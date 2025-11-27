@@ -14,7 +14,6 @@ import { PrismaService } from '@/prisma/prisma.service';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // ------------------ Read ------------------
   async findById(id: string): Promise<SafeUser | null> {
     const user = await this.prisma.user.findUnique({
       where: { id, deletedAt: null },

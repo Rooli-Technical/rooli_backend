@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -20,7 +20,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: payload.sub, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -28,8 +28,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         lastName: true,
         role: true,
         isEmailVerified: true,
+        lockedUntil: true,
+        lastPasswordChange: true,
+        refreshTokenVersion: true
       },
     });
+
+    // Check if account is locked
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new ForbiddenException('Account is locked');
+    }
+
+      if (payload.ver !== user.refreshTokenVersion) {
+    throw new UnauthorizedException('Session has been revoked');
+  }
 
     if (!user) {
       throw new UnauthorizedException();

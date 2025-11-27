@@ -9,61 +9,44 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Register } from './dtos/Register.dto';
-import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Login } from './dtos/Login.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { AuthResponse, SafeUser } from './dtos/AuthResponse.dto';
-import { OAuthLoginDto } from './dtos/oauth-login.dto';
 import { ForgotPassword } from './dtos/ForgotPassword.dto';
 import { ResetPassword } from './dtos/ResetPassword.dto';
-import { OAuthProfile } from './interfaces/google-profile.interface';
-import { OAuth2Client } from 'google-auth-library';
-import { EAuthProvider } from './enums/provider.enum';
 import { MailService } from '@/mail/mail.service';
 import { PrismaService } from '@/prisma/prisma.service';
-import { User } from '@generated/client';
-import { UserRole, AuthProvider } from '@generated/enums';
+import { Prisma, User } from '@generated/client';
+import { UserRole } from '@generated/enums';
+import * as argon2 from 'argon2';
+import { handlePrismaError } from '@/common/prisma.utils';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly MAX_LOGIN_ATTEMPTS = 5;
   private readonly LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
-  private readonly googleClientId: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly emailService: MailService,
-  ) {
-    this.googleClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-  }
+  ) {}
 
   async register(registerDto: Register): Promise<AuthResponse> {
     const { email, password, firstName, lastName, role } = registerDto;
 
-    return this.prisma.$transaction(async (tx) => {
-      const existingUser = await tx.user.findUnique({
-        where: { email: email.toLowerCase() },
-      });
+    // Validate password strength before DB work
+    this.validatePasswordStrength(password);
 
-      if (existingUser) {
-        if (existingUser.deletedAt) {
-          return this.restoreUser(existingUser.id, password);
-        }
-        throw new ConflictException('User already exists');
-      }
+    const hashedPassword = await argon2.hash(password);
+    const { plainToken, hashedToken } = await this.generateVerificationToken();
 
-      // Validate password strength
-      this.validatePasswordStrength(password);
-
-      const hashedPassword = await this.hashPassword(password);
-      const { plainToken, hashedToken } =
-        await this.generateVerificationToken();
-
-      const user = await tx.user.create({
+    try {
+      const user = await this.prisma.user.create({
         data: {
           email: email.toLowerCase(),
           password: hashedPassword,
@@ -72,15 +55,28 @@ export class AuthService {
           role: role || UserRole.ANALYST,
           emailVerificationToken: hashedToken,
           emailVerificationSentAt: new Date(),
-          provider: AuthProvider.LOCAL,
           lastPasswordChange: new Date(),
         },
       });
 
       const tokens = await this.generateTokens(user);
 
-      // Send verification email (non-blocking)
-      //this.sendVerificationEmail(user.email, plainToken);
+      const refreshHash = await argon2.hash(tokens.refreshToken);
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          refreshToken: refreshHash,
+          refreshTokenVersion: 0, // Initialize version
+        },
+      });
+
+      // this.sendVerificationEmail(user.email, plainToken).catch((err) => {
+      //   this.logger.error('Failed to send verification email (fallback)', {
+      //     userId: user.id,
+      //     email: user.email,
+      //     error: err?.message,
+      //   });
+      // });
 
       this.logger.log(`New user registered: ${user.email}`);
       return {
@@ -88,20 +84,41 @@ export class AuthService {
         ...tokens,
         requiresEmailVerification: !user.isEmailVerified,
       };
-    });
+    } catch (err) {
+      // If unique constraint triggered, check if it's a soft-deleted user to restore
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        // find existing user to determine if deletedAt is set
+        const existingUser = await this.prisma.user.findUnique({
+          where: { email: email.toLowerCase() },
+          select: { id: true, deletedAt: true },
+        });
+
+        if (existingUser?.deletedAt) {
+          // restore path (this will re-hash password and return tokens)
+          return this.restoreUser(existingUser.id, password);
+        }
+
+        throw new ConflictException('User already exists');
+      }
+
+      handlePrismaError(err);
+    }
   }
 
   async login(loginDto: Login): Promise<AuthResponse> {
+    try{
+    const email = loginDto.email.toLowerCase();
     const user = await this.prisma.user.findFirst({
       where: {
-        email: loginDto.email.toLowerCase(),
+        email,
         deletedAt: null,
-        provider: AuthProvider.LOCAL, // Ensure local auth user
       },
     });
 
     if (!user) {
-      // Simulate delay to prevent timing attacks
       await this.simulateProcessingDelay();
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -112,166 +129,62 @@ export class AuthService {
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
+    const isPasswordValid = await argon2.verify(
       user.password,
+      loginDto.password,
     );
-
     if (!isPasswordValid) {
       await this.handleFailedLogin(user.id);
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Reset security counters on successful login
-    await this.prisma.user.update({
+    // Reset security counters and return the updated user (select updated fields)
+    const updatedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: {
         loginAttempts: 0,
         lockedUntil: null,
         lastActiveAt: new Date(),
       },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        role: true,
+        isEmailVerified: true,
+        lastActiveAt: true,
+        refreshToken: true,
+      },
     });
 
-    const tokens = await this.generateTokens(user);
-    this.logger.log(`User logged in: ${user.email}`);
+    // generate tokens
+    const { accessToken, refreshToken } = await this.generateTokens(
+      updatedUser as any,
+    );
+
+    // store hashed refresh token (single refresh token per-user approach)
+    const refreshHash = await argon2.hash(refreshToken);
+    await this.prisma.user.update({
+      where: { id: updatedUser.id },
+      data: {
+        refreshToken: refreshHash,
+      },
+    });
+
+    this.logger.log(`User logged in: ${updatedUser.email}`);
 
     return {
-      user: this.toSafeUser(user),
-      ...tokens,
-      requiresEmailVerification: !user.isEmailVerified,
+      user: this.toSafeUser(updatedUser as any),
+      accessToken,
+      refreshToken,
+      requiresEmailVerification: !updatedUser.isEmailVerified,
     };
+  }catch(err){
+    this.logger.error(err)
+    throw err
   }
-
-  async handleOAuthCallback(
-    provider: EAuthProvider,
-    code: string,
-  ): Promise<AuthResponse> {
-    const profile = await this.getProfileFromCode(provider, code);
-    return this.loginWithOAuth(profile);
-  }
-
-  async loginWithOAuth(profile: OAuthLoginDto): Promise<AuthResponse> {
-    const { provider } = profile;
-    return this.prisma.$transaction(async (tx) => {
-      const providerField = this.getProviderField(provider);
-
-      let user = await tx.user.findFirst({
-        where: {
-          [providerField]: profile.id,
-          deletedAt: null,
-        },
-      });
-
-      if (!user && profile.email) {
-        user = await tx.user.findFirst({
-          where: {
-            email: profile.email.toLowerCase(),
-            deletedAt: null,
-          },
-        });
-
-        if (user) {
-          // Link OAuth provider to existing account
-          user = await tx.user.update({
-            where: { id: user.id },
-            data: {
-              [providerField]: profile.id,
-              avatar: profile.avatar || user.avatar,
-              isEmailVerified: user.isEmailVerified || true, // Don't override if already verified
-              lastActiveAt: new Date(),
-            },
-          });
-        }
-      }
-
-      if (!user) {
-        // Create new OAuth user
-        user = await tx.user.create({
-          data: {
-            email: profile.email.toLowerCase(),
-            firstName: profile.firstName?.trim(),
-            lastName: profile.lastName?.trim(),
-            avatar: profile.avatar,
-            provider,
-            [providerField]: profile.id,
-            isEmailVerified: true, // OAuth emails are typically verified
-            role: UserRole.ANALYST,
-            lastActiveAt: new Date(),
-          },
-        });
-      } else {
-        // Update last active for existing user
-        user = await tx.user.update({
-          where: { id: user.id },
-          data: { lastActiveAt: new Date() },
-        });
-      }
-
-      const tokens = await this.generateTokens(user);
-      this.logger.log(`OAuth login successful: ${user.email} via ${provider}`);
-
-      return {
-        user: this.toSafeUser(user),
-        ...tokens,
-        requiresEmailVerification: false, // OAuth users are auto-verified
-      };
-    });
-  }
-
-  async getOAuthRedirectUrl(provider: EAuthProvider): Promise<string> {
-    if (provider === EAuthProvider.GOOGLE) {
-      const params = new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        redirect_uri: process.env.GOOGLE_CALLBACK_URL,
-        response_type: 'code',
-        scope: 'openid email profile',
-        access_type: 'offline', // optional: lets you get refresh tokens
-        prompt: 'consent',
-      });
-      return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-    }
-    throw new BadRequestException('Unsupported provider');
-  }
-
-  async getProfileFromCode(
-    provider: EAuthProvider,
-    code: string,
-  ): Promise<OAuthLoginDto> {
-    if (provider === EAuthProvider.GOOGLE) {
-      const decodedCode = decodeURIComponent(code);
-      // 1. Exchange code for tokens
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          code: decodedCode,
-          client_id: process.env.GOOGLE_CLIENT_ID,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET,
-          redirect_uri: process.env.GOOGLE_CALLBACK_URL,
-          grant_type: 'authorization_code',
-        }),
-      });
-      const tokens = await tokenResponse.json();
-
-      // 2. Fetch user profile
-      const profileResponse = await fetch(
-        'https://openidconnect.googleapis.com/v1/userinfo',
-        {
-          headers: { Authorization: `Bearer ${tokens.access_token}` },
-        },
-      );
-      const profile = await profileResponse.json();
-
-      return {
-        provider: AuthProvider.GOOGLE,
-        id: profile.sub,
-        email: profile.email,
-        firstName: profile.given_name,
-        lastName: profile.family_name,
-        avatar: profile.picture,
-      } as OAuthLoginDto;
-    }
-    throw new BadRequestException('Unsupported provider');
   }
 
   async refreshTokens(refreshToken: string): Promise<AuthResponse> {
@@ -286,16 +199,47 @@ export class AuthService {
 
       if (!user) throw new UnauthorizedException('User not found');
 
-      // Update last active timestamp
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { lastActiveAt: new Date() },
-      });
+      if (!user.refreshToken) {
+        throw new UnauthorizedException('No active session');
+      }
+
+      if (user.refreshTokenVersion !== payload.ver) {
+        // Token has been invalidated (logout, password change, etc.)
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { refreshToken: null },
+        });
+        this.logger.warn(
+          `Refresh token version mismatch for user ${user.email}`,
+        );
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const isValidRefreshToken = await argon2.verify(
+        user.refreshToken,
+        refreshToken,
+      );
+
+      if (!isValidRefreshToken) {
+        this.logger.warn('Invalid refresh token attempt', { userId: user.id });
+        throw new UnauthorizedException('Invalid refresh token');
+      }
 
       const tokens = await this.generateTokens(user);
+      const newHash = await argon2.hash(tokens.refreshToken);
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          refreshToken: newHash,
+          refreshTokenVersion: { increment: 1 },
+          lastActiveAt: new Date(),
+        },
+      });
       return {
-        user: this.toSafeUser(user),
-        ...tokens,
+        user: this.toSafeUser(user as any),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         requiresEmailVerification: !user.isEmailVerified,
       };
     } catch (error) {
@@ -305,23 +249,35 @@ export class AuthService {
   }
 
   async verifyEmail(token: string): Promise<void> {
-    // Find user by token with expiration check (24 hours)
-    const expirationTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    try{
+    const expirationTime = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours
 
-    const user = await this.prisma.user.findFirst({
+    const candidates = await this.prisma.user.findMany({
       where: {
         emailVerificationToken: { not: null },
         emailVerificationSentAt: { gte: expirationTime },
         deletedAt: null,
       },
+      select: { id: true, email: true, emailVerificationToken: true },
     });
 
-    if (!user || !(await bcrypt.compare(token, user.emailVerificationToken))) {
+    let matched: { id: string; email: string } | null = null;
+    for (const c of candidates) {
+      if (!c.emailVerificationToken) continue;
+      const ok = await argon2.verify(c.emailVerificationToken, token);
+      if (ok) {
+        matched = { id: c.id, email: c.email };
+        break;
+      }
+    }
+
+    if (!matched) {
+      await this.simulateProcessingDelay();
       throw new BadRequestException('Invalid or expired verification token');
     }
 
     await this.prisma.user.update({
-      where: { id: user.id },
+      where: { id: matched.id },
       data: {
         isEmailVerified: true,
         emailVerificationToken: null,
@@ -329,63 +285,82 @@ export class AuthService {
       },
     });
 
-    this.logger.log(`Email verified for user: ${user.email}`);
+    this.logger.log(`Email verified for user: ${matched.email}`);
+  }catch(err){
+    throw err
+  }
   }
 
   async forgotPassword(dto: ForgotPassword): Promise<User> {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        email: dto.email.toLowerCase(),
-        deletedAt: null,
-        provider: AuthProvider.LOCAL, // Only allow for local auth users
-      },
-    });
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: dto.email.toLowerCase(),
+          deletedAt: null,
+        },
+      });
 
-    if (!user) {
-      // Simulate processing to prevent email enumeration
-      await this.simulateProcessingDelay();
-      return;
+      if (!user) {
+        await this.simulateProcessingDelay();
+        return;
+      }
+
+      const { plainToken, hashedToken } =
+        await this.generateVerificationToken();
+      const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      const _user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetPasswordToken: hashedToken,
+          resetPasswordExpires: resetExpires,
+        },
+      });
+
+      this.emailService
+        .sendPasswordResetEmail(user.email, plainToken)
+        .catch((err) => this.logger.error('Failed to send reset email:', err));
+
+      this.logger.log(`Password reset requested for: ${user.email}`);
+      return _user;
+    } catch (err) {
+      throw err;
     }
-
-    const { plainToken, hashedToken } = await this.generateVerificationToken();
-    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    const _user = await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        resetPasswordToken: hashedToken,
-        resetPasswordExpires: resetExpires,
-      },
-    });
-
-    this.emailService
-      .sendPasswordResetEmail(user.email, plainToken)
-      .catch((err) => this.logger.error('Failed to send reset email:', err));
-
-    this.logger.log(`Password reset requested for: ${user.email}`);
-    return _user;
   }
 
   async resetPassword(dto: ResetPassword): Promise<void> {
-    // Find user with valid reset token (not expired)
-    const user = await this.prisma.user.findFirst({
+    try{
+    const now = new Date();
+
+    const candidates = await this.prisma.user.findMany({
       where: {
         resetPasswordToken: { not: null },
-        resetPasswordExpires: { gt: new Date() },
+        resetPasswordExpires: { gt: now },
         deletedAt: null,
       },
+      select: { id: true, email: true, resetPasswordToken: true },
     });
 
-    if (!user || !(await bcrypt.compare(dto.token, user.resetPasswordToken))) {
+    let matched: { id: string; email: string } | null = null;
+    for (const c of candidates) {
+      if (!c.resetPasswordToken) continue;
+      const ok = await argon2.verify(c.resetPasswordToken, dto.token);
+      if (ok) {
+        matched = { id: c.id, email: c.email };
+        break;
+      }
+    }
+
+    if (!matched) {
+      await this.simulateProcessingDelay();
       throw new BadRequestException('Invalid or expired reset token');
     }
 
     this.validatePasswordStrength(dto.password);
-
-    const hashedPassword = await this.hashPassword(dto.password);
+    const hashedPassword = await argon2.hash(dto.password);
 
     await this.prisma.user.update({
-      where: { id: user.id },
+      where: { id: matched.id },
       data: {
         password: hashedPassword,
         resetPasswordToken: null,
@@ -393,13 +368,36 @@ export class AuthService {
         loginAttempts: 0,
         lockedUntil: null,
         lastPasswordChange: new Date(),
+        refreshTokenVersion: { increment: 1 },
       },
     });
 
-    this.logger.log(`Password reset successful for ${user.email}`);
+    this.logger.log(`Password reset successful for ${matched.email}`);
+  }catch(err){
+    this.logger.error(err)
+    throw err
+  }
+  }
+
+  async logout(userId: string): Promise<void> {
+    try{
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        refreshToken: null,
+        lastActiveAt: new Date(),
+      },
+    });
+
+    this.logger.log(`User logged out: ${userId}`);
+  }catch(err){
+     this.logger.error(err)
+    throw err
+  }
   }
 
   async resendVerificationEmail(email: string): Promise<void> {
+    try{
     const user = await this.prisma.user.findFirst({
       where: {
         email: email.toLowerCase(),
@@ -420,40 +418,20 @@ export class AuthService {
       },
     });
 
-    //this.sendVerificationEmail(user.email, plainToken);
+    this.sendVerificationEmail(user.email, plainToken);
+  }catch(err){
+     this.logger.error(err)
+    throw err
   }
-
-  // OAuth profile methods remain similar but with better error handling
-  async getOAuthProfile(
-    provider: 'google' | 'facebook' | 'linkedin',
-    token: string,
-  ): Promise<OAuthProfile> {
-    try {
-      switch (provider) {
-        case 'google':
-          return await this.getGoogleProfile(token);
-        case 'facebook':
-          return await this.getFacebookProfile(token);
-        case 'linkedin':
-          return await this.getLinkedInProfile(token);
-        default:
-          throw new UnauthorizedException('Unsupported OAuth provider');
-      }
-    } catch (error) {
-      this.logger.error(`OAuth profile fetch failed for ${provider}:`, error);
-      throw new UnauthorizedException(
-        `Failed to authenticate with ${provider}`,
-      );
-    }
   }
-
-  // ... OAuth profile methods (improved with timeout and better error handling)
 
   private async generateTokens(user: User) {
+    try{
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
+      ver: user.refreshTokenVersion || 0,
     };
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -468,43 +446,61 @@ export class AuthService {
     ]);
 
     return { accessToken, refreshToken };
+  }catch(err){
+     this.logger.error(err)
+    throw err
+  }
   }
 
   private async handleFailedLogin(userId: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return;
+    try{
+    // Atomically increment loginAttempts and read updated value within a transaction
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          loginAttempts: { increment: 1 },
+          lastActiveAt: new Date(),
+        },
+      });
 
-    const newAttempts = user.loginAttempts + 1;
-    let lockedUntil: Date | null = null;
+      return tx.user.findUnique({
+        where: { id: userId },
+        select: { loginAttempts: true, email: true },
+      });
+    });
 
-    if (newAttempts >= this.MAX_LOGIN_ATTEMPTS) {
-      lockedUntil = new Date(Date.now() + this.LOCKOUT_DURATION_MS);
+    if (!updated) return;
+
+    if (updated.loginAttempts >= this.MAX_LOGIN_ATTEMPTS) {
+      const lockedUntil = new Date(Date.now() + this.LOCKOUT_DURATION_MS);
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { lockedUntil },
+      });
       this.logger.warn(
-        `Account locked for user ${user.email} until ${lockedUntil}`,
+        `Account locked for user ${updated.email} until ${lockedUntil.toISOString()}`,
       );
     }
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        loginAttempts: newAttempts,
-        lockedUntil,
-        lastActiveAt: new Date(), // Track failed attempt activity
-      },
-    });
+  }catch(err){
+     this.logger.error(err)
+    throw err
   }
-
-  private async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 12);
   }
 
   private async generateVerificationToken(): Promise<{
     plainToken: string;
     hashedToken: string;
   }> {
+    try{
     const plainToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = await bcrypt.hash(plainToken, 12);
+    const hashedToken = await argon2.hash(plainToken);
+    console.log(plainToken);
     return { plainToken, hashedToken };
+    }catch(err){
+     this.logger.error(err)
+    throw err
+  }
   }
 
   private validatePasswordStrength(password: string): void {
@@ -536,44 +532,12 @@ export class AuthService {
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
-  private sendVerificationEmail(email: string, token: string): void {
-    this.emailService
-      .sendVerificationEmail(email, token)
-      .catch((err) =>
-        this.logger.error('Failed to send verification email:', err),
-      );
-  }
-
-  private getProviderField(provider: AuthProvider): string {
-    const providerMap: Record<AuthProvider, string> = {
-      [AuthProvider.GOOGLE]: 'googleId',
-      [AuthProvider.FACEBOOK]: 'facebookId',
-      [AuthProvider.LINKEDIN]: 'linkedinId',
-      [AuthProvider.LOCAL]: 'password', // Not used for OAuth
-    };
-
-    return providerMap[provider];
-  }
-
-  private toSafeUser(user: User): SafeUser {
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      avatar: user.avatar,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified,
-      lastActiveAt: user.lastActiveAt,
-    };
-  }
-
   private async restoreUser(
     userId: string,
     newPassword: string,
   ): Promise<AuthResponse> {
     this.validatePasswordStrength(newPassword);
-    const hashedPassword = await this.hashPassword(newPassword);
+    const hashedPassword = await argon2.hash(newPassword);
 
     const user = await this.prisma.user.update({
       where: { id: userId },
@@ -597,77 +561,48 @@ export class AuthService {
     };
   }
 
-  private async getGoogleProfile(token: string): Promise<OAuthProfile> {
-    const client = new OAuth2Client(this.googleClientId);
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: this.googleClientId,
-    });
+  private async sendVerificationEmail(
+    email: string,
+    token: string,
+  ): Promise<void> {
+    try {
+      await this.emailService.sendVerificationEmail(email, token);
+      this.logger.log(`Verification email sent to ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send verification email to ${email}`, {
+        error,
+      });
+      throw error;
+    }
+  }
 
-    const payload = ticket.getPayload();
-    if (!payload) throw new UnauthorizedException('Invalid Google token');
-
+  private toSafeUser(user: User): SafeUser {
     return {
-      id: payload.sub,
-      email: payload.email!,
-      firstName: payload.given_name,
-      lastName: payload.family_name,
-      avatar: payload.picture,
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatar: user.avatar,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      lastActiveAt: user.lastActiveAt,
     };
   }
-  catch(err) {
-    this.logger.error('Google OAuth error:', err);
-    throw new UnauthorizedException('Invalid Google token');
-  }
 
-  private async getFacebookProfile(token: string): Promise<OAuthProfile> {
-    try {
-      const url = `https://graph.facebook.com/me?fields=id,email,first_name,last_name,picture.type(large)&access_token=${token}`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (data.error) throw new UnauthorizedException('Invalid Facebook token');
-
-      return {
-        id: data.id,
-        email: data.email,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        avatar: data.picture?.data?.url,
-      };
-    } catch (err) {
-      this.logger.error('Facebook OAuth error:', err);
-      throw new UnauthorizedException('Invalid Facebook token');
-    }
-  }
-
-  private async getLinkedInProfile(token: string): Promise<OAuthProfile> {
-    try {
-      // 1. Get basic profile
-      const profileRes = await fetch('https://api.linkedin.com/v2/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const profileData = await profileRes.json();
-      if (profileData.status === 401)
-        throw new UnauthorizedException('Invalid LinkedIn token');
-
-      // 2. Get email
-      const emailRes = await fetch(
-        'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      const emailData = await emailRes.json();
-
-      return {
-        id: profileData.id,
-        email: emailData.elements[0]['handle~'].emailAddress,
-        firstName: profileData.localizedFirstName,
-        lastName: profileData.localizedLastName,
-        avatar: undefined, // LinkedIn API requires extra permissions for profile picture
-      };
-    } catch (err) {
-      this.logger.error('LinkedIn OAuth error:', err);
-      throw new UnauthorizedException('Invalid LinkedIn token');
-    }
+  @Cron(CronExpression.EVERY_WEEK)
+  async cleanupStaleRefreshTokens() {
+    const result = await this.prisma.user.updateMany({
+      where: {
+        lastActiveAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+        refreshToken: { not: null },
+      },
+      data: {
+        refreshToken: null,
+        refreshTokenVersion: { increment: 1 },
+      },
+    });
+    this.logger.log(
+      `Cleaned up stale refresh tokens for ${result.count} users`,
+    );
   }
 }

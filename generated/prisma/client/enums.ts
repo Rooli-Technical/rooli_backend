@@ -224,16 +224,6 @@ export const UserRole = {
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
 
-export const AuthProvider = {
-  LOCAL: 'LOCAL',
-  GOOGLE: 'GOOGLE',
-  FACEBOOK: 'FACEBOOK',
-  LINKEDIN: 'LINKEDIN'
-} as const
-
-export type AuthProvider = (typeof AuthProvider)[keyof typeof AuthProvider]
-
-
 export const ContentType = {
   POST: 'POST',
   STORY: 'STORY',

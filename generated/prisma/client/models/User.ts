@@ -28,10 +28,12 @@ export type AggregateUser = {
 
 export type UserAvgAggregateOutputType = {
   loginAttempts: number | null
+  refreshTokenVersion: number | null
 }
 
 export type UserSumAggregateOutputType = {
   loginAttempts: number | null
+  refreshTokenVersion: number | null
 }
 
 export type UserMinAggregateOutputType = {
@@ -42,18 +44,16 @@ export type UserMinAggregateOutputType = {
   lastName: string | null
   avatar: string | null
   role: $Enums.UserRole | null
-  provider: $Enums.AuthProvider | null
-  googleId: string | null
-  facebookId: string | null
-  linkedinId: string | null
   isEmailVerified: boolean | null
   emailVerificationToken: string | null
   emailVerificationSentAt: Date | null
+  refreshToken: string | null
   resetPasswordToken: string | null
   resetPasswordExpires: Date | null
   loginAttempts: number | null
   lockedUntil: Date | null
   lastPasswordChange: Date | null
+  refreshTokenVersion: number | null
   createdAt: Date | null
   updatedAt: Date | null
   deletedAt: Date | null
@@ -68,18 +68,16 @@ export type UserMaxAggregateOutputType = {
   lastName: string | null
   avatar: string | null
   role: $Enums.UserRole | null
-  provider: $Enums.AuthProvider | null
-  googleId: string | null
-  facebookId: string | null
-  linkedinId: string | null
   isEmailVerified: boolean | null
   emailVerificationToken: string | null
   emailVerificationSentAt: Date | null
+  refreshToken: string | null
   resetPasswordToken: string | null
   resetPasswordExpires: Date | null
   loginAttempts: number | null
   lockedUntil: Date | null
   lastPasswordChange: Date | null
+  refreshTokenVersion: number | null
   createdAt: Date | null
   updatedAt: Date | null
   deletedAt: Date | null
@@ -94,18 +92,16 @@ export type UserCountAggregateOutputType = {
   lastName: number
   avatar: number
   role: number
-  provider: number
-  googleId: number
-  facebookId: number
-  linkedinId: number
   isEmailVerified: number
   emailVerificationToken: number
   emailVerificationSentAt: number
+  refreshToken: number
   resetPasswordToken: number
   resetPasswordExpires: number
   loginAttempts: number
   lockedUntil: number
   lastPasswordChange: number
+  refreshTokenVersion: number
   createdAt: number
   updatedAt: number
   deletedAt: number
@@ -116,10 +112,12 @@ export type UserCountAggregateOutputType = {
 
 export type UserAvgAggregateInputType = {
   loginAttempts?: true
+  refreshTokenVersion?: true
 }
 
 export type UserSumAggregateInputType = {
   loginAttempts?: true
+  refreshTokenVersion?: true
 }
 
 export type UserMinAggregateInputType = {
@@ -130,18 +128,16 @@ export type UserMinAggregateInputType = {
   lastName?: true
   avatar?: true
   role?: true
-  provider?: true
-  googleId?: true
-  facebookId?: true
-  linkedinId?: true
   isEmailVerified?: true
   emailVerificationToken?: true
   emailVerificationSentAt?: true
+  refreshToken?: true
   resetPasswordToken?: true
   resetPasswordExpires?: true
   loginAttempts?: true
   lockedUntil?: true
   lastPasswordChange?: true
+  refreshTokenVersion?: true
   createdAt?: true
   updatedAt?: true
   deletedAt?: true
@@ -156,18 +152,16 @@ export type UserMaxAggregateInputType = {
   lastName?: true
   avatar?: true
   role?: true
-  provider?: true
-  googleId?: true
-  facebookId?: true
-  linkedinId?: true
   isEmailVerified?: true
   emailVerificationToken?: true
   emailVerificationSentAt?: true
+  refreshToken?: true
   resetPasswordToken?: true
   resetPasswordExpires?: true
   loginAttempts?: true
   lockedUntil?: true
   lastPasswordChange?: true
+  refreshTokenVersion?: true
   createdAt?: true
   updatedAt?: true
   deletedAt?: true
@@ -182,18 +176,16 @@ export type UserCountAggregateInputType = {
   lastName?: true
   avatar?: true
   role?: true
-  provider?: true
-  googleId?: true
-  facebookId?: true
-  linkedinId?: true
   isEmailVerified?: true
   emailVerificationToken?: true
   emailVerificationSentAt?: true
+  refreshToken?: true
   resetPasswordToken?: true
   resetPasswordExpires?: true
   loginAttempts?: true
   lockedUntil?: true
   lastPasswordChange?: true
+  refreshTokenVersion?: true
   createdAt?: true
   updatedAt?: true
   deletedAt?: true
@@ -295,18 +287,16 @@ export type UserGroupByOutputType = {
   lastName: string | null
   avatar: string | null
   role: $Enums.UserRole
-  provider: $Enums.AuthProvider
-  googleId: string | null
-  facebookId: string | null
-  linkedinId: string | null
   isEmailVerified: boolean
   emailVerificationToken: string | null
   emailVerificationSentAt: Date | null
+  refreshToken: string | null
   resetPasswordToken: string | null
   resetPasswordExpires: Date | null
   loginAttempts: number
   lockedUntil: Date | null
   lastPasswordChange: Date | null
+  refreshTokenVersion: number
   createdAt: Date
   updatedAt: Date
   deletedAt: Date | null
@@ -344,18 +334,16 @@ export type UserWhereInput = {
   lastName?: Prisma.StringNullableFilter<"User"> | string | null
   avatar?: Prisma.StringNullableFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFilter<"User"> | $Enums.AuthProvider
-  googleId?: Prisma.StringNullableFilter<"User"> | string | null
-  facebookId?: Prisma.StringNullableFilter<"User"> | string | null
-  linkedinId?: Prisma.StringNullableFilter<"User"> | string | null
   isEmailVerified?: Prisma.BoolFilter<"User"> | boolean
   emailVerificationToken?: Prisma.StringNullableFilter<"User"> | string | null
   emailVerificationSentAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  refreshToken?: Prisma.StringNullableFilter<"User"> | string | null
   resetPasswordToken?: Prisma.StringNullableFilter<"User"> | string | null
   resetPasswordExpires?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   loginAttempts?: Prisma.IntFilter<"User"> | number
   lockedUntil?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   lastPasswordChange?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  refreshTokenVersion?: Prisma.IntFilter<"User"> | number
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   deletedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
@@ -387,18 +375,16 @@ export type UserOrderByWithRelationInput = {
   lastName?: Prisma.SortOrderInput | Prisma.SortOrder
   avatar?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
-  provider?: Prisma.SortOrder
-  googleId?: Prisma.SortOrderInput | Prisma.SortOrder
-  facebookId?: Prisma.SortOrderInput | Prisma.SortOrder
-  linkedinId?: Prisma.SortOrderInput | Prisma.SortOrder
   isEmailVerified?: Prisma.SortOrder
   emailVerificationToken?: Prisma.SortOrderInput | Prisma.SortOrder
   emailVerificationSentAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  refreshToken?: Prisma.SortOrderInput | Prisma.SortOrder
   resetPasswordToken?: Prisma.SortOrderInput | Prisma.SortOrder
   resetPasswordExpires?: Prisma.SortOrderInput | Prisma.SortOrder
   loginAttempts?: Prisma.SortOrder
   lockedUntil?: Prisma.SortOrderInput | Prisma.SortOrder
   lastPasswordChange?: Prisma.SortOrderInput | Prisma.SortOrder
+  refreshTokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -425,9 +411,6 @@ export type UserOrderByWithRelationInput = {
 export type UserWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   email?: string
-  googleId?: string
-  facebookId?: string
-  linkedinId?: string
   AND?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   OR?: Prisma.UserWhereInput[]
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
@@ -436,15 +419,16 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   lastName?: Prisma.StringNullableFilter<"User"> | string | null
   avatar?: Prisma.StringNullableFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFilter<"User"> | $Enums.AuthProvider
   isEmailVerified?: Prisma.BoolFilter<"User"> | boolean
   emailVerificationToken?: Prisma.StringNullableFilter<"User"> | string | null
   emailVerificationSentAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  refreshToken?: Prisma.StringNullableFilter<"User"> | string | null
   resetPasswordToken?: Prisma.StringNullableFilter<"User"> | string | null
   resetPasswordExpires?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   loginAttempts?: Prisma.IntFilter<"User"> | number
   lockedUntil?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   lastPasswordChange?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  refreshTokenVersion?: Prisma.IntFilter<"User"> | number
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   deletedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
@@ -466,7 +450,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   conversationParticipants?: Prisma.ConversationParticipantListRelationFilter
   socialAccountMemberships?: Prisma.SocialAccountMemberListRelationFilter
   invitedSocialMembers?: Prisma.SocialAccountMemberListRelationFilter
-}, "id" | "email" | "googleId" | "facebookId" | "linkedinId">
+}, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -476,18 +460,16 @@ export type UserOrderByWithAggregationInput = {
   lastName?: Prisma.SortOrderInput | Prisma.SortOrder
   avatar?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
-  provider?: Prisma.SortOrder
-  googleId?: Prisma.SortOrderInput | Prisma.SortOrder
-  facebookId?: Prisma.SortOrderInput | Prisma.SortOrder
-  linkedinId?: Prisma.SortOrderInput | Prisma.SortOrder
   isEmailVerified?: Prisma.SortOrder
   emailVerificationToken?: Prisma.SortOrderInput | Prisma.SortOrder
   emailVerificationSentAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  refreshToken?: Prisma.SortOrderInput | Prisma.SortOrder
   resetPasswordToken?: Prisma.SortOrderInput | Prisma.SortOrder
   resetPasswordExpires?: Prisma.SortOrderInput | Prisma.SortOrder
   loginAttempts?: Prisma.SortOrder
   lockedUntil?: Prisma.SortOrderInput | Prisma.SortOrder
   lastPasswordChange?: Prisma.SortOrderInput | Prisma.SortOrder
+  refreshTokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -510,18 +492,16 @@ export type UserScalarWhereWithAggregatesInput = {
   lastName?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   avatar?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   role?: Prisma.EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderWithAggregatesFilter<"User"> | $Enums.AuthProvider
-  googleId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
-  facebookId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
-  linkedinId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   isEmailVerified?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   emailVerificationToken?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   emailVerificationSentAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  refreshToken?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   resetPasswordToken?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   resetPasswordExpires?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   loginAttempts?: Prisma.IntWithAggregatesFilter<"User"> | number
   lockedUntil?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   lastPasswordChange?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  refreshTokenVersion?: Prisma.IntWithAggregatesFilter<"User"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   deletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
@@ -536,18 +516,16 @@ export type UserCreateInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -579,18 +557,16 @@ export type UserUncheckedCreateInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -622,18 +598,16 @@ export type UserUpdateInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -665,18 +639,16 @@ export type UserUncheckedUpdateInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -708,18 +680,16 @@ export type UserCreateManyInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -734,18 +704,16 @@ export type UserUpdateManyMutationInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -760,18 +728,16 @@ export type UserUncheckedUpdateManyInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -786,18 +752,16 @@ export type UserCountOrderByAggregateInput = {
   lastName?: Prisma.SortOrder
   avatar?: Prisma.SortOrder
   role?: Prisma.SortOrder
-  provider?: Prisma.SortOrder
-  googleId?: Prisma.SortOrder
-  facebookId?: Prisma.SortOrder
-  linkedinId?: Prisma.SortOrder
   isEmailVerified?: Prisma.SortOrder
   emailVerificationToken?: Prisma.SortOrder
   emailVerificationSentAt?: Prisma.SortOrder
+  refreshToken?: Prisma.SortOrder
   resetPasswordToken?: Prisma.SortOrder
   resetPasswordExpires?: Prisma.SortOrder
   loginAttempts?: Prisma.SortOrder
   lockedUntil?: Prisma.SortOrder
   lastPasswordChange?: Prisma.SortOrder
+  refreshTokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrder
@@ -806,6 +770,7 @@ export type UserCountOrderByAggregateInput = {
 
 export type UserAvgOrderByAggregateInput = {
   loginAttempts?: Prisma.SortOrder
+  refreshTokenVersion?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -816,18 +781,16 @@ export type UserMaxOrderByAggregateInput = {
   lastName?: Prisma.SortOrder
   avatar?: Prisma.SortOrder
   role?: Prisma.SortOrder
-  provider?: Prisma.SortOrder
-  googleId?: Prisma.SortOrder
-  facebookId?: Prisma.SortOrder
-  linkedinId?: Prisma.SortOrder
   isEmailVerified?: Prisma.SortOrder
   emailVerificationToken?: Prisma.SortOrder
   emailVerificationSentAt?: Prisma.SortOrder
+  refreshToken?: Prisma.SortOrder
   resetPasswordToken?: Prisma.SortOrder
   resetPasswordExpires?: Prisma.SortOrder
   loginAttempts?: Prisma.SortOrder
   lockedUntil?: Prisma.SortOrder
   lastPasswordChange?: Prisma.SortOrder
+  refreshTokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrder
@@ -842,18 +805,16 @@ export type UserMinOrderByAggregateInput = {
   lastName?: Prisma.SortOrder
   avatar?: Prisma.SortOrder
   role?: Prisma.SortOrder
-  provider?: Prisma.SortOrder
-  googleId?: Prisma.SortOrder
-  facebookId?: Prisma.SortOrder
-  linkedinId?: Prisma.SortOrder
   isEmailVerified?: Prisma.SortOrder
   emailVerificationToken?: Prisma.SortOrder
   emailVerificationSentAt?: Prisma.SortOrder
+  refreshToken?: Prisma.SortOrder
   resetPasswordToken?: Prisma.SortOrder
   resetPasswordExpires?: Prisma.SortOrder
   loginAttempts?: Prisma.SortOrder
   lockedUntil?: Prisma.SortOrder
   lastPasswordChange?: Prisma.SortOrder
+  refreshTokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrder
@@ -862,6 +823,7 @@ export type UserMinOrderByAggregateInput = {
 
 export type UserSumOrderByAggregateInput = {
   loginAttempts?: Prisma.SortOrder
+  refreshTokenVersion?: Prisma.SortOrder
 }
 
 export type UserNullableScalarRelationFilter = {
@@ -884,10 +846,6 @@ export type NullableStringFieldUpdateOperationsInput = {
 
 export type EnumUserRoleFieldUpdateOperationsInput = {
   set?: $Enums.UserRole
-}
-
-export type EnumAuthProviderFieldUpdateOperationsInput = {
-  set?: $Enums.AuthProvider
 }
 
 export type BoolFieldUpdateOperationsInput = {
@@ -1166,18 +1124,16 @@ export type UserCreateWithoutPostInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1208,18 +1164,16 @@ export type UserUncheckedCreateWithoutPostInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1266,18 +1220,16 @@ export type UserUpdateWithoutPostInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1308,18 +1260,16 @@ export type UserUncheckedUpdateWithoutPostInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1350,18 +1300,16 @@ export type UserCreateWithoutApprovalsRequestedInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1392,18 +1340,16 @@ export type UserUncheckedCreateWithoutApprovalsRequestedInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1439,18 +1385,16 @@ export type UserCreateWithoutApprovalsGivenInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1481,18 +1425,16 @@ export type UserUncheckedCreateWithoutApprovalsGivenInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1539,18 +1481,16 @@ export type UserUpdateWithoutApprovalsRequestedInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1581,18 +1521,16 @@ export type UserUncheckedUpdateWithoutApprovalsRequestedInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1634,18 +1572,16 @@ export type UserUpdateWithoutApprovalsGivenInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1676,18 +1612,16 @@ export type UserUncheckedUpdateWithoutApprovalsGivenInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1718,18 +1652,16 @@ export type UserCreateWithoutMediaFilesInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1760,18 +1692,16 @@ export type UserUncheckedCreateWithoutMediaFilesInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1818,18 +1748,16 @@ export type UserUpdateWithoutMediaFilesInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1860,18 +1788,16 @@ export type UserUncheckedUpdateWithoutMediaFilesInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1902,18 +1828,16 @@ export type UserCreateWithoutOrganizationMembershipsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -1944,18 +1868,16 @@ export type UserUncheckedCreateWithoutOrganizationMembershipsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2002,18 +1924,16 @@ export type UserUpdateWithoutOrganizationMembershipsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2044,18 +1964,16 @@ export type UserUncheckedUpdateWithoutOrganizationMembershipsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2086,18 +2004,16 @@ export type UserCreateWithoutSentInvitationsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2128,18 +2044,16 @@ export type UserUncheckedCreateWithoutSentInvitationsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2186,18 +2100,16 @@ export type UserUpdateWithoutSentInvitationsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2228,18 +2140,16 @@ export type UserUncheckedUpdateWithoutSentInvitationsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2270,18 +2180,16 @@ export type UserCreateWithoutAiContentGenerationsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2312,18 +2220,16 @@ export type UserUncheckedCreateWithoutAiContentGenerationsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2370,18 +2276,16 @@ export type UserUpdateWithoutAiContentGenerationsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2412,18 +2316,16 @@ export type UserUncheckedUpdateWithoutAiContentGenerationsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2454,18 +2356,16 @@ export type UserCreateWithoutAiImageGenerationsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2496,18 +2396,16 @@ export type UserUncheckedCreateWithoutAiImageGenerationsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2554,18 +2452,16 @@ export type UserUpdateWithoutAiImageGenerationsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2596,18 +2492,16 @@ export type UserUncheckedUpdateWithoutAiImageGenerationsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2638,18 +2532,16 @@ export type UserCreateWithoutAiUsagesInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2680,18 +2572,16 @@ export type UserUncheckedCreateWithoutAiUsagesInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2738,18 +2628,16 @@ export type UserUpdateWithoutAiUsagesInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2780,18 +2668,16 @@ export type UserUncheckedUpdateWithoutAiUsagesInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2822,18 +2708,16 @@ export type UserCreateWithoutConversationParticipantsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2864,18 +2748,16 @@ export type UserUncheckedCreateWithoutConversationParticipantsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -2922,18 +2804,16 @@ export type UserUpdateWithoutConversationParticipantsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2964,18 +2844,16 @@ export type UserUncheckedUpdateWithoutConversationParticipantsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3006,18 +2884,16 @@ export type UserCreateWithoutMessagesInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3048,18 +2924,16 @@ export type UserUncheckedCreateWithoutMessagesInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3106,18 +2980,16 @@ export type UserUpdateWithoutMessagesInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3148,18 +3020,16 @@ export type UserUncheckedUpdateWithoutMessagesInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3190,18 +3060,16 @@ export type UserCreateWithoutContentTemplateInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3232,18 +3100,16 @@ export type UserUncheckedCreateWithoutContentTemplateInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3290,18 +3156,16 @@ export type UserUpdateWithoutContentTemplateInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3332,18 +3196,16 @@ export type UserUncheckedUpdateWithoutContentTemplateInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3374,18 +3236,16 @@ export type UserCreateWithoutFavoriteTemplatesInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3416,18 +3276,16 @@ export type UserUncheckedCreateWithoutFavoriteTemplatesInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3474,18 +3332,16 @@ export type UserUpdateWithoutFavoriteTemplatesInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3516,18 +3372,16 @@ export type UserUncheckedUpdateWithoutFavoriteTemplatesInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3558,18 +3412,16 @@ export type UserCreateWithoutNotificationsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3600,18 +3452,16 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3658,18 +3508,16 @@ export type UserUpdateWithoutNotificationsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3700,18 +3548,16 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3742,18 +3588,16 @@ export type UserCreateWithoutAuditLogsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3784,18 +3628,16 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3842,18 +3684,16 @@ export type UserUpdateWithoutAuditLogsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3884,18 +3724,16 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3926,18 +3764,16 @@ export type UserCreateWithoutSocialAccountMembershipsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -3968,18 +3804,16 @@ export type UserUncheckedCreateWithoutSocialAccountMembershipsInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -4015,18 +3849,16 @@ export type UserCreateWithoutInvitedSocialMembersInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -4057,18 +3889,16 @@ export type UserUncheckedCreateWithoutInvitedSocialMembersInput = {
   lastName?: string | null
   avatar?: string | null
   role?: $Enums.UserRole
-  provider?: $Enums.AuthProvider
-  googleId?: string | null
-  facebookId?: string | null
-  linkedinId?: string | null
   isEmailVerified?: boolean
   emailVerificationToken?: string | null
   emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
   resetPasswordToken?: string | null
   resetPasswordExpires?: Date | string | null
   loginAttempts?: number
   lockedUntil?: Date | string | null
   lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
@@ -4115,18 +3945,16 @@ export type UserUpdateWithoutSocialAccountMembershipsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4157,18 +3985,16 @@ export type UserUncheckedUpdateWithoutSocialAccountMembershipsInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4210,18 +4036,16 @@ export type UserUpdateWithoutInvitedSocialMembersInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4252,18 +4076,16 @@ export type UserUncheckedUpdateWithoutInvitedSocialMembersInput = {
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  provider?: Prisma.EnumAuthProviderFieldUpdateOperationsInput | $Enums.AuthProvider
-  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  facebookId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedinId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
   lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4469,18 +4291,16 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   lastName?: boolean
   avatar?: boolean
   role?: boolean
-  provider?: boolean
-  googleId?: boolean
-  facebookId?: boolean
-  linkedinId?: boolean
   isEmailVerified?: boolean
   emailVerificationToken?: boolean
   emailVerificationSentAt?: boolean
+  refreshToken?: boolean
   resetPasswordToken?: boolean
   resetPasswordExpires?: boolean
   loginAttempts?: boolean
   lockedUntil?: boolean
   lastPasswordChange?: boolean
+  refreshTokenVersion?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   deletedAt?: boolean
@@ -4513,18 +4333,16 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   lastName?: boolean
   avatar?: boolean
   role?: boolean
-  provider?: boolean
-  googleId?: boolean
-  facebookId?: boolean
-  linkedinId?: boolean
   isEmailVerified?: boolean
   emailVerificationToken?: boolean
   emailVerificationSentAt?: boolean
+  refreshToken?: boolean
   resetPasswordToken?: boolean
   resetPasswordExpires?: boolean
   loginAttempts?: boolean
   lockedUntil?: boolean
   lastPasswordChange?: boolean
+  refreshTokenVersion?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   deletedAt?: boolean
@@ -4539,18 +4357,16 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   lastName?: boolean
   avatar?: boolean
   role?: boolean
-  provider?: boolean
-  googleId?: boolean
-  facebookId?: boolean
-  linkedinId?: boolean
   isEmailVerified?: boolean
   emailVerificationToken?: boolean
   emailVerificationSentAt?: boolean
+  refreshToken?: boolean
   resetPasswordToken?: boolean
   resetPasswordExpires?: boolean
   loginAttempts?: boolean
   lockedUntil?: boolean
   lastPasswordChange?: boolean
+  refreshTokenVersion?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   deletedAt?: boolean
@@ -4565,25 +4381,23 @@ export type UserSelectScalar = {
   lastName?: boolean
   avatar?: boolean
   role?: boolean
-  provider?: boolean
-  googleId?: boolean
-  facebookId?: boolean
-  linkedinId?: boolean
   isEmailVerified?: boolean
   emailVerificationToken?: boolean
   emailVerificationSentAt?: boolean
+  refreshToken?: boolean
   resetPasswordToken?: boolean
   resetPasswordExpires?: boolean
   loginAttempts?: boolean
   lockedUntil?: boolean
   lastPasswordChange?: boolean
+  refreshTokenVersion?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   deletedAt?: boolean
   lastActiveAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "firstName" | "lastName" | "avatar" | "role" | "provider" | "googleId" | "facebookId" | "linkedinId" | "isEmailVerified" | "emailVerificationToken" | "emailVerificationSentAt" | "resetPasswordToken" | "resetPasswordExpires" | "loginAttempts" | "lockedUntil" | "lastPasswordChange" | "createdAt" | "updatedAt" | "deletedAt" | "lastActiveAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "firstName" | "lastName" | "avatar" | "role" | "isEmailVerified" | "emailVerificationToken" | "emailVerificationSentAt" | "refreshToken" | "resetPasswordToken" | "resetPasswordExpires" | "loginAttempts" | "lockedUntil" | "lastPasswordChange" | "refreshTokenVersion" | "createdAt" | "updatedAt" | "deletedAt" | "lastActiveAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   mediaFiles?: boolean | Prisma.User$mediaFilesArgs<ExtArgs>
   organizationMemberships?: boolean | Prisma.User$organizationMembershipsArgs<ExtArgs>
@@ -4636,18 +4450,16 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     lastName: string | null
     avatar: string | null
     role: $Enums.UserRole
-    provider: $Enums.AuthProvider
-    googleId: string | null
-    facebookId: string | null
-    linkedinId: string | null
     isEmailVerified: boolean
     emailVerificationToken: string | null
     emailVerificationSentAt: Date | null
+    refreshToken: string | null
     resetPasswordToken: string | null
     resetPasswordExpires: Date | null
     loginAttempts: number
     lockedUntil: Date | null
     lastPasswordChange: Date | null
+    refreshTokenVersion: number
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
@@ -5099,18 +4911,16 @@ export interface UserFieldRefs {
   readonly lastName: Prisma.FieldRef<"User", 'String'>
   readonly avatar: Prisma.FieldRef<"User", 'String'>
   readonly role: Prisma.FieldRef<"User", 'UserRole'>
-  readonly provider: Prisma.FieldRef<"User", 'AuthProvider'>
-  readonly googleId: Prisma.FieldRef<"User", 'String'>
-  readonly facebookId: Prisma.FieldRef<"User", 'String'>
-  readonly linkedinId: Prisma.FieldRef<"User", 'String'>
   readonly isEmailVerified: Prisma.FieldRef<"User", 'Boolean'>
   readonly emailVerificationToken: Prisma.FieldRef<"User", 'String'>
   readonly emailVerificationSentAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly refreshToken: Prisma.FieldRef<"User", 'String'>
   readonly resetPasswordToken: Prisma.FieldRef<"User", 'String'>
   readonly resetPasswordExpires: Prisma.FieldRef<"User", 'DateTime'>
   readonly loginAttempts: Prisma.FieldRef<"User", 'Int'>
   readonly lockedUntil: Prisma.FieldRef<"User", 'DateTime'>
   readonly lastPasswordChange: Prisma.FieldRef<"User", 'DateTime'>
+  readonly refreshTokenVersion: Prisma.FieldRef<"User", 'Int'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly deletedAt: Prisma.FieldRef<"User", 'DateTime'>

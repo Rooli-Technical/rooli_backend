@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -16,10 +16,7 @@ import { ForgotPassword } from './dtos/ForgotPassword.dto';
 import { Login } from './dtos/Login.dto';
 import { Register } from './dtos/Register.dto';
 import { ResetPassword } from './dtos/ResetPassword.dto';
-import { OAuthLoginDto } from './dtos/oauth-login.dto';
 import { Public } from './decorators/public.decorator';
-import { Response } from 'express';
-import { EAuthProvider } from './enums/provider.enum';
 import { User } from '@generated/client';
 
 @ApiTags('Authentication')
@@ -52,22 +49,6 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  @Post('oauth')
-  @Public()
-  @Throttle({ default: { limit: 10, ttl: 60 } })
-  @Post('oauth-login')
-  @ApiOperation({
-    summary: 'OAuth login',
-    description:
-      'Login or register using OAuth provider (Google, Facebook, LinkedIn)',
-  })
-  @ApiBody({
-    type: OAuthLoginDto,
-    description: 'OAuth profile data with provider info',
-  })
-  async loginWithOAuth(@Body() dto: OAuthLoginDto): Promise<AuthResponse> {
-    return this.authService.loginWithOAuth(dto);
-  }
 
   @Post('refresh')
   @Public()
@@ -156,63 +137,9 @@ export class AuthController {
     };
   }
 
-  @Get(':provider')
-  @Public()
-  @ApiOperation({ summary: 'Start OAuth flow' })
-  @ApiParam({
-    name: 'provider',
-    enum: ['google', 'facebook', 'github'], // <-- adjust to your supported providers
-    description: 'OAuth provider to use',
-  })
-  @ApiResponse({
-    status: 302,
-    description: 'Redirects the user to the provider’s login page',
-  })
-  async redirectToProvider(
-    @Param('provider') provider: EAuthProvider,
-    @Res() res: Response,
-  ) {
-    const url = await this.authService.getOAuthRedirectUrl(provider);
-    console.log(url);
-    return res.redirect(url);
-  }
-
-  @Get(':provider/callback')
-  @Public()
-  @ApiOperation({ summary: 'Handle OAuth provider callback' })
-  @ApiParam({
-    name: 'provider',
-    enum: ['google', 'facebook', 'github'],
-    description: 'OAuth provider to use',
-  })
-  @ApiQuery({
-    name: 'code',
-    required: true,
-    description: 'Authorization code returned by the provider',
-  })
-  @ApiResponse({
-    status: 302,
-    description:
-      'Redirects to frontend with access token in query params (e.g. https://your-frontend.com/oauth-success?token=...)',
-  })
-  async handleCallback(
-    @Param('provider') provider: EAuthProvider,
-    @Query('code') code: string,
-  ) {
-    const authResponse = await this.authService.handleOAuthCallback(
-      provider,
-      code,
-    );
-
-    // Example: redirect back to frontend with JWT
-    // return res.redirect(
-    //   `https://your-frontend.com/oauth-success?accessToken=${authResponse.accessToken}`,
-    // );
-
-    return authResponse;
-  }
 
   @Get('profile')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({
     status: 200,
@@ -238,4 +165,13 @@ export class AuthController {
       isEmailVerified: user.isEmailVerified,
     };
   }
+
+@Post('logout')
+@ApiOperation({ summary: 'Logout the current user' })
+@ApiResponse({ status: 200, description: 'Logged out successfully.' })
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+async logout(@Req() req: any) {
+  await this.authService.logout(req.user.id);
+  return { message: 'Logged out successfully' };
+}
 }

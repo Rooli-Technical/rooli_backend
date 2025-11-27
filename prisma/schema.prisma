@@ -15,17 +15,13 @@ model User {
   lastName  String?
   avatar    String?
   role      UserRole     @default(ANALYST)
-  provider  AuthProvider @default(LOCAL)
 
-  // OAuth identifiers
-  googleId   String? @unique
-  facebookId String? @unique
-  linkedinId String? @unique
 
   // Email verification
   isEmailVerified         Boolean   @default(false)
   emailVerificationToken  String?
   emailVerificationSentAt DateTime?
+  refreshToken           String?
 
   // Password reset
   resetPasswordToken   String?
@@ -35,6 +31,7 @@ model User {
   loginAttempts      Int       @default(0)
   lockedUntil        DateTime?
   lastPasswordChange DateTime?
+  refreshTokenVersion Int @default(0)
 
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -63,7 +60,6 @@ model User {
   invitedSocialMembers     SocialAccountMember[] @relation("SocialAccountInvitations")
 
   @@index([email, deletedAt])
-  @@index([googleId, deletedAt])
   @@index([createdAt])
   @@index([lastActiveAt])
 }
@@ -1083,13 +1079,6 @@ enum UserRole {
   ANALYST
   VIEWER
   USER
-}
-
-enum AuthProvider {
-  LOCAL
-  GOOGLE
-  FACEBOOK
-  LINKEDIN
 }
 
 enum ContentType {

@@ -43,6 +43,7 @@
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.1",
     "@types/socket.io": "^3.0.1",
+    "argon2": "^0.44.0",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "bull-board": "^1.2.0",
