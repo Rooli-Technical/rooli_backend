@@ -48,6 +48,11 @@ export type User = Prisma.UserModel
  */
 export type SocialAccount = Prisma.SocialAccountModel
 /**
+ * Model SocialAccountMember
+ * 
+ */
+export type SocialAccountMember = Prisma.SocialAccountMemberModel
+/**
  * Model PageAccount
  * 
  */
@@ -67,6 +72,11 @@ export type PostApproval = Prisma.PostApprovalModel
  * 
  */
 export type PublishingMetric = Prisma.PublishingMetricModel
+/**
+ * Model MediaFolder
+ * 
+ */
+export type MediaFolder = Prisma.MediaFolderModel
 /**
  * Model MediaFile
  * 
@@ -133,10 +143,10 @@ export type UserFavoriteTemplate = Prisma.UserFavoriteTemplateModel
  */
 export type PlatformRateLimitLog = Prisma.PlatformRateLimitLogModel
 /**
- * Model PostAnalytics
+ * Model PostAnalyticsSnapshot
  * 
  */
-export type PostAnalytics = Prisma.PostAnalyticsModel
+export type PostAnalyticsSnapshot = Prisma.PostAnalyticsSnapshotModel
 /**
  * Model WebhookEvent
  * 
@@ -147,11 +157,6 @@ export type WebhookEvent = Prisma.WebhookEventModel
  * 
  */
 export type DeadLetterWebhook = Prisma.DeadLetterWebhookModel
-/**
- * Model EngagementMetric
- * 
- */
-export type EngagementMetric = Prisma.EngagementMetricModel
 /**
  * Model PostingSchedule
  * 
@@ -192,11 +197,6 @@ export type UsageRecord = Prisma.UsageRecordModel
  * 
  */
 export type CreditTransaction = Prisma.CreditTransactionModel
-/**
- * Model SocialAccountMember
- * 
- */
-export type SocialAccountMember = Prisma.SocialAccountMemberModel
 /**
  * Model Permission
  * 

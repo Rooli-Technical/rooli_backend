@@ -503,7 +503,7 @@ export class AuthService {
   }
   }
 
-  private validatePasswordStrength(password: string): void {
+   validatePasswordStrength(password: string): void {
     if (password.length < 8) {
       throw new BadRequestException(
         'Password must be at least 8 characters long',

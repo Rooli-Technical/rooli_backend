@@ -53,10 +53,12 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   User: 'User',
   SocialAccount: 'SocialAccount',
+  SocialAccountMember: 'SocialAccountMember',
   PageAccount: 'PageAccount',
   Post: 'Post',
   PostApproval: 'PostApproval',
   PublishingMetric: 'PublishingMetric',
+  MediaFolder: 'MediaFolder',
   MediaFile: 'MediaFile',
   Organization: 'Organization',
   OrganizationMember: 'OrganizationMember',
@@ -70,10 +72,9 @@ export const ModelName = {
   ContentTemplate: 'ContentTemplate',
   UserFavoriteTemplate: 'UserFavoriteTemplate',
   PlatformRateLimitLog: 'PlatformRateLimitLog',
-  PostAnalytics: 'PostAnalytics',
+  PostAnalyticsSnapshot: 'PostAnalyticsSnapshot',
   WebhookEvent: 'WebhookEvent',
   DeadLetterWebhook: 'DeadLetterWebhook',
-  EngagementMetric: 'EngagementMetric',
   PostingSchedule: 'PostingSchedule',
   NotificationEntity: 'NotificationEntity',
   AuditLog: 'AuditLog',
@@ -82,7 +83,6 @@ export const ModelName = {
   Invoice: 'Invoice',
   UsageRecord: 'UsageRecord',
   CreditTransaction: 'CreditTransaction',
-  SocialAccountMember: 'SocialAccountMember',
   Permission: 'Permission',
   Role: 'Role',
   RolePermission: 'RolePermission'
@@ -142,12 +142,13 @@ export const SocialAccountScalarFieldEnum = {
   profileImage: 'profileImage',
   accessToken: 'accessToken',
   refreshToken: 'refreshToken',
-  refreshTokenExpiresIn: 'refreshTokenExpiresIn',
+  refreshTokenExpiresAt: 'refreshTokenExpiresAt',
   accessSecret: 'accessSecret',
   tokenExpiresAt: 'tokenExpiresAt',
   errorMessage: 'errorMessage',
   isActive: 'isActive',
   lastSyncAt: 'lastSyncAt',
+  connectedById: 'connectedById',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   scopes: 'scopes',
@@ -157,6 +158,20 @@ export const SocialAccountScalarFieldEnum = {
 } as const
 
 export type SocialAccountScalarFieldEnum = (typeof SocialAccountScalarFieldEnum)[keyof typeof SocialAccountScalarFieldEnum]
+
+
+export const SocialAccountMemberScalarFieldEnum = {
+  id: 'id',
+  socialAccountId: 'socialAccountId',
+  userId: 'userId',
+  invitedById: 'invitedById',
+  roleId: 'roleId',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SocialAccountMemberScalarFieldEnum = (typeof SocialAccountMemberScalarFieldEnum)[keyof typeof SocialAccountMemberScalarFieldEnum]
 
 
 export const PageAccountScalarFieldEnum = {
@@ -185,7 +200,6 @@ export const PostScalarFieldEnum = {
   content: 'content',
   contentType: 'contentType',
   platform: 'platform',
-  mediaFileIds: 'mediaFileIds',
   scheduledAt: 'scheduledAt',
   timezone: 'timezone',
   publishedAt: 'publishedAt',
@@ -197,6 +211,7 @@ export const PostScalarFieldEnum = {
   updatedAt: 'updatedAt',
   maxRetries: 'maxRetries',
   platformPostId: 'platformPostId',
+  parentPostId: 'parentPostId',
   jobId: 'jobId',
   queueStatus: 'queueStatus',
   aiContentId: 'aiContentId',
@@ -233,6 +248,18 @@ export const PublishingMetricScalarFieldEnum = {
 export type PublishingMetricScalarFieldEnum = (typeof PublishingMetricScalarFieldEnum)[keyof typeof PublishingMetricScalarFieldEnum]
 
 
+export const MediaFolderScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  organizationId: 'organizationId',
+  parentId: 'parentId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MediaFolderScalarFieldEnum = (typeof MediaFolderScalarFieldEnum)[keyof typeof MediaFolderScalarFieldEnum]
+
+
 export const MediaFileScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -244,6 +271,7 @@ export const MediaFileScalarFieldEnum = {
   url: 'url',
   publicId: 'publicId',
   thumbnailUrl: 'thumbnailUrl',
+  folderId: 'folderId',
   duration: 'duration',
   metadata: 'metadata',
   createdAt: 'createdAt',
@@ -472,23 +500,19 @@ export const PlatformRateLimitLogScalarFieldEnum = {
 export type PlatformRateLimitLogScalarFieldEnum = (typeof PlatformRateLimitLogScalarFieldEnum)[keyof typeof PlatformRateLimitLogScalarFieldEnum]
 
 
-export const PostAnalyticsScalarFieldEnum = {
+export const PostAnalyticsSnapshotScalarFieldEnum = {
   id: 'id',
   postId: 'postId',
-  platform: 'platform',
+  recordedAt: 'recordedAt',
   likes: 'likes',
-  shares: 'shares',
   comments: 'comments',
+  shares: 'shares',
   impressions: 'impressions',
-  clicks: 'clicks',
   reach: 'reach',
-  saves: 'saves',
-  videoViews: 'videoViews',
-  syncedAt: 'syncedAt',
-  createdAt: 'createdAt'
+  clicks: 'clicks'
 } as const
 
-export type PostAnalyticsScalarFieldEnum = (typeof PostAnalyticsScalarFieldEnum)[keyof typeof PostAnalyticsScalarFieldEnum]
+export type PostAnalyticsSnapshotScalarFieldEnum = (typeof PostAnalyticsSnapshotScalarFieldEnum)[keyof typeof PostAnalyticsSnapshotScalarFieldEnum]
 
 
 export const WebhookEventScalarFieldEnum = {
@@ -518,22 +542,6 @@ export const DeadLetterWebhookScalarFieldEnum = {
 } as const
 
 export type DeadLetterWebhookScalarFieldEnum = (typeof DeadLetterWebhookScalarFieldEnum)[keyof typeof DeadLetterWebhookScalarFieldEnum]
-
-
-export const EngagementMetricScalarFieldEnum = {
-  id: 'id',
-  postId: 'postId',
-  platform: 'platform',
-  type: 'type',
-  count: 'count',
-  lastEngagementAt: 'lastEngagementAt',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  socialAccountId: 'socialAccountId',
-  organizationId: 'organizationId'
-} as const
-
-export type EngagementMetricScalarFieldEnum = (typeof EngagementMetricScalarFieldEnum)[keyof typeof EngagementMetricScalarFieldEnum]
 
 
 export const PostingScheduleScalarFieldEnum = {
@@ -681,19 +689,6 @@ export const CreditTransactionScalarFieldEnum = {
 export type CreditTransactionScalarFieldEnum = (typeof CreditTransactionScalarFieldEnum)[keyof typeof CreditTransactionScalarFieldEnum]
 
 
-export const SocialAccountMemberScalarFieldEnum = {
-  id: 'id',
-  socialAccountId: 'socialAccountId',
-  userId: 'userId',
-  invitedBy: 'invitedBy',
-  roleId: 'roleId',
-  joinedAt: 'joinedAt',
-  isActive: 'isActive'
-} as const
-
-export type SocialAccountMemberScalarFieldEnum = (typeof SocialAccountMemberScalarFieldEnum)[keyof typeof SocialAccountMemberScalarFieldEnum]
-
-
 export const PermissionScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -711,11 +706,15 @@ export type PermissionScalarFieldEnum = (typeof PermissionScalarFieldEnum)[keyof
 export const RoleScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  slug: 'slug',
   description: 'description',
   isSystem: 'isSystem',
   isDefault: 'isDefault',
+  organizationId: 'organizationId',
+  displayName: 'displayName',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  scope: 'scope'
 } as const
 
 export type RoleScalarFieldEnum = (typeof RoleScalarFieldEnum)[keyof typeof RoleScalarFieldEnum]

@@ -35,12 +35,13 @@ export type SocialAccountMinAggregateOutputType = {
   profileImage: string | null
   accessToken: string | null
   refreshToken: string | null
-  refreshTokenExpiresIn: Date | null
+  refreshTokenExpiresAt: Date | null
   accessSecret: string | null
   tokenExpiresAt: Date | null
   errorMessage: string | null
   isActive: boolean | null
   lastSyncAt: Date | null
+  connectedById: string | null
   createdAt: Date | null
   updatedAt: Date | null
   lastPostedAt: Date | null
@@ -58,12 +59,13 @@ export type SocialAccountMaxAggregateOutputType = {
   profileImage: string | null
   accessToken: string | null
   refreshToken: string | null
-  refreshTokenExpiresIn: Date | null
+  refreshTokenExpiresAt: Date | null
   accessSecret: string | null
   tokenExpiresAt: Date | null
   errorMessage: string | null
   isActive: boolean | null
   lastSyncAt: Date | null
+  connectedById: string | null
   createdAt: Date | null
   updatedAt: Date | null
   lastPostedAt: Date | null
@@ -81,12 +83,13 @@ export type SocialAccountCountAggregateOutputType = {
   profileImage: number
   accessToken: number
   refreshToken: number
-  refreshTokenExpiresIn: number
+  refreshTokenExpiresAt: number
   accessSecret: number
   tokenExpiresAt: number
   errorMessage: number
   isActive: number
   lastSyncAt: number
+  connectedById: number
   createdAt: number
   updatedAt: number
   scopes: number
@@ -108,12 +111,13 @@ export type SocialAccountMinAggregateInputType = {
   profileImage?: true
   accessToken?: true
   refreshToken?: true
-  refreshTokenExpiresIn?: true
+  refreshTokenExpiresAt?: true
   accessSecret?: true
   tokenExpiresAt?: true
   errorMessage?: true
   isActive?: true
   lastSyncAt?: true
+  connectedById?: true
   createdAt?: true
   updatedAt?: true
   lastPostedAt?: true
@@ -131,12 +135,13 @@ export type SocialAccountMaxAggregateInputType = {
   profileImage?: true
   accessToken?: true
   refreshToken?: true
-  refreshTokenExpiresIn?: true
+  refreshTokenExpiresAt?: true
   accessSecret?: true
   tokenExpiresAt?: true
   errorMessage?: true
   isActive?: true
   lastSyncAt?: true
+  connectedById?: true
   createdAt?: true
   updatedAt?: true
   lastPostedAt?: true
@@ -154,12 +159,13 @@ export type SocialAccountCountAggregateInputType = {
   profileImage?: true
   accessToken?: true
   refreshToken?: true
-  refreshTokenExpiresIn?: true
+  refreshTokenExpiresAt?: true
   accessSecret?: true
   tokenExpiresAt?: true
   errorMessage?: true
   isActive?: true
   lastSyncAt?: true
+  connectedById?: true
   createdAt?: true
   updatedAt?: true
   scopes?: true
@@ -252,12 +258,13 @@ export type SocialAccountGroupByOutputType = {
   profileImage: string | null
   accessToken: string
   refreshToken: string | null
-  refreshTokenExpiresIn: Date | null
+  refreshTokenExpiresAt: Date | null
   accessSecret: string | null
   tokenExpiresAt: Date | null
   errorMessage: string | null
   isActive: boolean
   lastSyncAt: Date | null
+  connectedById: string | null
   createdAt: Date
   updatedAt: Date
   scopes: string[]
@@ -298,22 +305,23 @@ export type SocialAccountWhereInput = {
   profileImage?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
   accessToken?: Prisma.StringFilter<"SocialAccount"> | string
   refreshToken?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  refreshTokenExpiresIn?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
+  refreshTokenExpiresAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
   accessSecret?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
   tokenExpiresAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
   errorMessage?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
   isActive?: Prisma.BoolFilter<"SocialAccount"> | boolean
   lastSyncAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
+  connectedById?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SocialAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SocialAccount"> | Date | string
   scopes?: Prisma.StringNullableListFilter<"SocialAccount">
   lastPostedAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"SocialAccount">
   accountType?: Prisma.EnumSocialAccountTypeFilter<"SocialAccount"> | $Enums.SocialAccountType
+  connectedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   organization?: Prisma.XOR<Prisma.OrganizationNullableScalarRelationFilter, Prisma.OrganizationWhereInput> | null
   posts?: Prisma.PostListRelationFilter
   rateLimitLogs?: Prisma.PlatformRateLimitLogListRelationFilter
-  EngagementMetric?: Prisma.EngagementMetricListRelationFilter
   members?: Prisma.SocialAccountMemberListRelationFilter
   notifications?: Prisma.NotificationEntityListRelationFilter
   conversations?: Prisma.ConversationListRelationFilter
@@ -331,22 +339,23 @@ export type SocialAccountOrderByWithRelationInput = {
   profileImage?: Prisma.SortOrderInput | Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrderInput | Prisma.SortOrder
-  refreshTokenExpiresIn?: Prisma.SortOrderInput | Prisma.SortOrder
+  refreshTokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   accessSecret?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   lastSyncAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  connectedById?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   scopes?: Prisma.SortOrder
   lastPostedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   accountType?: Prisma.SortOrder
+  connectedBy?: Prisma.UserOrderByWithRelationInput
   organization?: Prisma.OrganizationOrderByWithRelationInput
   posts?: Prisma.PostOrderByRelationAggregateInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogOrderByRelationAggregateInput
-  EngagementMetric?: Prisma.EngagementMetricOrderByRelationAggregateInput
   members?: Prisma.SocialAccountMemberOrderByRelationAggregateInput
   notifications?: Prisma.NotificationEntityOrderByRelationAggregateInput
   conversations?: Prisma.ConversationOrderByRelationAggregateInput
@@ -355,7 +364,7 @@ export type SocialAccountOrderByWithRelationInput = {
 
 export type SocialAccountWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  organizationId_platform_platformAccountId?: Prisma.SocialAccountOrganizationIdPlatformPlatformAccountIdCompoundUniqueInput
+  platform_platformAccountId?: Prisma.SocialAccountPlatformPlatformAccountIdCompoundUniqueInput
   AND?: Prisma.SocialAccountWhereInput | Prisma.SocialAccountWhereInput[]
   OR?: Prisma.SocialAccountWhereInput[]
   NOT?: Prisma.SocialAccountWhereInput | Prisma.SocialAccountWhereInput[]
@@ -368,27 +377,28 @@ export type SocialAccountWhereUniqueInput = Prisma.AtLeast<{
   profileImage?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
   accessToken?: Prisma.StringFilter<"SocialAccount"> | string
   refreshToken?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  refreshTokenExpiresIn?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
+  refreshTokenExpiresAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
   accessSecret?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
   tokenExpiresAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
   errorMessage?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
   isActive?: Prisma.BoolFilter<"SocialAccount"> | boolean
   lastSyncAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
+  connectedById?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SocialAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SocialAccount"> | Date | string
   scopes?: Prisma.StringNullableListFilter<"SocialAccount">
   lastPostedAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"SocialAccount">
   accountType?: Prisma.EnumSocialAccountTypeFilter<"SocialAccount"> | $Enums.SocialAccountType
+  connectedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   organization?: Prisma.XOR<Prisma.OrganizationNullableScalarRelationFilter, Prisma.OrganizationWhereInput> | null
   posts?: Prisma.PostListRelationFilter
   rateLimitLogs?: Prisma.PlatformRateLimitLogListRelationFilter
-  EngagementMetric?: Prisma.EngagementMetricListRelationFilter
   members?: Prisma.SocialAccountMemberListRelationFilter
   notifications?: Prisma.NotificationEntityListRelationFilter
   conversations?: Prisma.ConversationListRelationFilter
   pages?: Prisma.PageAccountListRelationFilter
-}, "id" | "organizationId_platform_platformAccountId">
+}, "id" | "platform_platformAccountId">
 
 export type SocialAccountOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -401,12 +411,13 @@ export type SocialAccountOrderByWithAggregationInput = {
   profileImage?: Prisma.SortOrderInput | Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrderInput | Prisma.SortOrder
-  refreshTokenExpiresIn?: Prisma.SortOrderInput | Prisma.SortOrder
+  refreshTokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   accessSecret?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   lastSyncAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  connectedById?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   scopes?: Prisma.SortOrder
@@ -432,12 +443,13 @@ export type SocialAccountScalarWhereWithAggregatesInput = {
   profileImage?: Prisma.StringNullableWithAggregatesFilter<"SocialAccount"> | string | null
   accessToken?: Prisma.StringWithAggregatesFilter<"SocialAccount"> | string
   refreshToken?: Prisma.StringNullableWithAggregatesFilter<"SocialAccount"> | string | null
-  refreshTokenExpiresIn?: Prisma.DateTimeNullableWithAggregatesFilter<"SocialAccount"> | Date | string | null
+  refreshTokenExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SocialAccount"> | Date | string | null
   accessSecret?: Prisma.StringNullableWithAggregatesFilter<"SocialAccount"> | string | null
   tokenExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SocialAccount"> | Date | string | null
   errorMessage?: Prisma.StringNullableWithAggregatesFilter<"SocialAccount"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"SocialAccount"> | boolean
   lastSyncAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SocialAccount"> | Date | string | null
+  connectedById?: Prisma.StringNullableWithAggregatesFilter<"SocialAccount"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SocialAccount"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SocialAccount"> | Date | string
   scopes?: Prisma.StringNullableListFilter<"SocialAccount">
@@ -456,7 +468,7 @@ export type SocialAccountCreateInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
@@ -468,10 +480,10 @@ export type SocialAccountCreateInput = {
   lastPostedAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
+  connectedBy?: Prisma.UserCreateNestedOneWithoutSocialAccountsInput
   organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
   posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
@@ -489,12 +501,13 @@ export type SocialAccountUncheckedCreateInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -503,7 +516,6 @@ export type SocialAccountUncheckedCreateInput = {
   accountType?: $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
@@ -520,7 +532,7 @@ export type SocialAccountUpdateInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -532,10 +544,10 @@ export type SocialAccountUpdateInput = {
   lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  connectedBy?: Prisma.UserUpdateOneWithoutSocialAccountsNestedInput
   organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
   posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
@@ -553,12 +565,13 @@ export type SocialAccountUncheckedUpdateInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
@@ -567,7 +580,6 @@ export type SocialAccountUncheckedUpdateInput = {
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
@@ -585,12 +597,13 @@ export type SocialAccountCreateManyInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -609,7 +622,7 @@ export type SocialAccountUpdateManyMutationInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -634,18 +647,29 @@ export type SocialAccountUncheckedUpdateManyInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
   lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+}
+
+export type SocialAccountListRelationFilter = {
+  every?: Prisma.SocialAccountWhereInput
+  some?: Prisma.SocialAccountWhereInput
+  none?: Prisma.SocialAccountWhereInput
+}
+
+export type SocialAccountOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type StringNullableListFilter<$PrismaModel = never> = {
@@ -656,8 +680,7 @@ export type StringNullableListFilter<$PrismaModel = never> = {
   isEmpty?: boolean
 }
 
-export type SocialAccountOrganizationIdPlatformPlatformAccountIdCompoundUniqueInput = {
-  organizationId: string
+export type SocialAccountPlatformPlatformAccountIdCompoundUniqueInput = {
   platform: $Enums.Platform
   platformAccountId: string
 }
@@ -673,12 +696,13 @@ export type SocialAccountCountOrderByAggregateInput = {
   profileImage?: Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrder
-  refreshTokenExpiresIn?: Prisma.SortOrder
+  refreshTokenExpiresAt?: Prisma.SortOrder
   accessSecret?: Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   lastSyncAt?: Prisma.SortOrder
+  connectedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   scopes?: Prisma.SortOrder
@@ -698,12 +722,13 @@ export type SocialAccountMaxOrderByAggregateInput = {
   profileImage?: Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrder
-  refreshTokenExpiresIn?: Prisma.SortOrder
+  refreshTokenExpiresAt?: Prisma.SortOrder
   accessSecret?: Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   lastSyncAt?: Prisma.SortOrder
+  connectedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastPostedAt?: Prisma.SortOrder
@@ -721,12 +746,13 @@ export type SocialAccountMinOrderByAggregateInput = {
   profileImage?: Prisma.SortOrder
   accessToken?: Prisma.SortOrder
   refreshToken?: Prisma.SortOrder
-  refreshTokenExpiresIn?: Prisma.SortOrder
+  refreshTokenExpiresAt?: Prisma.SortOrder
   accessSecret?: Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   lastSyncAt?: Prisma.SortOrder
+  connectedById?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastPostedAt?: Prisma.SortOrder
@@ -738,19 +764,51 @@ export type SocialAccountScalarRelationFilter = {
   isNot?: Prisma.SocialAccountWhereInput
 }
 
-export type SocialAccountListRelationFilter = {
-  every?: Prisma.SocialAccountWhereInput
-  some?: Prisma.SocialAccountWhereInput
-  none?: Prisma.SocialAccountWhereInput
-}
-
-export type SocialAccountOrderByRelationAggregateInput = {
-  _count?: Prisma.SortOrder
-}
-
 export type SocialAccountNullableScalarRelationFilter = {
   is?: Prisma.SocialAccountWhereInput | null
   isNot?: Prisma.SocialAccountWhereInput | null
+}
+
+export type SocialAccountCreateNestedManyWithoutConnectedByInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutConnectedByInput, Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput> | Prisma.SocialAccountCreateWithoutConnectedByInput[] | Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput[]
+  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutConnectedByInput | Prisma.SocialAccountCreateOrConnectWithoutConnectedByInput[]
+  createMany?: Prisma.SocialAccountCreateManyConnectedByInputEnvelope
+  connect?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+}
+
+export type SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutConnectedByInput, Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput> | Prisma.SocialAccountCreateWithoutConnectedByInput[] | Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput[]
+  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutConnectedByInput | Prisma.SocialAccountCreateOrConnectWithoutConnectedByInput[]
+  createMany?: Prisma.SocialAccountCreateManyConnectedByInputEnvelope
+  connect?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+}
+
+export type SocialAccountUpdateManyWithoutConnectedByNestedInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutConnectedByInput, Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput> | Prisma.SocialAccountCreateWithoutConnectedByInput[] | Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput[]
+  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutConnectedByInput | Prisma.SocialAccountCreateOrConnectWithoutConnectedByInput[]
+  upsert?: Prisma.SocialAccountUpsertWithWhereUniqueWithoutConnectedByInput | Prisma.SocialAccountUpsertWithWhereUniqueWithoutConnectedByInput[]
+  createMany?: Prisma.SocialAccountCreateManyConnectedByInputEnvelope
+  set?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+  disconnect?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+  delete?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+  connect?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+  update?: Prisma.SocialAccountUpdateWithWhereUniqueWithoutConnectedByInput | Prisma.SocialAccountUpdateWithWhereUniqueWithoutConnectedByInput[]
+  updateMany?: Prisma.SocialAccountUpdateManyWithWhereWithoutConnectedByInput | Prisma.SocialAccountUpdateManyWithWhereWithoutConnectedByInput[]
+  deleteMany?: Prisma.SocialAccountScalarWhereInput | Prisma.SocialAccountScalarWhereInput[]
+}
+
+export type SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutConnectedByInput, Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput> | Prisma.SocialAccountCreateWithoutConnectedByInput[] | Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput[]
+  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutConnectedByInput | Prisma.SocialAccountCreateOrConnectWithoutConnectedByInput[]
+  upsert?: Prisma.SocialAccountUpsertWithWhereUniqueWithoutConnectedByInput | Prisma.SocialAccountUpsertWithWhereUniqueWithoutConnectedByInput[]
+  createMany?: Prisma.SocialAccountCreateManyConnectedByInputEnvelope
+  set?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+  disconnect?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+  delete?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+  connect?: Prisma.SocialAccountWhereUniqueInput | Prisma.SocialAccountWhereUniqueInput[]
+  update?: Prisma.SocialAccountUpdateWithWhereUniqueWithoutConnectedByInput | Prisma.SocialAccountUpdateWithWhereUniqueWithoutConnectedByInput[]
+  updateMany?: Prisma.SocialAccountUpdateManyWithWhereWithoutConnectedByInput | Prisma.SocialAccountUpdateManyWithWhereWithoutConnectedByInput[]
+  deleteMany?: Prisma.SocialAccountScalarWhereInput | Prisma.SocialAccountScalarWhereInput[]
 }
 
 export type SocialAccountCreatescopesInput = {
@@ -768,6 +826,20 @@ export type SocialAccountUpdatescopesInput = {
 
 export type EnumSocialAccountTypeFieldUpdateOperationsInput = {
   set?: $Enums.SocialAccountType
+}
+
+export type SocialAccountCreateNestedOneWithoutMembersInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutMembersInput, Prisma.SocialAccountUncheckedCreateWithoutMembersInput>
+  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutMembersInput
+  connect?: Prisma.SocialAccountWhereUniqueInput
+}
+
+export type SocialAccountUpdateOneRequiredWithoutMembersNestedInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutMembersInput, Prisma.SocialAccountUncheckedCreateWithoutMembersInput>
+  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutMembersInput
+  upsert?: Prisma.SocialAccountUpsertWithoutMembersInput
+  connect?: Prisma.SocialAccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SocialAccountUpdateToOneWithWhereWithoutMembersInput, Prisma.SocialAccountUpdateWithoutMembersInput>, Prisma.SocialAccountUncheckedUpdateWithoutMembersInput>
 }
 
 export type SocialAccountCreateNestedOneWithoutPagesInput = {
@@ -870,20 +942,6 @@ export type SocialAccountUpdateOneRequiredWithoutRateLimitLogsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SocialAccountUpdateToOneWithWhereWithoutRateLimitLogsInput, Prisma.SocialAccountUpdateWithoutRateLimitLogsInput>, Prisma.SocialAccountUncheckedUpdateWithoutRateLimitLogsInput>
 }
 
-export type SocialAccountCreateNestedOneWithoutEngagementMetricInput = {
-  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutEngagementMetricInput, Prisma.SocialAccountUncheckedCreateWithoutEngagementMetricInput>
-  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutEngagementMetricInput
-  connect?: Prisma.SocialAccountWhereUniqueInput
-}
-
-export type SocialAccountUpdateOneRequiredWithoutEngagementMetricNestedInput = {
-  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutEngagementMetricInput, Prisma.SocialAccountUncheckedCreateWithoutEngagementMetricInput>
-  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutEngagementMetricInput
-  upsert?: Prisma.SocialAccountUpsertWithoutEngagementMetricInput
-  connect?: Prisma.SocialAccountWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.SocialAccountUpdateToOneWithWhereWithoutEngagementMetricInput, Prisma.SocialAccountUpdateWithoutEngagementMetricInput>, Prisma.SocialAccountUncheckedUpdateWithoutEngagementMetricInput>
-}
-
 export type SocialAccountCreateNestedOneWithoutNotificationsInput = {
   create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutNotificationsInput, Prisma.SocialAccountUncheckedCreateWithoutNotificationsInput>
   connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutNotificationsInput
@@ -900,21 +958,7 @@ export type SocialAccountUpdateOneWithoutNotificationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SocialAccountUpdateToOneWithWhereWithoutNotificationsInput, Prisma.SocialAccountUpdateWithoutNotificationsInput>, Prisma.SocialAccountUncheckedUpdateWithoutNotificationsInput>
 }
 
-export type SocialAccountCreateNestedOneWithoutMembersInput = {
-  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutMembersInput, Prisma.SocialAccountUncheckedCreateWithoutMembersInput>
-  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutMembersInput
-  connect?: Prisma.SocialAccountWhereUniqueInput
-}
-
-export type SocialAccountUpdateOneRequiredWithoutMembersNestedInput = {
-  create?: Prisma.XOR<Prisma.SocialAccountCreateWithoutMembersInput, Prisma.SocialAccountUncheckedCreateWithoutMembersInput>
-  connectOrCreate?: Prisma.SocialAccountCreateOrConnectWithoutMembersInput
-  upsert?: Prisma.SocialAccountUpsertWithoutMembersInput
-  connect?: Prisma.SocialAccountWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.SocialAccountUpdateToOneWithWhereWithoutMembersInput, Prisma.SocialAccountUpdateWithoutMembersInput>, Prisma.SocialAccountUncheckedUpdateWithoutMembersInput>
-}
-
-export type SocialAccountCreateWithoutPagesInput = {
+export type SocialAccountCreateWithoutConnectedByInput = {
   id?: string
   platform: $Enums.Platform
   platformAccountId: string
@@ -924,7 +968,7 @@ export type SocialAccountCreateWithoutPagesInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
@@ -939,7 +983,264 @@ export type SocialAccountCreateWithoutPagesInput = {
   organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
   posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutSocialAccountInput
+  members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
+  pages?: Prisma.PageAccountCreateNestedManyWithoutSocialAccountInput
+}
+
+export type SocialAccountUncheckedCreateWithoutConnectedByInput = {
+  id?: string
+  organizationId?: string | null
+  platform: $Enums.Platform
+  platformAccountId: string
+  username?: string | null
+  name?: string | null
+  displayName?: string | null
+  profileImage?: string | null
+  accessToken: string
+  refreshToken?: string | null
+  refreshTokenExpiresAt?: Date | string | null
+  accessSecret?: string | null
+  tokenExpiresAt?: Date | string | null
+  errorMessage?: string | null
+  isActive?: boolean
+  lastSyncAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  scopes?: Prisma.SocialAccountCreatescopesInput | string[]
+  lastPostedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accountType?: $Enums.SocialAccountType
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
+  rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
+  members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
+  pages?: Prisma.PageAccountUncheckedCreateNestedManyWithoutSocialAccountInput
+}
+
+export type SocialAccountCreateOrConnectWithoutConnectedByInput = {
+  where: Prisma.SocialAccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.SocialAccountCreateWithoutConnectedByInput, Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput>
+}
+
+export type SocialAccountCreateManyConnectedByInputEnvelope = {
+  data: Prisma.SocialAccountCreateManyConnectedByInput | Prisma.SocialAccountCreateManyConnectedByInput[]
+  skipDuplicates?: boolean
+}
+
+export type SocialAccountUpsertWithWhereUniqueWithoutConnectedByInput = {
+  where: Prisma.SocialAccountWhereUniqueInput
+  update: Prisma.XOR<Prisma.SocialAccountUpdateWithoutConnectedByInput, Prisma.SocialAccountUncheckedUpdateWithoutConnectedByInput>
+  create: Prisma.XOR<Prisma.SocialAccountCreateWithoutConnectedByInput, Prisma.SocialAccountUncheckedCreateWithoutConnectedByInput>
+}
+
+export type SocialAccountUpdateWithWhereUniqueWithoutConnectedByInput = {
+  where: Prisma.SocialAccountWhereUniqueInput
+  data: Prisma.XOR<Prisma.SocialAccountUpdateWithoutConnectedByInput, Prisma.SocialAccountUncheckedUpdateWithoutConnectedByInput>
+}
+
+export type SocialAccountUpdateManyWithWhereWithoutConnectedByInput = {
+  where: Prisma.SocialAccountScalarWhereInput
+  data: Prisma.XOR<Prisma.SocialAccountUpdateManyMutationInput, Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByInput>
+}
+
+export type SocialAccountScalarWhereInput = {
+  AND?: Prisma.SocialAccountScalarWhereInput | Prisma.SocialAccountScalarWhereInput[]
+  OR?: Prisma.SocialAccountScalarWhereInput[]
+  NOT?: Prisma.SocialAccountScalarWhereInput | Prisma.SocialAccountScalarWhereInput[]
+  id?: Prisma.StringFilter<"SocialAccount"> | string
+  organizationId?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  platform?: Prisma.EnumPlatformFilter<"SocialAccount"> | $Enums.Platform
+  platformAccountId?: Prisma.StringFilter<"SocialAccount"> | string
+  username?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  name?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  displayName?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  profileImage?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  accessToken?: Prisma.StringFilter<"SocialAccount"> | string
+  refreshToken?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  refreshTokenExpiresAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
+  accessSecret?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  tokenExpiresAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
+  errorMessage?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  isActive?: Prisma.BoolFilter<"SocialAccount"> | boolean
+  lastSyncAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
+  connectedById?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
+  createdAt?: Prisma.DateTimeFilter<"SocialAccount"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"SocialAccount"> | Date | string
+  scopes?: Prisma.StringNullableListFilter<"SocialAccount">
+  lastPostedAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
+  metadata?: Prisma.JsonNullableFilter<"SocialAccount">
+  accountType?: Prisma.EnumSocialAccountTypeFilter<"SocialAccount"> | $Enums.SocialAccountType
+}
+
+export type SocialAccountCreateWithoutMembersInput = {
+  id?: string
+  platform: $Enums.Platform
+  platformAccountId: string
+  username?: string | null
+  name?: string | null
+  displayName?: string | null
+  profileImage?: string | null
+  accessToken: string
+  refreshToken?: string | null
+  refreshTokenExpiresAt?: Date | string | null
+  accessSecret?: string | null
+  tokenExpiresAt?: Date | string | null
+  errorMessage?: string | null
+  isActive?: boolean
+  lastSyncAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  scopes?: Prisma.SocialAccountCreatescopesInput | string[]
+  lastPostedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accountType?: $Enums.SocialAccountType
+  connectedBy?: Prisma.UserCreateNestedOneWithoutSocialAccountsInput
+  organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
+  posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
+  rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
+  pages?: Prisma.PageAccountCreateNestedManyWithoutSocialAccountInput
+}
+
+export type SocialAccountUncheckedCreateWithoutMembersInput = {
+  id?: string
+  organizationId?: string | null
+  platform: $Enums.Platform
+  platformAccountId: string
+  username?: string | null
+  name?: string | null
+  displayName?: string | null
+  profileImage?: string | null
+  accessToken: string
+  refreshToken?: string | null
+  refreshTokenExpiresAt?: Date | string | null
+  accessSecret?: string | null
+  tokenExpiresAt?: Date | string | null
+  errorMessage?: string | null
+  isActive?: boolean
+  lastSyncAt?: Date | string | null
+  connectedById?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  scopes?: Prisma.SocialAccountCreatescopesInput | string[]
+  lastPostedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accountType?: $Enums.SocialAccountType
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
+  rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
+  pages?: Prisma.PageAccountUncheckedCreateNestedManyWithoutSocialAccountInput
+}
+
+export type SocialAccountCreateOrConnectWithoutMembersInput = {
+  where: Prisma.SocialAccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.SocialAccountCreateWithoutMembersInput, Prisma.SocialAccountUncheckedCreateWithoutMembersInput>
+}
+
+export type SocialAccountUpsertWithoutMembersInput = {
+  update: Prisma.XOR<Prisma.SocialAccountUpdateWithoutMembersInput, Prisma.SocialAccountUncheckedUpdateWithoutMembersInput>
+  create: Prisma.XOR<Prisma.SocialAccountCreateWithoutMembersInput, Prisma.SocialAccountUncheckedCreateWithoutMembersInput>
+  where?: Prisma.SocialAccountWhereInput
+}
+
+export type SocialAccountUpdateToOneWithWhereWithoutMembersInput = {
+  where?: Prisma.SocialAccountWhereInput
+  data: Prisma.XOR<Prisma.SocialAccountUpdateWithoutMembersInput, Prisma.SocialAccountUncheckedUpdateWithoutMembersInput>
+}
+
+export type SocialAccountUpdateWithoutMembersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  platformAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.StringFieldUpdateOperationsInput | string
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
+  lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  connectedBy?: Prisma.UserUpdateOneWithoutSocialAccountsNestedInput
+  organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
+  posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
+  rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
+  pages?: Prisma.PageAccountUpdateManyWithoutSocialAccountNestedInput
+}
+
+export type SocialAccountUncheckedUpdateWithoutMembersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  platformAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.StringFieldUpdateOperationsInput | string
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
+  lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
+  rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
+  pages?: Prisma.PageAccountUncheckedUpdateManyWithoutSocialAccountNestedInput
+}
+
+export type SocialAccountCreateWithoutPagesInput = {
+  id?: string
+  platform: $Enums.Platform
+  platformAccountId: string
+  username?: string | null
+  name?: string | null
+  displayName?: string | null
+  profileImage?: string | null
+  accessToken: string
+  refreshToken?: string | null
+  refreshTokenExpiresAt?: Date | string | null
+  accessSecret?: string | null
+  tokenExpiresAt?: Date | string | null
+  errorMessage?: string | null
+  isActive?: boolean
+  lastSyncAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  scopes?: Prisma.SocialAccountCreatescopesInput | string[]
+  lastPostedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accountType?: $Enums.SocialAccountType
+  connectedBy?: Prisma.UserCreateNestedOneWithoutSocialAccountsInput
+  organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
+  posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
+  rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
@@ -956,12 +1257,13 @@ export type SocialAccountUncheckedCreateWithoutPagesInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -970,7 +1272,6 @@ export type SocialAccountUncheckedCreateWithoutPagesInput = {
   accountType?: $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
@@ -1002,7 +1303,7 @@ export type SocialAccountUpdateWithoutPagesInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1014,10 +1315,10 @@ export type SocialAccountUpdateWithoutPagesInput = {
   lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  connectedBy?: Prisma.UserUpdateOneWithoutSocialAccountsNestedInput
   organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
   posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
@@ -1034,12 +1335,13 @@ export type SocialAccountUncheckedUpdateWithoutPagesInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
@@ -1048,7 +1350,6 @@ export type SocialAccountUncheckedUpdateWithoutPagesInput = {
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
@@ -1064,7 +1365,7 @@ export type SocialAccountCreateWithoutPostsInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
@@ -1076,9 +1377,9 @@ export type SocialAccountCreateWithoutPostsInput = {
   lastPostedAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
+  connectedBy?: Prisma.UserCreateNestedOneWithoutSocialAccountsInput
   organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
@@ -1096,12 +1397,13 @@ export type SocialAccountUncheckedCreateWithoutPostsInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -1109,7 +1411,6 @@ export type SocialAccountUncheckedCreateWithoutPostsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
@@ -1142,7 +1443,7 @@ export type SocialAccountUpdateWithoutPostsInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1154,9 +1455,9 @@ export type SocialAccountUpdateWithoutPostsInput = {
   lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  connectedBy?: Prisma.UserUpdateOneWithoutSocialAccountsNestedInput
   organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
@@ -1174,12 +1475,13 @@ export type SocialAccountUncheckedUpdateWithoutPostsInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
@@ -1187,7 +1489,6 @@ export type SocialAccountUncheckedUpdateWithoutPostsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
@@ -1204,7 +1505,7 @@ export type SocialAccountCreateWithoutOrganizationInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
@@ -1216,9 +1517,9 @@ export type SocialAccountCreateWithoutOrganizationInput = {
   lastPostedAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
+  connectedBy?: Prisma.UserCreateNestedOneWithoutSocialAccountsInput
   posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
@@ -1235,12 +1536,13 @@ export type SocialAccountUncheckedCreateWithoutOrganizationInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -1249,7 +1551,6 @@ export type SocialAccountUncheckedCreateWithoutOrganizationInput = {
   accountType?: $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
@@ -1282,34 +1583,6 @@ export type SocialAccountUpdateManyWithWhereWithoutOrganizationInput = {
   data: Prisma.XOR<Prisma.SocialAccountUpdateManyMutationInput, Prisma.SocialAccountUncheckedUpdateManyWithoutOrganizationInput>
 }
 
-export type SocialAccountScalarWhereInput = {
-  AND?: Prisma.SocialAccountScalarWhereInput | Prisma.SocialAccountScalarWhereInput[]
-  OR?: Prisma.SocialAccountScalarWhereInput[]
-  NOT?: Prisma.SocialAccountScalarWhereInput | Prisma.SocialAccountScalarWhereInput[]
-  id?: Prisma.StringFilter<"SocialAccount"> | string
-  organizationId?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  platform?: Prisma.EnumPlatformFilter<"SocialAccount"> | $Enums.Platform
-  platformAccountId?: Prisma.StringFilter<"SocialAccount"> | string
-  username?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  name?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  displayName?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  profileImage?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  accessToken?: Prisma.StringFilter<"SocialAccount"> | string
-  refreshToken?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  refreshTokenExpiresIn?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
-  accessSecret?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  tokenExpiresAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
-  errorMessage?: Prisma.StringNullableFilter<"SocialAccount"> | string | null
-  isActive?: Prisma.BoolFilter<"SocialAccount"> | boolean
-  lastSyncAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
-  createdAt?: Prisma.DateTimeFilter<"SocialAccount"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"SocialAccount"> | Date | string
-  scopes?: Prisma.StringNullableListFilter<"SocialAccount">
-  lastPostedAt?: Prisma.DateTimeNullableFilter<"SocialAccount"> | Date | string | null
-  metadata?: Prisma.JsonNullableFilter<"SocialAccount">
-  accountType?: Prisma.EnumSocialAccountTypeFilter<"SocialAccount"> | $Enums.SocialAccountType
-}
-
 export type SocialAccountCreateWithoutConversationsInput = {
   id?: string
   platform: $Enums.Platform
@@ -1320,7 +1593,7 @@ export type SocialAccountCreateWithoutConversationsInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
@@ -1332,10 +1605,10 @@ export type SocialAccountCreateWithoutConversationsInput = {
   lastPostedAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
+  connectedBy?: Prisma.UserCreateNestedOneWithoutSocialAccountsInput
   organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
   posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
   pages?: Prisma.PageAccountCreateNestedManyWithoutSocialAccountInput
@@ -1352,12 +1625,13 @@ export type SocialAccountUncheckedCreateWithoutConversationsInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -1366,7 +1640,6 @@ export type SocialAccountUncheckedCreateWithoutConversationsInput = {
   accountType?: $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
   pages?: Prisma.PageAccountUncheckedCreateNestedManyWithoutSocialAccountInput
@@ -1398,7 +1671,7 @@ export type SocialAccountUpdateWithoutConversationsInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1410,10 +1683,10 @@ export type SocialAccountUpdateWithoutConversationsInput = {
   lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  connectedBy?: Prisma.UserUpdateOneWithoutSocialAccountsNestedInput
   organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
   posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
   pages?: Prisma.PageAccountUpdateManyWithoutSocialAccountNestedInput
@@ -1430,12 +1703,13 @@ export type SocialAccountUncheckedUpdateWithoutConversationsInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
@@ -1444,7 +1718,6 @@ export type SocialAccountUncheckedUpdateWithoutConversationsInput = {
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
   pages?: Prisma.PageAccountUncheckedUpdateManyWithoutSocialAccountNestedInput
@@ -1460,7 +1733,7 @@ export type SocialAccountCreateWithoutRateLimitLogsInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
@@ -1472,9 +1745,9 @@ export type SocialAccountCreateWithoutRateLimitLogsInput = {
   lastPostedAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
+  connectedBy?: Prisma.UserCreateNestedOneWithoutSocialAccountsInput
   organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
   posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
@@ -1492,12 +1765,13 @@ export type SocialAccountUncheckedCreateWithoutRateLimitLogsInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -1505,7 +1779,6 @@ export type SocialAccountUncheckedCreateWithoutRateLimitLogsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
@@ -1538,7 +1811,7 @@ export type SocialAccountUpdateWithoutRateLimitLogsInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1550,9 +1823,9 @@ export type SocialAccountUpdateWithoutRateLimitLogsInput = {
   lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  connectedBy?: Prisma.UserUpdateOneWithoutSocialAccountsNestedInput
   organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
   posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
@@ -1570,12 +1843,13 @@ export type SocialAccountUncheckedUpdateWithoutRateLimitLogsInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
@@ -1583,147 +1857,6 @@ export type SocialAccountUncheckedUpdateWithoutRateLimitLogsInput = {
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutSocialAccountNestedInput
-  members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
-  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
-  pages?: Prisma.PageAccountUncheckedUpdateManyWithoutSocialAccountNestedInput
-}
-
-export type SocialAccountCreateWithoutEngagementMetricInput = {
-  id?: string
-  platform: $Enums.Platform
-  platformAccountId: string
-  username?: string | null
-  name?: string | null
-  displayName?: string | null
-  profileImage?: string | null
-  accessToken: string
-  refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
-  accessSecret?: string | null
-  tokenExpiresAt?: Date | string | null
-  errorMessage?: string | null
-  isActive?: boolean
-  lastSyncAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  scopes?: Prisma.SocialAccountCreatescopesInput | string[]
-  lastPostedAt?: Date | string | null
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  accountType?: $Enums.SocialAccountType
-  organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
-  posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
-  rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
-  members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
-  conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
-  pages?: Prisma.PageAccountCreateNestedManyWithoutSocialAccountInput
-}
-
-export type SocialAccountUncheckedCreateWithoutEngagementMetricInput = {
-  id?: string
-  organizationId?: string | null
-  platform: $Enums.Platform
-  platformAccountId: string
-  username?: string | null
-  name?: string | null
-  displayName?: string | null
-  profileImage?: string | null
-  accessToken: string
-  refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
-  accessSecret?: string | null
-  tokenExpiresAt?: Date | string | null
-  errorMessage?: string | null
-  isActive?: boolean
-  lastSyncAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  scopes?: Prisma.SocialAccountCreatescopesInput | string[]
-  lastPostedAt?: Date | string | null
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  accountType?: $Enums.SocialAccountType
-  posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
-  rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
-  members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
-  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
-  pages?: Prisma.PageAccountUncheckedCreateNestedManyWithoutSocialAccountInput
-}
-
-export type SocialAccountCreateOrConnectWithoutEngagementMetricInput = {
-  where: Prisma.SocialAccountWhereUniqueInput
-  create: Prisma.XOR<Prisma.SocialAccountCreateWithoutEngagementMetricInput, Prisma.SocialAccountUncheckedCreateWithoutEngagementMetricInput>
-}
-
-export type SocialAccountUpsertWithoutEngagementMetricInput = {
-  update: Prisma.XOR<Prisma.SocialAccountUpdateWithoutEngagementMetricInput, Prisma.SocialAccountUncheckedUpdateWithoutEngagementMetricInput>
-  create: Prisma.XOR<Prisma.SocialAccountCreateWithoutEngagementMetricInput, Prisma.SocialAccountUncheckedCreateWithoutEngagementMetricInput>
-  where?: Prisma.SocialAccountWhereInput
-}
-
-export type SocialAccountUpdateToOneWithWhereWithoutEngagementMetricInput = {
-  where?: Prisma.SocialAccountWhereInput
-  data: Prisma.XOR<Prisma.SocialAccountUpdateWithoutEngagementMetricInput, Prisma.SocialAccountUncheckedUpdateWithoutEngagementMetricInput>
-}
-
-export type SocialAccountUpdateWithoutEngagementMetricInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  platformAccountId?: Prisma.StringFieldUpdateOperationsInput | string
-  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  accessToken?: Prisma.StringFieldUpdateOperationsInput | string
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
-  lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
-  organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
-  posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
-  rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
-  members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
-  conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
-  pages?: Prisma.PageAccountUpdateManyWithoutSocialAccountNestedInput
-}
-
-export type SocialAccountUncheckedUpdateWithoutEngagementMetricInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  organizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  platformAccountId?: Prisma.StringFieldUpdateOperationsInput | string
-  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  accessToken?: Prisma.StringFieldUpdateOperationsInput | string
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
-  lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
-  posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
-  rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
@@ -1740,7 +1873,7 @@ export type SocialAccountCreateWithoutNotificationsInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
@@ -1752,10 +1885,10 @@ export type SocialAccountCreateWithoutNotificationsInput = {
   lastPostedAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
+  connectedBy?: Prisma.UserCreateNestedOneWithoutSocialAccountsInput
   organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
   posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
   pages?: Prisma.PageAccountCreateNestedManyWithoutSocialAccountInput
@@ -1772,12 +1905,13 @@ export type SocialAccountUncheckedCreateWithoutNotificationsInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -1786,7 +1920,6 @@ export type SocialAccountUncheckedCreateWithoutNotificationsInput = {
   accountType?: $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutSocialAccountInput
   members?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutSocialAccountInput
   conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
   pages?: Prisma.PageAccountUncheckedCreateNestedManyWithoutSocialAccountInput
@@ -1818,7 +1951,7 @@ export type SocialAccountUpdateWithoutNotificationsInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1830,10 +1963,10 @@ export type SocialAccountUpdateWithoutNotificationsInput = {
   lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  connectedBy?: Prisma.UserUpdateOneWithoutSocialAccountsNestedInput
   organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
   posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
   pages?: Prisma.PageAccountUpdateManyWithoutSocialAccountNestedInput
@@ -1850,12 +1983,13 @@ export type SocialAccountUncheckedUpdateWithoutNotificationsInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
@@ -1864,44 +1998,12 @@ export type SocialAccountUncheckedUpdateWithoutNotificationsInput = {
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
   pages?: Prisma.PageAccountUncheckedUpdateManyWithoutSocialAccountNestedInput
 }
 
-export type SocialAccountCreateWithoutMembersInput = {
-  id?: string
-  platform: $Enums.Platform
-  platformAccountId: string
-  username?: string | null
-  name?: string | null
-  displayName?: string | null
-  profileImage?: string | null
-  accessToken: string
-  refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
-  accessSecret?: string | null
-  tokenExpiresAt?: Date | string | null
-  errorMessage?: string | null
-  isActive?: boolean
-  lastSyncAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  scopes?: Prisma.SocialAccountCreatescopesInput | string[]
-  lastPostedAt?: Date | string | null
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  accountType?: $Enums.SocialAccountType
-  organization?: Prisma.OrganizationCreateNestedOneWithoutSocialAccountsInput
-  posts?: Prisma.PostCreateNestedManyWithoutSocialAccountInput
-  rateLimitLogs?: Prisma.PlatformRateLimitLogCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutSocialAccountInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutSocialAccountInput
-  conversations?: Prisma.ConversationCreateNestedManyWithoutSocialAccountInput
-  pages?: Prisma.PageAccountCreateNestedManyWithoutSocialAccountInput
-}
-
-export type SocialAccountUncheckedCreateWithoutMembersInput = {
+export type SocialAccountCreateManyConnectedByInput = {
   id?: string
   organizationId?: string | null
   platform: $Enums.Platform
@@ -1912,7 +2014,7 @@ export type SocialAccountUncheckedCreateWithoutMembersInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
@@ -1924,31 +2026,9 @@ export type SocialAccountUncheckedCreateWithoutMembersInput = {
   lastPostedAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: $Enums.SocialAccountType
-  posts?: Prisma.PostUncheckedCreateNestedManyWithoutSocialAccountInput
-  rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedCreateNestedManyWithoutSocialAccountInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutSocialAccountInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutSocialAccountInput
-  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutSocialAccountInput
-  pages?: Prisma.PageAccountUncheckedCreateNestedManyWithoutSocialAccountInput
 }
 
-export type SocialAccountCreateOrConnectWithoutMembersInput = {
-  where: Prisma.SocialAccountWhereUniqueInput
-  create: Prisma.XOR<Prisma.SocialAccountCreateWithoutMembersInput, Prisma.SocialAccountUncheckedCreateWithoutMembersInput>
-}
-
-export type SocialAccountUpsertWithoutMembersInput = {
-  update: Prisma.XOR<Prisma.SocialAccountUpdateWithoutMembersInput, Prisma.SocialAccountUncheckedUpdateWithoutMembersInput>
-  create: Prisma.XOR<Prisma.SocialAccountCreateWithoutMembersInput, Prisma.SocialAccountUncheckedCreateWithoutMembersInput>
-  where?: Prisma.SocialAccountWhereInput
-}
-
-export type SocialAccountUpdateToOneWithWhereWithoutMembersInput = {
-  where?: Prisma.SocialAccountWhereInput
-  data: Prisma.XOR<Prisma.SocialAccountUpdateWithoutMembersInput, Prisma.SocialAccountUncheckedUpdateWithoutMembersInput>
-}
-
-export type SocialAccountUpdateWithoutMembersInput = {
+export type SocialAccountUpdateWithoutConnectedByInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
   platformAccountId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1958,7 +2038,7 @@ export type SocialAccountUpdateWithoutMembersInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1973,13 +2053,13 @@ export type SocialAccountUpdateWithoutMembersInput = {
   organization?: Prisma.OrganizationUpdateOneWithoutSocialAccountsNestedInput
   posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutSocialAccountNestedInput
+  members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
   pages?: Prisma.PageAccountUpdateManyWithoutSocialAccountNestedInput
 }
 
-export type SocialAccountUncheckedUpdateWithoutMembersInput = {
+export type SocialAccountUncheckedUpdateWithoutConnectedByInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
@@ -1990,7 +2070,7 @@ export type SocialAccountUncheckedUpdateWithoutMembersInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2004,10 +2084,35 @@ export type SocialAccountUncheckedUpdateWithoutMembersInput = {
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutSocialAccountNestedInput
+  members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
   pages?: Prisma.PageAccountUncheckedUpdateManyWithoutSocialAccountNestedInput
+}
+
+export type SocialAccountUncheckedUpdateManyWithoutConnectedByInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  platformAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessToken?: Prisma.StringFieldUpdateOperationsInput | string
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
+  lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
 }
 
 export type SocialAccountCreateManyOrganizationInput = {
@@ -2020,12 +2125,13 @@ export type SocialAccountCreateManyOrganizationInput = {
   profileImage?: string | null
   accessToken: string
   refreshToken?: string | null
-  refreshTokenExpiresIn?: Date | string | null
+  refreshTokenExpiresAt?: Date | string | null
   accessSecret?: string | null
   tokenExpiresAt?: Date | string | null
   errorMessage?: string | null
   isActive?: boolean
   lastSyncAt?: Date | string | null
+  connectedById?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scopes?: Prisma.SocialAccountCreatescopesInput | string[]
@@ -2044,7 +2150,7 @@ export type SocialAccountUpdateWithoutOrganizationInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2056,9 +2162,9 @@ export type SocialAccountUpdateWithoutOrganizationInput = {
   lastPostedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
+  connectedBy?: Prisma.UserUpdateOneWithoutSocialAccountsNestedInput
   posts?: Prisma.PostUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUpdateManyWithoutSocialAccountNestedInput
@@ -2075,12 +2181,13 @@ export type SocialAccountUncheckedUpdateWithoutOrganizationInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
@@ -2089,7 +2196,6 @@ export type SocialAccountUncheckedUpdateWithoutOrganizationInput = {
   accountType?: Prisma.EnumSocialAccountTypeFieldUpdateOperationsInput | $Enums.SocialAccountType
   posts?: Prisma.PostUncheckedUpdateManyWithoutSocialAccountNestedInput
   rateLimitLogs?: Prisma.PlatformRateLimitLogUncheckedUpdateManyWithoutSocialAccountNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutSocialAccountNestedInput
   members?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutSocialAccountNestedInput
   conversations?: Prisma.ConversationUncheckedUpdateManyWithoutSocialAccountNestedInput
@@ -2106,12 +2212,13 @@ export type SocialAccountUncheckedUpdateManyWithoutOrganizationInput = {
   profileImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accessToken?: Prisma.StringFieldUpdateOperationsInput | string
   refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  refreshTokenExpiresIn?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   accessSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastSyncAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  connectedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scopes?: Prisma.SocialAccountUpdatescopesInput | string[]
@@ -2128,7 +2235,6 @@ export type SocialAccountUncheckedUpdateManyWithoutOrganizationInput = {
 export type SocialAccountCountOutputType = {
   posts: number
   rateLimitLogs: number
-  EngagementMetric: number
   members: number
   notifications: number
   conversations: number
@@ -2138,7 +2244,6 @@ export type SocialAccountCountOutputType = {
 export type SocialAccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   posts?: boolean | SocialAccountCountOutputTypeCountPostsArgs
   rateLimitLogs?: boolean | SocialAccountCountOutputTypeCountRateLimitLogsArgs
-  EngagementMetric?: boolean | SocialAccountCountOutputTypeCountEngagementMetricArgs
   members?: boolean | SocialAccountCountOutputTypeCountMembersArgs
   notifications?: boolean | SocialAccountCountOutputTypeCountNotificationsArgs
   conversations?: boolean | SocialAccountCountOutputTypeCountConversationsArgs
@@ -2167,13 +2272,6 @@ export type SocialAccountCountOutputTypeCountPostsArgs<ExtArgs extends runtime.T
  */
 export type SocialAccountCountOutputTypeCountRateLimitLogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PlatformRateLimitLogWhereInput
-}
-
-/**
- * SocialAccountCountOutputType without action
- */
-export type SocialAccountCountOutputTypeCountEngagementMetricArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.EngagementMetricWhereInput
 }
 
 /**
@@ -2216,22 +2314,23 @@ export type SocialAccountSelect<ExtArgs extends runtime.Types.Extensions.Interna
   profileImage?: boolean
   accessToken?: boolean
   refreshToken?: boolean
-  refreshTokenExpiresIn?: boolean
+  refreshTokenExpiresAt?: boolean
   accessSecret?: boolean
   tokenExpiresAt?: boolean
   errorMessage?: boolean
   isActive?: boolean
   lastSyncAt?: boolean
+  connectedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   scopes?: boolean
   lastPostedAt?: boolean
   metadata?: boolean
   accountType?: boolean
+  connectedBy?: boolean | Prisma.SocialAccount$connectedByArgs<ExtArgs>
   organization?: boolean | Prisma.SocialAccount$organizationArgs<ExtArgs>
   posts?: boolean | Prisma.SocialAccount$postsArgs<ExtArgs>
   rateLimitLogs?: boolean | Prisma.SocialAccount$rateLimitLogsArgs<ExtArgs>
-  EngagementMetric?: boolean | Prisma.SocialAccount$EngagementMetricArgs<ExtArgs>
   members?: boolean | Prisma.SocialAccount$membersArgs<ExtArgs>
   notifications?: boolean | Prisma.SocialAccount$notificationsArgs<ExtArgs>
   conversations?: boolean | Prisma.SocialAccount$conversationsArgs<ExtArgs>
@@ -2250,18 +2349,20 @@ export type SocialAccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   profileImage?: boolean
   accessToken?: boolean
   refreshToken?: boolean
-  refreshTokenExpiresIn?: boolean
+  refreshTokenExpiresAt?: boolean
   accessSecret?: boolean
   tokenExpiresAt?: boolean
   errorMessage?: boolean
   isActive?: boolean
   lastSyncAt?: boolean
+  connectedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   scopes?: boolean
   lastPostedAt?: boolean
   metadata?: boolean
   accountType?: boolean
+  connectedBy?: boolean | Prisma.SocialAccount$connectedByArgs<ExtArgs>
   organization?: boolean | Prisma.SocialAccount$organizationArgs<ExtArgs>
 }, ExtArgs["result"]["socialAccount"]>
 
@@ -2276,18 +2377,20 @@ export type SocialAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   profileImage?: boolean
   accessToken?: boolean
   refreshToken?: boolean
-  refreshTokenExpiresIn?: boolean
+  refreshTokenExpiresAt?: boolean
   accessSecret?: boolean
   tokenExpiresAt?: boolean
   errorMessage?: boolean
   isActive?: boolean
   lastSyncAt?: boolean
+  connectedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   scopes?: boolean
   lastPostedAt?: boolean
   metadata?: boolean
   accountType?: boolean
+  connectedBy?: boolean | Prisma.SocialAccount$connectedByArgs<ExtArgs>
   organization?: boolean | Prisma.SocialAccount$organizationArgs<ExtArgs>
 }, ExtArgs["result"]["socialAccount"]>
 
@@ -2302,12 +2405,13 @@ export type SocialAccountSelectScalar = {
   profileImage?: boolean
   accessToken?: boolean
   refreshToken?: boolean
-  refreshTokenExpiresIn?: boolean
+  refreshTokenExpiresAt?: boolean
   accessSecret?: boolean
   tokenExpiresAt?: boolean
   errorMessage?: boolean
   isActive?: boolean
   lastSyncAt?: boolean
+  connectedById?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   scopes?: boolean
@@ -2316,12 +2420,12 @@ export type SocialAccountSelectScalar = {
   accountType?: boolean
 }
 
-export type SocialAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "platform" | "platformAccountId" | "username" | "name" | "displayName" | "profileImage" | "accessToken" | "refreshToken" | "refreshTokenExpiresIn" | "accessSecret" | "tokenExpiresAt" | "errorMessage" | "isActive" | "lastSyncAt" | "createdAt" | "updatedAt" | "scopes" | "lastPostedAt" | "metadata" | "accountType", ExtArgs["result"]["socialAccount"]>
+export type SocialAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "platform" | "platformAccountId" | "username" | "name" | "displayName" | "profileImage" | "accessToken" | "refreshToken" | "refreshTokenExpiresAt" | "accessSecret" | "tokenExpiresAt" | "errorMessage" | "isActive" | "lastSyncAt" | "connectedById" | "createdAt" | "updatedAt" | "scopes" | "lastPostedAt" | "metadata" | "accountType", ExtArgs["result"]["socialAccount"]>
 export type SocialAccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  connectedBy?: boolean | Prisma.SocialAccount$connectedByArgs<ExtArgs>
   organization?: boolean | Prisma.SocialAccount$organizationArgs<ExtArgs>
   posts?: boolean | Prisma.SocialAccount$postsArgs<ExtArgs>
   rateLimitLogs?: boolean | Prisma.SocialAccount$rateLimitLogsArgs<ExtArgs>
-  EngagementMetric?: boolean | Prisma.SocialAccount$EngagementMetricArgs<ExtArgs>
   members?: boolean | Prisma.SocialAccount$membersArgs<ExtArgs>
   notifications?: boolean | Prisma.SocialAccount$notificationsArgs<ExtArgs>
   conversations?: boolean | Prisma.SocialAccount$conversationsArgs<ExtArgs>
@@ -2329,19 +2433,21 @@ export type SocialAccountInclude<ExtArgs extends runtime.Types.Extensions.Intern
   _count?: boolean | Prisma.SocialAccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SocialAccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  connectedBy?: boolean | Prisma.SocialAccount$connectedByArgs<ExtArgs>
   organization?: boolean | Prisma.SocialAccount$organizationArgs<ExtArgs>
 }
 export type SocialAccountIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  connectedBy?: boolean | Prisma.SocialAccount$connectedByArgs<ExtArgs>
   organization?: boolean | Prisma.SocialAccount$organizationArgs<ExtArgs>
 }
 
 export type $SocialAccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SocialAccount"
   objects: {
+    connectedBy: Prisma.$UserPayload<ExtArgs> | null
     organization: Prisma.$OrganizationPayload<ExtArgs> | null
     posts: Prisma.$PostPayload<ExtArgs>[]
     rateLimitLogs: Prisma.$PlatformRateLimitLogPayload<ExtArgs>[]
-    EngagementMetric: Prisma.$EngagementMetricPayload<ExtArgs>[]
     members: Prisma.$SocialAccountMemberPayload<ExtArgs>[]
     notifications: Prisma.$NotificationEntityPayload<ExtArgs>[]
     conversations: Prisma.$ConversationPayload<ExtArgs>[]
@@ -2358,12 +2464,13 @@ export type $SocialAccountPayload<ExtArgs extends runtime.Types.Extensions.Inter
     profileImage: string | null
     accessToken: string
     refreshToken: string | null
-    refreshTokenExpiresIn: Date | null
+    refreshTokenExpiresAt: Date | null
     accessSecret: string | null
     tokenExpiresAt: Date | null
     errorMessage: string | null
     isActive: boolean
     lastSyncAt: Date | null
+    connectedById: string | null
     createdAt: Date
     updatedAt: Date
     scopes: string[]
@@ -2764,10 +2871,10 @@ readonly fields: SocialAccountFieldRefs;
  */
 export interface Prisma__SocialAccountClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  connectedBy<T extends Prisma.SocialAccount$connectedByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccount$connectedByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   organization<T extends Prisma.SocialAccount$organizationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccount$organizationArgs<ExtArgs>>): Prisma.Prisma__OrganizationClient<runtime.Types.Result.GetResult<Prisma.$OrganizationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   posts<T extends Prisma.SocialAccount$postsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccount$postsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   rateLimitLogs<T extends Prisma.SocialAccount$rateLimitLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccount$rateLimitLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformRateLimitLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  EngagementMetric<T extends Prisma.SocialAccount$EngagementMetricArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccount$EngagementMetricArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EngagementMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   members<T extends Prisma.SocialAccount$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccount$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SocialAccountMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.SocialAccount$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccount$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationEntityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   conversations<T extends Prisma.SocialAccount$conversationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccount$conversationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2811,12 +2918,13 @@ export interface SocialAccountFieldRefs {
   readonly profileImage: Prisma.FieldRef<"SocialAccount", 'String'>
   readonly accessToken: Prisma.FieldRef<"SocialAccount", 'String'>
   readonly refreshToken: Prisma.FieldRef<"SocialAccount", 'String'>
-  readonly refreshTokenExpiresIn: Prisma.FieldRef<"SocialAccount", 'DateTime'>
+  readonly refreshTokenExpiresAt: Prisma.FieldRef<"SocialAccount", 'DateTime'>
   readonly accessSecret: Prisma.FieldRef<"SocialAccount", 'String'>
   readonly tokenExpiresAt: Prisma.FieldRef<"SocialAccount", 'DateTime'>
   readonly errorMessage: Prisma.FieldRef<"SocialAccount", 'String'>
   readonly isActive: Prisma.FieldRef<"SocialAccount", 'Boolean'>
   readonly lastSyncAt: Prisma.FieldRef<"SocialAccount", 'DateTime'>
+  readonly connectedById: Prisma.FieldRef<"SocialAccount", 'String'>
   readonly createdAt: Prisma.FieldRef<"SocialAccount", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SocialAccount", 'DateTime'>
   readonly scopes: Prisma.FieldRef<"SocialAccount", 'String[]'>
@@ -3219,6 +3327,25 @@ export type SocialAccountDeleteManyArgs<ExtArgs extends runtime.Types.Extensions
 }
 
 /**
+ * SocialAccount.connectedBy
+ */
+export type SocialAccount$connectedByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+}
+
+/**
  * SocialAccount.organization
  */
 export type SocialAccount$organizationArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3283,30 +3410,6 @@ export type SocialAccount$rateLimitLogsArgs<ExtArgs extends runtime.Types.Extens
   take?: number
   skip?: number
   distinct?: Prisma.PlatformRateLimitLogScalarFieldEnum | Prisma.PlatformRateLimitLogScalarFieldEnum[]
-}
-
-/**
- * SocialAccount.EngagementMetric
- */
-export type SocialAccount$EngagementMetricArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the EngagementMetric
-   */
-  select?: Prisma.EngagementMetricSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the EngagementMetric
-   */
-  omit?: Prisma.EngagementMetricOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.EngagementMetricInclude<ExtArgs> | null
-  where?: Prisma.EngagementMetricWhereInput
-  orderBy?: Prisma.EngagementMetricOrderByWithRelationInput | Prisma.EngagementMetricOrderByWithRelationInput[]
-  cursor?: Prisma.EngagementMetricWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.EngagementMetricScalarFieldEnum | Prisma.EngagementMetricScalarFieldEnum[]
 }
 
 /**

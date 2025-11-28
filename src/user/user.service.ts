@@ -1,18 +1,25 @@
 import {
+  ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
 import { UserFiltersDto } from './dtos/user-filters.dto';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
 import { PrismaService } from '@/prisma/prisma.service';
+import { AuthService } from '@/auth/auth.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(UserService.name);
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
   async findById(id: string): Promise<SafeUser | null> {
     const user = await this.prisma.user.findUnique({
@@ -25,6 +32,7 @@ export class UserService {
     organizationId: string,
     filters: UserFiltersDto,
   ) {
+
     const where: any = {
       deletedAt: null,
       organizationMemberships: {
@@ -87,25 +95,42 @@ export class UserService {
     return this.toSafeUser(user);
   }
 
-  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId, deletedAt: null },
     });
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {
+      this.logger.error('User not found for password change', { userId });
+      throw new NotFoundException('User not found');
+    }
 
-    const isCurrentValid = await bcrypt.compare(
-      dto.currentPassword,
-      user.password,
-    );
-    if (!isCurrentValid)
+    // ✅ Use argon2 to match AuthService
+    const isCurrentValid = await argon2.verify(user.password, dto.currentPassword);
+    
+    if (!isCurrentValid) {
+      this.logger.warn('Invalid current password attempt', { userId });
       throw new UnauthorizedException('Current password is incorrect');
+    }
 
-    const hashedPassword = await this.hashPassword(dto.newPassword);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword, lastPasswordChange: new Date() },
+    // ✅ Use AuthService method for consistency
+    this.authService.validatePasswordStrength(dto.newPassword);
+    const hashedPassword = await argon2.hash(dto.newPassword);
+
+    // ✅ Use transaction with session revocation
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          password: hashedPassword,
+          lastPasswordChange: new Date(),
+          refreshToken: null, // Invalidate refresh token
+          refreshTokenVersion: { increment: 1 }, // Invalidate all JWTs
+        },
+      });
     });
+
+    this.logger.log('Password changed successfully', { userId });
   }
 
   async deactivateAccount(userId: string): Promise<void> {
@@ -115,10 +140,6 @@ export class UserService {
     });
   }
 
-  // ------------------ Helpers ------------------
-  private async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 12);
-  }
 
   private getSafeUserSelect() {
     return {
@@ -145,5 +166,24 @@ export class UserService {
       isEmailVerified: user.isEmailVerified,
       lastActiveAt: user.lastActiveAt,
     };
+  }
+
+   async getUserSocialAccounts(userId: string) {
+    const memberships = await this.prisma.socialAccountMember.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        socialAccount: true,
+      },
+    });
+
+    return memberships.map(m => ({
+      id: m.socialAccount.id,
+      platform: m.socialAccount.platform,
+      accountName: m.socialAccount.name,
+      isActive: m.socialAccount.isActive,
+      connectedAt: m.createdAt,
+    }));
   }
 }

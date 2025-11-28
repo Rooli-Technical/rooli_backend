@@ -28,30 +28,33 @@ export type SocialAccountMemberMinAggregateOutputType = {
   id: string | null
   socialAccountId: string | null
   userId: string | null
-  invitedBy: string | null
+  invitedById: string | null
   roleId: string | null
-  joinedAt: Date | null
   isActive: boolean | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type SocialAccountMemberMaxAggregateOutputType = {
   id: string | null
   socialAccountId: string | null
   userId: string | null
-  invitedBy: string | null
+  invitedById: string | null
   roleId: string | null
-  joinedAt: Date | null
   isActive: boolean | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type SocialAccountMemberCountAggregateOutputType = {
   id: number
   socialAccountId: number
   userId: number
-  invitedBy: number
+  invitedById: number
   roleId: number
-  joinedAt: number
   isActive: number
+  createdAt: number
+  updatedAt: number
   _all: number
 }
 
@@ -60,30 +63,33 @@ export type SocialAccountMemberMinAggregateInputType = {
   id?: true
   socialAccountId?: true
   userId?: true
-  invitedBy?: true
+  invitedById?: true
   roleId?: true
-  joinedAt?: true
   isActive?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type SocialAccountMemberMaxAggregateInputType = {
   id?: true
   socialAccountId?: true
   userId?: true
-  invitedBy?: true
+  invitedById?: true
   roleId?: true
-  joinedAt?: true
   isActive?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type SocialAccountMemberCountAggregateInputType = {
   id?: true
   socialAccountId?: true
   userId?: true
-  invitedBy?: true
+  invitedById?: true
   roleId?: true
-  joinedAt?: true
   isActive?: true
+  createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -163,10 +169,11 @@ export type SocialAccountMemberGroupByOutputType = {
   id: string
   socialAccountId: string
   userId: string
-  invitedBy: string | null
-  roleId: string
-  joinedAt: Date
+  invitedById: string | null
+  roleId: string | null
   isActive: boolean
+  createdAt: Date
+  updatedAt: Date
   _count: SocialAccountMemberCountAggregateOutputType | null
   _min: SocialAccountMemberMinAggregateOutputType | null
   _max: SocialAccountMemberMaxAggregateOutputType | null
@@ -194,28 +201,30 @@ export type SocialAccountMemberWhereInput = {
   id?: Prisma.StringFilter<"SocialAccountMember"> | string
   socialAccountId?: Prisma.StringFilter<"SocialAccountMember"> | string
   userId?: Prisma.StringFilter<"SocialAccountMember"> | string
-  invitedBy?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
-  roleId?: Prisma.StringFilter<"SocialAccountMember"> | string
-  joinedAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
+  invitedById?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
+  roleId?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
   isActive?: Prisma.BoolFilter<"SocialAccountMember"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
   socialAccount?: Prisma.XOR<Prisma.SocialAccountScalarRelationFilter, Prisma.SocialAccountWhereInput>
-  role?: Prisma.XOR<Prisma.RoleScalarRelationFilter, Prisma.RoleWhereInput>
+  role?: Prisma.XOR<Prisma.RoleNullableScalarRelationFilter, Prisma.RoleWhereInput> | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  inviter?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  invitedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }
 
 export type SocialAccountMemberOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   socialAccountId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
-  invitedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  roleId?: Prisma.SortOrder
-  joinedAt?: Prisma.SortOrder
+  invitedById?: Prisma.SortOrderInput | Prisma.SortOrder
+  roleId?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   socialAccount?: Prisma.SocialAccountOrderByWithRelationInput
   role?: Prisma.RoleOrderByWithRelationInput
   user?: Prisma.UserOrderByWithRelationInput
-  inviter?: Prisma.UserOrderByWithRelationInput
+  invitedBy?: Prisma.UserOrderByWithRelationInput
 }
 
 export type SocialAccountMemberWhereUniqueInput = Prisma.AtLeast<{
@@ -226,24 +235,26 @@ export type SocialAccountMemberWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.SocialAccountMemberWhereInput | Prisma.SocialAccountMemberWhereInput[]
   socialAccountId?: Prisma.StringFilter<"SocialAccountMember"> | string
   userId?: Prisma.StringFilter<"SocialAccountMember"> | string
-  invitedBy?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
-  roleId?: Prisma.StringFilter<"SocialAccountMember"> | string
-  joinedAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
+  invitedById?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
+  roleId?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
   isActive?: Prisma.BoolFilter<"SocialAccountMember"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
   socialAccount?: Prisma.XOR<Prisma.SocialAccountScalarRelationFilter, Prisma.SocialAccountWhereInput>
-  role?: Prisma.XOR<Prisma.RoleScalarRelationFilter, Prisma.RoleWhereInput>
+  role?: Prisma.XOR<Prisma.RoleNullableScalarRelationFilter, Prisma.RoleWhereInput> | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  inviter?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  invitedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }, "id" | "socialAccountId_userId">
 
 export type SocialAccountMemberOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   socialAccountId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
-  invitedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  roleId?: Prisma.SortOrder
-  joinedAt?: Prisma.SortOrder
+  invitedById?: Prisma.SortOrderInput | Prisma.SortOrder
+  roleId?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.SocialAccountMemberCountOrderByAggregateInput
   _max?: Prisma.SocialAccountMemberMaxOrderByAggregateInput
   _min?: Prisma.SocialAccountMemberMinOrderByAggregateInput
@@ -256,76 +267,84 @@ export type SocialAccountMemberScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"SocialAccountMember"> | string
   socialAccountId?: Prisma.StringWithAggregatesFilter<"SocialAccountMember"> | string
   userId?: Prisma.StringWithAggregatesFilter<"SocialAccountMember"> | string
-  invitedBy?: Prisma.StringNullableWithAggregatesFilter<"SocialAccountMember"> | string | null
-  roleId?: Prisma.StringWithAggregatesFilter<"SocialAccountMember"> | string
-  joinedAt?: Prisma.DateTimeWithAggregatesFilter<"SocialAccountMember"> | Date | string
+  invitedById?: Prisma.StringNullableWithAggregatesFilter<"SocialAccountMember"> | string | null
+  roleId?: Prisma.StringNullableWithAggregatesFilter<"SocialAccountMember"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"SocialAccountMember"> | boolean
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"SocialAccountMember"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SocialAccountMember"> | Date | string
 }
 
 export type SocialAccountMemberCreateInput = {
   id?: string
-  joinedAt?: Date | string
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutMembersInput
-  role: Prisma.RoleCreateNestedOneWithoutSocialAccountMembersInput
+  role?: Prisma.RoleCreateNestedOneWithoutSocialAccountMembersInput
   user: Prisma.UserCreateNestedOneWithoutSocialAccountMembershipsInput
-  inviter?: Prisma.UserCreateNestedOneWithoutInvitedSocialMembersInput
+  invitedBy?: Prisma.UserCreateNestedOneWithoutInvitedSocialMembersInput
 }
 
 export type SocialAccountMemberUncheckedCreateInput = {
   id?: string
   socialAccountId: string
   userId: string
-  invitedBy?: string | null
-  roleId: string
-  joinedAt?: Date | string
+  invitedById?: string | null
+  roleId?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type SocialAccountMemberUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutMembersNestedInput
-  role?: Prisma.RoleUpdateOneRequiredWithoutSocialAccountMembersNestedInput
+  role?: Prisma.RoleUpdateOneWithoutSocialAccountMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutSocialAccountMembershipsNestedInput
-  inviter?: Prisma.UserUpdateOneWithoutInvitedSocialMembersNestedInput
+  invitedBy?: Prisma.UserUpdateOneWithoutInvitedSocialMembersNestedInput
 }
 
 export type SocialAccountMemberUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  invitedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  roleId?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  roleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type SocialAccountMemberCreateManyInput = {
   id?: string
   socialAccountId: string
   userId: string
-  invitedBy?: string | null
-  roleId: string
-  joinedAt?: Date | string
+  invitedById?: string | null
+  roleId?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type SocialAccountMemberUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type SocialAccountMemberUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  invitedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  roleId?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  roleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type SocialAccountMemberListRelationFilter = {
@@ -347,30 +366,33 @@ export type SocialAccountMemberCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   socialAccountId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
-  invitedBy?: Prisma.SortOrder
+  invitedById?: Prisma.SortOrder
   roleId?: Prisma.SortOrder
-  joinedAt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type SocialAccountMemberMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   socialAccountId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
-  invitedBy?: Prisma.SortOrder
+  invitedById?: Prisma.SortOrder
   roleId?: Prisma.SortOrder
-  joinedAt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type SocialAccountMemberMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   socialAccountId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
-  invitedBy?: Prisma.SortOrder
+  invitedById?: Prisma.SortOrder
   roleId?: Prisma.SortOrder
-  joinedAt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type SocialAccountMemberCreateNestedManyWithoutUserInput = {
@@ -380,10 +402,10 @@ export type SocialAccountMemberCreateNestedManyWithoutUserInput = {
   connect?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
 }
 
-export type SocialAccountMemberCreateNestedManyWithoutInviterInput = {
-  create?: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInviterInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput> | Prisma.SocialAccountMemberCreateWithoutInviterInput[] | Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput[]
-  connectOrCreate?: Prisma.SocialAccountMemberCreateOrConnectWithoutInviterInput | Prisma.SocialAccountMemberCreateOrConnectWithoutInviterInput[]
-  createMany?: Prisma.SocialAccountMemberCreateManyInviterInputEnvelope
+export type SocialAccountMemberCreateNestedManyWithoutInvitedByInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInvitedByInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput> | Prisma.SocialAccountMemberCreateWithoutInvitedByInput[] | Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput[]
+  connectOrCreate?: Prisma.SocialAccountMemberCreateOrConnectWithoutInvitedByInput | Prisma.SocialAccountMemberCreateOrConnectWithoutInvitedByInput[]
+  createMany?: Prisma.SocialAccountMemberCreateManyInvitedByInputEnvelope
   connect?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
 }
 
@@ -394,10 +416,10 @@ export type SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput = {
   connect?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
 }
 
-export type SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput = {
-  create?: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInviterInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput> | Prisma.SocialAccountMemberCreateWithoutInviterInput[] | Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput[]
-  connectOrCreate?: Prisma.SocialAccountMemberCreateOrConnectWithoutInviterInput | Prisma.SocialAccountMemberCreateOrConnectWithoutInviterInput[]
-  createMany?: Prisma.SocialAccountMemberCreateManyInviterInputEnvelope
+export type SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInvitedByInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput> | Prisma.SocialAccountMemberCreateWithoutInvitedByInput[] | Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput[]
+  connectOrCreate?: Prisma.SocialAccountMemberCreateOrConnectWithoutInvitedByInput | Prisma.SocialAccountMemberCreateOrConnectWithoutInvitedByInput[]
+  createMany?: Prisma.SocialAccountMemberCreateManyInvitedByInputEnvelope
   connect?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
 }
 
@@ -415,17 +437,17 @@ export type SocialAccountMemberUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.SocialAccountMemberScalarWhereInput | Prisma.SocialAccountMemberScalarWhereInput[]
 }
 
-export type SocialAccountMemberUpdateManyWithoutInviterNestedInput = {
-  create?: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInviterInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput> | Prisma.SocialAccountMemberCreateWithoutInviterInput[] | Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput[]
-  connectOrCreate?: Prisma.SocialAccountMemberCreateOrConnectWithoutInviterInput | Prisma.SocialAccountMemberCreateOrConnectWithoutInviterInput[]
-  upsert?: Prisma.SocialAccountMemberUpsertWithWhereUniqueWithoutInviterInput | Prisma.SocialAccountMemberUpsertWithWhereUniqueWithoutInviterInput[]
-  createMany?: Prisma.SocialAccountMemberCreateManyInviterInputEnvelope
+export type SocialAccountMemberUpdateManyWithoutInvitedByNestedInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInvitedByInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput> | Prisma.SocialAccountMemberCreateWithoutInvitedByInput[] | Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput[]
+  connectOrCreate?: Prisma.SocialAccountMemberCreateOrConnectWithoutInvitedByInput | Prisma.SocialAccountMemberCreateOrConnectWithoutInvitedByInput[]
+  upsert?: Prisma.SocialAccountMemberUpsertWithWhereUniqueWithoutInvitedByInput | Prisma.SocialAccountMemberUpsertWithWhereUniqueWithoutInvitedByInput[]
+  createMany?: Prisma.SocialAccountMemberCreateManyInvitedByInputEnvelope
   set?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
   disconnect?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
   delete?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
   connect?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
-  update?: Prisma.SocialAccountMemberUpdateWithWhereUniqueWithoutInviterInput | Prisma.SocialAccountMemberUpdateWithWhereUniqueWithoutInviterInput[]
-  updateMany?: Prisma.SocialAccountMemberUpdateManyWithWhereWithoutInviterInput | Prisma.SocialAccountMemberUpdateManyWithWhereWithoutInviterInput[]
+  update?: Prisma.SocialAccountMemberUpdateWithWhereUniqueWithoutInvitedByInput | Prisma.SocialAccountMemberUpdateWithWhereUniqueWithoutInvitedByInput[]
+  updateMany?: Prisma.SocialAccountMemberUpdateManyWithWhereWithoutInvitedByInput | Prisma.SocialAccountMemberUpdateManyWithWhereWithoutInvitedByInput[]
   deleteMany?: Prisma.SocialAccountMemberScalarWhereInput | Prisma.SocialAccountMemberScalarWhereInput[]
 }
 
@@ -443,17 +465,17 @@ export type SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.SocialAccountMemberScalarWhereInput | Prisma.SocialAccountMemberScalarWhereInput[]
 }
 
-export type SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput = {
-  create?: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInviterInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput> | Prisma.SocialAccountMemberCreateWithoutInviterInput[] | Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput[]
-  connectOrCreate?: Prisma.SocialAccountMemberCreateOrConnectWithoutInviterInput | Prisma.SocialAccountMemberCreateOrConnectWithoutInviterInput[]
-  upsert?: Prisma.SocialAccountMemberUpsertWithWhereUniqueWithoutInviterInput | Prisma.SocialAccountMemberUpsertWithWhereUniqueWithoutInviterInput[]
-  createMany?: Prisma.SocialAccountMemberCreateManyInviterInputEnvelope
+export type SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput = {
+  create?: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInvitedByInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput> | Prisma.SocialAccountMemberCreateWithoutInvitedByInput[] | Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput[]
+  connectOrCreate?: Prisma.SocialAccountMemberCreateOrConnectWithoutInvitedByInput | Prisma.SocialAccountMemberCreateOrConnectWithoutInvitedByInput[]
+  upsert?: Prisma.SocialAccountMemberUpsertWithWhereUniqueWithoutInvitedByInput | Prisma.SocialAccountMemberUpsertWithWhereUniqueWithoutInvitedByInput[]
+  createMany?: Prisma.SocialAccountMemberCreateManyInvitedByInputEnvelope
   set?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
   disconnect?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
   delete?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
   connect?: Prisma.SocialAccountMemberWhereUniqueInput | Prisma.SocialAccountMemberWhereUniqueInput[]
-  update?: Prisma.SocialAccountMemberUpdateWithWhereUniqueWithoutInviterInput | Prisma.SocialAccountMemberUpdateWithWhereUniqueWithoutInviterInput[]
-  updateMany?: Prisma.SocialAccountMemberUpdateManyWithWhereWithoutInviterInput | Prisma.SocialAccountMemberUpdateManyWithWhereWithoutInviterInput[]
+  update?: Prisma.SocialAccountMemberUpdateWithWhereUniqueWithoutInvitedByInput | Prisma.SocialAccountMemberUpdateWithWhereUniqueWithoutInvitedByInput[]
+  updateMany?: Prisma.SocialAccountMemberUpdateManyWithWhereWithoutInvitedByInput | Prisma.SocialAccountMemberUpdateManyWithWhereWithoutInvitedByInput[]
   deleteMany?: Prisma.SocialAccountMemberScalarWhereInput | Prisma.SocialAccountMemberScalarWhereInput[]
 }
 
@@ -543,20 +565,22 @@ export type SocialAccountMemberUncheckedUpdateManyWithoutRoleNestedInput = {
 
 export type SocialAccountMemberCreateWithoutUserInput = {
   id?: string
-  joinedAt?: Date | string
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutMembersInput
-  role: Prisma.RoleCreateNestedOneWithoutSocialAccountMembersInput
-  inviter?: Prisma.UserCreateNestedOneWithoutInvitedSocialMembersInput
+  role?: Prisma.RoleCreateNestedOneWithoutSocialAccountMembersInput
+  invitedBy?: Prisma.UserCreateNestedOneWithoutInvitedSocialMembersInput
 }
 
 export type SocialAccountMemberUncheckedCreateWithoutUserInput = {
   id?: string
   socialAccountId: string
-  invitedBy?: string | null
-  roleId: string
-  joinedAt?: Date | string
+  invitedById?: string | null
+  roleId?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type SocialAccountMemberCreateOrConnectWithoutUserInput = {
@@ -569,31 +593,33 @@ export type SocialAccountMemberCreateManyUserInputEnvelope = {
   skipDuplicates?: boolean
 }
 
-export type SocialAccountMemberCreateWithoutInviterInput = {
+export type SocialAccountMemberCreateWithoutInvitedByInput = {
   id?: string
-  joinedAt?: Date | string
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutMembersInput
-  role: Prisma.RoleCreateNestedOneWithoutSocialAccountMembersInput
+  role?: Prisma.RoleCreateNestedOneWithoutSocialAccountMembersInput
   user: Prisma.UserCreateNestedOneWithoutSocialAccountMembershipsInput
 }
 
-export type SocialAccountMemberUncheckedCreateWithoutInviterInput = {
+export type SocialAccountMemberUncheckedCreateWithoutInvitedByInput = {
   id?: string
   socialAccountId: string
   userId: string
-  roleId: string
-  joinedAt?: Date | string
+  roleId?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
-export type SocialAccountMemberCreateOrConnectWithoutInviterInput = {
+export type SocialAccountMemberCreateOrConnectWithoutInvitedByInput = {
   where: Prisma.SocialAccountMemberWhereUniqueInput
-  create: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInviterInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput>
+  create: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInvitedByInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput>
 }
 
-export type SocialAccountMemberCreateManyInviterInputEnvelope = {
-  data: Prisma.SocialAccountMemberCreateManyInviterInput | Prisma.SocialAccountMemberCreateManyInviterInput[]
+export type SocialAccountMemberCreateManyInvitedByInputEnvelope = {
+  data: Prisma.SocialAccountMemberCreateManyInvitedByInput | Prisma.SocialAccountMemberCreateManyInvitedByInput[]
   skipDuplicates?: boolean
 }
 
@@ -620,44 +646,47 @@ export type SocialAccountMemberScalarWhereInput = {
   id?: Prisma.StringFilter<"SocialAccountMember"> | string
   socialAccountId?: Prisma.StringFilter<"SocialAccountMember"> | string
   userId?: Prisma.StringFilter<"SocialAccountMember"> | string
-  invitedBy?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
-  roleId?: Prisma.StringFilter<"SocialAccountMember"> | string
-  joinedAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
+  invitedById?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
+  roleId?: Prisma.StringNullableFilter<"SocialAccountMember"> | string | null
   isActive?: Prisma.BoolFilter<"SocialAccountMember"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"SocialAccountMember"> | Date | string
 }
 
-export type SocialAccountMemberUpsertWithWhereUniqueWithoutInviterInput = {
+export type SocialAccountMemberUpsertWithWhereUniqueWithoutInvitedByInput = {
   where: Prisma.SocialAccountMemberWhereUniqueInput
-  update: Prisma.XOR<Prisma.SocialAccountMemberUpdateWithoutInviterInput, Prisma.SocialAccountMemberUncheckedUpdateWithoutInviterInput>
-  create: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInviterInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInviterInput>
+  update: Prisma.XOR<Prisma.SocialAccountMemberUpdateWithoutInvitedByInput, Prisma.SocialAccountMemberUncheckedUpdateWithoutInvitedByInput>
+  create: Prisma.XOR<Prisma.SocialAccountMemberCreateWithoutInvitedByInput, Prisma.SocialAccountMemberUncheckedCreateWithoutInvitedByInput>
 }
 
-export type SocialAccountMemberUpdateWithWhereUniqueWithoutInviterInput = {
+export type SocialAccountMemberUpdateWithWhereUniqueWithoutInvitedByInput = {
   where: Prisma.SocialAccountMemberWhereUniqueInput
-  data: Prisma.XOR<Prisma.SocialAccountMemberUpdateWithoutInviterInput, Prisma.SocialAccountMemberUncheckedUpdateWithoutInviterInput>
+  data: Prisma.XOR<Prisma.SocialAccountMemberUpdateWithoutInvitedByInput, Prisma.SocialAccountMemberUncheckedUpdateWithoutInvitedByInput>
 }
 
-export type SocialAccountMemberUpdateManyWithWhereWithoutInviterInput = {
+export type SocialAccountMemberUpdateManyWithWhereWithoutInvitedByInput = {
   where: Prisma.SocialAccountMemberScalarWhereInput
-  data: Prisma.XOR<Prisma.SocialAccountMemberUpdateManyMutationInput, Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterInput>
+  data: Prisma.XOR<Prisma.SocialAccountMemberUpdateManyMutationInput, Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByInput>
 }
 
 export type SocialAccountMemberCreateWithoutSocialAccountInput = {
   id?: string
-  joinedAt?: Date | string
   isActive?: boolean
-  role: Prisma.RoleCreateNestedOneWithoutSocialAccountMembersInput
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: Prisma.RoleCreateNestedOneWithoutSocialAccountMembersInput
   user: Prisma.UserCreateNestedOneWithoutSocialAccountMembershipsInput
-  inviter?: Prisma.UserCreateNestedOneWithoutInvitedSocialMembersInput
+  invitedBy?: Prisma.UserCreateNestedOneWithoutInvitedSocialMembersInput
 }
 
 export type SocialAccountMemberUncheckedCreateWithoutSocialAccountInput = {
   id?: string
   userId: string
-  invitedBy?: string | null
-  roleId: string
-  joinedAt?: Date | string
+  invitedById?: string | null
+  roleId?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type SocialAccountMemberCreateOrConnectWithoutSocialAccountInput = {
@@ -688,20 +717,22 @@ export type SocialAccountMemberUpdateManyWithWhereWithoutSocialAccountInput = {
 
 export type SocialAccountMemberCreateWithoutRoleInput = {
   id?: string
-  joinedAt?: Date | string
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutMembersInput
   user: Prisma.UserCreateNestedOneWithoutSocialAccountMembershipsInput
-  inviter?: Prisma.UserCreateNestedOneWithoutInvitedSocialMembersInput
+  invitedBy?: Prisma.UserCreateNestedOneWithoutInvitedSocialMembersInput
 }
 
 export type SocialAccountMemberUncheckedCreateWithoutRoleInput = {
   id?: string
   socialAccountId: string
   userId: string
-  invitedBy?: string | null
-  joinedAt?: Date | string
+  invitedById?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type SocialAccountMemberCreateOrConnectWithoutRoleInput = {
@@ -733,145 +764,161 @@ export type SocialAccountMemberUpdateManyWithWhereWithoutRoleInput = {
 export type SocialAccountMemberCreateManyUserInput = {
   id?: string
   socialAccountId: string
-  invitedBy?: string | null
-  roleId: string
-  joinedAt?: Date | string
+  invitedById?: string | null
+  roleId?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
-export type SocialAccountMemberCreateManyInviterInput = {
+export type SocialAccountMemberCreateManyInvitedByInput = {
   id?: string
   socialAccountId: string
   userId: string
-  roleId: string
-  joinedAt?: Date | string
+  roleId?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type SocialAccountMemberUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutMembersNestedInput
-  role?: Prisma.RoleUpdateOneRequiredWithoutSocialAccountMembersNestedInput
-  inviter?: Prisma.UserUpdateOneWithoutInvitedSocialMembersNestedInput
+  role?: Prisma.RoleUpdateOneWithoutSocialAccountMembersNestedInput
+  invitedBy?: Prisma.UserUpdateOneWithoutInvitedSocialMembersNestedInput
 }
 
 export type SocialAccountMemberUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
-  invitedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  roleId?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  roleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type SocialAccountMemberUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
-  invitedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  roleId?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  roleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type SocialAccountMemberUpdateWithoutInviterInput = {
+export type SocialAccountMemberUpdateWithoutInvitedByInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutMembersNestedInput
-  role?: Prisma.RoleUpdateOneRequiredWithoutSocialAccountMembersNestedInput
+  role?: Prisma.RoleUpdateOneWithoutSocialAccountMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutSocialAccountMembershipsNestedInput
 }
 
-export type SocialAccountMemberUncheckedUpdateWithoutInviterInput = {
+export type SocialAccountMemberUncheckedUpdateWithoutInvitedByInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  roleId?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  roleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type SocialAccountMemberUncheckedUpdateManyWithoutInviterInput = {
+export type SocialAccountMemberUncheckedUpdateManyWithoutInvitedByInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  roleId?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  roleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type SocialAccountMemberCreateManySocialAccountInput = {
   id?: string
   userId: string
-  invitedBy?: string | null
-  roleId: string
-  joinedAt?: Date | string
+  invitedById?: string | null
+  roleId?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type SocialAccountMemberUpdateWithoutSocialAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  role?: Prisma.RoleUpdateOneRequiredWithoutSocialAccountMembersNestedInput
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneWithoutSocialAccountMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutSocialAccountMembershipsNestedInput
-  inviter?: Prisma.UserUpdateOneWithoutInvitedSocialMembersNestedInput
+  invitedBy?: Prisma.UserUpdateOneWithoutInvitedSocialMembersNestedInput
 }
 
 export type SocialAccountMemberUncheckedUpdateWithoutSocialAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  invitedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  roleId?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  roleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type SocialAccountMemberUncheckedUpdateManyWithoutSocialAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  invitedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  roleId?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  roleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type SocialAccountMemberCreateManyRoleInput = {
   id?: string
   socialAccountId: string
   userId: string
-  invitedBy?: string | null
-  joinedAt?: Date | string
+  invitedById?: string | null
   isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type SocialAccountMemberUpdateWithoutRoleInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutMembersNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutSocialAccountMembershipsNestedInput
-  inviter?: Prisma.UserUpdateOneWithoutInvitedSocialMembersNestedInput
+  invitedBy?: Prisma.UserUpdateOneWithoutInvitedSocialMembersNestedInput
 }
 
 export type SocialAccountMemberUncheckedUpdateWithoutRoleInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  invitedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type SocialAccountMemberUncheckedUpdateManyWithoutRoleInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  invitedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitedById?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -880,90 +927,95 @@ export type SocialAccountMemberSelect<ExtArgs extends runtime.Types.Extensions.I
   id?: boolean
   socialAccountId?: boolean
   userId?: boolean
-  invitedBy?: boolean
+  invitedById?: boolean
   roleId?: boolean
-  joinedAt?: boolean
   isActive?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
-  role?: boolean | Prisma.RoleDefaultArgs<ExtArgs>
+  role?: boolean | Prisma.SocialAccountMember$roleArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  inviter?: boolean | Prisma.SocialAccountMember$inviterArgs<ExtArgs>
+  invitedBy?: boolean | Prisma.SocialAccountMember$invitedByArgs<ExtArgs>
 }, ExtArgs["result"]["socialAccountMember"]>
 
 export type SocialAccountMemberSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   socialAccountId?: boolean
   userId?: boolean
-  invitedBy?: boolean
+  invitedById?: boolean
   roleId?: boolean
-  joinedAt?: boolean
   isActive?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
-  role?: boolean | Prisma.RoleDefaultArgs<ExtArgs>
+  role?: boolean | Prisma.SocialAccountMember$roleArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  inviter?: boolean | Prisma.SocialAccountMember$inviterArgs<ExtArgs>
+  invitedBy?: boolean | Prisma.SocialAccountMember$invitedByArgs<ExtArgs>
 }, ExtArgs["result"]["socialAccountMember"]>
 
 export type SocialAccountMemberSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   socialAccountId?: boolean
   userId?: boolean
-  invitedBy?: boolean
+  invitedById?: boolean
   roleId?: boolean
-  joinedAt?: boolean
   isActive?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
-  role?: boolean | Prisma.RoleDefaultArgs<ExtArgs>
+  role?: boolean | Prisma.SocialAccountMember$roleArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  inviter?: boolean | Prisma.SocialAccountMember$inviterArgs<ExtArgs>
+  invitedBy?: boolean | Prisma.SocialAccountMember$invitedByArgs<ExtArgs>
 }, ExtArgs["result"]["socialAccountMember"]>
 
 export type SocialAccountMemberSelectScalar = {
   id?: boolean
   socialAccountId?: boolean
   userId?: boolean
-  invitedBy?: boolean
+  invitedById?: boolean
   roleId?: boolean
-  joinedAt?: boolean
   isActive?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type SocialAccountMemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "socialAccountId" | "userId" | "invitedBy" | "roleId" | "joinedAt" | "isActive", ExtArgs["result"]["socialAccountMember"]>
+export type SocialAccountMemberOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "socialAccountId" | "userId" | "invitedById" | "roleId" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["socialAccountMember"]>
 export type SocialAccountMemberInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
-  role?: boolean | Prisma.RoleDefaultArgs<ExtArgs>
+  role?: boolean | Prisma.SocialAccountMember$roleArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  inviter?: boolean | Prisma.SocialAccountMember$inviterArgs<ExtArgs>
+  invitedBy?: boolean | Prisma.SocialAccountMember$invitedByArgs<ExtArgs>
 }
 export type SocialAccountMemberIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
-  role?: boolean | Prisma.RoleDefaultArgs<ExtArgs>
+  role?: boolean | Prisma.SocialAccountMember$roleArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  inviter?: boolean | Prisma.SocialAccountMember$inviterArgs<ExtArgs>
+  invitedBy?: boolean | Prisma.SocialAccountMember$invitedByArgs<ExtArgs>
 }
 export type SocialAccountMemberIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
-  role?: boolean | Prisma.RoleDefaultArgs<ExtArgs>
+  role?: boolean | Prisma.SocialAccountMember$roleArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  inviter?: boolean | Prisma.SocialAccountMember$inviterArgs<ExtArgs>
+  invitedBy?: boolean | Prisma.SocialAccountMember$invitedByArgs<ExtArgs>
 }
 
 export type $SocialAccountMemberPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SocialAccountMember"
   objects: {
     socialAccount: Prisma.$SocialAccountPayload<ExtArgs>
-    role: Prisma.$RolePayload<ExtArgs>
+    role: Prisma.$RolePayload<ExtArgs> | null
     user: Prisma.$UserPayload<ExtArgs>
-    inviter: Prisma.$UserPayload<ExtArgs> | null
+    invitedBy: Prisma.$UserPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     socialAccountId: string
     userId: string
-    invitedBy: string | null
-    roleId: string
-    joinedAt: Date
+    invitedById: string | null
+    roleId: string | null
     isActive: boolean
+    createdAt: Date
+    updatedAt: Date
   }, ExtArgs["result"]["socialAccountMember"]>
   composites: {}
 }
@@ -1359,9 +1411,9 @@ readonly fields: SocialAccountMemberFieldRefs;
 export interface Prisma__SocialAccountMemberClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   socialAccount<T extends Prisma.SocialAccountDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccountDefaultArgs<ExtArgs>>): Prisma.Prisma__SocialAccountClient<runtime.Types.Result.GetResult<Prisma.$SocialAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  role<T extends Prisma.RoleDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RoleDefaultArgs<ExtArgs>>): Prisma.Prisma__RoleClient<runtime.Types.Result.GetResult<Prisma.$RolePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  role<T extends Prisma.SocialAccountMember$roleArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccountMember$roleArgs<ExtArgs>>): Prisma.Prisma__RoleClient<runtime.Types.Result.GetResult<Prisma.$RolePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  inviter<T extends Prisma.SocialAccountMember$inviterArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccountMember$inviterArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  invitedBy<T extends Prisma.SocialAccountMember$invitedByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccountMember$invitedByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1394,10 +1446,11 @@ export interface SocialAccountMemberFieldRefs {
   readonly id: Prisma.FieldRef<"SocialAccountMember", 'String'>
   readonly socialAccountId: Prisma.FieldRef<"SocialAccountMember", 'String'>
   readonly userId: Prisma.FieldRef<"SocialAccountMember", 'String'>
-  readonly invitedBy: Prisma.FieldRef<"SocialAccountMember", 'String'>
+  readonly invitedById: Prisma.FieldRef<"SocialAccountMember", 'String'>
   readonly roleId: Prisma.FieldRef<"SocialAccountMember", 'String'>
-  readonly joinedAt: Prisma.FieldRef<"SocialAccountMember", 'DateTime'>
   readonly isActive: Prisma.FieldRef<"SocialAccountMember", 'Boolean'>
+  readonly createdAt: Prisma.FieldRef<"SocialAccountMember", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"SocialAccountMember", 'DateTime'>
 }
     
 
@@ -1794,9 +1847,28 @@ export type SocialAccountMemberDeleteManyArgs<ExtArgs extends runtime.Types.Exte
 }
 
 /**
- * SocialAccountMember.inviter
+ * SocialAccountMember.role
  */
-export type SocialAccountMember$inviterArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type SocialAccountMember$roleArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Role
+   */
+  select?: Prisma.RoleSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Role
+   */
+  omit?: Prisma.RoleOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RoleInclude<ExtArgs> | null
+  where?: Prisma.RoleWhereInput
+}
+
+/**
+ * SocialAccountMember.invitedBy
+ */
+export type SocialAccountMember$invitedByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the User
    */

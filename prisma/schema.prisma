@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma/client" 
+  output   = "../generated/prisma/client"
 }
 
 datasource db {
@@ -8,30 +8,29 @@ datasource db {
 }
 
 model User {
-  id        String       @id @default(cuid())
-  email     String       @unique
+  id        String   @id @default(cuid())
+  email     String   @unique
   password  String? // Optional for OAuth users
   firstName String?
   lastName  String?
   avatar    String?
-  role      UserRole     @default(ANALYST)
-
+  role      UserRole @default(ANALYST)
 
   // Email verification
   isEmailVerified         Boolean   @default(false)
   emailVerificationToken  String?
   emailVerificationSentAt DateTime?
-  refreshToken           String?
+  refreshToken            String?
 
   // Password reset
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
 
   // Security
-  loginAttempts      Int       @default(0)
-  lockedUntil        DateTime?
-  lastPasswordChange DateTime?
-  refreshTokenVersion Int @default(0)
+  loginAttempts       Int       @default(0)
+  lockedUntil         DateTime?
+  lastPasswordChange  DateTime?
+  refreshTokenVersion Int       @default(0)
 
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -58,6 +57,7 @@ model User {
 
   socialAccountMemberships SocialAccountMember[] @relation("SocialAccountMemberships")
   invitedSocialMembers     SocialAccountMember[] @relation("SocialAccountInvitations")
+  socialAccounts           SocialAccount[]
 
   @@index([email, deletedAt])
   @@index([createdAt])
@@ -65,44 +65,66 @@ model User {
 }
 
 model SocialAccount {
-  id                String    @id @default(cuid())
-  organizationId    String?
-  platform          Platform
-  platformAccountId String // Platform-specific account ID
-  username          String?
-  name              String?
-  displayName       String?
-  profileImage      String?
-  accessToken       String
-  refreshToken      String?
-  refreshTokenExpiresIn DateTime?
-  accessSecret      String? // For Twitter OAuth 1.0a
-  tokenExpiresAt    DateTime?
-  errorMessage      String?
-  isActive          Boolean   @default(true)
-  lastSyncAt        DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                    String    @id @default(cuid())
+  organizationId        String?
+  platform              Platform
+  platformAccountId     String // Platform-specific account ID
+  username              String?
+  name                  String?
+  displayName           String?
+  profileImage          String?
+  accessToken           String
+  refreshToken          String?
+  refreshTokenExpiresAt DateTime?
+  accessSecret          String? // For Twitter OAuth 1.0a
+  tokenExpiresAt        DateTime?
+  errorMessage          String?
+  isActive              Boolean   @default(true)
+  lastSyncAt            DateTime?
+  connectedById         String?
+  connectedBy           User?     @relation(fields: [connectedById], references: [id])
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   scopes       String[]
   lastPostedAt DateTime?
   metadata     Json?
 
-  organization     Organization?           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization     Organization?          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   posts            Post[]
   rateLimitLogs    PlatformRateLimitLog[]
-  EngagementMetric EngagementMetric[]
   members          SocialAccountMember[]
 
-  accountType   SocialAccountType    @default(PAGE) // PAGE or PROFILE
+  accountType   SocialAccountType    @default(PAGE)
   notifications NotificationEntity[]
   conversations Conversation[]
   pages         PageAccount[]
 
-  @@unique([organizationId, platform, platformAccountId])
+  @@unique([platform, platformAccountId])
   @@index([platform, isActive])
   @@index([organizationId])
   @@index([accountType])
+}
+
+model SocialAccountMember {
+  id              String   @id @default(cuid())
+  socialAccountId String
+  userId          String
+  invitedById     String?
+  roleId          String?
+  isActive        Boolean  @default(true)
+
+  // Relations
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  role          Role?          @relation(fields: [roleId], references: [id])
+  user          User          @relation("SocialAccountMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy       User?         @relation("SocialAccountInvitations", fields: [invitedById], references: [id], onDelete: SetNull)
+
+   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([socialAccountId, userId])
+  @@index([userId, isActive])
 }
 
 model PageAccount {
@@ -134,35 +156,39 @@ model PageAccount {
 }
 
 model Post {
-  id              String     @id @default(cuid())
+  id              String      @id @default(cuid())
   authorId        String?
   socialAccountId String
   pageAccountId   String?
   content         String
-  contentType     ContentType  @default(POST)
-  platform        Platform  
-  mediaFileIds    String[]
-  scheduledAt     String?
+  contentType     ContentType @default(POST)
+  platform        Platform
+  mediaFileIds    MediaFile[]
+  scheduledAt     DateTime?
   timezone        String
   publishedAt     DateTime?
-  status          PostStatus @default(DRAFT)
+  status          PostStatus  @default(DRAFT)
   errorMessage    String?
-  retryCount      Int        @default(0)
+  retryCount      Int         @default(0)
   metadata        Json?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   maxRetries Int @default(3)
 
   // Platform metadata
   platformPostId String? // ID returned by platform after publishing
 
+  parentPostId String?  // Points to the previous tweet in the thread
+  parentPost   Post?    @relation("PostThread", fields: [parentPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childPosts   Post[]   @relation("PostThread")
+
   // RELATIONS
   author        User?           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   socialAccount SocialAccount   @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
   pageAccount   PageAccount?    @relation(fields: [pageAccountId], references: [id], onDelete: Cascade)
   approvals     PostApproval[]
-  analytics     PostAnalytics[]
+  analytics     PostAnalyticsSnapshot[]
 
   jobId       String?
   queueStatus ScheduleJobStatus @default(PENDING)
@@ -172,7 +198,6 @@ model Post {
   aiContent          AiContentGeneration? @relation(fields: [aiContentId], references: [id])
   aiImageGenerations AiImageGeneration[]
 
-  metrics       EngagementMetric[]
   notifications NotificationEntity[]
 
   organizationId String
@@ -219,6 +244,25 @@ model PublishingMetric {
   @@index([organizationId, platform, timestamp])
 }
 
+model MediaFolder {
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String
+  parentId       String?
+  
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent         MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: NoAction)
+  children       MediaFolder[] @relation("FolderHierarchy")
+  files          MediaFile[]  
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, parentId, name])
+  @@index([organizationId])
+  @@index([parentId])
+}
+
 model MediaFile {
   id                  String    @id @default(cuid())
   userId              String
@@ -230,6 +274,7 @@ model MediaFile {
   url                 String
   publicId            String
   thumbnailUrl        String?
+  folderId            String?
   duration            Int?
   metadata            Json?
   createdAt           DateTime  @default(now())
@@ -239,6 +284,9 @@ model MediaFile {
   aiGenerationContext Json?
   // Not unique to allow multiple files per generation:
   aiGenerationId      String?
+  posts               Post[]
+
+  folder         MediaFolder?      @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   // Relation field (many media files -> one generation)
   aiImageGeneration AiImageGeneration? @relation(fields: [aiGenerationId], references: [id], onDelete: SetNull)
@@ -282,7 +330,8 @@ model Organization {
   creditTransactions CreditTransaction[]
 
   brandKit         BrandKit[]
-  EngagementMetric EngagementMetric[]
+  mediaFolders     MediaFolder[]
+  roles          Role[]
 
   // billing and limits
   monthlyCreditLimit Int?    @default(1000) // NULL = unlimited for enterprise
@@ -576,25 +625,22 @@ model PlatformRateLimitLog {
 // ANALYTICS & REPORTING
 // ========================
 
-model PostAnalytics {
+model PostAnalyticsSnapshot {
   id          String   @id @default(cuid())
   postId      String
-  platform    Platform
+ 
+  recordedAt  DateTime @default(now()) 
+  
   likes       Int      @default(0)
-  shares      Int      @default(0)
   comments    Int      @default(0)
+  shares      Int      @default(0)
   impressions Int      @default(0)
-  clicks      Int      @default(0)
   reach       Int      @default(0)
-  saves       Int      @default(0) // Instagram/LinkedIn saves
-  videoViews  Int      @default(0)
-  syncedAt    DateTime @default(now())
-  createdAt   DateTime @default(now())
+  clicks      Int      @default(0)
+  
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@unique([postId, platform, createdAt])
-  @@index([postId, createdAt])
+  @@index([postId, recordedAt]) 
 }
 
 // ========================
@@ -632,27 +678,6 @@ model DeadLetterWebhook {
   createdAt      DateTime @default(now())
 
   webhookEvent WebhookEvent @relation(fields: [webhookEventId], references: [id], onDelete: Cascade)
-}
-
-model EngagementMetric {
-  id               String    @id @default(cuid())
-  post             Post?     @relation(fields: [postId], references: [id])
-  postId           String // The platform's post ID (e.g., Instagram post ID)
-  platform         Platform
-  type             String // 'like', 'comment', 'share', 'message'
-  count            Int       @default(0)
-  lastEngagementAt DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  socialAccountId String
-  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id])
-  organizationId  String
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-
-  @@unique([postId, platform, type])
-  @@index([platform])
-  @@index([type])
 }
 
 model PostingSchedule {
@@ -896,24 +921,6 @@ enum SocialAccountRole {
   ANALYST
 }
 
-model SocialAccountMember {
-  id              String   @id @default(cuid())
-  socialAccountId String
-  userId          String
-  invitedBy       String?
-  roleId          String
-  joinedAt        DateTime @default(now())
-  isActive        Boolean  @default(true)
-
-  // Relations
-  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
-  role          Role          @relation(fields: [roleId], references: [id])
-  user          User          @relation("SocialAccountMemberships", fields: [userId], references: [id], onDelete: Cascade)
-  inviter       User?         @relation("SocialAccountInvitations", fields: [invitedBy], references: [id], onDelete: SetNull)
-
-  @@unique([socialAccountId, userId])
-  @@index([userId, isActive])
-}
 
 enum SocialAccountType {
   PAGE
@@ -922,11 +929,12 @@ enum SocialAccountType {
 
 model Permission {
   id          String             @id @default(cuid())
-  name        String             @unique // e.g., "posts:create", "analytics:read"
+  name        String 
   description String?
   scope       PermissionScope
   resource    PermissionResource
   action      PermissionAction
+
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -939,19 +947,25 @@ model Permission {
 
 model Role {
   id          String   @id @default(cuid())
-  name        String   @unique
+  name        String 
+  slug        String?
   description String?
   isSystem    Boolean  @default(false) // System roles cannot be deleted
   isDefault   Boolean  @default(false) // Default role for new members
+  organizationId String?
+  displayName    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  scope RoleScope
 
   // Relations
+  organization Organization?     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   permissions          RolePermission[]
   organizationMembers  OrganizationMember[]
   socialAccountMembers SocialAccountMember[]
 
   @@index([isSystem, isDefault])
+  @@unique([scope, organizationId, name])
 }
 
 model RolePermission {
@@ -977,6 +991,11 @@ enum PostStatus {
   FAILED
   CANCELED
   RETRYING
+}
+
+enum RoleScope {
+  ORGANIZATION
+  SOCIAL_ACCOUNT
 }
 
 enum QueueStatus {
@@ -1188,19 +1207,18 @@ enum PermissionResource {
   MEMBERS
   BILLING
   SETTINGS
+  SUBSCRIPTION
+  INTEGRATION
+
 
   // Social media resources
   POSTS
+  DRAFT
   CONTENT
   SCHEDULING
   ANALYTICS
-  DMS
-
-  // AI & Content resources
-  AI_GENERATION
-  MEDIA_FILES
-  TEMPLATES
-  BRAND_KIT
+  MESSAGE
+  COMMENT
 
   // Team resources
   INVITATIONS

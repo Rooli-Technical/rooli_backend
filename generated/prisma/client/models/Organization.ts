@@ -349,7 +349,8 @@ export type OrganizationWhereInput = {
   subscription?: Prisma.XOR<Prisma.SubscriptionNullableScalarRelationFilter, Prisma.SubscriptionWhereInput> | null
   creditTransactions?: Prisma.CreditTransactionListRelationFilter
   brandKit?: Prisma.BrandKitListRelationFilter
-  EngagementMetric?: Prisma.EngagementMetricListRelationFilter
+  mediaFolders?: Prisma.MediaFolderListRelationFilter
+  roles?: Prisma.RoleListRelationFilter
   publishingMetrics?: Prisma.PublishingMetricListRelationFilter
 }
 
@@ -390,7 +391,8 @@ export type OrganizationOrderByWithRelationInput = {
   subscription?: Prisma.SubscriptionOrderByWithRelationInput
   creditTransactions?: Prisma.CreditTransactionOrderByRelationAggregateInput
   brandKit?: Prisma.BrandKitOrderByRelationAggregateInput
-  EngagementMetric?: Prisma.EngagementMetricOrderByRelationAggregateInput
+  mediaFolders?: Prisma.MediaFolderOrderByRelationAggregateInput
+  roles?: Prisma.RoleOrderByRelationAggregateInput
   publishingMetrics?: Prisma.PublishingMetricOrderByRelationAggregateInput
 }
 
@@ -434,7 +436,8 @@ export type OrganizationWhereUniqueInput = Prisma.AtLeast<{
   subscription?: Prisma.XOR<Prisma.SubscriptionNullableScalarRelationFilter, Prisma.SubscriptionWhereInput> | null
   creditTransactions?: Prisma.CreditTransactionListRelationFilter
   brandKit?: Prisma.BrandKitListRelationFilter
-  EngagementMetric?: Prisma.EngagementMetricListRelationFilter
+  mediaFolders?: Prisma.MediaFolderListRelationFilter
+  roles?: Prisma.RoleListRelationFilter
   publishingMetrics?: Prisma.PublishingMetricListRelationFilter
 }, "id" | "slug">
 
@@ -527,7 +530,8 @@ export type OrganizationCreateInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -568,7 +572,8 @@ export type OrganizationUncheckedCreateInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -609,7 +614,8 @@ export type OrganizationUpdateInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -650,7 +656,8 @@ export type OrganizationUncheckedUpdateInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -850,6 +857,20 @@ export type OrganizationUpdateOneRequiredWithoutPublishingMetricsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutPublishingMetricsInput, Prisma.OrganizationUpdateWithoutPublishingMetricsInput>, Prisma.OrganizationUncheckedUpdateWithoutPublishingMetricsInput>
 }
 
+export type OrganizationCreateNestedOneWithoutMediaFoldersInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutMediaFoldersInput, Prisma.OrganizationUncheckedCreateWithoutMediaFoldersInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutMediaFoldersInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+}
+
+export type OrganizationUpdateOneRequiredWithoutMediaFoldersNestedInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutMediaFoldersInput, Prisma.OrganizationUncheckedCreateWithoutMediaFoldersInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutMediaFoldersInput
+  upsert?: Prisma.OrganizationUpsertWithoutMediaFoldersInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutMediaFoldersInput, Prisma.OrganizationUpdateWithoutMediaFoldersInput>, Prisma.OrganizationUncheckedUpdateWithoutMediaFoldersInput>
+}
+
 export type OrganizationCreateNestedOneWithoutMediaFilesInput = {
   create?: Prisma.XOR<Prisma.OrganizationCreateWithoutMediaFilesInput, Prisma.OrganizationUncheckedCreateWithoutMediaFilesInput>
   connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutMediaFilesInput
@@ -986,20 +1007,6 @@ export type OrganizationUpdateOneRequiredWithoutWebhookEventsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutWebhookEventsInput, Prisma.OrganizationUpdateWithoutWebhookEventsInput>, Prisma.OrganizationUncheckedUpdateWithoutWebhookEventsInput>
 }
 
-export type OrganizationCreateNestedOneWithoutEngagementMetricInput = {
-  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutEngagementMetricInput, Prisma.OrganizationUncheckedCreateWithoutEngagementMetricInput>
-  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutEngagementMetricInput
-  connect?: Prisma.OrganizationWhereUniqueInput
-}
-
-export type OrganizationUpdateOneRequiredWithoutEngagementMetricNestedInput = {
-  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutEngagementMetricInput, Prisma.OrganizationUncheckedCreateWithoutEngagementMetricInput>
-  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutEngagementMetricInput
-  upsert?: Prisma.OrganizationUpsertWithoutEngagementMetricInput
-  connect?: Prisma.OrganizationWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutEngagementMetricInput, Prisma.OrganizationUpdateWithoutEngagementMetricInput>, Prisma.OrganizationUncheckedUpdateWithoutEngagementMetricInput>
-}
-
 export type OrganizationCreateNestedOneWithoutPostingScheduleInput = {
   create?: Prisma.XOR<Prisma.OrganizationCreateWithoutPostingScheduleInput, Prisma.OrganizationUncheckedCreateWithoutPostingScheduleInput>
   connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutPostingScheduleInput
@@ -1084,6 +1091,22 @@ export type OrganizationUpdateOneRequiredWithoutCreditTransactionsNestedInput = 
   update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutCreditTransactionsInput, Prisma.OrganizationUpdateWithoutCreditTransactionsInput>, Prisma.OrganizationUncheckedUpdateWithoutCreditTransactionsInput>
 }
 
+export type OrganizationCreateNestedOneWithoutRolesInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutRolesInput, Prisma.OrganizationUncheckedCreateWithoutRolesInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutRolesInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+}
+
+export type OrganizationUpdateOneWithoutRolesNestedInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutRolesInput, Prisma.OrganizationUncheckedCreateWithoutRolesInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutRolesInput
+  upsert?: Prisma.OrganizationUpsertWithoutRolesInput
+  disconnect?: Prisma.OrganizationWhereInput | boolean
+  delete?: Prisma.OrganizationWhereInput | boolean
+  connect?: Prisma.OrganizationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutRolesInput, Prisma.OrganizationUpdateWithoutRolesInput>, Prisma.OrganizationUncheckedUpdateWithoutRolesInput>
+}
+
 export type OrganizationCreateWithoutSocialAccountsInput = {
   id?: string
   name: string
@@ -1120,7 +1143,8 @@ export type OrganizationCreateWithoutSocialAccountsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -1160,7 +1184,8 @@ export type OrganizationUncheckedCreateWithoutSocialAccountsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -1216,7 +1241,8 @@ export type OrganizationUpdateWithoutSocialAccountsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -1256,7 +1282,8 @@ export type OrganizationUncheckedUpdateWithoutSocialAccountsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -1296,7 +1323,8 @@ export type OrganizationCreateWithoutPostsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -1336,7 +1364,8 @@ export type OrganizationUncheckedCreateWithoutPostsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -1392,7 +1421,8 @@ export type OrganizationUpdateWithoutPostsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -1432,7 +1462,8 @@ export type OrganizationUncheckedUpdateWithoutPostsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -1473,7 +1504,8 @@ export type OrganizationCreateWithoutPublishingMetricsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUncheckedCreateWithoutPublishingMetricsInput = {
@@ -1513,7 +1545,8 @@ export type OrganizationUncheckedCreateWithoutPublishingMetricsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationCreateOrConnectWithoutPublishingMetricsInput = {
@@ -1569,7 +1602,8 @@ export type OrganizationUpdateWithoutPublishingMetricsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationUncheckedUpdateWithoutPublishingMetricsInput = {
@@ -1609,7 +1643,188 @@ export type OrganizationUncheckedUpdateWithoutPublishingMetricsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
+}
+
+export type OrganizationCreateWithoutMediaFoldersInput = {
+  id?: string
+  name: string
+  email: string
+  slug: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  isActive?: boolean
+  planTier?: $Enums.PlanTier
+  planStatus?: $Enums.PlanStatus
+  subscriptionEndsAt?: Date | string | null
+  totalCreditsUsed?: number
+  monthlyCreditLimit?: number | null
+  maxMembers?: number
+  billingEmail?: string | null
+  timezone?: string
+  currency?: string
+  trialEndsAt?: Date | string | null
+  trialExtended?: boolean
+  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.OrganizationMemberCreateNestedManyWithoutOrganizationInput
+  invitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutOrganizationInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutOrganizationInput
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutOrganizationInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutOrganizationInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutOrganizationInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutOrganizationInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutOrganizationInput
+  webhookEvents?: Prisma.WebhookEventCreateNestedManyWithoutOrganizationInput
+  PostingSchedule?: Prisma.PostingScheduleCreateNestedManyWithoutOrganizationInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutOrganizationInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutOrganizationInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutOrganizationInput
+  posts?: Prisma.PostCreateNestedManyWithoutOrganizationInput
+  subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
+  creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
+  brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
+  publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
+}
+
+export type OrganizationUncheckedCreateWithoutMediaFoldersInput = {
+  id?: string
+  name: string
+  email: string
+  slug: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  isActive?: boolean
+  planTier?: $Enums.PlanTier
+  planStatus?: $Enums.PlanStatus
+  subscriptionEndsAt?: Date | string | null
+  totalCreditsUsed?: number
+  monthlyCreditLimit?: number | null
+  maxMembers?: number
+  billingEmail?: string | null
+  timezone?: string
+  currency?: string
+  trialEndsAt?: Date | string | null
+  trialExtended?: boolean
+  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutOrganizationInput
+  invitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutOrganizationInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutOrganizationInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutOrganizationInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutOrganizationInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutOrganizationInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutOrganizationInput
+  webhookEvents?: Prisma.WebhookEventUncheckedCreateNestedManyWithoutOrganizationInput
+  PostingSchedule?: Prisma.PostingScheduleUncheckedCreateNestedManyWithoutOrganizationInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutOrganizationInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutOrganizationInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutOrganizationInput
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutOrganizationInput
+  subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
+  creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
+  brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
+  publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
+}
+
+export type OrganizationCreateOrConnectWithoutMediaFoldersInput = {
+  where: Prisma.OrganizationWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutMediaFoldersInput, Prisma.OrganizationUncheckedCreateWithoutMediaFoldersInput>
+}
+
+export type OrganizationUpsertWithoutMediaFoldersInput = {
+  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutMediaFoldersInput, Prisma.OrganizationUncheckedUpdateWithoutMediaFoldersInput>
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutMediaFoldersInput, Prisma.OrganizationUncheckedCreateWithoutMediaFoldersInput>
+  where?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationUpdateToOneWithWhereWithoutMediaFoldersInput = {
+  where?: Prisma.OrganizationWhereInput
+  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutMediaFoldersInput, Prisma.OrganizationUncheckedUpdateWithoutMediaFoldersInput>
+}
+
+export type OrganizationUpdateWithoutMediaFoldersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planTier?: Prisma.EnumPlanTierFieldUpdateOperationsInput | $Enums.PlanTier
+  planStatus?: Prisma.EnumPlanStatusFieldUpdateOperationsInput | $Enums.PlanStatus
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  totalCreditsUsed?: Prisma.IntFieldUpdateOperationsInput | number
+  monthlyCreditLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxMembers?: Prisma.IntFieldUpdateOperationsInput | number
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trialExtended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.OrganizationMemberUpdateManyWithoutOrganizationNestedInput
+  invitations?: Prisma.OrganizationInvitationUpdateManyWithoutOrganizationNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutOrganizationNestedInput
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutOrganizationNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutOrganizationNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutOrganizationNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutOrganizationNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutOrganizationNestedInput
+  webhookEvents?: Prisma.WebhookEventUpdateManyWithoutOrganizationNestedInput
+  PostingSchedule?: Prisma.PostingScheduleUpdateManyWithoutOrganizationNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutOrganizationNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutOrganizationNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutOrganizationNestedInput
+  posts?: Prisma.PostUpdateManyWithoutOrganizationNestedInput
+  subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
+  creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
+  brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
+  publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
+}
+
+export type OrganizationUncheckedUpdateWithoutMediaFoldersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planTier?: Prisma.EnumPlanTierFieldUpdateOperationsInput | $Enums.PlanTier
+  planStatus?: Prisma.EnumPlanStatusFieldUpdateOperationsInput | $Enums.PlanStatus
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  totalCreditsUsed?: Prisma.IntFieldUpdateOperationsInput | number
+  monthlyCreditLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxMembers?: Prisma.IntFieldUpdateOperationsInput | number
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trialExtended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutOrganizationNestedInput
+  invitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutOrganizationNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutOrganizationNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutOrganizationNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutOrganizationNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutOrganizationNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutOrganizationNestedInput
+  webhookEvents?: Prisma.WebhookEventUncheckedUpdateManyWithoutOrganizationNestedInput
+  PostingSchedule?: Prisma.PostingScheduleUncheckedUpdateManyWithoutOrganizationNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutOrganizationNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutOrganizationNestedInput
+  posts?: Prisma.PostUncheckedUpdateManyWithoutOrganizationNestedInput
+  subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
+  creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
+  brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
+  publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationCreateWithoutMediaFilesInput = {
@@ -1648,7 +1863,8 @@ export type OrganizationCreateWithoutMediaFilesInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -1688,7 +1904,8 @@ export type OrganizationUncheckedCreateWithoutMediaFilesInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -1744,7 +1961,8 @@ export type OrganizationUpdateWithoutMediaFilesInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -1784,7 +2002,8 @@ export type OrganizationUncheckedUpdateWithoutMediaFilesInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -1824,7 +2043,8 @@ export type OrganizationCreateWithoutMembersInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -1864,7 +2084,8 @@ export type OrganizationUncheckedCreateWithoutMembersInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -1920,7 +2141,8 @@ export type OrganizationUpdateWithoutMembersInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -1960,7 +2182,8 @@ export type OrganizationUncheckedUpdateWithoutMembersInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2000,7 +2223,8 @@ export type OrganizationCreateWithoutInvitationsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2040,7 +2264,8 @@ export type OrganizationUncheckedCreateWithoutInvitationsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2096,7 +2321,8 @@ export type OrganizationUpdateWithoutInvitationsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2136,7 +2362,8 @@ export type OrganizationUncheckedUpdateWithoutInvitationsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2176,7 +2403,8 @@ export type OrganizationCreateWithoutAiContentGenerationsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2216,7 +2444,8 @@ export type OrganizationUncheckedCreateWithoutAiContentGenerationsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2272,7 +2501,8 @@ export type OrganizationUpdateWithoutAiContentGenerationsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2312,7 +2542,8 @@ export type OrganizationUncheckedUpdateWithoutAiContentGenerationsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2352,7 +2583,8 @@ export type OrganizationCreateWithoutAiImageGenerationsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2392,7 +2624,8 @@ export type OrganizationUncheckedCreateWithoutAiImageGenerationsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2448,7 +2681,8 @@ export type OrganizationUpdateWithoutAiImageGenerationsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2488,7 +2722,8 @@ export type OrganizationUncheckedUpdateWithoutAiImageGenerationsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2528,7 +2763,8 @@ export type OrganizationCreateWithoutAiUsagesInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2568,7 +2804,8 @@ export type OrganizationUncheckedCreateWithoutAiUsagesInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2624,7 +2861,8 @@ export type OrganizationUpdateWithoutAiUsagesInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2664,7 +2902,8 @@ export type OrganizationUncheckedUpdateWithoutAiUsagesInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2704,7 +2943,8 @@ export type OrganizationCreateWithoutConversationsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2744,7 +2984,8 @@ export type OrganizationUncheckedCreateWithoutConversationsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2800,7 +3041,8 @@ export type OrganizationUpdateWithoutConversationsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2840,7 +3082,8 @@ export type OrganizationUncheckedUpdateWithoutConversationsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -2880,7 +3123,8 @@ export type OrganizationCreateWithoutContentTemplateInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2920,7 +3164,8 @@ export type OrganizationUncheckedCreateWithoutContentTemplateInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -2976,7 +3221,8 @@ export type OrganizationUpdateWithoutContentTemplateInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3016,7 +3262,8 @@ export type OrganizationUncheckedUpdateWithoutContentTemplateInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3056,7 +3303,8 @@ export type OrganizationCreateWithoutWebhookEventsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3096,7 +3344,8 @@ export type OrganizationUncheckedCreateWithoutWebhookEventsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3152,7 +3401,8 @@ export type OrganizationUpdateWithoutWebhookEventsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3192,183 +3442,8 @@ export type OrganizationUncheckedUpdateWithoutWebhookEventsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
-  publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
-}
-
-export type OrganizationCreateWithoutEngagementMetricInput = {
-  id?: string
-  name: string
-  email: string
-  slug: string
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  isActive?: boolean
-  planTier?: $Enums.PlanTier
-  planStatus?: $Enums.PlanStatus
-  subscriptionEndsAt?: Date | string | null
-  totalCreditsUsed?: number
-  monthlyCreditLimit?: number | null
-  maxMembers?: number
-  billingEmail?: string | null
-  timezone?: string
-  currency?: string
-  trialEndsAt?: Date | string | null
-  trialExtended?: boolean
-  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  members?: Prisma.OrganizationMemberCreateNestedManyWithoutOrganizationInput
-  invitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutOrganizationInput
-  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutOrganizationInput
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutOrganizationInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutOrganizationInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutOrganizationInput
-  conversations?: Prisma.ConversationCreateNestedManyWithoutOrganizationInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutOrganizationInput
-  webhookEvents?: Prisma.WebhookEventCreateNestedManyWithoutOrganizationInput
-  PostingSchedule?: Prisma.PostingScheduleCreateNestedManyWithoutOrganizationInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutOrganizationInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutOrganizationInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutOrganizationInput
-  posts?: Prisma.PostCreateNestedManyWithoutOrganizationInput
-  subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
-  creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
-  brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
-}
-
-export type OrganizationUncheckedCreateWithoutEngagementMetricInput = {
-  id?: string
-  name: string
-  email: string
-  slug: string
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  isActive?: boolean
-  planTier?: $Enums.PlanTier
-  planStatus?: $Enums.PlanStatus
-  subscriptionEndsAt?: Date | string | null
-  totalCreditsUsed?: number
-  monthlyCreditLimit?: number | null
-  maxMembers?: number
-  billingEmail?: string | null
-  timezone?: string
-  currency?: string
-  trialEndsAt?: Date | string | null
-  trialExtended?: boolean
-  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  members?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutOrganizationInput
-  invitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutOrganizationInput
-  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutOrganizationInput
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutOrganizationInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutOrganizationInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutOrganizationInput
-  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutOrganizationInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutOrganizationInput
-  webhookEvents?: Prisma.WebhookEventUncheckedCreateNestedManyWithoutOrganizationInput
-  PostingSchedule?: Prisma.PostingScheduleUncheckedCreateNestedManyWithoutOrganizationInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutOrganizationInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutOrganizationInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutOrganizationInput
-  posts?: Prisma.PostUncheckedCreateNestedManyWithoutOrganizationInput
-  subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
-  creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
-  brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
-}
-
-export type OrganizationCreateOrConnectWithoutEngagementMetricInput = {
-  where: Prisma.OrganizationWhereUniqueInput
-  create: Prisma.XOR<Prisma.OrganizationCreateWithoutEngagementMetricInput, Prisma.OrganizationUncheckedCreateWithoutEngagementMetricInput>
-}
-
-export type OrganizationUpsertWithoutEngagementMetricInput = {
-  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutEngagementMetricInput, Prisma.OrganizationUncheckedUpdateWithoutEngagementMetricInput>
-  create: Prisma.XOR<Prisma.OrganizationCreateWithoutEngagementMetricInput, Prisma.OrganizationUncheckedCreateWithoutEngagementMetricInput>
-  where?: Prisma.OrganizationWhereInput
-}
-
-export type OrganizationUpdateToOneWithWhereWithoutEngagementMetricInput = {
-  where?: Prisma.OrganizationWhereInput
-  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutEngagementMetricInput, Prisma.OrganizationUncheckedUpdateWithoutEngagementMetricInput>
-}
-
-export type OrganizationUpdateWithoutEngagementMetricInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  slug?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  planTier?: Prisma.EnumPlanTierFieldUpdateOperationsInput | $Enums.PlanTier
-  planStatus?: Prisma.EnumPlanStatusFieldUpdateOperationsInput | $Enums.PlanStatus
-  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  totalCreditsUsed?: Prisma.IntFieldUpdateOperationsInput | number
-  monthlyCreditLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  maxMembers?: Prisma.IntFieldUpdateOperationsInput | number
-  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  timezone?: Prisma.StringFieldUpdateOperationsInput | string
-  currency?: Prisma.StringFieldUpdateOperationsInput | string
-  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialExtended?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  members?: Prisma.OrganizationMemberUpdateManyWithoutOrganizationNestedInput
-  invitations?: Prisma.OrganizationInvitationUpdateManyWithoutOrganizationNestedInput
-  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutOrganizationNestedInput
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutOrganizationNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutOrganizationNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutOrganizationNestedInput
-  conversations?: Prisma.ConversationUpdateManyWithoutOrganizationNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutOrganizationNestedInput
-  webhookEvents?: Prisma.WebhookEventUpdateManyWithoutOrganizationNestedInput
-  PostingSchedule?: Prisma.PostingScheduleUpdateManyWithoutOrganizationNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutOrganizationNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutOrganizationNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutOrganizationNestedInput
-  posts?: Prisma.PostUpdateManyWithoutOrganizationNestedInput
-  subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
-  creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
-  brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
-}
-
-export type OrganizationUncheckedUpdateWithoutEngagementMetricInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  slug?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  planTier?: Prisma.EnumPlanTierFieldUpdateOperationsInput | $Enums.PlanTier
-  planStatus?: Prisma.EnumPlanStatusFieldUpdateOperationsInput | $Enums.PlanStatus
-  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  totalCreditsUsed?: Prisma.IntFieldUpdateOperationsInput | number
-  monthlyCreditLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  maxMembers?: Prisma.IntFieldUpdateOperationsInput | number
-  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  timezone?: Prisma.StringFieldUpdateOperationsInput | string
-  currency?: Prisma.StringFieldUpdateOperationsInput | string
-  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  trialExtended?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  members?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutOrganizationNestedInput
-  invitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutOrganizationNestedInput
-  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutOrganizationNestedInput
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutOrganizationNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutOrganizationNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutOrganizationNestedInput
-  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutOrganizationNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutOrganizationNestedInput
-  webhookEvents?: Prisma.WebhookEventUncheckedUpdateManyWithoutOrganizationNestedInput
-  PostingSchedule?: Prisma.PostingScheduleUncheckedUpdateManyWithoutOrganizationNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutOrganizationNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutOrganizationNestedInput
-  posts?: Prisma.PostUncheckedUpdateManyWithoutOrganizationNestedInput
-  subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
-  creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
-  brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3408,7 +3483,8 @@ export type OrganizationCreateWithoutPostingScheduleInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3448,7 +3524,8 @@ export type OrganizationUncheckedCreateWithoutPostingScheduleInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3504,7 +3581,8 @@ export type OrganizationUpdateWithoutPostingScheduleInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3544,7 +3622,8 @@ export type OrganizationUncheckedUpdateWithoutPostingScheduleInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3584,7 +3663,8 @@ export type OrganizationCreateWithoutNotificationsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3624,7 +3704,8 @@ export type OrganizationUncheckedCreateWithoutNotificationsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3680,7 +3761,8 @@ export type OrganizationUpdateWithoutNotificationsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3720,7 +3802,8 @@ export type OrganizationUncheckedUpdateWithoutNotificationsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3760,7 +3843,8 @@ export type OrganizationCreateWithoutAuditLogsInput = {
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3800,7 +3884,8 @@ export type OrganizationUncheckedCreateWithoutAuditLogsInput = {
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3856,7 +3941,8 @@ export type OrganizationUpdateWithoutAuditLogsInput = {
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3896,7 +3982,8 @@ export type OrganizationUncheckedUpdateWithoutAuditLogsInput = {
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -3936,7 +4023,8 @@ export type OrganizationCreateWithoutBrandKitInput = {
   posts?: Prisma.PostCreateNestedManyWithoutOrganizationInput
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -3976,7 +4064,8 @@ export type OrganizationUncheckedCreateWithoutBrandKitInput = {
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutOrganizationInput
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -4032,7 +4121,8 @@ export type OrganizationUpdateWithoutBrandKitInput = {
   posts?: Prisma.PostUpdateManyWithoutOrganizationNestedInput
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -4072,7 +4162,8 @@ export type OrganizationUncheckedUpdateWithoutBrandKitInput = {
   posts?: Prisma.PostUncheckedUpdateManyWithoutOrganizationNestedInput
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -4112,7 +4203,8 @@ export type OrganizationCreateWithoutSubscriptionInput = {
   posts?: Prisma.PostCreateNestedManyWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -4152,7 +4244,8 @@ export type OrganizationUncheckedCreateWithoutSubscriptionInput = {
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutOrganizationInput
   creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -4208,7 +4301,8 @@ export type OrganizationUpdateWithoutSubscriptionInput = {
   posts?: Prisma.PostUpdateManyWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -4248,7 +4342,8 @@ export type OrganizationUncheckedUpdateWithoutSubscriptionInput = {
   posts?: Prisma.PostUncheckedUpdateManyWithoutOrganizationNestedInput
   creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -4288,7 +4383,8 @@ export type OrganizationCreateWithoutCreditTransactionsInput = {
   posts?: Prisma.PostCreateNestedManyWithoutOrganizationInput
   subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
   brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
 }
 
@@ -4328,7 +4424,8 @@ export type OrganizationUncheckedCreateWithoutCreditTransactionsInput = {
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutOrganizationInput
   subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
   brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutOrganizationInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
@@ -4384,7 +4481,8 @@ export type OrganizationUpdateWithoutCreditTransactionsInput = {
   posts?: Prisma.PostUpdateManyWithoutOrganizationNestedInput
   subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -4424,7 +4522,188 @@ export type OrganizationUncheckedUpdateWithoutCreditTransactionsInput = {
   posts?: Prisma.PostUncheckedUpdateManyWithoutOrganizationNestedInput
   subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
   brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
-  EngagementMetric?: Prisma.EngagementMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutOrganizationNestedInput
+  publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
+}
+
+export type OrganizationCreateWithoutRolesInput = {
+  id?: string
+  name: string
+  email: string
+  slug: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  isActive?: boolean
+  planTier?: $Enums.PlanTier
+  planStatus?: $Enums.PlanStatus
+  subscriptionEndsAt?: Date | string | null
+  totalCreditsUsed?: number
+  monthlyCreditLimit?: number | null
+  maxMembers?: number
+  billingEmail?: string | null
+  timezone?: string
+  currency?: string
+  trialEndsAt?: Date | string | null
+  trialExtended?: boolean
+  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.OrganizationMemberCreateNestedManyWithoutOrganizationInput
+  invitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutOrganizationInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutOrganizationInput
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutOrganizationInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutOrganizationInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutOrganizationInput
+  conversations?: Prisma.ConversationCreateNestedManyWithoutOrganizationInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutOrganizationInput
+  webhookEvents?: Prisma.WebhookEventCreateNestedManyWithoutOrganizationInput
+  PostingSchedule?: Prisma.PostingScheduleCreateNestedManyWithoutOrganizationInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutOrganizationInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutOrganizationInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutOrganizationInput
+  posts?: Prisma.PostCreateNestedManyWithoutOrganizationInput
+  subscription?: Prisma.SubscriptionCreateNestedOneWithoutOrganizationInput
+  creditTransactions?: Prisma.CreditTransactionCreateNestedManyWithoutOrganizationInput
+  brandKit?: Prisma.BrandKitCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderCreateNestedManyWithoutOrganizationInput
+  publishingMetrics?: Prisma.PublishingMetricCreateNestedManyWithoutOrganizationInput
+}
+
+export type OrganizationUncheckedCreateWithoutRolesInput = {
+  id?: string
+  name: string
+  email: string
+  slug: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  isActive?: boolean
+  planTier?: $Enums.PlanTier
+  planStatus?: $Enums.PlanStatus
+  subscriptionEndsAt?: Date | string | null
+  totalCreditsUsed?: number
+  monthlyCreditLimit?: number | null
+  maxMembers?: number
+  billingEmail?: string | null
+  timezone?: string
+  currency?: string
+  trialEndsAt?: Date | string | null
+  trialExtended?: boolean
+  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutOrganizationInput
+  invitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutOrganizationInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutOrganizationInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutOrganizationInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutOrganizationInput
+  conversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutOrganizationInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutOrganizationInput
+  webhookEvents?: Prisma.WebhookEventUncheckedCreateNestedManyWithoutOrganizationInput
+  PostingSchedule?: Prisma.PostingScheduleUncheckedCreateNestedManyWithoutOrganizationInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutOrganizationInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutOrganizationInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutOrganizationInput
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutOrganizationInput
+  subscription?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutOrganizationInput
+  creditTransactions?: Prisma.CreditTransactionUncheckedCreateNestedManyWithoutOrganizationInput
+  brandKit?: Prisma.BrandKitUncheckedCreateNestedManyWithoutOrganizationInput
+  mediaFolders?: Prisma.MediaFolderUncheckedCreateNestedManyWithoutOrganizationInput
+  publishingMetrics?: Prisma.PublishingMetricUncheckedCreateNestedManyWithoutOrganizationInput
+}
+
+export type OrganizationCreateOrConnectWithoutRolesInput = {
+  where: Prisma.OrganizationWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutRolesInput, Prisma.OrganizationUncheckedCreateWithoutRolesInput>
+}
+
+export type OrganizationUpsertWithoutRolesInput = {
+  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutRolesInput, Prisma.OrganizationUncheckedUpdateWithoutRolesInput>
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutRolesInput, Prisma.OrganizationUncheckedCreateWithoutRolesInput>
+  where?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationUpdateToOneWithWhereWithoutRolesInput = {
+  where?: Prisma.OrganizationWhereInput
+  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutRolesInput, Prisma.OrganizationUncheckedUpdateWithoutRolesInput>
+}
+
+export type OrganizationUpdateWithoutRolesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planTier?: Prisma.EnumPlanTierFieldUpdateOperationsInput | $Enums.PlanTier
+  planStatus?: Prisma.EnumPlanStatusFieldUpdateOperationsInput | $Enums.PlanStatus
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  totalCreditsUsed?: Prisma.IntFieldUpdateOperationsInput | number
+  monthlyCreditLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxMembers?: Prisma.IntFieldUpdateOperationsInput | number
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trialExtended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.OrganizationMemberUpdateManyWithoutOrganizationNestedInput
+  invitations?: Prisma.OrganizationInvitationUpdateManyWithoutOrganizationNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutOrganizationNestedInput
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutOrganizationNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutOrganizationNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutOrganizationNestedInput
+  conversations?: Prisma.ConversationUpdateManyWithoutOrganizationNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutOrganizationNestedInput
+  webhookEvents?: Prisma.WebhookEventUpdateManyWithoutOrganizationNestedInput
+  PostingSchedule?: Prisma.PostingScheduleUpdateManyWithoutOrganizationNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutOrganizationNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutOrganizationNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutOrganizationNestedInput
+  posts?: Prisma.PostUpdateManyWithoutOrganizationNestedInput
+  subscription?: Prisma.SubscriptionUpdateOneWithoutOrganizationNestedInput
+  creditTransactions?: Prisma.CreditTransactionUpdateManyWithoutOrganizationNestedInput
+  brandKit?: Prisma.BrandKitUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUpdateManyWithoutOrganizationNestedInput
+  publishingMetrics?: Prisma.PublishingMetricUpdateManyWithoutOrganizationNestedInput
+}
+
+export type OrganizationUncheckedUpdateWithoutRolesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planTier?: Prisma.EnumPlanTierFieldUpdateOperationsInput | $Enums.PlanTier
+  planStatus?: Prisma.EnumPlanStatusFieldUpdateOperationsInput | $Enums.PlanStatus
+  subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  totalCreditsUsed?: Prisma.IntFieldUpdateOperationsInput | number
+  monthlyCreditLimit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxMembers?: Prisma.IntFieldUpdateOperationsInput | number
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trialExtended?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  settings?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  members?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutOrganizationNestedInput
+  invitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutOrganizationNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutOrganizationNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutOrganizationNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutOrganizationNestedInput
+  conversations?: Prisma.ConversationUncheckedUpdateManyWithoutOrganizationNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutOrganizationNestedInput
+  webhookEvents?: Prisma.WebhookEventUncheckedUpdateManyWithoutOrganizationNestedInput
+  PostingSchedule?: Prisma.PostingScheduleUncheckedUpdateManyWithoutOrganizationNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutOrganizationNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutOrganizationNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutOrganizationNestedInput
+  posts?: Prisma.PostUncheckedUpdateManyWithoutOrganizationNestedInput
+  subscription?: Prisma.SubscriptionUncheckedUpdateOneWithoutOrganizationNestedInput
+  creditTransactions?: Prisma.CreditTransactionUncheckedUpdateManyWithoutOrganizationNestedInput
+  brandKit?: Prisma.BrandKitUncheckedUpdateManyWithoutOrganizationNestedInput
+  mediaFolders?: Prisma.MediaFolderUncheckedUpdateManyWithoutOrganizationNestedInput
   publishingMetrics?: Prisma.PublishingMetricUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
@@ -4450,7 +4729,8 @@ export type OrganizationCountOutputType = {
   posts: number
   creditTransactions: number
   brandKit: number
-  EngagementMetric: number
+  mediaFolders: number
+  roles: number
   publishingMetrics: number
 }
 
@@ -4471,7 +4751,8 @@ export type OrganizationCountOutputTypeSelect<ExtArgs extends runtime.Types.Exte
   posts?: boolean | OrganizationCountOutputTypeCountPostsArgs
   creditTransactions?: boolean | OrganizationCountOutputTypeCountCreditTransactionsArgs
   brandKit?: boolean | OrganizationCountOutputTypeCountBrandKitArgs
-  EngagementMetric?: boolean | OrganizationCountOutputTypeCountEngagementMetricArgs
+  mediaFolders?: boolean | OrganizationCountOutputTypeCountMediaFoldersArgs
+  roles?: boolean | OrganizationCountOutputTypeCountRolesArgs
   publishingMetrics?: boolean | OrganizationCountOutputTypeCountPublishingMetricsArgs
 }
 
@@ -4600,8 +4881,15 @@ export type OrganizationCountOutputTypeCountBrandKitArgs<ExtArgs extends runtime
 /**
  * OrganizationCountOutputType without action
  */
-export type OrganizationCountOutputTypeCountEngagementMetricArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.EngagementMetricWhereInput
+export type OrganizationCountOutputTypeCountMediaFoldersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MediaFolderWhereInput
+}
+
+/**
+ * OrganizationCountOutputType without action
+ */
+export type OrganizationCountOutputTypeCountRolesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RoleWhereInput
 }
 
 /**
@@ -4649,7 +4937,8 @@ export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.Internal
   subscription?: boolean | Prisma.Organization$subscriptionArgs<ExtArgs>
   creditTransactions?: boolean | Prisma.Organization$creditTransactionsArgs<ExtArgs>
   brandKit?: boolean | Prisma.Organization$brandKitArgs<ExtArgs>
-  EngagementMetric?: boolean | Prisma.Organization$EngagementMetricArgs<ExtArgs>
+  mediaFolders?: boolean | Prisma.Organization$mediaFoldersArgs<ExtArgs>
+  roles?: boolean | Prisma.Organization$rolesArgs<ExtArgs>
   publishingMetrics?: boolean | Prisma.Organization$publishingMetricsArgs<ExtArgs>
   _count?: boolean | Prisma.OrganizationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["organization"]>
@@ -4739,7 +5028,8 @@ export type OrganizationInclude<ExtArgs extends runtime.Types.Extensions.Interna
   subscription?: boolean | Prisma.Organization$subscriptionArgs<ExtArgs>
   creditTransactions?: boolean | Prisma.Organization$creditTransactionsArgs<ExtArgs>
   brandKit?: boolean | Prisma.Organization$brandKitArgs<ExtArgs>
-  EngagementMetric?: boolean | Prisma.Organization$EngagementMetricArgs<ExtArgs>
+  mediaFolders?: boolean | Prisma.Organization$mediaFoldersArgs<ExtArgs>
+  roles?: boolean | Prisma.Organization$rolesArgs<ExtArgs>
   publishingMetrics?: boolean | Prisma.Organization$publishingMetricsArgs<ExtArgs>
   _count?: boolean | Prisma.OrganizationCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -4766,7 +5056,8 @@ export type $OrganizationPayload<ExtArgs extends runtime.Types.Extensions.Intern
     subscription: Prisma.$SubscriptionPayload<ExtArgs> | null
     creditTransactions: Prisma.$CreditTransactionPayload<ExtArgs>[]
     brandKit: Prisma.$BrandKitPayload<ExtArgs>[]
-    EngagementMetric: Prisma.$EngagementMetricPayload<ExtArgs>[]
+    mediaFolders: Prisma.$MediaFolderPayload<ExtArgs>[]
+    roles: Prisma.$RolePayload<ExtArgs>[]
     publishingMetrics: Prisma.$PublishingMetricPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -5200,7 +5491,8 @@ export interface Prisma__OrganizationClient<T, Null = never, ExtArgs extends run
   subscription<T extends Prisma.Organization$subscriptionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$subscriptionArgs<ExtArgs>>): Prisma.Prisma__SubscriptionClient<runtime.Types.Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   creditTransactions<T extends Prisma.Organization$creditTransactionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$creditTransactionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CreditTransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   brandKit<T extends Prisma.Organization$brandKitArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$brandKitArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BrandKitPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  EngagementMetric<T extends Prisma.Organization$EngagementMetricArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$EngagementMetricArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EngagementMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  mediaFolders<T extends Prisma.Organization$mediaFoldersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$mediaFoldersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MediaFolderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  roles<T extends Prisma.Organization$rolesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$rolesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RolePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   publishingMetrics<T extends Prisma.Organization$publishingMetricsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$publishingMetricsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PublishingMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -6041,27 +6333,51 @@ export type Organization$brandKitArgs<ExtArgs extends runtime.Types.Extensions.I
 }
 
 /**
- * Organization.EngagementMetric
+ * Organization.mediaFolders
  */
-export type Organization$EngagementMetricArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Organization$mediaFoldersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the EngagementMetric
+   * Select specific fields to fetch from the MediaFolder
    */
-  select?: Prisma.EngagementMetricSelect<ExtArgs> | null
+  select?: Prisma.MediaFolderSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the EngagementMetric
+   * Omit specific fields from the MediaFolder
    */
-  omit?: Prisma.EngagementMetricOmit<ExtArgs> | null
+  omit?: Prisma.MediaFolderOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.EngagementMetricInclude<ExtArgs> | null
-  where?: Prisma.EngagementMetricWhereInput
-  orderBy?: Prisma.EngagementMetricOrderByWithRelationInput | Prisma.EngagementMetricOrderByWithRelationInput[]
-  cursor?: Prisma.EngagementMetricWhereUniqueInput
+  include?: Prisma.MediaFolderInclude<ExtArgs> | null
+  where?: Prisma.MediaFolderWhereInput
+  orderBy?: Prisma.MediaFolderOrderByWithRelationInput | Prisma.MediaFolderOrderByWithRelationInput[]
+  cursor?: Prisma.MediaFolderWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.EngagementMetricScalarFieldEnum | Prisma.EngagementMetricScalarFieldEnum[]
+  distinct?: Prisma.MediaFolderScalarFieldEnum | Prisma.MediaFolderScalarFieldEnum[]
+}
+
+/**
+ * Organization.roles
+ */
+export type Organization$rolesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Role
+   */
+  select?: Prisma.RoleSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Role
+   */
+  omit?: Prisma.RoleOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RoleInclude<ExtArgs> | null
+  where?: Prisma.RoleWhereInput
+  orderBy?: Prisma.RoleOrderByWithRelationInput | Prisma.RoleOrderByWithRelationInput[]
+  cursor?: Prisma.RoleWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RoleScalarFieldEnum | Prisma.RoleScalarFieldEnum[]
 }
 
 /**

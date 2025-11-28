@@ -75,38 +75,12 @@ export class UserController {
     return this.usersService.deactivateAccount(req.user.id);
   }
 
+  //there should be a guard to restrict organization access
   @Get('organization/:organizationId')
   @ApiOperation({
     summary: 'List users by organization',
     description:
       'Returns paginated list of users for a given organization with optional search and role filters.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Paginated users retrieved',
-    schema: {
-      example: {
-        users: [
-          {
-            id: 'uuid',
-            email: 'user@example.com',
-            firstName: 'John',
-            lastName: 'Doe',
-            avatar: null,
-            role: 'ANALYST',
-            isEmailVerified: true,
-            lastActiveAt: '2025-09-25T10:00:00.000Z',
-            createdAt: '2025-09-25T09:00:00.000Z',
-          },
-        ],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 1,
-          pages: 1,
-        },
-      },
-    },
   })
   async getUsersByOrganization(
     @Param('organizationId') organizationId: string,
@@ -114,4 +88,6 @@ export class UserController {
   ) {
     return this.usersService.getUsersByOrganization(organizationId, filters);
   }
+
+  //get user socialaccounts
 }

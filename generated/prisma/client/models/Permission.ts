@@ -223,11 +223,11 @@ export type PermissionOrderByWithRelationInput = {
 
 export type PermissionWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  name?: string
   scope_resource_action?: Prisma.PermissionScopeResourceActionCompoundUniqueInput
   AND?: Prisma.PermissionWhereInput | Prisma.PermissionWhereInput[]
   OR?: Prisma.PermissionWhereInput[]
   NOT?: Prisma.PermissionWhereInput | Prisma.PermissionWhereInput[]
+  name?: Prisma.StringFilter<"Permission"> | string
   description?: Prisma.StringNullableFilter<"Permission"> | string | null
   scope?: Prisma.EnumPermissionScopeFilter<"Permission"> | $Enums.PermissionScope
   resource?: Prisma.EnumPermissionResourceFilter<"Permission"> | $Enums.PermissionResource
@@ -235,7 +235,7 @@ export type PermissionWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Permission"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Permission"> | Date | string
   rolePermissions?: Prisma.RolePermissionListRelationFilter
-}, "id" | "name" | "scope_resource_action">
+}, "id" | "scope_resource_action">
 
 export type PermissionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder

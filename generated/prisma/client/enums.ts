@@ -83,6 +83,14 @@ export const PostStatus = {
 export type PostStatus = (typeof PostStatus)[keyof typeof PostStatus]
 
 
+export const RoleScope = {
+  ORGANIZATION: 'ORGANIZATION',
+  SOCIAL_ACCOUNT: 'SOCIAL_ACCOUNT'
+} as const
+
+export type RoleScope = (typeof RoleScope)[keyof typeof RoleScope]
+
+
 export const QueueStatus = {
   PENDING: 'PENDING',
   QUEUED: 'QUEUED',
@@ -369,15 +377,15 @@ export const PermissionResource = {
   MEMBERS: 'MEMBERS',
   BILLING: 'BILLING',
   SETTINGS: 'SETTINGS',
+  SUBSCRIPTION: 'SUBSCRIPTION',
+  INTEGRATION: 'INTEGRATION',
   POSTS: 'POSTS',
+  DRAFT: 'DRAFT',
   CONTENT: 'CONTENT',
   SCHEDULING: 'SCHEDULING',
   ANALYTICS: 'ANALYTICS',
-  DMS: 'DMS',
-  AI_GENERATION: 'AI_GENERATION',
-  MEDIA_FILES: 'MEDIA_FILES',
-  TEMPLATES: 'TEMPLATES',
-  BRAND_KIT: 'BRAND_KIT',
+  MESSAGE: 'MESSAGE',
+  COMMENT: 'COMMENT',
   INVITATIONS: 'INVITATIONS',
   AUDIT_LOGS: 'AUDIT_LOGS'
 } as const

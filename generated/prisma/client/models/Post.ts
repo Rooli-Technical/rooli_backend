@@ -44,7 +44,7 @@ export type PostMinAggregateOutputType = {
   content: string | null
   contentType: $Enums.ContentType | null
   platform: $Enums.Platform | null
-  scheduledAt: string | null
+  scheduledAt: Date | null
   timezone: string | null
   publishedAt: Date | null
   status: $Enums.PostStatus | null
@@ -54,6 +54,7 @@ export type PostMinAggregateOutputType = {
   updatedAt: Date | null
   maxRetries: number | null
   platformPostId: string | null
+  parentPostId: string | null
   jobId: string | null
   queueStatus: $Enums.ScheduleJobStatus | null
   aiContentId: string | null
@@ -68,7 +69,7 @@ export type PostMaxAggregateOutputType = {
   content: string | null
   contentType: $Enums.ContentType | null
   platform: $Enums.Platform | null
-  scheduledAt: string | null
+  scheduledAt: Date | null
   timezone: string | null
   publishedAt: Date | null
   status: $Enums.PostStatus | null
@@ -78,6 +79,7 @@ export type PostMaxAggregateOutputType = {
   updatedAt: Date | null
   maxRetries: number | null
   platformPostId: string | null
+  parentPostId: string | null
   jobId: string | null
   queueStatus: $Enums.ScheduleJobStatus | null
   aiContentId: string | null
@@ -92,7 +94,6 @@ export type PostCountAggregateOutputType = {
   content: number
   contentType: number
   platform: number
-  mediaFileIds: number
   scheduledAt: number
   timezone: number
   publishedAt: number
@@ -104,6 +105,7 @@ export type PostCountAggregateOutputType = {
   updatedAt: number
   maxRetries: number
   platformPostId: number
+  parentPostId: number
   jobId: number
   queueStatus: number
   aiContentId: number
@@ -140,6 +142,7 @@ export type PostMinAggregateInputType = {
   updatedAt?: true
   maxRetries?: true
   platformPostId?: true
+  parentPostId?: true
   jobId?: true
   queueStatus?: true
   aiContentId?: true
@@ -164,6 +167,7 @@ export type PostMaxAggregateInputType = {
   updatedAt?: true
   maxRetries?: true
   platformPostId?: true
+  parentPostId?: true
   jobId?: true
   queueStatus?: true
   aiContentId?: true
@@ -178,7 +182,6 @@ export type PostCountAggregateInputType = {
   content?: true
   contentType?: true
   platform?: true
-  mediaFileIds?: true
   scheduledAt?: true
   timezone?: true
   publishedAt?: true
@@ -190,6 +193,7 @@ export type PostCountAggregateInputType = {
   updatedAt?: true
   maxRetries?: true
   platformPostId?: true
+  parentPostId?: true
   jobId?: true
   queueStatus?: true
   aiContentId?: true
@@ -291,8 +295,7 @@ export type PostGroupByOutputType = {
   content: string
   contentType: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds: string[]
-  scheduledAt: string | null
+  scheduledAt: Date | null
   timezone: string
   publishedAt: Date | null
   status: $Enums.PostStatus
@@ -303,6 +306,7 @@ export type PostGroupByOutputType = {
   updatedAt: Date
   maxRetries: number
   platformPostId: string | null
+  parentPostId: string | null
   jobId: string | null
   queueStatus: $Enums.ScheduleJobStatus
   aiContentId: string | null
@@ -340,8 +344,7 @@ export type PostWhereInput = {
   content?: Prisma.StringFilter<"Post"> | string
   contentType?: Prisma.EnumContentTypeFilter<"Post"> | $Enums.ContentType
   platform?: Prisma.EnumPlatformFilter<"Post"> | $Enums.Platform
-  mediaFileIds?: Prisma.StringNullableListFilter<"Post">
-  scheduledAt?: Prisma.StringNullableFilter<"Post"> | string | null
+  scheduledAt?: Prisma.DateTimeNullableFilter<"Post"> | Date | string | null
   timezone?: Prisma.StringFilter<"Post"> | string
   publishedAt?: Prisma.DateTimeNullableFilter<"Post"> | Date | string | null
   status?: Prisma.EnumPostStatusFilter<"Post"> | $Enums.PostStatus
@@ -352,18 +355,21 @@ export type PostWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Post"> | Date | string
   maxRetries?: Prisma.IntFilter<"Post"> | number
   platformPostId?: Prisma.StringNullableFilter<"Post"> | string | null
+  parentPostId?: Prisma.StringNullableFilter<"Post"> | string | null
   jobId?: Prisma.StringNullableFilter<"Post"> | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFilter<"Post"> | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.StringNullableFilter<"Post"> | string | null
   organizationId?: Prisma.StringFilter<"Post"> | string
+  mediaFileIds?: Prisma.MediaFileListRelationFilter
+  parentPost?: Prisma.XOR<Prisma.PostNullableScalarRelationFilter, Prisma.PostWhereInput> | null
+  childPosts?: Prisma.PostListRelationFilter
   author?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   socialAccount?: Prisma.XOR<Prisma.SocialAccountScalarRelationFilter, Prisma.SocialAccountWhereInput>
   pageAccount?: Prisma.XOR<Prisma.PageAccountNullableScalarRelationFilter, Prisma.PageAccountWhereInput> | null
   approvals?: Prisma.PostApprovalListRelationFilter
-  analytics?: Prisma.PostAnalyticsListRelationFilter
+  analytics?: Prisma.PostAnalyticsSnapshotListRelationFilter
   aiContent?: Prisma.XOR<Prisma.AiContentGenerationNullableScalarRelationFilter, Prisma.AiContentGenerationWhereInput> | null
   aiImageGenerations?: Prisma.AiImageGenerationListRelationFilter
-  metrics?: Prisma.EngagementMetricListRelationFilter
   notifications?: Prisma.NotificationEntityListRelationFilter
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
 }
@@ -376,7 +382,6 @@ export type PostOrderByWithRelationInput = {
   content?: Prisma.SortOrder
   contentType?: Prisma.SortOrder
   platform?: Prisma.SortOrder
-  mediaFileIds?: Prisma.SortOrder
   scheduledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   timezone?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -388,18 +393,21 @@ export type PostOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   maxRetries?: Prisma.SortOrder
   platformPostId?: Prisma.SortOrderInput | Prisma.SortOrder
+  parentPostId?: Prisma.SortOrderInput | Prisma.SortOrder
   jobId?: Prisma.SortOrderInput | Prisma.SortOrder
   queueStatus?: Prisma.SortOrder
   aiContentId?: Prisma.SortOrderInput | Prisma.SortOrder
   organizationId?: Prisma.SortOrder
+  mediaFileIds?: Prisma.MediaFileOrderByRelationAggregateInput
+  parentPost?: Prisma.PostOrderByWithRelationInput
+  childPosts?: Prisma.PostOrderByRelationAggregateInput
   author?: Prisma.UserOrderByWithRelationInput
   socialAccount?: Prisma.SocialAccountOrderByWithRelationInput
   pageAccount?: Prisma.PageAccountOrderByWithRelationInput
   approvals?: Prisma.PostApprovalOrderByRelationAggregateInput
-  analytics?: Prisma.PostAnalyticsOrderByRelationAggregateInput
+  analytics?: Prisma.PostAnalyticsSnapshotOrderByRelationAggregateInput
   aiContent?: Prisma.AiContentGenerationOrderByWithRelationInput
   aiImageGenerations?: Prisma.AiImageGenerationOrderByRelationAggregateInput
-  metrics?: Prisma.EngagementMetricOrderByRelationAggregateInput
   notifications?: Prisma.NotificationEntityOrderByRelationAggregateInput
   organization?: Prisma.OrganizationOrderByWithRelationInput
 }
@@ -416,8 +424,7 @@ export type PostWhereUniqueInput = Prisma.AtLeast<{
   content?: Prisma.StringFilter<"Post"> | string
   contentType?: Prisma.EnumContentTypeFilter<"Post"> | $Enums.ContentType
   platform?: Prisma.EnumPlatformFilter<"Post"> | $Enums.Platform
-  mediaFileIds?: Prisma.StringNullableListFilter<"Post">
-  scheduledAt?: Prisma.StringNullableFilter<"Post"> | string | null
+  scheduledAt?: Prisma.DateTimeNullableFilter<"Post"> | Date | string | null
   timezone?: Prisma.StringFilter<"Post"> | string
   publishedAt?: Prisma.DateTimeNullableFilter<"Post"> | Date | string | null
   status?: Prisma.EnumPostStatusFilter<"Post"> | $Enums.PostStatus
@@ -428,17 +435,20 @@ export type PostWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"Post"> | Date | string
   maxRetries?: Prisma.IntFilter<"Post"> | number
   platformPostId?: Prisma.StringNullableFilter<"Post"> | string | null
+  parentPostId?: Prisma.StringNullableFilter<"Post"> | string | null
   jobId?: Prisma.StringNullableFilter<"Post"> | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFilter<"Post"> | $Enums.ScheduleJobStatus
   organizationId?: Prisma.StringFilter<"Post"> | string
+  mediaFileIds?: Prisma.MediaFileListRelationFilter
+  parentPost?: Prisma.XOR<Prisma.PostNullableScalarRelationFilter, Prisma.PostWhereInput> | null
+  childPosts?: Prisma.PostListRelationFilter
   author?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   socialAccount?: Prisma.XOR<Prisma.SocialAccountScalarRelationFilter, Prisma.SocialAccountWhereInput>
   pageAccount?: Prisma.XOR<Prisma.PageAccountNullableScalarRelationFilter, Prisma.PageAccountWhereInput> | null
   approvals?: Prisma.PostApprovalListRelationFilter
-  analytics?: Prisma.PostAnalyticsListRelationFilter
+  analytics?: Prisma.PostAnalyticsSnapshotListRelationFilter
   aiContent?: Prisma.XOR<Prisma.AiContentGenerationNullableScalarRelationFilter, Prisma.AiContentGenerationWhereInput> | null
   aiImageGenerations?: Prisma.AiImageGenerationListRelationFilter
-  metrics?: Prisma.EngagementMetricListRelationFilter
   notifications?: Prisma.NotificationEntityListRelationFilter
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
 }, "id" | "aiContentId">
@@ -451,7 +461,6 @@ export type PostOrderByWithAggregationInput = {
   content?: Prisma.SortOrder
   contentType?: Prisma.SortOrder
   platform?: Prisma.SortOrder
-  mediaFileIds?: Prisma.SortOrder
   scheduledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   timezone?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -463,6 +472,7 @@ export type PostOrderByWithAggregationInput = {
   updatedAt?: Prisma.SortOrder
   maxRetries?: Prisma.SortOrder
   platformPostId?: Prisma.SortOrderInput | Prisma.SortOrder
+  parentPostId?: Prisma.SortOrderInput | Prisma.SortOrder
   jobId?: Prisma.SortOrderInput | Prisma.SortOrder
   queueStatus?: Prisma.SortOrder
   aiContentId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -485,8 +495,7 @@ export type PostScalarWhereWithAggregatesInput = {
   content?: Prisma.StringWithAggregatesFilter<"Post"> | string
   contentType?: Prisma.EnumContentTypeWithAggregatesFilter<"Post"> | $Enums.ContentType
   platform?: Prisma.EnumPlatformWithAggregatesFilter<"Post"> | $Enums.Platform
-  mediaFileIds?: Prisma.StringNullableListFilter<"Post">
-  scheduledAt?: Prisma.StringNullableWithAggregatesFilter<"Post"> | string | null
+  scheduledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Post"> | Date | string | null
   timezone?: Prisma.StringWithAggregatesFilter<"Post"> | string
   publishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Post"> | Date | string | null
   status?: Prisma.EnumPostStatusWithAggregatesFilter<"Post"> | $Enums.PostStatus
@@ -497,6 +506,7 @@ export type PostScalarWhereWithAggregatesInput = {
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Post"> | Date | string
   maxRetries?: Prisma.IntWithAggregatesFilter<"Post"> | number
   platformPostId?: Prisma.StringNullableWithAggregatesFilter<"Post"> | string | null
+  parentPostId?: Prisma.StringNullableWithAggregatesFilter<"Post"> | string | null
   jobId?: Prisma.StringNullableWithAggregatesFilter<"Post"> | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusWithAggregatesFilter<"Post"> | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.StringNullableWithAggregatesFilter<"Post"> | string | null
@@ -508,8 +518,7 @@ export type PostCreateInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -522,14 +531,16 @@ export type PostCreateInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
@@ -542,8 +553,7 @@ export type PostUncheckedCreateInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -554,14 +564,16 @@ export type PostUncheckedCreateInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
   organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -570,8 +582,7 @@ export type PostUpdateInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -584,14 +595,16 @@ export type PostUpdateInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
@@ -604,8 +617,7 @@ export type PostUncheckedUpdateInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -616,14 +628,16 @@ export type PostUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
 
@@ -635,8 +649,7 @@ export type PostCreateManyInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -647,6 +660,7 @@ export type PostCreateManyInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
@@ -658,8 +672,7 @@ export type PostUpdateManyMutationInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -682,8 +695,7 @@ export type PostUncheckedUpdateManyInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -694,6 +706,7 @@ export type PostUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -710,6 +723,11 @@ export type PostOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type PostNullableScalarRelationFilter = {
+  is?: Prisma.PostWhereInput | null
+  isNot?: Prisma.PostWhereInput | null
+}
+
 export type PostCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   authorId?: Prisma.SortOrder
@@ -718,7 +736,6 @@ export type PostCountOrderByAggregateInput = {
   content?: Prisma.SortOrder
   contentType?: Prisma.SortOrder
   platform?: Prisma.SortOrder
-  mediaFileIds?: Prisma.SortOrder
   scheduledAt?: Prisma.SortOrder
   timezone?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
@@ -730,6 +747,7 @@ export type PostCountOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   maxRetries?: Prisma.SortOrder
   platformPostId?: Prisma.SortOrder
+  parentPostId?: Prisma.SortOrder
   jobId?: Prisma.SortOrder
   queueStatus?: Prisma.SortOrder
   aiContentId?: Prisma.SortOrder
@@ -759,6 +777,7 @@ export type PostMaxOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   maxRetries?: Prisma.SortOrder
   platformPostId?: Prisma.SortOrder
+  parentPostId?: Prisma.SortOrder
   jobId?: Prisma.SortOrder
   queueStatus?: Prisma.SortOrder
   aiContentId?: Prisma.SortOrder
@@ -783,6 +802,7 @@ export type PostMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   maxRetries?: Prisma.SortOrder
   platformPostId?: Prisma.SortOrder
+  parentPostId?: Prisma.SortOrder
   jobId?: Prisma.SortOrder
   queueStatus?: Prisma.SortOrder
   aiContentId?: Prisma.SortOrder
@@ -797,11 +817,6 @@ export type PostSumOrderByAggregateInput = {
 export type PostScalarRelationFilter = {
   is?: Prisma.PostWhereInput
   isNot?: Prisma.PostWhereInput
-}
-
-export type PostNullableScalarRelationFilter = {
-  is?: Prisma.PostWhereInput | null
-  isNot?: Prisma.PostWhereInput | null
 }
 
 export type PostCreateNestedManyWithoutAuthorInput = {
@@ -930,17 +945,28 @@ export type PostUncheckedUpdateManyWithoutPageAccountNestedInput = {
   deleteMany?: Prisma.PostScalarWhereInput | Prisma.PostScalarWhereInput[]
 }
 
-export type PostCreatemediaFileIdsInput = {
-  set: string[]
+export type PostCreateNestedOneWithoutChildPostsInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutChildPostsInput, Prisma.PostUncheckedCreateWithoutChildPostsInput>
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutChildPostsInput
+  connect?: Prisma.PostWhereUniqueInput
+}
+
+export type PostCreateNestedManyWithoutParentPostInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutParentPostInput, Prisma.PostUncheckedCreateWithoutParentPostInput> | Prisma.PostCreateWithoutParentPostInput[] | Prisma.PostUncheckedCreateWithoutParentPostInput[]
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutParentPostInput | Prisma.PostCreateOrConnectWithoutParentPostInput[]
+  createMany?: Prisma.PostCreateManyParentPostInputEnvelope
+  connect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+}
+
+export type PostUncheckedCreateNestedManyWithoutParentPostInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutParentPostInput, Prisma.PostUncheckedCreateWithoutParentPostInput> | Prisma.PostCreateWithoutParentPostInput[] | Prisma.PostUncheckedCreateWithoutParentPostInput[]
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutParentPostInput | Prisma.PostCreateOrConnectWithoutParentPostInput[]
+  createMany?: Prisma.PostCreateManyParentPostInputEnvelope
+  connect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
 }
 
 export type EnumContentTypeFieldUpdateOperationsInput = {
   set?: $Enums.ContentType
-}
-
-export type PostUpdatemediaFileIdsInput = {
-  set?: string[]
-  push?: string | string[]
 }
 
 export type EnumPostStatusFieldUpdateOperationsInput = {
@@ -949,6 +975,44 @@ export type EnumPostStatusFieldUpdateOperationsInput = {
 
 export type EnumScheduleJobStatusFieldUpdateOperationsInput = {
   set?: $Enums.ScheduleJobStatus
+}
+
+export type PostUpdateOneWithoutChildPostsNestedInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutChildPostsInput, Prisma.PostUncheckedCreateWithoutChildPostsInput>
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutChildPostsInput
+  upsert?: Prisma.PostUpsertWithoutChildPostsInput
+  disconnect?: Prisma.PostWhereInput | boolean
+  delete?: Prisma.PostWhereInput | boolean
+  connect?: Prisma.PostWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PostUpdateToOneWithWhereWithoutChildPostsInput, Prisma.PostUpdateWithoutChildPostsInput>, Prisma.PostUncheckedUpdateWithoutChildPostsInput>
+}
+
+export type PostUpdateManyWithoutParentPostNestedInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutParentPostInput, Prisma.PostUncheckedCreateWithoutParentPostInput> | Prisma.PostCreateWithoutParentPostInput[] | Prisma.PostUncheckedCreateWithoutParentPostInput[]
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutParentPostInput | Prisma.PostCreateOrConnectWithoutParentPostInput[]
+  upsert?: Prisma.PostUpsertWithWhereUniqueWithoutParentPostInput | Prisma.PostUpsertWithWhereUniqueWithoutParentPostInput[]
+  createMany?: Prisma.PostCreateManyParentPostInputEnvelope
+  set?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  disconnect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  delete?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  connect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  update?: Prisma.PostUpdateWithWhereUniqueWithoutParentPostInput | Prisma.PostUpdateWithWhereUniqueWithoutParentPostInput[]
+  updateMany?: Prisma.PostUpdateManyWithWhereWithoutParentPostInput | Prisma.PostUpdateManyWithWhereWithoutParentPostInput[]
+  deleteMany?: Prisma.PostScalarWhereInput | Prisma.PostScalarWhereInput[]
+}
+
+export type PostUncheckedUpdateManyWithoutParentPostNestedInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutParentPostInput, Prisma.PostUncheckedCreateWithoutParentPostInput> | Prisma.PostCreateWithoutParentPostInput[] | Prisma.PostUncheckedCreateWithoutParentPostInput[]
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutParentPostInput | Prisma.PostCreateOrConnectWithoutParentPostInput[]
+  upsert?: Prisma.PostUpsertWithWhereUniqueWithoutParentPostInput | Prisma.PostUpsertWithWhereUniqueWithoutParentPostInput[]
+  createMany?: Prisma.PostCreateManyParentPostInputEnvelope
+  set?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  disconnect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  delete?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  connect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  update?: Prisma.PostUpdateWithWhereUniqueWithoutParentPostInput | Prisma.PostUpdateWithWhereUniqueWithoutParentPostInput[]
+  updateMany?: Prisma.PostUpdateManyWithWhereWithoutParentPostInput | Prisma.PostUpdateManyWithWhereWithoutParentPostInput[]
+  deleteMany?: Prisma.PostScalarWhereInput | Prisma.PostScalarWhereInput[]
 }
 
 export type PostCreateNestedOneWithoutApprovalsInput = {
@@ -963,6 +1027,44 @@ export type PostUpdateOneRequiredWithoutApprovalsNestedInput = {
   upsert?: Prisma.PostUpsertWithoutApprovalsInput
   connect?: Prisma.PostWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.PostUpdateToOneWithWhereWithoutApprovalsInput, Prisma.PostUpdateWithoutApprovalsInput>, Prisma.PostUncheckedUpdateWithoutApprovalsInput>
+}
+
+export type PostCreateNestedManyWithoutMediaFileIdsInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutMediaFileIdsInput, Prisma.PostUncheckedCreateWithoutMediaFileIdsInput> | Prisma.PostCreateWithoutMediaFileIdsInput[] | Prisma.PostUncheckedCreateWithoutMediaFileIdsInput[]
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutMediaFileIdsInput | Prisma.PostCreateOrConnectWithoutMediaFileIdsInput[]
+  connect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+}
+
+export type PostUncheckedCreateNestedManyWithoutMediaFileIdsInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutMediaFileIdsInput, Prisma.PostUncheckedCreateWithoutMediaFileIdsInput> | Prisma.PostCreateWithoutMediaFileIdsInput[] | Prisma.PostUncheckedCreateWithoutMediaFileIdsInput[]
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutMediaFileIdsInput | Prisma.PostCreateOrConnectWithoutMediaFileIdsInput[]
+  connect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+}
+
+export type PostUpdateManyWithoutMediaFileIdsNestedInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutMediaFileIdsInput, Prisma.PostUncheckedCreateWithoutMediaFileIdsInput> | Prisma.PostCreateWithoutMediaFileIdsInput[] | Prisma.PostUncheckedCreateWithoutMediaFileIdsInput[]
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutMediaFileIdsInput | Prisma.PostCreateOrConnectWithoutMediaFileIdsInput[]
+  upsert?: Prisma.PostUpsertWithWhereUniqueWithoutMediaFileIdsInput | Prisma.PostUpsertWithWhereUniqueWithoutMediaFileIdsInput[]
+  set?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  disconnect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  delete?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  connect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  update?: Prisma.PostUpdateWithWhereUniqueWithoutMediaFileIdsInput | Prisma.PostUpdateWithWhereUniqueWithoutMediaFileIdsInput[]
+  updateMany?: Prisma.PostUpdateManyWithWhereWithoutMediaFileIdsInput | Prisma.PostUpdateManyWithWhereWithoutMediaFileIdsInput[]
+  deleteMany?: Prisma.PostScalarWhereInput | Prisma.PostScalarWhereInput[]
+}
+
+export type PostUncheckedUpdateManyWithoutMediaFileIdsNestedInput = {
+  create?: Prisma.XOR<Prisma.PostCreateWithoutMediaFileIdsInput, Prisma.PostUncheckedCreateWithoutMediaFileIdsInput> | Prisma.PostCreateWithoutMediaFileIdsInput[] | Prisma.PostUncheckedCreateWithoutMediaFileIdsInput[]
+  connectOrCreate?: Prisma.PostCreateOrConnectWithoutMediaFileIdsInput | Prisma.PostCreateOrConnectWithoutMediaFileIdsInput[]
+  upsert?: Prisma.PostUpsertWithWhereUniqueWithoutMediaFileIdsInput | Prisma.PostUpsertWithWhereUniqueWithoutMediaFileIdsInput[]
+  set?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  disconnect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  delete?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  connect?: Prisma.PostWhereUniqueInput | Prisma.PostWhereUniqueInput[]
+  update?: Prisma.PostUpdateWithWhereUniqueWithoutMediaFileIdsInput | Prisma.PostUpdateWithWhereUniqueWithoutMediaFileIdsInput[]
+  updateMany?: Prisma.PostUpdateManyWithWhereWithoutMediaFileIdsInput | Prisma.PostUpdateManyWithWhereWithoutMediaFileIdsInput[]
+  deleteMany?: Prisma.PostScalarWhereInput | Prisma.PostScalarWhereInput[]
 }
 
 export type PostCreateNestedManyWithoutOrganizationInput = {
@@ -1069,22 +1171,6 @@ export type PostUpdateOneRequiredWithoutAnalyticsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.PostUpdateToOneWithWhereWithoutAnalyticsInput, Prisma.PostUpdateWithoutAnalyticsInput>, Prisma.PostUncheckedUpdateWithoutAnalyticsInput>
 }
 
-export type PostCreateNestedOneWithoutMetricsInput = {
-  create?: Prisma.XOR<Prisma.PostCreateWithoutMetricsInput, Prisma.PostUncheckedCreateWithoutMetricsInput>
-  connectOrCreate?: Prisma.PostCreateOrConnectWithoutMetricsInput
-  connect?: Prisma.PostWhereUniqueInput
-}
-
-export type PostUpdateOneWithoutMetricsNestedInput = {
-  create?: Prisma.XOR<Prisma.PostCreateWithoutMetricsInput, Prisma.PostUncheckedCreateWithoutMetricsInput>
-  connectOrCreate?: Prisma.PostCreateOrConnectWithoutMetricsInput
-  upsert?: Prisma.PostUpsertWithoutMetricsInput
-  disconnect?: Prisma.PostWhereInput | boolean
-  delete?: Prisma.PostWhereInput | boolean
-  connect?: Prisma.PostWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.PostUpdateToOneWithWhereWithoutMetricsInput, Prisma.PostUpdateWithoutMetricsInput>, Prisma.PostUncheckedUpdateWithoutMetricsInput>
-}
-
 export type PostCreateNestedOneWithoutNotificationsInput = {
   create?: Prisma.XOR<Prisma.PostCreateWithoutNotificationsInput, Prisma.PostUncheckedCreateWithoutNotificationsInput>
   connectOrCreate?: Prisma.PostCreateOrConnectWithoutNotificationsInput
@@ -1106,8 +1192,7 @@ export type PostCreateWithoutAuthorInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1120,13 +1205,15 @@ export type PostCreateWithoutAuthorInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
@@ -1138,8 +1225,7 @@ export type PostUncheckedCreateWithoutAuthorInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1150,14 +1236,16 @@ export type PostUncheckedCreateWithoutAuthorInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
   organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -1198,8 +1286,7 @@ export type PostScalarWhereInput = {
   content?: Prisma.StringFilter<"Post"> | string
   contentType?: Prisma.EnumContentTypeFilter<"Post"> | $Enums.ContentType
   platform?: Prisma.EnumPlatformFilter<"Post"> | $Enums.Platform
-  mediaFileIds?: Prisma.StringNullableListFilter<"Post">
-  scheduledAt?: Prisma.StringNullableFilter<"Post"> | string | null
+  scheduledAt?: Prisma.DateTimeNullableFilter<"Post"> | Date | string | null
   timezone?: Prisma.StringFilter<"Post"> | string
   publishedAt?: Prisma.DateTimeNullableFilter<"Post"> | Date | string | null
   status?: Prisma.EnumPostStatusFilter<"Post"> | $Enums.PostStatus
@@ -1210,6 +1297,7 @@ export type PostScalarWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Post"> | Date | string
   maxRetries?: Prisma.IntFilter<"Post"> | number
   platformPostId?: Prisma.StringNullableFilter<"Post"> | string | null
+  parentPostId?: Prisma.StringNullableFilter<"Post"> | string | null
   jobId?: Prisma.StringNullableFilter<"Post"> | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFilter<"Post"> | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.StringNullableFilter<"Post"> | string | null
@@ -1221,8 +1309,7 @@ export type PostCreateWithoutSocialAccountInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1235,13 +1322,15 @@ export type PostCreateWithoutSocialAccountInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
@@ -1253,8 +1342,7 @@ export type PostUncheckedCreateWithoutSocialAccountInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1265,14 +1353,16 @@ export type PostUncheckedCreateWithoutSocialAccountInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
   organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -1307,8 +1397,7 @@ export type PostCreateWithoutPageAccountInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1321,13 +1410,15 @@ export type PostCreateWithoutPageAccountInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
@@ -1339,8 +1430,7 @@ export type PostUncheckedCreateWithoutPageAccountInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1351,14 +1441,16 @@ export type PostUncheckedCreateWithoutPageAccountInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
   organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -1388,13 +1480,12 @@ export type PostUpdateManyWithWhereWithoutPageAccountInput = {
   data: Prisma.XOR<Prisma.PostUpdateManyMutationInput, Prisma.PostUncheckedUpdateManyWithoutPageAccountInput>
 }
 
-export type PostCreateWithoutApprovalsInput = {
+export type PostCreateWithoutChildPostsInput = {
   id?: string
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1407,18 +1498,20 @@ export type PostCreateWithoutApprovalsInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
 
-export type PostUncheckedCreateWithoutApprovalsInput = {
+export type PostUncheckedCreateWithoutChildPostsInput = {
   id?: string
   authorId?: string | null
   socialAccountId: string
@@ -1426,8 +1519,74 @@ export type PostUncheckedCreateWithoutApprovalsInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
+  timezone: string
+  publishedAt?: Date | string | null
+  status?: $Enums.PostStatus
+  errorMessage?: string | null
+  retryCount?: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  maxRetries?: number
+  platformPostId?: string | null
+  parentPostId?: string | null
+  jobId?: string | null
+  queueStatus?: $Enums.ScheduleJobStatus
+  aiContentId?: string | null
+  organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
+}
+
+export type PostCreateOrConnectWithoutChildPostsInput = {
+  where: Prisma.PostWhereUniqueInput
+  create: Prisma.XOR<Prisma.PostCreateWithoutChildPostsInput, Prisma.PostUncheckedCreateWithoutChildPostsInput>
+}
+
+export type PostCreateWithoutParentPostInput = {
+  id?: string
+  content: string
+  contentType?: $Enums.ContentType
+  platform: $Enums.Platform
+  scheduledAt?: Date | string | null
+  timezone: string
+  publishedAt?: Date | string | null
+  status?: $Enums.PostStatus
+  errorMessage?: string | null
+  retryCount?: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  maxRetries?: number
+  platformPostId?: string | null
+  jobId?: string | null
+  queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
+  author?: Prisma.UserCreateNestedOneWithoutPostInput
+  socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
+  pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
+  approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
+  aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
+  organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
+}
+
+export type PostUncheckedCreateWithoutParentPostInput = {
+  id?: string
+  authorId?: string | null
+  socialAccountId: string
+  pageAccountId?: string | null
+  content: string
+  contentType?: $Enums.ContentType
+  platform: $Enums.Platform
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1442,9 +1601,172 @@ export type PostUncheckedCreateWithoutApprovalsInput = {
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
   organizationId: string
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
+  approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
+}
+
+export type PostCreateOrConnectWithoutParentPostInput = {
+  where: Prisma.PostWhereUniqueInput
+  create: Prisma.XOR<Prisma.PostCreateWithoutParentPostInput, Prisma.PostUncheckedCreateWithoutParentPostInput>
+}
+
+export type PostCreateManyParentPostInputEnvelope = {
+  data: Prisma.PostCreateManyParentPostInput | Prisma.PostCreateManyParentPostInput[]
+  skipDuplicates?: boolean
+}
+
+export type PostUpsertWithoutChildPostsInput = {
+  update: Prisma.XOR<Prisma.PostUpdateWithoutChildPostsInput, Prisma.PostUncheckedUpdateWithoutChildPostsInput>
+  create: Prisma.XOR<Prisma.PostCreateWithoutChildPostsInput, Prisma.PostUncheckedCreateWithoutChildPostsInput>
+  where?: Prisma.PostWhereInput
+}
+
+export type PostUpdateToOneWithWhereWithoutChildPostsInput = {
+  where?: Prisma.PostWhereInput
+  data: Prisma.XOR<Prisma.PostUpdateWithoutChildPostsInput, Prisma.PostUncheckedUpdateWithoutChildPostsInput>
+}
+
+export type PostUpdateWithoutChildPostsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  author?: Prisma.UserUpdateOneWithoutPostNestedInput
+  socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
+  pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
+  approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
+  aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
+}
+
+export type PostUncheckedUpdateWithoutChildPostsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  authorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  pageAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
+}
+
+export type PostUpsertWithWhereUniqueWithoutParentPostInput = {
+  where: Prisma.PostWhereUniqueInput
+  update: Prisma.XOR<Prisma.PostUpdateWithoutParentPostInput, Prisma.PostUncheckedUpdateWithoutParentPostInput>
+  create: Prisma.XOR<Prisma.PostCreateWithoutParentPostInput, Prisma.PostUncheckedCreateWithoutParentPostInput>
+}
+
+export type PostUpdateWithWhereUniqueWithoutParentPostInput = {
+  where: Prisma.PostWhereUniqueInput
+  data: Prisma.XOR<Prisma.PostUpdateWithoutParentPostInput, Prisma.PostUncheckedUpdateWithoutParentPostInput>
+}
+
+export type PostUpdateManyWithWhereWithoutParentPostInput = {
+  where: Prisma.PostScalarWhereInput
+  data: Prisma.XOR<Prisma.PostUpdateManyMutationInput, Prisma.PostUncheckedUpdateManyWithoutParentPostInput>
+}
+
+export type PostCreateWithoutApprovalsInput = {
+  id?: string
+  content: string
+  contentType?: $Enums.ContentType
+  platform: $Enums.Platform
+  scheduledAt?: Date | string | null
+  timezone: string
+  publishedAt?: Date | string | null
+  status?: $Enums.PostStatus
+  errorMessage?: string | null
+  retryCount?: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  maxRetries?: number
+  platformPostId?: string | null
+  jobId?: string | null
+  queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
+  author?: Prisma.UserCreateNestedOneWithoutPostInput
+  socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
+  pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
+  aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
+  organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
+}
+
+export type PostUncheckedCreateWithoutApprovalsInput = {
+  id?: string
+  authorId?: string | null
+  socialAccountId: string
+  pageAccountId?: string | null
+  content: string
+  contentType?: $Enums.ContentType
+  platform: $Enums.Platform
+  scheduledAt?: Date | string | null
+  timezone: string
+  publishedAt?: Date | string | null
+  status?: $Enums.PostStatus
+  errorMessage?: string | null
+  retryCount?: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  maxRetries?: number
+  platformPostId?: string | null
+  parentPostId?: string | null
+  jobId?: string | null
+  queueStatus?: $Enums.ScheduleJobStatus
+  aiContentId?: string | null
+  organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -1469,8 +1791,7 @@ export type PostUpdateWithoutApprovalsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -1483,13 +1804,15 @@ export type PostUpdateWithoutApprovalsInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
@@ -1502,8 +1825,7 @@ export type PostUncheckedUpdateWithoutApprovalsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -1514,23 +1836,24 @@ export type PostUncheckedUpdateWithoutApprovalsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
 
-export type PostCreateWithoutOrganizationInput = {
+export type PostCreateWithoutMediaFileIdsInput = {
   id?: string
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1543,14 +1866,99 @@ export type PostCreateWithoutOrganizationInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
+  organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
+}
+
+export type PostUncheckedCreateWithoutMediaFileIdsInput = {
+  id?: string
+  authorId?: string | null
+  socialAccountId: string
+  pageAccountId?: string | null
+  content: string
+  contentType?: $Enums.ContentType
+  platform: $Enums.Platform
+  scheduledAt?: Date | string | null
+  timezone: string
+  publishedAt?: Date | string | null
+  status?: $Enums.PostStatus
+  errorMessage?: string | null
+  retryCount?: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  maxRetries?: number
+  platformPostId?: string | null
+  parentPostId?: string | null
+  jobId?: string | null
+  queueStatus?: $Enums.ScheduleJobStatus
+  aiContentId?: string | null
+  organizationId: string
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
+  approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
+}
+
+export type PostCreateOrConnectWithoutMediaFileIdsInput = {
+  where: Prisma.PostWhereUniqueInput
+  create: Prisma.XOR<Prisma.PostCreateWithoutMediaFileIdsInput, Prisma.PostUncheckedCreateWithoutMediaFileIdsInput>
+}
+
+export type PostUpsertWithWhereUniqueWithoutMediaFileIdsInput = {
+  where: Prisma.PostWhereUniqueInput
+  update: Prisma.XOR<Prisma.PostUpdateWithoutMediaFileIdsInput, Prisma.PostUncheckedUpdateWithoutMediaFileIdsInput>
+  create: Prisma.XOR<Prisma.PostCreateWithoutMediaFileIdsInput, Prisma.PostUncheckedCreateWithoutMediaFileIdsInput>
+}
+
+export type PostUpdateWithWhereUniqueWithoutMediaFileIdsInput = {
+  where: Prisma.PostWhereUniqueInput
+  data: Prisma.XOR<Prisma.PostUpdateWithoutMediaFileIdsInput, Prisma.PostUncheckedUpdateWithoutMediaFileIdsInput>
+}
+
+export type PostUpdateManyWithWhereWithoutMediaFileIdsInput = {
+  where: Prisma.PostScalarWhereInput
+  data: Prisma.XOR<Prisma.PostUpdateManyMutationInput, Prisma.PostUncheckedUpdateManyWithoutMediaFileIdsInput>
+}
+
+export type PostCreateWithoutOrganizationInput = {
+  id?: string
+  content: string
+  contentType?: $Enums.ContentType
+  platform: $Enums.Platform
+  scheduledAt?: Date | string | null
+  timezone: string
+  publishedAt?: Date | string | null
+  status?: $Enums.PostStatus
+  errorMessage?: string | null
+  retryCount?: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  maxRetries?: number
+  platformPostId?: string | null
+  jobId?: string | null
+  queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
+  author?: Prisma.UserCreateNestedOneWithoutPostInput
+  socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
+  pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
+  approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
+  aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
 }
 
@@ -1562,8 +1970,7 @@ export type PostUncheckedCreateWithoutOrganizationInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1574,13 +1981,15 @@ export type PostUncheckedCreateWithoutOrganizationInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -1615,8 +2024,7 @@ export type PostCreateWithoutAiContentInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1629,13 +2037,15 @@ export type PostCreateWithoutAiContentInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
@@ -1648,8 +2058,7 @@ export type PostUncheckedCreateWithoutAiContentInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1660,13 +2069,15 @@ export type PostUncheckedCreateWithoutAiContentInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -1691,8 +2102,7 @@ export type PostUpdateWithoutAiContentInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -1705,13 +2115,15 @@ export type PostUpdateWithoutAiContentInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
@@ -1724,8 +2136,7 @@ export type PostUncheckedUpdateWithoutAiContentInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -1736,13 +2147,15 @@ export type PostUncheckedUpdateWithoutAiContentInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
 
@@ -1751,8 +2164,7 @@ export type PostCreateWithoutAiImageGenerationsInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1765,13 +2177,15 @@ export type PostCreateWithoutAiImageGenerationsInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
@@ -1784,8 +2198,7 @@ export type PostUncheckedCreateWithoutAiImageGenerationsInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1796,13 +2209,15 @@ export type PostUncheckedCreateWithoutAiImageGenerationsInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
   organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -1827,8 +2242,7 @@ export type PostUpdateWithoutAiImageGenerationsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -1841,13 +2255,15 @@ export type PostUpdateWithoutAiImageGenerationsInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
@@ -1860,8 +2276,7 @@ export type PostUncheckedUpdateWithoutAiImageGenerationsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -1872,13 +2287,15 @@ export type PostUncheckedUpdateWithoutAiImageGenerationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
 
@@ -1887,8 +2304,7 @@ export type PostCreateWithoutAnalyticsInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1901,13 +2317,15 @@ export type PostCreateWithoutAnalyticsInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
@@ -1920,8 +2338,7 @@ export type PostUncheckedCreateWithoutAnalyticsInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -1932,13 +2349,15 @@ export type PostUncheckedCreateWithoutAnalyticsInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
   organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
   notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
 }
 
@@ -1963,8 +2382,7 @@ export type PostUpdateWithoutAnalyticsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -1977,13 +2395,15 @@ export type PostUpdateWithoutAnalyticsInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
@@ -1996,8 +2416,7 @@ export type PostUncheckedUpdateWithoutAnalyticsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2008,148 +2427,14 @@ export type PostUncheckedUpdateWithoutAnalyticsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
-}
-
-export type PostCreateWithoutMetricsInput = {
-  id?: string
-  content: string
-  contentType?: $Enums.ContentType
-  platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
-  timezone: string
-  publishedAt?: Date | string | null
-  status?: $Enums.PostStatus
-  errorMessage?: string | null
-  retryCount?: number
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  maxRetries?: number
-  platformPostId?: string | null
-  jobId?: string | null
-  queueStatus?: $Enums.ScheduleJobStatus
-  author?: Prisma.UserCreateNestedOneWithoutPostInput
-  socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
-  pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
-  approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
-  aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutPostInput
-  organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
-}
-
-export type PostUncheckedCreateWithoutMetricsInput = {
-  id?: string
-  authorId?: string | null
-  socialAccountId: string
-  pageAccountId?: string | null
-  content: string
-  contentType?: $Enums.ContentType
-  platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
-  timezone: string
-  publishedAt?: Date | string | null
-  status?: $Enums.PostStatus
-  errorMessage?: string | null
-  retryCount?: number
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  maxRetries?: number
-  platformPostId?: string | null
-  jobId?: string | null
-  queueStatus?: $Enums.ScheduleJobStatus
-  aiContentId?: string | null
-  organizationId: string
-  approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutPostInput
-}
-
-export type PostCreateOrConnectWithoutMetricsInput = {
-  where: Prisma.PostWhereUniqueInput
-  create: Prisma.XOR<Prisma.PostCreateWithoutMetricsInput, Prisma.PostUncheckedCreateWithoutMetricsInput>
-}
-
-export type PostUpsertWithoutMetricsInput = {
-  update: Prisma.XOR<Prisma.PostUpdateWithoutMetricsInput, Prisma.PostUncheckedUpdateWithoutMetricsInput>
-  create: Prisma.XOR<Prisma.PostCreateWithoutMetricsInput, Prisma.PostUncheckedCreateWithoutMetricsInput>
-  where?: Prisma.PostWhereInput
-}
-
-export type PostUpdateToOneWithWhereWithoutMetricsInput = {
-  where?: Prisma.PostWhereInput
-  data: Prisma.XOR<Prisma.PostUpdateWithoutMetricsInput, Prisma.PostUncheckedUpdateWithoutMetricsInput>
-}
-
-export type PostUpdateWithoutMetricsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  content?: Prisma.StringFieldUpdateOperationsInput | string
-  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
-  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  timezone?: Prisma.StringFieldUpdateOperationsInput | string
-  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
-  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
-  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
-  author?: Prisma.UserUpdateOneWithoutPostNestedInput
-  socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
-  pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
-  approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
-  aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
-  organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
-}
-
-export type PostUncheckedUpdateWithoutMetricsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  authorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
-  pageAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  content?: Prisma.StringFieldUpdateOperationsInput | string
-  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
-  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  timezone?: Prisma.StringFieldUpdateOperationsInput | string
-  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
-  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
-  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
-  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
-  aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
-  approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
@@ -2159,8 +2444,7 @@ export type PostCreateWithoutNotificationsInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -2173,14 +2457,16 @@ export type PostCreateWithoutNotificationsInput = {
   platformPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileCreateNestedManyWithoutPostsInput
+  parentPost?: Prisma.PostCreateNestedOneWithoutChildPostsInput
+  childPosts?: Prisma.PostCreateNestedManyWithoutParentPostInput
   author?: Prisma.UserCreateNestedOneWithoutPostInput
   socialAccount: Prisma.SocialAccountCreateNestedOneWithoutPostsInput
   pageAccount?: Prisma.PageAccountCreateNestedOneWithoutPostsInput
   approvals?: Prisma.PostApprovalCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotCreateNestedManyWithoutPostInput
   aiContent?: Prisma.AiContentGenerationCreateNestedOneWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricCreateNestedManyWithoutPostInput
   organization: Prisma.OrganizationCreateNestedOneWithoutPostsInput
 }
 
@@ -2192,8 +2478,7 @@ export type PostUncheckedCreateWithoutNotificationsInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -2204,14 +2489,16 @@ export type PostUncheckedCreateWithoutNotificationsInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
   organizationId: string
+  mediaFileIds?: Prisma.MediaFileUncheckedCreateNestedManyWithoutPostsInput
+  childPosts?: Prisma.PostUncheckedCreateNestedManyWithoutParentPostInput
   approvals?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutPostInput
-  analytics?: Prisma.PostAnalyticsUncheckedCreateNestedManyWithoutPostInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedCreateNestedManyWithoutPostInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutPostInput
-  metrics?: Prisma.EngagementMetricUncheckedCreateNestedManyWithoutPostInput
 }
 
 export type PostCreateOrConnectWithoutNotificationsInput = {
@@ -2235,8 +2522,7 @@ export type PostUpdateWithoutNotificationsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2249,14 +2535,16 @@ export type PostUpdateWithoutNotificationsInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
 
@@ -2268,8 +2556,7 @@ export type PostUncheckedUpdateWithoutNotificationsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2280,14 +2567,16 @@ export type PostUncheckedUpdateWithoutNotificationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
 }
 
 export type PostCreateManyAuthorInput = {
@@ -2297,8 +2586,7 @@ export type PostCreateManyAuthorInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -2309,6 +2597,7 @@ export type PostCreateManyAuthorInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
@@ -2320,8 +2609,7 @@ export type PostUpdateWithoutAuthorInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2334,13 +2622,15 @@ export type PostUpdateWithoutAuthorInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
@@ -2352,8 +2642,7 @@ export type PostUncheckedUpdateWithoutAuthorInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2364,14 +2653,16 @@ export type PostUncheckedUpdateWithoutAuthorInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
 
@@ -2382,8 +2673,7 @@ export type PostUncheckedUpdateManyWithoutAuthorInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2394,6 +2684,7 @@ export type PostUncheckedUpdateManyWithoutAuthorInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2407,8 +2698,7 @@ export type PostCreateManySocialAccountInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -2419,6 +2709,7 @@ export type PostCreateManySocialAccountInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
@@ -2430,8 +2721,7 @@ export type PostUpdateWithoutSocialAccountInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2444,13 +2734,15 @@ export type PostUpdateWithoutSocialAccountInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
@@ -2462,8 +2754,7 @@ export type PostUncheckedUpdateWithoutSocialAccountInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2474,14 +2765,16 @@ export type PostUncheckedUpdateWithoutSocialAccountInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
 
@@ -2492,8 +2785,7 @@ export type PostUncheckedUpdateManyWithoutSocialAccountInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2504,6 +2796,7 @@ export type PostUncheckedUpdateManyWithoutSocialAccountInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2517,8 +2810,120 @@ export type PostCreateManyPageAccountInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
+  timezone: string
+  publishedAt?: Date | string | null
+  status?: $Enums.PostStatus
+  errorMessage?: string | null
+  retryCount?: number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  maxRetries?: number
+  platformPostId?: string | null
+  parentPostId?: string | null
+  jobId?: string | null
+  queueStatus?: $Enums.ScheduleJobStatus
+  aiContentId?: string | null
+  organizationId: string
+}
+
+export type PostUpdateWithoutPageAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
+  author?: Prisma.UserUpdateOneWithoutPostNestedInput
+  socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
+  approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
+  aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
+}
+
+export type PostUncheckedUpdateWithoutPageAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  authorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
+  approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
+}
+
+export type PostUncheckedUpdateManyWithoutPageAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  authorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+export type PostCreateManyParentPostInput = {
+  id?: string
+  authorId?: string | null
+  socialAccountId: string
+  pageAccountId?: string | null
+  content: string
+  contentType?: $Enums.ContentType
+  platform: $Enums.Platform
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -2535,13 +2940,12 @@ export type PostCreateManyPageAccountInput = {
   organizationId: string
 }
 
-export type PostUpdateWithoutPageAccountInput = {
+export type PostUpdateWithoutParentPostInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2554,26 +2958,28 @@ export type PostUpdateWithoutPageAccountInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
+  pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
 }
 
-export type PostUncheckedUpdateWithoutPageAccountInput = {
+export type PostUncheckedUpdateWithoutParentPostInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   authorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  pageAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2588,22 +2994,23 @@ export type PostUncheckedUpdateWithoutPageAccountInput = {
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
 
-export type PostUncheckedUpdateManyWithoutPageAccountInput = {
+export type PostUncheckedUpdateManyWithoutParentPostInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   authorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  pageAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2614,6 +3021,94 @@ export type PostUncheckedUpdateManyWithoutPageAccountInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+export type PostUpdateWithoutMediaFileIdsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
+  author?: Prisma.UserUpdateOneWithoutPostNestedInput
+  socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
+  pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
+  approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
+  aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutPostsNestedInput
+}
+
+export type PostUncheckedUpdateWithoutMediaFileIdsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  authorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  pageAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
+  approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
+}
+
+export type PostUncheckedUpdateManyWithoutMediaFileIdsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  authorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  socialAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  pageAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  content?: Prisma.StringFieldUpdateOperationsInput | string
+  contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
+  platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  timezone?: Prisma.StringFieldUpdateOperationsInput | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
+  errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2628,8 +3123,7 @@ export type PostCreateManyOrganizationInput = {
   content: string
   contentType?: $Enums.ContentType
   platform: $Enums.Platform
-  mediaFileIds?: Prisma.PostCreatemediaFileIdsInput | string[]
-  scheduledAt?: string | null
+  scheduledAt?: Date | string | null
   timezone: string
   publishedAt?: Date | string | null
   status?: $Enums.PostStatus
@@ -2640,6 +3134,7 @@ export type PostCreateManyOrganizationInput = {
   updatedAt?: Date | string
   maxRetries?: number
   platformPostId?: string | null
+  parentPostId?: string | null
   jobId?: string | null
   queueStatus?: $Enums.ScheduleJobStatus
   aiContentId?: string | null
@@ -2650,8 +3145,7 @@ export type PostUpdateWithoutOrganizationInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2664,14 +3158,16 @@ export type PostUpdateWithoutOrganizationInput = {
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
+  mediaFileIds?: Prisma.MediaFileUpdateManyWithoutPostsNestedInput
+  parentPost?: Prisma.PostUpdateOneWithoutChildPostsNestedInput
+  childPosts?: Prisma.PostUpdateManyWithoutParentPostNestedInput
   author?: Prisma.UserUpdateOneWithoutPostNestedInput
   socialAccount?: Prisma.SocialAccountUpdateOneRequiredWithoutPostsNestedInput
   pageAccount?: Prisma.PageAccountUpdateOneWithoutPostsNestedInput
   approvals?: Prisma.PostApprovalUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUpdateManyWithoutPostNestedInput
   aiContent?: Prisma.AiContentGenerationUpdateOneWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUpdateManyWithoutPostNestedInput
 }
 
@@ -2683,8 +3179,7 @@ export type PostUncheckedUpdateWithoutOrganizationInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2695,13 +3190,15 @@ export type PostUncheckedUpdateWithoutOrganizationInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mediaFileIds?: Prisma.MediaFileUncheckedUpdateManyWithoutPostsNestedInput
+  childPosts?: Prisma.PostUncheckedUpdateManyWithoutParentPostNestedInput
   approvals?: Prisma.PostApprovalUncheckedUpdateManyWithoutPostNestedInput
-  analytics?: Prisma.PostAnalyticsUncheckedUpdateManyWithoutPostNestedInput
+  analytics?: Prisma.PostAnalyticsSnapshotUncheckedUpdateManyWithoutPostNestedInput
   aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutPostNestedInput
-  metrics?: Prisma.EngagementMetricUncheckedUpdateManyWithoutPostNestedInput
   notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutPostNestedInput
 }
 
@@ -2713,8 +3210,7 @@ export type PostUncheckedUpdateManyWithoutOrganizationInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   contentType?: Prisma.EnumContentTypeFieldUpdateOperationsInput | $Enums.ContentType
   platform?: Prisma.EnumPlatformFieldUpdateOperationsInput | $Enums.Platform
-  mediaFileIds?: Prisma.PostUpdatemediaFileIdsInput | string[]
-  scheduledAt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   timezone?: Prisma.StringFieldUpdateOperationsInput | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   status?: Prisma.EnumPostStatusFieldUpdateOperationsInput | $Enums.PostStatus
@@ -2725,6 +3221,7 @@ export type PostUncheckedUpdateManyWithoutOrganizationInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   maxRetries?: Prisma.IntFieldUpdateOperationsInput | number
   platformPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentPostId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   jobId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   queueStatus?: Prisma.EnumScheduleJobStatusFieldUpdateOperationsInput | $Enums.ScheduleJobStatus
   aiContentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2736,18 +3233,20 @@ export type PostUncheckedUpdateManyWithoutOrganizationInput = {
  */
 
 export type PostCountOutputType = {
+  mediaFileIds: number
+  childPosts: number
   approvals: number
   analytics: number
   aiImageGenerations: number
-  metrics: number
   notifications: number
 }
 
 export type PostCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  mediaFileIds?: boolean | PostCountOutputTypeCountMediaFileIdsArgs
+  childPosts?: boolean | PostCountOutputTypeCountChildPostsArgs
   approvals?: boolean | PostCountOutputTypeCountApprovalsArgs
   analytics?: boolean | PostCountOutputTypeCountAnalyticsArgs
   aiImageGenerations?: boolean | PostCountOutputTypeCountAiImageGenerationsArgs
-  metrics?: boolean | PostCountOutputTypeCountMetricsArgs
   notifications?: boolean | PostCountOutputTypeCountNotificationsArgs
 }
 
@@ -2764,6 +3263,20 @@ export type PostCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensi
 /**
  * PostCountOutputType without action
  */
+export type PostCountOutputTypeCountMediaFileIdsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MediaFileWhereInput
+}
+
+/**
+ * PostCountOutputType without action
+ */
+export type PostCountOutputTypeCountChildPostsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PostWhereInput
+}
+
+/**
+ * PostCountOutputType without action
+ */
 export type PostCountOutputTypeCountApprovalsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PostApprovalWhereInput
 }
@@ -2772,7 +3285,7 @@ export type PostCountOutputTypeCountApprovalsArgs<ExtArgs extends runtime.Types.
  * PostCountOutputType without action
  */
 export type PostCountOutputTypeCountAnalyticsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.PostAnalyticsWhereInput
+  where?: Prisma.PostAnalyticsSnapshotWhereInput
 }
 
 /**
@@ -2780,13 +3293,6 @@ export type PostCountOutputTypeCountAnalyticsArgs<ExtArgs extends runtime.Types.
  */
 export type PostCountOutputTypeCountAiImageGenerationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AiImageGenerationWhereInput
-}
-
-/**
- * PostCountOutputType without action
- */
-export type PostCountOutputTypeCountMetricsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.EngagementMetricWhereInput
 }
 
 /**
@@ -2805,7 +3311,6 @@ export type PostSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   content?: boolean
   contentType?: boolean
   platform?: boolean
-  mediaFileIds?: boolean
   scheduledAt?: boolean
   timezone?: boolean
   publishedAt?: boolean
@@ -2817,10 +3322,14 @@ export type PostSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   updatedAt?: boolean
   maxRetries?: boolean
   platformPostId?: boolean
+  parentPostId?: boolean
   jobId?: boolean
   queueStatus?: boolean
   aiContentId?: boolean
   organizationId?: boolean
+  mediaFileIds?: boolean | Prisma.Post$mediaFileIdsArgs<ExtArgs>
+  parentPost?: boolean | Prisma.Post$parentPostArgs<ExtArgs>
+  childPosts?: boolean | Prisma.Post$childPostsArgs<ExtArgs>
   author?: boolean | Prisma.Post$authorArgs<ExtArgs>
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
   pageAccount?: boolean | Prisma.Post$pageAccountArgs<ExtArgs>
@@ -2828,7 +3337,6 @@ export type PostSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   analytics?: boolean | Prisma.Post$analyticsArgs<ExtArgs>
   aiContent?: boolean | Prisma.Post$aiContentArgs<ExtArgs>
   aiImageGenerations?: boolean | Prisma.Post$aiImageGenerationsArgs<ExtArgs>
-  metrics?: boolean | Prisma.Post$metricsArgs<ExtArgs>
   notifications?: boolean | Prisma.Post$notificationsArgs<ExtArgs>
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   _count?: boolean | Prisma.PostCountOutputTypeDefaultArgs<ExtArgs>
@@ -2842,7 +3350,6 @@ export type PostSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   content?: boolean
   contentType?: boolean
   platform?: boolean
-  mediaFileIds?: boolean
   scheduledAt?: boolean
   timezone?: boolean
   publishedAt?: boolean
@@ -2854,10 +3361,12 @@ export type PostSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   updatedAt?: boolean
   maxRetries?: boolean
   platformPostId?: boolean
+  parentPostId?: boolean
   jobId?: boolean
   queueStatus?: boolean
   aiContentId?: boolean
   organizationId?: boolean
+  parentPost?: boolean | Prisma.Post$parentPostArgs<ExtArgs>
   author?: boolean | Prisma.Post$authorArgs<ExtArgs>
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
   pageAccount?: boolean | Prisma.Post$pageAccountArgs<ExtArgs>
@@ -2873,7 +3382,6 @@ export type PostSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   content?: boolean
   contentType?: boolean
   platform?: boolean
-  mediaFileIds?: boolean
   scheduledAt?: boolean
   timezone?: boolean
   publishedAt?: boolean
@@ -2885,10 +3393,12 @@ export type PostSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   updatedAt?: boolean
   maxRetries?: boolean
   platformPostId?: boolean
+  parentPostId?: boolean
   jobId?: boolean
   queueStatus?: boolean
   aiContentId?: boolean
   organizationId?: boolean
+  parentPost?: boolean | Prisma.Post$parentPostArgs<ExtArgs>
   author?: boolean | Prisma.Post$authorArgs<ExtArgs>
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
   pageAccount?: boolean | Prisma.Post$pageAccountArgs<ExtArgs>
@@ -2904,7 +3414,6 @@ export type PostSelectScalar = {
   content?: boolean
   contentType?: boolean
   platform?: boolean
-  mediaFileIds?: boolean
   scheduledAt?: boolean
   timezone?: boolean
   publishedAt?: boolean
@@ -2916,14 +3425,18 @@ export type PostSelectScalar = {
   updatedAt?: boolean
   maxRetries?: boolean
   platformPostId?: boolean
+  parentPostId?: boolean
   jobId?: boolean
   queueStatus?: boolean
   aiContentId?: boolean
   organizationId?: boolean
 }
 
-export type PostOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "authorId" | "socialAccountId" | "pageAccountId" | "content" | "contentType" | "platform" | "mediaFileIds" | "scheduledAt" | "timezone" | "publishedAt" | "status" | "errorMessage" | "retryCount" | "metadata" | "createdAt" | "updatedAt" | "maxRetries" | "platformPostId" | "jobId" | "queueStatus" | "aiContentId" | "organizationId", ExtArgs["result"]["post"]>
+export type PostOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "authorId" | "socialAccountId" | "pageAccountId" | "content" | "contentType" | "platform" | "scheduledAt" | "timezone" | "publishedAt" | "status" | "errorMessage" | "retryCount" | "metadata" | "createdAt" | "updatedAt" | "maxRetries" | "platformPostId" | "parentPostId" | "jobId" | "queueStatus" | "aiContentId" | "organizationId", ExtArgs["result"]["post"]>
 export type PostInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  mediaFileIds?: boolean | Prisma.Post$mediaFileIdsArgs<ExtArgs>
+  parentPost?: boolean | Prisma.Post$parentPostArgs<ExtArgs>
+  childPosts?: boolean | Prisma.Post$childPostsArgs<ExtArgs>
   author?: boolean | Prisma.Post$authorArgs<ExtArgs>
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
   pageAccount?: boolean | Prisma.Post$pageAccountArgs<ExtArgs>
@@ -2931,12 +3444,12 @@ export type PostInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   analytics?: boolean | Prisma.Post$analyticsArgs<ExtArgs>
   aiContent?: boolean | Prisma.Post$aiContentArgs<ExtArgs>
   aiImageGenerations?: boolean | Prisma.Post$aiImageGenerationsArgs<ExtArgs>
-  metrics?: boolean | Prisma.Post$metricsArgs<ExtArgs>
   notifications?: boolean | Prisma.Post$notificationsArgs<ExtArgs>
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
   _count?: boolean | Prisma.PostCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type PostIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  parentPost?: boolean | Prisma.Post$parentPostArgs<ExtArgs>
   author?: boolean | Prisma.Post$authorArgs<ExtArgs>
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
   pageAccount?: boolean | Prisma.Post$pageAccountArgs<ExtArgs>
@@ -2944,6 +3457,7 @@ export type PostIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
 }
 export type PostIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  parentPost?: boolean | Prisma.Post$parentPostArgs<ExtArgs>
   author?: boolean | Prisma.Post$authorArgs<ExtArgs>
   socialAccount?: boolean | Prisma.SocialAccountDefaultArgs<ExtArgs>
   pageAccount?: boolean | Prisma.Post$pageAccountArgs<ExtArgs>
@@ -2954,14 +3468,16 @@ export type PostIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 export type $PostPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Post"
   objects: {
+    mediaFileIds: Prisma.$MediaFilePayload<ExtArgs>[]
+    parentPost: Prisma.$PostPayload<ExtArgs> | null
+    childPosts: Prisma.$PostPayload<ExtArgs>[]
     author: Prisma.$UserPayload<ExtArgs> | null
     socialAccount: Prisma.$SocialAccountPayload<ExtArgs>
     pageAccount: Prisma.$PageAccountPayload<ExtArgs> | null
     approvals: Prisma.$PostApprovalPayload<ExtArgs>[]
-    analytics: Prisma.$PostAnalyticsPayload<ExtArgs>[]
+    analytics: Prisma.$PostAnalyticsSnapshotPayload<ExtArgs>[]
     aiContent: Prisma.$AiContentGenerationPayload<ExtArgs> | null
     aiImageGenerations: Prisma.$AiImageGenerationPayload<ExtArgs>[]
-    metrics: Prisma.$EngagementMetricPayload<ExtArgs>[]
     notifications: Prisma.$NotificationEntityPayload<ExtArgs>[]
     organization: Prisma.$OrganizationPayload<ExtArgs>
   }
@@ -2973,8 +3489,7 @@ export type $PostPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     content: string
     contentType: $Enums.ContentType
     platform: $Enums.Platform
-    mediaFileIds: string[]
-    scheduledAt: string | null
+    scheduledAt: Date | null
     timezone: string
     publishedAt: Date | null
     status: $Enums.PostStatus
@@ -2985,6 +3500,7 @@ export type $PostPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     updatedAt: Date
     maxRetries: number
     platformPostId: string | null
+    parentPostId: string | null
     jobId: string | null
     queueStatus: $Enums.ScheduleJobStatus
     aiContentId: string | null
@@ -3383,14 +3899,16 @@ readonly fields: PostFieldRefs;
  */
 export interface Prisma__PostClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  mediaFileIds<T extends Prisma.Post$mediaFileIdsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$mediaFileIdsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MediaFilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  parentPost<T extends Prisma.Post$parentPostArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$parentPostArgs<ExtArgs>>): Prisma.Prisma__PostClient<runtime.Types.Result.GetResult<Prisma.$PostPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  childPosts<T extends Prisma.Post$childPostsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$childPostsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   author<T extends Prisma.Post$authorArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$authorArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   socialAccount<T extends Prisma.SocialAccountDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SocialAccountDefaultArgs<ExtArgs>>): Prisma.Prisma__SocialAccountClient<runtime.Types.Result.GetResult<Prisma.$SocialAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   pageAccount<T extends Prisma.Post$pageAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$pageAccountArgs<ExtArgs>>): Prisma.Prisma__PageAccountClient<runtime.Types.Result.GetResult<Prisma.$PageAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   approvals<T extends Prisma.Post$approvalsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$approvalsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostApprovalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  analytics<T extends Prisma.Post$analyticsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$analyticsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostAnalyticsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  analytics<T extends Prisma.Post$analyticsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$analyticsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostAnalyticsSnapshotPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   aiContent<T extends Prisma.Post$aiContentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$aiContentArgs<ExtArgs>>): Prisma.Prisma__AiContentGenerationClient<runtime.Types.Result.GetResult<Prisma.$AiContentGenerationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   aiImageGenerations<T extends Prisma.Post$aiImageGenerationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$aiImageGenerationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AiImageGenerationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  metrics<T extends Prisma.Post$metricsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$metricsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EngagementMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.Post$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Post$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationEntityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   organization<T extends Prisma.OrganizationDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OrganizationDefaultArgs<ExtArgs>>): Prisma.Prisma__OrganizationClient<runtime.Types.Result.GetResult<Prisma.$OrganizationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
@@ -3429,8 +3947,7 @@ export interface PostFieldRefs {
   readonly content: Prisma.FieldRef<"Post", 'String'>
   readonly contentType: Prisma.FieldRef<"Post", 'ContentType'>
   readonly platform: Prisma.FieldRef<"Post", 'Platform'>
-  readonly mediaFileIds: Prisma.FieldRef<"Post", 'String[]'>
-  readonly scheduledAt: Prisma.FieldRef<"Post", 'String'>
+  readonly scheduledAt: Prisma.FieldRef<"Post", 'DateTime'>
   readonly timezone: Prisma.FieldRef<"Post", 'String'>
   readonly publishedAt: Prisma.FieldRef<"Post", 'DateTime'>
   readonly status: Prisma.FieldRef<"Post", 'PostStatus'>
@@ -3441,6 +3958,7 @@ export interface PostFieldRefs {
   readonly updatedAt: Prisma.FieldRef<"Post", 'DateTime'>
   readonly maxRetries: Prisma.FieldRef<"Post", 'Int'>
   readonly platformPostId: Prisma.FieldRef<"Post", 'String'>
+  readonly parentPostId: Prisma.FieldRef<"Post", 'String'>
   readonly jobId: Prisma.FieldRef<"Post", 'String'>
   readonly queueStatus: Prisma.FieldRef<"Post", 'ScheduleJobStatus'>
   readonly aiContentId: Prisma.FieldRef<"Post", 'String'>
@@ -3841,6 +4359,73 @@ export type PostDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
 }
 
 /**
+ * Post.mediaFileIds
+ */
+export type Post$mediaFileIdsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MediaFile
+   */
+  select?: Prisma.MediaFileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MediaFile
+   */
+  omit?: Prisma.MediaFileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MediaFileInclude<ExtArgs> | null
+  where?: Prisma.MediaFileWhereInput
+  orderBy?: Prisma.MediaFileOrderByWithRelationInput | Prisma.MediaFileOrderByWithRelationInput[]
+  cursor?: Prisma.MediaFileWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MediaFileScalarFieldEnum | Prisma.MediaFileScalarFieldEnum[]
+}
+
+/**
+ * Post.parentPost
+ */
+export type Post$parentPostArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Post
+   */
+  select?: Prisma.PostSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Post
+   */
+  omit?: Prisma.PostOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PostInclude<ExtArgs> | null
+  where?: Prisma.PostWhereInput
+}
+
+/**
+ * Post.childPosts
+ */
+export type Post$childPostsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Post
+   */
+  select?: Prisma.PostSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Post
+   */
+  omit?: Prisma.PostOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PostInclude<ExtArgs> | null
+  where?: Prisma.PostWhereInput
+  orderBy?: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[]
+  cursor?: Prisma.PostWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PostScalarFieldEnum | Prisma.PostScalarFieldEnum[]
+}
+
+/**
  * Post.author
  */
 export type Post$authorArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3907,23 +4492,23 @@ export type Post$approvalsArgs<ExtArgs extends runtime.Types.Extensions.Internal
  */
 export type Post$analyticsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the PostAnalytics
+   * Select specific fields to fetch from the PostAnalyticsSnapshot
    */
-  select?: Prisma.PostAnalyticsSelect<ExtArgs> | null
+  select?: Prisma.PostAnalyticsSnapshotSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the PostAnalytics
+   * Omit specific fields from the PostAnalyticsSnapshot
    */
-  omit?: Prisma.PostAnalyticsOmit<ExtArgs> | null
+  omit?: Prisma.PostAnalyticsSnapshotOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.PostAnalyticsInclude<ExtArgs> | null
-  where?: Prisma.PostAnalyticsWhereInput
-  orderBy?: Prisma.PostAnalyticsOrderByWithRelationInput | Prisma.PostAnalyticsOrderByWithRelationInput[]
-  cursor?: Prisma.PostAnalyticsWhereUniqueInput
+  include?: Prisma.PostAnalyticsSnapshotInclude<ExtArgs> | null
+  where?: Prisma.PostAnalyticsSnapshotWhereInput
+  orderBy?: Prisma.PostAnalyticsSnapshotOrderByWithRelationInput | Prisma.PostAnalyticsSnapshotOrderByWithRelationInput[]
+  cursor?: Prisma.PostAnalyticsSnapshotWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.PostAnalyticsScalarFieldEnum | Prisma.PostAnalyticsScalarFieldEnum[]
+  distinct?: Prisma.PostAnalyticsSnapshotScalarFieldEnum | Prisma.PostAnalyticsSnapshotScalarFieldEnum[]
 }
 
 /**
@@ -3967,30 +4552,6 @@ export type Post$aiImageGenerationsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.AiImageGenerationScalarFieldEnum | Prisma.AiImageGenerationScalarFieldEnum[]
-}
-
-/**
- * Post.metrics
- */
-export type Post$metricsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the EngagementMetric
-   */
-  select?: Prisma.EngagementMetricSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the EngagementMetric
-   */
-  omit?: Prisma.EngagementMetricOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.EngagementMetricInclude<ExtArgs> | null
-  where?: Prisma.EngagementMetricWhereInput
-  orderBy?: Prisma.EngagementMetricOrderByWithRelationInput | Prisma.EngagementMetricOrderByWithRelationInput[]
-  cursor?: Prisma.EngagementMetricWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.EngagementMetricScalarFieldEnum | Prisma.EngagementMetricScalarFieldEnum[]
 }
 
 /**

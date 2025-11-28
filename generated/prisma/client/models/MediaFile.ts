@@ -47,6 +47,7 @@ export type MediaFileMinAggregateOutputType = {
   url: string | null
   publicId: string | null
   thumbnailUrl: string | null
+  folderId: string | null
   duration: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -66,6 +67,7 @@ export type MediaFileMaxAggregateOutputType = {
   url: string | null
   publicId: string | null
   thumbnailUrl: string | null
+  folderId: string | null
   duration: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -85,6 +87,7 @@ export type MediaFileCountAggregateOutputType = {
   url: number
   publicId: number
   thumbnailUrl: number
+  folderId: number
   duration: number
   metadata: number
   createdAt: number
@@ -118,6 +121,7 @@ export type MediaFileMinAggregateInputType = {
   url?: true
   publicId?: true
   thumbnailUrl?: true
+  folderId?: true
   duration?: true
   createdAt?: true
   updatedAt?: true
@@ -137,6 +141,7 @@ export type MediaFileMaxAggregateInputType = {
   url?: true
   publicId?: true
   thumbnailUrl?: true
+  folderId?: true
   duration?: true
   createdAt?: true
   updatedAt?: true
@@ -156,6 +161,7 @@ export type MediaFileCountAggregateInputType = {
   url?: true
   publicId?: true
   thumbnailUrl?: true
+  folderId?: true
   duration?: true
   metadata?: true
   createdAt?: true
@@ -264,6 +270,7 @@ export type MediaFileGroupByOutputType = {
   url: string
   publicId: string
   thumbnailUrl: string | null
+  folderId: string | null
   duration: number | null
   metadata: runtime.JsonValue | null
   createdAt: Date
@@ -308,6 +315,7 @@ export type MediaFileWhereInput = {
   url?: Prisma.StringFilter<"MediaFile"> | string
   publicId?: Prisma.StringFilter<"MediaFile"> | string
   thumbnailUrl?: Prisma.StringNullableFilter<"MediaFile"> | string | null
+  folderId?: Prisma.StringNullableFilter<"MediaFile"> | string | null
   duration?: Prisma.IntNullableFilter<"MediaFile"> | number | null
   metadata?: Prisma.JsonNullableFilter<"MediaFile">
   createdAt?: Prisma.DateTimeFilter<"MediaFile"> | Date | string
@@ -316,6 +324,8 @@ export type MediaFileWhereInput = {
   isAIGenerated?: Prisma.BoolFilter<"MediaFile"> | boolean
   aiGenerationContext?: Prisma.JsonNullableFilter<"MediaFile">
   aiGenerationId?: Prisma.StringNullableFilter<"MediaFile"> | string | null
+  posts?: Prisma.PostListRelationFilter
+  folder?: Prisma.XOR<Prisma.MediaFolderNullableScalarRelationFilter, Prisma.MediaFolderWhereInput> | null
   aiImageGeneration?: Prisma.XOR<Prisma.AiImageGenerationNullableScalarRelationFilter, Prisma.AiImageGenerationWhereInput> | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
@@ -332,6 +342,7 @@ export type MediaFileOrderByWithRelationInput = {
   url?: Prisma.SortOrder
   publicId?: Prisma.SortOrder
   thumbnailUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  folderId?: Prisma.SortOrderInput | Prisma.SortOrder
   duration?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -340,6 +351,8 @@ export type MediaFileOrderByWithRelationInput = {
   isAIGenerated?: Prisma.SortOrder
   aiGenerationContext?: Prisma.SortOrderInput | Prisma.SortOrder
   aiGenerationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  posts?: Prisma.PostOrderByRelationAggregateInput
+  folder?: Prisma.MediaFolderOrderByWithRelationInput
   aiImageGeneration?: Prisma.AiImageGenerationOrderByWithRelationInput
   user?: Prisma.UserOrderByWithRelationInput
   organization?: Prisma.OrganizationOrderByWithRelationInput
@@ -359,6 +372,7 @@ export type MediaFileWhereUniqueInput = Prisma.AtLeast<{
   url?: Prisma.StringFilter<"MediaFile"> | string
   publicId?: Prisma.StringFilter<"MediaFile"> | string
   thumbnailUrl?: Prisma.StringNullableFilter<"MediaFile"> | string | null
+  folderId?: Prisma.StringNullableFilter<"MediaFile"> | string | null
   duration?: Prisma.IntNullableFilter<"MediaFile"> | number | null
   metadata?: Prisma.JsonNullableFilter<"MediaFile">
   createdAt?: Prisma.DateTimeFilter<"MediaFile"> | Date | string
@@ -367,6 +381,8 @@ export type MediaFileWhereUniqueInput = Prisma.AtLeast<{
   isAIGenerated?: Prisma.BoolFilter<"MediaFile"> | boolean
   aiGenerationContext?: Prisma.JsonNullableFilter<"MediaFile">
   aiGenerationId?: Prisma.StringNullableFilter<"MediaFile"> | string | null
+  posts?: Prisma.PostListRelationFilter
+  folder?: Prisma.XOR<Prisma.MediaFolderNullableScalarRelationFilter, Prisma.MediaFolderWhereInput> | null
   aiImageGeneration?: Prisma.XOR<Prisma.AiImageGenerationNullableScalarRelationFilter, Prisma.AiImageGenerationWhereInput> | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   organization?: Prisma.XOR<Prisma.OrganizationScalarRelationFilter, Prisma.OrganizationWhereInput>
@@ -383,6 +399,7 @@ export type MediaFileOrderByWithAggregationInput = {
   url?: Prisma.SortOrder
   publicId?: Prisma.SortOrder
   thumbnailUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  folderId?: Prisma.SortOrderInput | Prisma.SortOrder
   duration?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -412,6 +429,7 @@ export type MediaFileScalarWhereWithAggregatesInput = {
   url?: Prisma.StringWithAggregatesFilter<"MediaFile"> | string
   publicId?: Prisma.StringWithAggregatesFilter<"MediaFile"> | string
   thumbnailUrl?: Prisma.StringNullableWithAggregatesFilter<"MediaFile"> | string | null
+  folderId?: Prisma.StringNullableWithAggregatesFilter<"MediaFile"> | string | null
   duration?: Prisma.IntNullableWithAggregatesFilter<"MediaFile"> | number | null
   metadata?: Prisma.JsonNullableWithAggregatesFilter<"MediaFile">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"MediaFile"> | Date | string
@@ -438,6 +456,8 @@ export type MediaFileCreateInput = {
   expiresAt?: Date | string | null
   isAIGenerated?: boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostCreateNestedManyWithoutMediaFileIdsInput
+  folder?: Prisma.MediaFolderCreateNestedOneWithoutFilesInput
   aiImageGeneration?: Prisma.AiImageGenerationCreateNestedOneWithoutMediaFilesInput
   user: Prisma.UserCreateNestedOneWithoutMediaFilesInput
   organization: Prisma.OrganizationCreateNestedOneWithoutMediaFilesInput
@@ -454,6 +474,7 @@ export type MediaFileUncheckedCreateInput = {
   url: string
   publicId: string
   thumbnailUrl?: string | null
+  folderId?: string | null
   duration?: number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -462,6 +483,7 @@ export type MediaFileUncheckedCreateInput = {
   isAIGenerated?: boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   aiGenerationId?: string | null
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutMediaFileIdsInput
 }
 
 export type MediaFileUpdateInput = {
@@ -480,6 +502,8 @@ export type MediaFileUpdateInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostUpdateManyWithoutMediaFileIdsNestedInput
+  folder?: Prisma.MediaFolderUpdateOneWithoutFilesNestedInput
   aiImageGeneration?: Prisma.AiImageGenerationUpdateOneWithoutMediaFilesNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMediaFilesNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMediaFilesNestedInput
@@ -496,6 +520,7 @@ export type MediaFileUncheckedUpdateInput = {
   url?: Prisma.StringFieldUpdateOperationsInput | string
   publicId?: Prisma.StringFieldUpdateOperationsInput | string
   thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -504,6 +529,7 @@ export type MediaFileUncheckedUpdateInput = {
   isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   aiGenerationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  posts?: Prisma.PostUncheckedUpdateManyWithoutMediaFileIdsNestedInput
 }
 
 export type MediaFileCreateManyInput = {
@@ -517,6 +543,7 @@ export type MediaFileCreateManyInput = {
   url: string
   publicId: string
   thumbnailUrl?: string | null
+  folderId?: string | null
   duration?: number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -556,6 +583,7 @@ export type MediaFileUncheckedUpdateManyInput = {
   url?: Prisma.StringFieldUpdateOperationsInput | string
   publicId?: Prisma.StringFieldUpdateOperationsInput | string
   thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -587,6 +615,7 @@ export type MediaFileCountOrderByAggregateInput = {
   url?: Prisma.SortOrder
   publicId?: Prisma.SortOrder
   thumbnailUrl?: Prisma.SortOrder
+  folderId?: Prisma.SortOrder
   duration?: Prisma.SortOrder
   metadata?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -613,6 +642,7 @@ export type MediaFileMaxOrderByAggregateInput = {
   url?: Prisma.SortOrder
   publicId?: Prisma.SortOrder
   thumbnailUrl?: Prisma.SortOrder
+  folderId?: Prisma.SortOrder
   duration?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -632,6 +662,7 @@ export type MediaFileMinOrderByAggregateInput = {
   url?: Prisma.SortOrder
   publicId?: Prisma.SortOrder
   thumbnailUrl?: Prisma.SortOrder
+  folderId?: Prisma.SortOrder
   duration?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -684,6 +715,86 @@ export type MediaFileUncheckedUpdateManyWithoutUserNestedInput = {
   connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
   update?: Prisma.MediaFileUpdateWithWhereUniqueWithoutUserInput | Prisma.MediaFileUpdateWithWhereUniqueWithoutUserInput[]
   updateMany?: Prisma.MediaFileUpdateManyWithWhereWithoutUserInput | Prisma.MediaFileUpdateManyWithWhereWithoutUserInput[]
+  deleteMany?: Prisma.MediaFileScalarWhereInput | Prisma.MediaFileScalarWhereInput[]
+}
+
+export type MediaFileCreateNestedManyWithoutPostsInput = {
+  create?: Prisma.XOR<Prisma.MediaFileCreateWithoutPostsInput, Prisma.MediaFileUncheckedCreateWithoutPostsInput> | Prisma.MediaFileCreateWithoutPostsInput[] | Prisma.MediaFileUncheckedCreateWithoutPostsInput[]
+  connectOrCreate?: Prisma.MediaFileCreateOrConnectWithoutPostsInput | Prisma.MediaFileCreateOrConnectWithoutPostsInput[]
+  connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+}
+
+export type MediaFileUncheckedCreateNestedManyWithoutPostsInput = {
+  create?: Prisma.XOR<Prisma.MediaFileCreateWithoutPostsInput, Prisma.MediaFileUncheckedCreateWithoutPostsInput> | Prisma.MediaFileCreateWithoutPostsInput[] | Prisma.MediaFileUncheckedCreateWithoutPostsInput[]
+  connectOrCreate?: Prisma.MediaFileCreateOrConnectWithoutPostsInput | Prisma.MediaFileCreateOrConnectWithoutPostsInput[]
+  connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+}
+
+export type MediaFileUpdateManyWithoutPostsNestedInput = {
+  create?: Prisma.XOR<Prisma.MediaFileCreateWithoutPostsInput, Prisma.MediaFileUncheckedCreateWithoutPostsInput> | Prisma.MediaFileCreateWithoutPostsInput[] | Prisma.MediaFileUncheckedCreateWithoutPostsInput[]
+  connectOrCreate?: Prisma.MediaFileCreateOrConnectWithoutPostsInput | Prisma.MediaFileCreateOrConnectWithoutPostsInput[]
+  upsert?: Prisma.MediaFileUpsertWithWhereUniqueWithoutPostsInput | Prisma.MediaFileUpsertWithWhereUniqueWithoutPostsInput[]
+  set?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  disconnect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  delete?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  update?: Prisma.MediaFileUpdateWithWhereUniqueWithoutPostsInput | Prisma.MediaFileUpdateWithWhereUniqueWithoutPostsInput[]
+  updateMany?: Prisma.MediaFileUpdateManyWithWhereWithoutPostsInput | Prisma.MediaFileUpdateManyWithWhereWithoutPostsInput[]
+  deleteMany?: Prisma.MediaFileScalarWhereInput | Prisma.MediaFileScalarWhereInput[]
+}
+
+export type MediaFileUncheckedUpdateManyWithoutPostsNestedInput = {
+  create?: Prisma.XOR<Prisma.MediaFileCreateWithoutPostsInput, Prisma.MediaFileUncheckedCreateWithoutPostsInput> | Prisma.MediaFileCreateWithoutPostsInput[] | Prisma.MediaFileUncheckedCreateWithoutPostsInput[]
+  connectOrCreate?: Prisma.MediaFileCreateOrConnectWithoutPostsInput | Prisma.MediaFileCreateOrConnectWithoutPostsInput[]
+  upsert?: Prisma.MediaFileUpsertWithWhereUniqueWithoutPostsInput | Prisma.MediaFileUpsertWithWhereUniqueWithoutPostsInput[]
+  set?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  disconnect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  delete?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  update?: Prisma.MediaFileUpdateWithWhereUniqueWithoutPostsInput | Prisma.MediaFileUpdateWithWhereUniqueWithoutPostsInput[]
+  updateMany?: Prisma.MediaFileUpdateManyWithWhereWithoutPostsInput | Prisma.MediaFileUpdateManyWithWhereWithoutPostsInput[]
+  deleteMany?: Prisma.MediaFileScalarWhereInput | Prisma.MediaFileScalarWhereInput[]
+}
+
+export type MediaFileCreateNestedManyWithoutFolderInput = {
+  create?: Prisma.XOR<Prisma.MediaFileCreateWithoutFolderInput, Prisma.MediaFileUncheckedCreateWithoutFolderInput> | Prisma.MediaFileCreateWithoutFolderInput[] | Prisma.MediaFileUncheckedCreateWithoutFolderInput[]
+  connectOrCreate?: Prisma.MediaFileCreateOrConnectWithoutFolderInput | Prisma.MediaFileCreateOrConnectWithoutFolderInput[]
+  createMany?: Prisma.MediaFileCreateManyFolderInputEnvelope
+  connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+}
+
+export type MediaFileUncheckedCreateNestedManyWithoutFolderInput = {
+  create?: Prisma.XOR<Prisma.MediaFileCreateWithoutFolderInput, Prisma.MediaFileUncheckedCreateWithoutFolderInput> | Prisma.MediaFileCreateWithoutFolderInput[] | Prisma.MediaFileUncheckedCreateWithoutFolderInput[]
+  connectOrCreate?: Prisma.MediaFileCreateOrConnectWithoutFolderInput | Prisma.MediaFileCreateOrConnectWithoutFolderInput[]
+  createMany?: Prisma.MediaFileCreateManyFolderInputEnvelope
+  connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+}
+
+export type MediaFileUpdateManyWithoutFolderNestedInput = {
+  create?: Prisma.XOR<Prisma.MediaFileCreateWithoutFolderInput, Prisma.MediaFileUncheckedCreateWithoutFolderInput> | Prisma.MediaFileCreateWithoutFolderInput[] | Prisma.MediaFileUncheckedCreateWithoutFolderInput[]
+  connectOrCreate?: Prisma.MediaFileCreateOrConnectWithoutFolderInput | Prisma.MediaFileCreateOrConnectWithoutFolderInput[]
+  upsert?: Prisma.MediaFileUpsertWithWhereUniqueWithoutFolderInput | Prisma.MediaFileUpsertWithWhereUniqueWithoutFolderInput[]
+  createMany?: Prisma.MediaFileCreateManyFolderInputEnvelope
+  set?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  disconnect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  delete?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  update?: Prisma.MediaFileUpdateWithWhereUniqueWithoutFolderInput | Prisma.MediaFileUpdateWithWhereUniqueWithoutFolderInput[]
+  updateMany?: Prisma.MediaFileUpdateManyWithWhereWithoutFolderInput | Prisma.MediaFileUpdateManyWithWhereWithoutFolderInput[]
+  deleteMany?: Prisma.MediaFileScalarWhereInput | Prisma.MediaFileScalarWhereInput[]
+}
+
+export type MediaFileUncheckedUpdateManyWithoutFolderNestedInput = {
+  create?: Prisma.XOR<Prisma.MediaFileCreateWithoutFolderInput, Prisma.MediaFileUncheckedCreateWithoutFolderInput> | Prisma.MediaFileCreateWithoutFolderInput[] | Prisma.MediaFileUncheckedCreateWithoutFolderInput[]
+  connectOrCreate?: Prisma.MediaFileCreateOrConnectWithoutFolderInput | Prisma.MediaFileCreateOrConnectWithoutFolderInput[]
+  upsert?: Prisma.MediaFileUpsertWithWhereUniqueWithoutFolderInput | Prisma.MediaFileUpsertWithWhereUniqueWithoutFolderInput[]
+  createMany?: Prisma.MediaFileCreateManyFolderInputEnvelope
+  set?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  disconnect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  delete?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  connect?: Prisma.MediaFileWhereUniqueInput | Prisma.MediaFileWhereUniqueInput[]
+  update?: Prisma.MediaFileUpdateWithWhereUniqueWithoutFolderInput | Prisma.MediaFileUpdateWithWhereUniqueWithoutFolderInput[]
+  updateMany?: Prisma.MediaFileUpdateManyWithWhereWithoutFolderInput | Prisma.MediaFileUpdateManyWithWhereWithoutFolderInput[]
   deleteMany?: Prisma.MediaFileScalarWhereInput | Prisma.MediaFileScalarWhereInput[]
 }
 
@@ -795,6 +906,8 @@ export type MediaFileCreateWithoutUserInput = {
   expiresAt?: Date | string | null
   isAIGenerated?: boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostCreateNestedManyWithoutMediaFileIdsInput
+  folder?: Prisma.MediaFolderCreateNestedOneWithoutFilesInput
   aiImageGeneration?: Prisma.AiImageGenerationCreateNestedOneWithoutMediaFilesInput
   organization: Prisma.OrganizationCreateNestedOneWithoutMediaFilesInput
 }
@@ -809,6 +922,7 @@ export type MediaFileUncheckedCreateWithoutUserInput = {
   url: string
   publicId: string
   thumbnailUrl?: string | null
+  folderId?: string | null
   duration?: number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -817,6 +931,7 @@ export type MediaFileUncheckedCreateWithoutUserInput = {
   isAIGenerated?: boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   aiGenerationId?: string | null
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutMediaFileIdsInput
 }
 
 export type MediaFileCreateOrConnectWithoutUserInput = {
@@ -859,6 +974,7 @@ export type MediaFileScalarWhereInput = {
   url?: Prisma.StringFilter<"MediaFile"> | string
   publicId?: Prisma.StringFilter<"MediaFile"> | string
   thumbnailUrl?: Prisma.StringNullableFilter<"MediaFile"> | string | null
+  folderId?: Prisma.StringNullableFilter<"MediaFile"> | string | null
   duration?: Prisma.IntNullableFilter<"MediaFile"> | number | null
   metadata?: Prisma.JsonNullableFilter<"MediaFile">
   createdAt?: Prisma.DateTimeFilter<"MediaFile"> | Date | string
@@ -867,6 +983,141 @@ export type MediaFileScalarWhereInput = {
   isAIGenerated?: Prisma.BoolFilter<"MediaFile"> | boolean
   aiGenerationContext?: Prisma.JsonNullableFilter<"MediaFile">
   aiGenerationId?: Prisma.StringNullableFilter<"MediaFile"> | string | null
+}
+
+export type MediaFileCreateWithoutPostsInput = {
+  id?: string
+  filename: string
+  originalName: string
+  mimeType: string
+  size: number
+  url: string
+  publicId: string
+  thumbnailUrl?: string | null
+  duration?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  expiresAt?: Date | string | null
+  isAIGenerated?: boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  folder?: Prisma.MediaFolderCreateNestedOneWithoutFilesInput
+  aiImageGeneration?: Prisma.AiImageGenerationCreateNestedOneWithoutMediaFilesInput
+  user: Prisma.UserCreateNestedOneWithoutMediaFilesInput
+  organization: Prisma.OrganizationCreateNestedOneWithoutMediaFilesInput
+}
+
+export type MediaFileUncheckedCreateWithoutPostsInput = {
+  id?: string
+  userId: string
+  organizationId: string
+  filename: string
+  originalName: string
+  mimeType: string
+  size: number
+  url: string
+  publicId: string
+  thumbnailUrl?: string | null
+  folderId?: string | null
+  duration?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  expiresAt?: Date | string | null
+  isAIGenerated?: boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  aiGenerationId?: string | null
+}
+
+export type MediaFileCreateOrConnectWithoutPostsInput = {
+  where: Prisma.MediaFileWhereUniqueInput
+  create: Prisma.XOR<Prisma.MediaFileCreateWithoutPostsInput, Prisma.MediaFileUncheckedCreateWithoutPostsInput>
+}
+
+export type MediaFileUpsertWithWhereUniqueWithoutPostsInput = {
+  where: Prisma.MediaFileWhereUniqueInput
+  update: Prisma.XOR<Prisma.MediaFileUpdateWithoutPostsInput, Prisma.MediaFileUncheckedUpdateWithoutPostsInput>
+  create: Prisma.XOR<Prisma.MediaFileCreateWithoutPostsInput, Prisma.MediaFileUncheckedCreateWithoutPostsInput>
+}
+
+export type MediaFileUpdateWithWhereUniqueWithoutPostsInput = {
+  where: Prisma.MediaFileWhereUniqueInput
+  data: Prisma.XOR<Prisma.MediaFileUpdateWithoutPostsInput, Prisma.MediaFileUncheckedUpdateWithoutPostsInput>
+}
+
+export type MediaFileUpdateManyWithWhereWithoutPostsInput = {
+  where: Prisma.MediaFileScalarWhereInput
+  data: Prisma.XOR<Prisma.MediaFileUpdateManyMutationInput, Prisma.MediaFileUncheckedUpdateManyWithoutPostsInput>
+}
+
+export type MediaFileCreateWithoutFolderInput = {
+  id?: string
+  filename: string
+  originalName: string
+  mimeType: string
+  size: number
+  url: string
+  publicId: string
+  thumbnailUrl?: string | null
+  duration?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  expiresAt?: Date | string | null
+  isAIGenerated?: boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostCreateNestedManyWithoutMediaFileIdsInput
+  aiImageGeneration?: Prisma.AiImageGenerationCreateNestedOneWithoutMediaFilesInput
+  user: Prisma.UserCreateNestedOneWithoutMediaFilesInput
+  organization: Prisma.OrganizationCreateNestedOneWithoutMediaFilesInput
+}
+
+export type MediaFileUncheckedCreateWithoutFolderInput = {
+  id?: string
+  userId: string
+  organizationId: string
+  filename: string
+  originalName: string
+  mimeType: string
+  size: number
+  url: string
+  publicId: string
+  thumbnailUrl?: string | null
+  duration?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  expiresAt?: Date | string | null
+  isAIGenerated?: boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  aiGenerationId?: string | null
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutMediaFileIdsInput
+}
+
+export type MediaFileCreateOrConnectWithoutFolderInput = {
+  where: Prisma.MediaFileWhereUniqueInput
+  create: Prisma.XOR<Prisma.MediaFileCreateWithoutFolderInput, Prisma.MediaFileUncheckedCreateWithoutFolderInput>
+}
+
+export type MediaFileCreateManyFolderInputEnvelope = {
+  data: Prisma.MediaFileCreateManyFolderInput | Prisma.MediaFileCreateManyFolderInput[]
+  skipDuplicates?: boolean
+}
+
+export type MediaFileUpsertWithWhereUniqueWithoutFolderInput = {
+  where: Prisma.MediaFileWhereUniqueInput
+  update: Prisma.XOR<Prisma.MediaFileUpdateWithoutFolderInput, Prisma.MediaFileUncheckedUpdateWithoutFolderInput>
+  create: Prisma.XOR<Prisma.MediaFileCreateWithoutFolderInput, Prisma.MediaFileUncheckedCreateWithoutFolderInput>
+}
+
+export type MediaFileUpdateWithWhereUniqueWithoutFolderInput = {
+  where: Prisma.MediaFileWhereUniqueInput
+  data: Prisma.XOR<Prisma.MediaFileUpdateWithoutFolderInput, Prisma.MediaFileUncheckedUpdateWithoutFolderInput>
+}
+
+export type MediaFileUpdateManyWithWhereWithoutFolderInput = {
+  where: Prisma.MediaFileScalarWhereInput
+  data: Prisma.XOR<Prisma.MediaFileUpdateManyMutationInput, Prisma.MediaFileUncheckedUpdateManyWithoutFolderInput>
 }
 
 export type MediaFileCreateWithoutOrganizationInput = {
@@ -885,6 +1136,8 @@ export type MediaFileCreateWithoutOrganizationInput = {
   expiresAt?: Date | string | null
   isAIGenerated?: boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostCreateNestedManyWithoutMediaFileIdsInput
+  folder?: Prisma.MediaFolderCreateNestedOneWithoutFilesInput
   aiImageGeneration?: Prisma.AiImageGenerationCreateNestedOneWithoutMediaFilesInput
   user: Prisma.UserCreateNestedOneWithoutMediaFilesInput
 }
@@ -899,6 +1152,7 @@ export type MediaFileUncheckedCreateWithoutOrganizationInput = {
   url: string
   publicId: string
   thumbnailUrl?: string | null
+  folderId?: string | null
   duration?: number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -907,6 +1161,7 @@ export type MediaFileUncheckedCreateWithoutOrganizationInput = {
   isAIGenerated?: boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   aiGenerationId?: string | null
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutMediaFileIdsInput
 }
 
 export type MediaFileCreateOrConnectWithoutOrganizationInput = {
@@ -951,6 +1206,8 @@ export type MediaFileCreateWithoutAiImageGenerationInput = {
   expiresAt?: Date | string | null
   isAIGenerated?: boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostCreateNestedManyWithoutMediaFileIdsInput
+  folder?: Prisma.MediaFolderCreateNestedOneWithoutFilesInput
   user: Prisma.UserCreateNestedOneWithoutMediaFilesInput
   organization: Prisma.OrganizationCreateNestedOneWithoutMediaFilesInput
 }
@@ -966,6 +1223,7 @@ export type MediaFileUncheckedCreateWithoutAiImageGenerationInput = {
   url: string
   publicId: string
   thumbnailUrl?: string | null
+  folderId?: string | null
   duration?: number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -973,6 +1231,7 @@ export type MediaFileUncheckedCreateWithoutAiImageGenerationInput = {
   expiresAt?: Date | string | null
   isAIGenerated?: boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutMediaFileIdsInput
 }
 
 export type MediaFileCreateOrConnectWithoutAiImageGenerationInput = {
@@ -1011,6 +1270,7 @@ export type MediaFileCreateManyUserInput = {
   url: string
   publicId: string
   thumbnailUrl?: string | null
+  folderId?: string | null
   duration?: number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -1037,12 +1297,167 @@ export type MediaFileUpdateWithoutUserInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostUpdateManyWithoutMediaFileIdsNestedInput
+  folder?: Prisma.MediaFolderUpdateOneWithoutFilesNestedInput
   aiImageGeneration?: Prisma.AiImageGenerationUpdateOneWithoutMediaFilesNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMediaFilesNestedInput
 }
 
 export type MediaFileUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  filename?: Prisma.StringFieldUpdateOperationsInput | string
+  originalName?: Prisma.StringFieldUpdateOperationsInput | string
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  publicId?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  aiGenerationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  posts?: Prisma.PostUncheckedUpdateManyWithoutMediaFileIdsNestedInput
+}
+
+export type MediaFileUncheckedUpdateManyWithoutUserInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  filename?: Prisma.StringFieldUpdateOperationsInput | string
+  originalName?: Prisma.StringFieldUpdateOperationsInput | string
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  publicId?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  aiGenerationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type MediaFileUpdateWithoutPostsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  filename?: Prisma.StringFieldUpdateOperationsInput | string
+  originalName?: Prisma.StringFieldUpdateOperationsInput | string
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  publicId?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  folder?: Prisma.MediaFolderUpdateOneWithoutFilesNestedInput
+  aiImageGeneration?: Prisma.AiImageGenerationUpdateOneWithoutMediaFilesNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutMediaFilesNestedInput
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutMediaFilesNestedInput
+}
+
+export type MediaFileUncheckedUpdateWithoutPostsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  filename?: Prisma.StringFieldUpdateOperationsInput | string
+  originalName?: Prisma.StringFieldUpdateOperationsInput | string
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  publicId?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  aiGenerationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type MediaFileUncheckedUpdateManyWithoutPostsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  filename?: Prisma.StringFieldUpdateOperationsInput | string
+  originalName?: Prisma.StringFieldUpdateOperationsInput | string
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  publicId?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  aiGenerationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type MediaFileCreateManyFolderInput = {
+  id?: string
+  userId: string
+  organizationId: string
+  filename: string
+  originalName: string
+  mimeType: string
+  size: number
+  url: string
+  publicId: string
+  thumbnailUrl?: string | null
+  duration?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  expiresAt?: Date | string | null
+  isAIGenerated?: boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  aiGenerationId?: string | null
+}
+
+export type MediaFileUpdateWithoutFolderInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  filename?: Prisma.StringFieldUpdateOperationsInput | string
+  originalName?: Prisma.StringFieldUpdateOperationsInput | string
+  mimeType?: Prisma.StringFieldUpdateOperationsInput | string
+  size?: Prisma.IntFieldUpdateOperationsInput | number
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  publicId?: Prisma.StringFieldUpdateOperationsInput | string
+  thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostUpdateManyWithoutMediaFileIdsNestedInput
+  aiImageGeneration?: Prisma.AiImageGenerationUpdateOneWithoutMediaFilesNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutMediaFilesNestedInput
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutMediaFilesNestedInput
+}
+
+export type MediaFileUncheckedUpdateWithoutFolderInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   filename?: Prisma.StringFieldUpdateOperationsInput | string
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1059,10 +1474,12 @@ export type MediaFileUncheckedUpdateWithoutUserInput = {
   isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   aiGenerationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  posts?: Prisma.PostUncheckedUpdateManyWithoutMediaFileIdsNestedInput
 }
 
-export type MediaFileUncheckedUpdateManyWithoutUserInput = {
+export type MediaFileUncheckedUpdateManyWithoutFolderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
   organizationId?: Prisma.StringFieldUpdateOperationsInput | string
   filename?: Prisma.StringFieldUpdateOperationsInput | string
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1091,6 +1508,7 @@ export type MediaFileCreateManyOrganizationInput = {
   url: string
   publicId: string
   thumbnailUrl?: string | null
+  folderId?: string | null
   duration?: number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -1117,6 +1535,8 @@ export type MediaFileUpdateWithoutOrganizationInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostUpdateManyWithoutMediaFileIdsNestedInput
+  folder?: Prisma.MediaFolderUpdateOneWithoutFilesNestedInput
   aiImageGeneration?: Prisma.AiImageGenerationUpdateOneWithoutMediaFilesNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMediaFilesNestedInput
 }
@@ -1131,6 +1551,7 @@ export type MediaFileUncheckedUpdateWithoutOrganizationInput = {
   url?: Prisma.StringFieldUpdateOperationsInput | string
   publicId?: Prisma.StringFieldUpdateOperationsInput | string
   thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1139,6 +1560,7 @@ export type MediaFileUncheckedUpdateWithoutOrganizationInput = {
   isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   aiGenerationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  posts?: Prisma.PostUncheckedUpdateManyWithoutMediaFileIdsNestedInput
 }
 
 export type MediaFileUncheckedUpdateManyWithoutOrganizationInput = {
@@ -1151,6 +1573,7 @@ export type MediaFileUncheckedUpdateManyWithoutOrganizationInput = {
   url?: Prisma.StringFieldUpdateOperationsInput | string
   publicId?: Prisma.StringFieldUpdateOperationsInput | string
   thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1172,6 +1595,7 @@ export type MediaFileCreateManyAiImageGenerationInput = {
   url: string
   publicId: string
   thumbnailUrl?: string | null
+  folderId?: string | null
   duration?: number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -1197,6 +1621,8 @@ export type MediaFileUpdateWithoutAiImageGenerationInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostUpdateManyWithoutMediaFileIdsNestedInput
+  folder?: Prisma.MediaFolderUpdateOneWithoutFilesNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutMediaFilesNestedInput
   organization?: Prisma.OrganizationUpdateOneRequiredWithoutMediaFilesNestedInput
 }
@@ -1212,6 +1638,7 @@ export type MediaFileUncheckedUpdateWithoutAiImageGenerationInput = {
   url?: Prisma.StringFieldUpdateOperationsInput | string
   publicId?: Prisma.StringFieldUpdateOperationsInput | string
   thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1219,6 +1646,7 @@ export type MediaFileUncheckedUpdateWithoutAiImageGenerationInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isAIGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  posts?: Prisma.PostUncheckedUpdateManyWithoutMediaFileIdsNestedInput
 }
 
 export type MediaFileUncheckedUpdateManyWithoutAiImageGenerationInput = {
@@ -1232,6 +1660,7 @@ export type MediaFileUncheckedUpdateManyWithoutAiImageGenerationInput = {
   url?: Prisma.StringFieldUpdateOperationsInput | string
   publicId?: Prisma.StringFieldUpdateOperationsInput | string
   thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   duration?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1241,6 +1670,35 @@ export type MediaFileUncheckedUpdateManyWithoutAiImageGenerationInput = {
   aiGenerationContext?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
+
+/**
+ * Count Type MediaFileCountOutputType
+ */
+
+export type MediaFileCountOutputType = {
+  posts: number
+}
+
+export type MediaFileCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  posts?: boolean | MediaFileCountOutputTypeCountPostsArgs
+}
+
+/**
+ * MediaFileCountOutputType without action
+ */
+export type MediaFileCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MediaFileCountOutputType
+   */
+  select?: Prisma.MediaFileCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * MediaFileCountOutputType without action
+ */
+export type MediaFileCountOutputTypeCountPostsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PostWhereInput
+}
 
 
 export type MediaFileSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1254,6 +1712,7 @@ export type MediaFileSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   url?: boolean
   publicId?: boolean
   thumbnailUrl?: boolean
+  folderId?: boolean
   duration?: boolean
   metadata?: boolean
   createdAt?: boolean
@@ -1262,9 +1721,12 @@ export type MediaFileSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   isAIGenerated?: boolean
   aiGenerationContext?: boolean
   aiGenerationId?: boolean
+  posts?: boolean | Prisma.MediaFile$postsArgs<ExtArgs>
+  folder?: boolean | Prisma.MediaFile$folderArgs<ExtArgs>
   aiImageGeneration?: boolean | Prisma.MediaFile$aiImageGenerationArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
+  _count?: boolean | Prisma.MediaFileCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["mediaFile"]>
 
 export type MediaFileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1278,6 +1740,7 @@ export type MediaFileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   url?: boolean
   publicId?: boolean
   thumbnailUrl?: boolean
+  folderId?: boolean
   duration?: boolean
   metadata?: boolean
   createdAt?: boolean
@@ -1286,6 +1749,7 @@ export type MediaFileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   isAIGenerated?: boolean
   aiGenerationContext?: boolean
   aiGenerationId?: boolean
+  folder?: boolean | Prisma.MediaFile$folderArgs<ExtArgs>
   aiImageGeneration?: boolean | Prisma.MediaFile$aiImageGenerationArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -1302,6 +1766,7 @@ export type MediaFileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   url?: boolean
   publicId?: boolean
   thumbnailUrl?: boolean
+  folderId?: boolean
   duration?: boolean
   metadata?: boolean
   createdAt?: boolean
@@ -1310,6 +1775,7 @@ export type MediaFileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   isAIGenerated?: boolean
   aiGenerationContext?: boolean
   aiGenerationId?: boolean
+  folder?: boolean | Prisma.MediaFile$folderArgs<ExtArgs>
   aiImageGeneration?: boolean | Prisma.MediaFile$aiImageGenerationArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -1326,6 +1792,7 @@ export type MediaFileSelectScalar = {
   url?: boolean
   publicId?: boolean
   thumbnailUrl?: boolean
+  folderId?: boolean
   duration?: boolean
   metadata?: boolean
   createdAt?: boolean
@@ -1336,18 +1803,23 @@ export type MediaFileSelectScalar = {
   aiGenerationId?: boolean
 }
 
-export type MediaFileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "organizationId" | "filename" | "originalName" | "mimeType" | "size" | "url" | "publicId" | "thumbnailUrl" | "duration" | "metadata" | "createdAt" | "updatedAt" | "expiresAt" | "isAIGenerated" | "aiGenerationContext" | "aiGenerationId", ExtArgs["result"]["mediaFile"]>
+export type MediaFileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "organizationId" | "filename" | "originalName" | "mimeType" | "size" | "url" | "publicId" | "thumbnailUrl" | "folderId" | "duration" | "metadata" | "createdAt" | "updatedAt" | "expiresAt" | "isAIGenerated" | "aiGenerationContext" | "aiGenerationId", ExtArgs["result"]["mediaFile"]>
 export type MediaFileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  posts?: boolean | Prisma.MediaFile$postsArgs<ExtArgs>
+  folder?: boolean | Prisma.MediaFile$folderArgs<ExtArgs>
   aiImageGeneration?: boolean | Prisma.MediaFile$aiImageGenerationArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
+  _count?: boolean | Prisma.MediaFileCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type MediaFileIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  folder?: boolean | Prisma.MediaFile$folderArgs<ExtArgs>
   aiImageGeneration?: boolean | Prisma.MediaFile$aiImageGenerationArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
 }
 export type MediaFileIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  folder?: boolean | Prisma.MediaFile$folderArgs<ExtArgs>
   aiImageGeneration?: boolean | Prisma.MediaFile$aiImageGenerationArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   organization?: boolean | Prisma.OrganizationDefaultArgs<ExtArgs>
@@ -1356,6 +1828,8 @@ export type MediaFileIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
 export type $MediaFilePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "MediaFile"
   objects: {
+    posts: Prisma.$PostPayload<ExtArgs>[]
+    folder: Prisma.$MediaFolderPayload<ExtArgs> | null
     aiImageGeneration: Prisma.$AiImageGenerationPayload<ExtArgs> | null
     user: Prisma.$UserPayload<ExtArgs>
     organization: Prisma.$OrganizationPayload<ExtArgs>
@@ -1371,6 +1845,7 @@ export type $MediaFilePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     url: string
     publicId: string
     thumbnailUrl: string | null
+    folderId: string | null
     duration: number | null
     metadata: runtime.JsonValue | null
     createdAt: Date
@@ -1773,6 +2248,8 @@ readonly fields: MediaFileFieldRefs;
  */
 export interface Prisma__MediaFileClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  posts<T extends Prisma.MediaFile$postsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MediaFile$postsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  folder<T extends Prisma.MediaFile$folderArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MediaFile$folderArgs<ExtArgs>>): Prisma.Prisma__MediaFolderClient<runtime.Types.Result.GetResult<Prisma.$MediaFolderPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   aiImageGeneration<T extends Prisma.MediaFile$aiImageGenerationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MediaFile$aiImageGenerationArgs<ExtArgs>>): Prisma.Prisma__AiImageGenerationClient<runtime.Types.Result.GetResult<Prisma.$AiImageGenerationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   organization<T extends Prisma.OrganizationDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OrganizationDefaultArgs<ExtArgs>>): Prisma.Prisma__OrganizationClient<runtime.Types.Result.GetResult<Prisma.$OrganizationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
@@ -1815,6 +2292,7 @@ export interface MediaFileFieldRefs {
   readonly url: Prisma.FieldRef<"MediaFile", 'String'>
   readonly publicId: Prisma.FieldRef<"MediaFile", 'String'>
   readonly thumbnailUrl: Prisma.FieldRef<"MediaFile", 'String'>
+  readonly folderId: Prisma.FieldRef<"MediaFile", 'String'>
   readonly duration: Prisma.FieldRef<"MediaFile", 'Int'>
   readonly metadata: Prisma.FieldRef<"MediaFile", 'Json'>
   readonly createdAt: Prisma.FieldRef<"MediaFile", 'DateTime'>
@@ -2216,6 +2694,49 @@ export type MediaFileDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Int
    * Limit how many MediaFiles to delete.
    */
   limit?: number
+}
+
+/**
+ * MediaFile.posts
+ */
+export type MediaFile$postsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Post
+   */
+  select?: Prisma.PostSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Post
+   */
+  omit?: Prisma.PostOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PostInclude<ExtArgs> | null
+  where?: Prisma.PostWhereInput
+  orderBy?: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[]
+  cursor?: Prisma.PostWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PostScalarFieldEnum | Prisma.PostScalarFieldEnum[]
+}
+
+/**
+ * MediaFile.folder
+ */
+export type MediaFile$folderArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MediaFolder
+   */
+  select?: Prisma.MediaFolderSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MediaFolder
+   */
+  omit?: Prisma.MediaFolderOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MediaFolderInclude<ExtArgs> | null
+  where?: Prisma.MediaFolderWhereInput
 }
 
 /**

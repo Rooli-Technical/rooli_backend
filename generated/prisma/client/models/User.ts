@@ -365,6 +365,7 @@ export type UserWhereInput = {
   conversationParticipants?: Prisma.ConversationParticipantListRelationFilter
   socialAccountMemberships?: Prisma.SocialAccountMemberListRelationFilter
   invitedSocialMembers?: Prisma.SocialAccountMemberListRelationFilter
+  socialAccounts?: Prisma.SocialAccountListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -406,6 +407,7 @@ export type UserOrderByWithRelationInput = {
   conversationParticipants?: Prisma.ConversationParticipantOrderByRelationAggregateInput
   socialAccountMemberships?: Prisma.SocialAccountMemberOrderByRelationAggregateInput
   invitedSocialMembers?: Prisma.SocialAccountMemberOrderByRelationAggregateInput
+  socialAccounts?: Prisma.SocialAccountOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -450,6 +452,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   conversationParticipants?: Prisma.ConversationParticipantListRelationFilter
   socialAccountMemberships?: Prisma.SocialAccountMemberListRelationFilter
   invitedSocialMembers?: Prisma.SocialAccountMemberListRelationFilter
+  socialAccounts?: Prisma.SocialAccountListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -546,7 +549,8 @@ export type UserCreateInput = {
   favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
   conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
   socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -587,7 +591,8 @@ export type UserUncheckedCreateInput = {
   favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
   conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
 }
 
 export type UserUpdateInput = {
@@ -628,7 +633,8 @@ export type UserUpdateInput = {
   favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
   conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -669,7 +675,8 @@ export type UserUncheckedUpdateInput = {
   favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
   conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -866,6 +873,52 @@ export type IntFieldUpdateOperationsInput = {
 
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type UserCreateNestedOneWithoutSocialAccountsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSocialAccountsInput, Prisma.UserUncheckedCreateWithoutSocialAccountsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSocialAccountsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutSocialAccountsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSocialAccountsInput, Prisma.UserUncheckedCreateWithoutSocialAccountsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSocialAccountsInput
+  upsert?: Prisma.UserUpsertWithoutSocialAccountsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSocialAccountsInput, Prisma.UserUpdateWithoutSocialAccountsInput>, Prisma.UserUncheckedUpdateWithoutSocialAccountsInput>
+}
+
+export type UserCreateNestedOneWithoutSocialAccountMembershipsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSocialAccountMembershipsInput, Prisma.UserUncheckedCreateWithoutSocialAccountMembershipsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSocialAccountMembershipsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutInvitedSocialMembersInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutInvitedSocialMembersInput, Prisma.UserUncheckedCreateWithoutInvitedSocialMembersInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutInvitedSocialMembersInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutSocialAccountMembershipsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSocialAccountMembershipsInput, Prisma.UserUncheckedCreateWithoutSocialAccountMembershipsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSocialAccountMembershipsInput
+  upsert?: Prisma.UserUpsertWithoutSocialAccountMembershipsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSocialAccountMembershipsInput, Prisma.UserUpdateWithoutSocialAccountMembershipsInput>, Prisma.UserUncheckedUpdateWithoutSocialAccountMembershipsInput>
+}
+
+export type UserUpdateOneWithoutInvitedSocialMembersNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutInvitedSocialMembersInput, Prisma.UserUncheckedCreateWithoutInvitedSocialMembersInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutInvitedSocialMembersInput
+  upsert?: Prisma.UserUpsertWithoutInvitedSocialMembersInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutInvitedSocialMembersInput, Prisma.UserUpdateWithoutInvitedSocialMembersInput>, Prisma.UserUncheckedUpdateWithoutInvitedSocialMembersInput>
 }
 
 export type UserCreateNestedOneWithoutPostInput = {
@@ -1086,1621 +1139,7 @@ export type UserUpdateOneRequiredWithoutAuditLogsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAuditLogsInput, Prisma.UserUpdateWithoutAuditLogsInput>, Prisma.UserUncheckedUpdateWithoutAuditLogsInput>
 }
 
-export type UserCreateNestedOneWithoutSocialAccountMembershipsInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutSocialAccountMembershipsInput, Prisma.UserUncheckedCreateWithoutSocialAccountMembershipsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSocialAccountMembershipsInput
-  connect?: Prisma.UserWhereUniqueInput
-}
-
-export type UserCreateNestedOneWithoutInvitedSocialMembersInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutInvitedSocialMembersInput, Prisma.UserUncheckedCreateWithoutInvitedSocialMembersInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutInvitedSocialMembersInput
-  connect?: Prisma.UserWhereUniqueInput
-}
-
-export type UserUpdateOneRequiredWithoutSocialAccountMembershipsNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutSocialAccountMembershipsInput, Prisma.UserUncheckedCreateWithoutSocialAccountMembershipsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSocialAccountMembershipsInput
-  upsert?: Prisma.UserUpsertWithoutSocialAccountMembershipsInput
-  connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSocialAccountMembershipsInput, Prisma.UserUpdateWithoutSocialAccountMembershipsInput>, Prisma.UserUncheckedUpdateWithoutSocialAccountMembershipsInput>
-}
-
-export type UserUpdateOneWithoutInvitedSocialMembersNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutInvitedSocialMembersInput, Prisma.UserUncheckedCreateWithoutInvitedSocialMembersInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutInvitedSocialMembersInput
-  upsert?: Prisma.UserUpsertWithoutInvitedSocialMembersInput
-  disconnect?: Prisma.UserWhereInput | boolean
-  delete?: Prisma.UserWhereInput | boolean
-  connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutInvitedSocialMembersInput, Prisma.UserUpdateWithoutInvitedSocialMembersInput>, Prisma.UserUncheckedUpdateWithoutInvitedSocialMembersInput>
-}
-
-export type UserCreateWithoutPostInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutPostInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutPostInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutPostInput, Prisma.UserUncheckedCreateWithoutPostInput>
-}
-
-export type UserUpsertWithoutPostInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutPostInput, Prisma.UserUncheckedUpdateWithoutPostInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutPostInput, Prisma.UserUncheckedCreateWithoutPostInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutPostInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutPostInput, Prisma.UserUncheckedUpdateWithoutPostInput>
-}
-
-export type UserUpdateWithoutPostInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutPostInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutApprovalsRequestedInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutApprovalsRequestedInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutApprovalsRequestedInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutApprovalsRequestedInput, Prisma.UserUncheckedCreateWithoutApprovalsRequestedInput>
-}
-
-export type UserCreateWithoutApprovalsGivenInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutApprovalsGivenInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutApprovalsGivenInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutApprovalsGivenInput, Prisma.UserUncheckedCreateWithoutApprovalsGivenInput>
-}
-
-export type UserUpsertWithoutApprovalsRequestedInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutApprovalsRequestedInput, Prisma.UserUncheckedUpdateWithoutApprovalsRequestedInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutApprovalsRequestedInput, Prisma.UserUncheckedCreateWithoutApprovalsRequestedInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutApprovalsRequestedInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutApprovalsRequestedInput, Prisma.UserUncheckedUpdateWithoutApprovalsRequestedInput>
-}
-
-export type UserUpdateWithoutApprovalsRequestedInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutApprovalsRequestedInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUpsertWithoutApprovalsGivenInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutApprovalsGivenInput, Prisma.UserUncheckedUpdateWithoutApprovalsGivenInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutApprovalsGivenInput, Prisma.UserUncheckedCreateWithoutApprovalsGivenInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutApprovalsGivenInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutApprovalsGivenInput, Prisma.UserUncheckedUpdateWithoutApprovalsGivenInput>
-}
-
-export type UserUpdateWithoutApprovalsGivenInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutApprovalsGivenInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutMediaFilesInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutMediaFilesInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutMediaFilesInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutMediaFilesInput, Prisma.UserUncheckedCreateWithoutMediaFilesInput>
-}
-
-export type UserUpsertWithoutMediaFilesInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutMediaFilesInput, Prisma.UserUncheckedUpdateWithoutMediaFilesInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutMediaFilesInput, Prisma.UserUncheckedCreateWithoutMediaFilesInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutMediaFilesInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutMediaFilesInput, Prisma.UserUncheckedUpdateWithoutMediaFilesInput>
-}
-
-export type UserUpdateWithoutMediaFilesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutMediaFilesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutOrganizationMembershipsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutOrganizationMembershipsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutOrganizationMembershipsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutOrganizationMembershipsInput, Prisma.UserUncheckedCreateWithoutOrganizationMembershipsInput>
-}
-
-export type UserUpsertWithoutOrganizationMembershipsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutOrganizationMembershipsInput, Prisma.UserUncheckedUpdateWithoutOrganizationMembershipsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutOrganizationMembershipsInput, Prisma.UserUncheckedCreateWithoutOrganizationMembershipsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutOrganizationMembershipsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutOrganizationMembershipsInput, Prisma.UserUncheckedUpdateWithoutOrganizationMembershipsInput>
-}
-
-export type UserUpdateWithoutOrganizationMembershipsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutOrganizationMembershipsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutSentInvitationsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutSentInvitationsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutSentInvitationsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutSentInvitationsInput, Prisma.UserUncheckedCreateWithoutSentInvitationsInput>
-}
-
-export type UserUpsertWithoutSentInvitationsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutSentInvitationsInput, Prisma.UserUncheckedUpdateWithoutSentInvitationsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutSentInvitationsInput, Prisma.UserUncheckedCreateWithoutSentInvitationsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutSentInvitationsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutSentInvitationsInput, Prisma.UserUncheckedUpdateWithoutSentInvitationsInput>
-}
-
-export type UserUpdateWithoutSentInvitationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutSentInvitationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutAiContentGenerationsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutAiContentGenerationsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutAiContentGenerationsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutAiContentGenerationsInput, Prisma.UserUncheckedCreateWithoutAiContentGenerationsInput>
-}
-
-export type UserUpsertWithoutAiContentGenerationsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutAiContentGenerationsInput, Prisma.UserUncheckedUpdateWithoutAiContentGenerationsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutAiContentGenerationsInput, Prisma.UserUncheckedCreateWithoutAiContentGenerationsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutAiContentGenerationsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutAiContentGenerationsInput, Prisma.UserUncheckedUpdateWithoutAiContentGenerationsInput>
-}
-
-export type UserUpdateWithoutAiContentGenerationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutAiContentGenerationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutAiImageGenerationsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutAiImageGenerationsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutAiImageGenerationsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutAiImageGenerationsInput, Prisma.UserUncheckedCreateWithoutAiImageGenerationsInput>
-}
-
-export type UserUpsertWithoutAiImageGenerationsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutAiImageGenerationsInput, Prisma.UserUncheckedUpdateWithoutAiImageGenerationsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutAiImageGenerationsInput, Prisma.UserUncheckedCreateWithoutAiImageGenerationsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutAiImageGenerationsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutAiImageGenerationsInput, Prisma.UserUncheckedUpdateWithoutAiImageGenerationsInput>
-}
-
-export type UserUpdateWithoutAiImageGenerationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutAiImageGenerationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutAiUsagesInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutAiUsagesInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutAiUsagesInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutAiUsagesInput, Prisma.UserUncheckedCreateWithoutAiUsagesInput>
-}
-
-export type UserUpsertWithoutAiUsagesInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutAiUsagesInput, Prisma.UserUncheckedUpdateWithoutAiUsagesInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutAiUsagesInput, Prisma.UserUncheckedCreateWithoutAiUsagesInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutAiUsagesInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutAiUsagesInput, Prisma.UserUncheckedUpdateWithoutAiUsagesInput>
-}
-
-export type UserUpdateWithoutAiUsagesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutAiUsagesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutConversationParticipantsInput = {
+export type UserCreateWithoutSocialAccountsInput = {
   id?: string
   email: string
   password?: string | null
@@ -2736,11 +1175,12 @@ export type UserCreateWithoutConversationParticipantsInput = {
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
   aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
   favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
   socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
 }
 
-export type UserUncheckedCreateWithoutConversationParticipantsInput = {
+export type UserUncheckedCreateWithoutSocialAccountsInput = {
   id?: string
   email: string
   password?: string | null
@@ -2776,27 +1216,28 @@ export type UserUncheckedCreateWithoutConversationParticipantsInput = {
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
   aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
   favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
 }
 
-export type UserCreateOrConnectWithoutConversationParticipantsInput = {
+export type UserCreateOrConnectWithoutSocialAccountsInput = {
   where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutConversationParticipantsInput, Prisma.UserUncheckedCreateWithoutConversationParticipantsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSocialAccountsInput, Prisma.UserUncheckedCreateWithoutSocialAccountsInput>
 }
 
-export type UserUpsertWithoutConversationParticipantsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutConversationParticipantsInput, Prisma.UserUncheckedUpdateWithoutConversationParticipantsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutConversationParticipantsInput, Prisma.UserUncheckedCreateWithoutConversationParticipantsInput>
+export type UserUpsertWithoutSocialAccountsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSocialAccountsInput, Prisma.UserUncheckedUpdateWithoutSocialAccountsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSocialAccountsInput, Prisma.UserUncheckedCreateWithoutSocialAccountsInput>
   where?: Prisma.UserWhereInput
 }
 
-export type UserUpdateToOneWithWhereWithoutConversationParticipantsInput = {
+export type UserUpdateToOneWithWhereWithoutSocialAccountsInput = {
   where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutConversationParticipantsInput, Prisma.UserUncheckedUpdateWithoutConversationParticipantsInput>
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSocialAccountsInput, Prisma.UserUncheckedUpdateWithoutSocialAccountsInput>
 }
 
-export type UserUpdateWithoutConversationParticipantsInput = {
+export type UserUpdateWithoutSocialAccountsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2832,11 +1273,12 @@ export type UserUpdateWithoutConversationParticipantsInput = {
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
   aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
   favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
 }
 
-export type UserUncheckedUpdateWithoutConversationParticipantsInput = {
+export type UserUncheckedUpdateWithoutSocialAccountsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2872,888 +1314,9 @@ export type UserUncheckedUpdateWithoutConversationParticipantsInput = {
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
   aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
   favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutMessagesInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutMessagesInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutMessagesInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutMessagesInput, Prisma.UserUncheckedCreateWithoutMessagesInput>
-}
-
-export type UserUpsertWithoutMessagesInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutMessagesInput, Prisma.UserUncheckedUpdateWithoutMessagesInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutMessagesInput, Prisma.UserUncheckedCreateWithoutMessagesInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutMessagesInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutMessagesInput, Prisma.UserUncheckedUpdateWithoutMessagesInput>
-}
-
-export type UserUpdateWithoutMessagesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutMessagesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
   conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutContentTemplateInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutContentTemplateInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutContentTemplateInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutContentTemplateInput, Prisma.UserUncheckedCreateWithoutContentTemplateInput>
-}
-
-export type UserUpsertWithoutContentTemplateInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutContentTemplateInput, Prisma.UserUncheckedUpdateWithoutContentTemplateInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutContentTemplateInput, Prisma.UserUncheckedCreateWithoutContentTemplateInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutContentTemplateInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutContentTemplateInput, Prisma.UserUncheckedUpdateWithoutContentTemplateInput>
-}
-
-export type UserUpdateWithoutContentTemplateInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutContentTemplateInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutFavoriteTemplatesInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutFavoriteTemplatesInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutFavoriteTemplatesInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutFavoriteTemplatesInput, Prisma.UserUncheckedCreateWithoutFavoriteTemplatesInput>
-}
-
-export type UserUpsertWithoutFavoriteTemplatesInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutFavoriteTemplatesInput, Prisma.UserUncheckedUpdateWithoutFavoriteTemplatesInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutFavoriteTemplatesInput, Prisma.UserUncheckedCreateWithoutFavoriteTemplatesInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutFavoriteTemplatesInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutFavoriteTemplatesInput, Prisma.UserUncheckedUpdateWithoutFavoriteTemplatesInput>
-}
-
-export type UserUpdateWithoutFavoriteTemplatesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutFavoriteTemplatesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutNotificationsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutNotificationsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutNotificationsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
-}
-
-export type UserUpsertWithoutNotificationsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutNotificationsInput, Prisma.UserUncheckedUpdateWithoutNotificationsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutNotificationsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutNotificationsInput, Prisma.UserUncheckedUpdateWithoutNotificationsInput>
-}
-
-export type UserUpdateWithoutNotificationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutNotificationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
-}
-
-export type UserCreateWithoutAuditLogsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
-  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
-}
-
-export type UserUncheckedCreateWithoutAuditLogsInput = {
-  id?: string
-  email: string
-  password?: string | null
-  firstName?: string | null
-  lastName?: string | null
-  avatar?: string | null
-  role?: $Enums.UserRole
-  isEmailVerified?: boolean
-  emailVerificationToken?: string | null
-  emailVerificationSentAt?: Date | string | null
-  refreshToken?: string | null
-  resetPasswordToken?: string | null
-  resetPasswordExpires?: Date | string | null
-  loginAttempts?: number
-  lockedUntil?: Date | string | null
-  lastPasswordChange?: Date | string | null
-  refreshTokenVersion?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deletedAt?: Date | string | null
-  lastActiveAt?: Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
-  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
-  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
-  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
-  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
-}
-
-export type UserCreateOrConnectWithoutAuditLogsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutAuditLogsInput, Prisma.UserUncheckedCreateWithoutAuditLogsInput>
-}
-
-export type UserUpsertWithoutAuditLogsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutAuditLogsInput, Prisma.UserUncheckedUpdateWithoutAuditLogsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutAuditLogsInput, Prisma.UserUncheckedCreateWithoutAuditLogsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutAuditLogsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutAuditLogsInput, Prisma.UserUncheckedUpdateWithoutAuditLogsInput>
-}
-
-export type UserUpdateWithoutAuditLogsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
-  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
-}
-
-export type UserUncheckedUpdateWithoutAuditLogsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
-  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
-  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
-  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
-  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
-  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
-  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
-  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
-  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
-  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
-  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
-  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
-  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
-  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
-  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
 }
 
 export type UserCreateWithoutSocialAccountMembershipsInput = {
@@ -3793,7 +1356,8 @@ export type UserCreateWithoutSocialAccountMembershipsInput = {
   aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
   favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
   conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInviterInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
 }
 
 export type UserUncheckedCreateWithoutSocialAccountMembershipsInput = {
@@ -3833,7 +1397,8 @@ export type UserUncheckedCreateWithoutSocialAccountMembershipsInput = {
   aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
   favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
   conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInviterInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
 }
 
 export type UserCreateOrConnectWithoutSocialAccountMembershipsInput = {
@@ -3879,6 +1444,7 @@ export type UserCreateWithoutInvitedSocialMembersInput = {
   favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
   conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
   socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
 }
 
 export type UserUncheckedCreateWithoutInvitedSocialMembersInput = {
@@ -3919,6 +1485,7 @@ export type UserUncheckedCreateWithoutInvitedSocialMembersInput = {
   favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
   conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
 }
 
 export type UserCreateOrConnectWithoutInvitedSocialMembersInput = {
@@ -3974,7 +1541,8 @@ export type UserUpdateWithoutSocialAccountMembershipsInput = {
   aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
   favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
   conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInviterNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSocialAccountMembershipsInput = {
@@ -4014,7 +1582,8 @@ export type UserUncheckedUpdateWithoutSocialAccountMembershipsInput = {
   aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
   favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
   conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
-  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInviterNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
 }
 
 export type UserUpsertWithoutInvitedSocialMembersInput = {
@@ -4066,6 +1635,7 @@ export type UserUpdateWithoutInvitedSocialMembersInput = {
   favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
   conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutInvitedSocialMembersInput = {
@@ -4106,6 +1676,2707 @@ export type UserUncheckedUpdateWithoutInvitedSocialMembersInput = {
   favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
   conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
   socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutPostInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutPostInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutPostInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutPostInput, Prisma.UserUncheckedCreateWithoutPostInput>
+}
+
+export type UserUpsertWithoutPostInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutPostInput, Prisma.UserUncheckedUpdateWithoutPostInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutPostInput, Prisma.UserUncheckedCreateWithoutPostInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutPostInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutPostInput, Prisma.UserUncheckedUpdateWithoutPostInput>
+}
+
+export type UserUpdateWithoutPostInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutPostInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutApprovalsRequestedInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutApprovalsRequestedInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutApprovalsRequestedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutApprovalsRequestedInput, Prisma.UserUncheckedCreateWithoutApprovalsRequestedInput>
+}
+
+export type UserCreateWithoutApprovalsGivenInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutApprovalsGivenInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutApprovalsGivenInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutApprovalsGivenInput, Prisma.UserUncheckedCreateWithoutApprovalsGivenInput>
+}
+
+export type UserUpsertWithoutApprovalsRequestedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutApprovalsRequestedInput, Prisma.UserUncheckedUpdateWithoutApprovalsRequestedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutApprovalsRequestedInput, Prisma.UserUncheckedCreateWithoutApprovalsRequestedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutApprovalsRequestedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutApprovalsRequestedInput, Prisma.UserUncheckedUpdateWithoutApprovalsRequestedInput>
+}
+
+export type UserUpdateWithoutApprovalsRequestedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutApprovalsRequestedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUpsertWithoutApprovalsGivenInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutApprovalsGivenInput, Prisma.UserUncheckedUpdateWithoutApprovalsGivenInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutApprovalsGivenInput, Prisma.UserUncheckedCreateWithoutApprovalsGivenInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutApprovalsGivenInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutApprovalsGivenInput, Prisma.UserUncheckedUpdateWithoutApprovalsGivenInput>
+}
+
+export type UserUpdateWithoutApprovalsGivenInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutApprovalsGivenInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutMediaFilesInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutMediaFilesInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutMediaFilesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutMediaFilesInput, Prisma.UserUncheckedCreateWithoutMediaFilesInput>
+}
+
+export type UserUpsertWithoutMediaFilesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutMediaFilesInput, Prisma.UserUncheckedUpdateWithoutMediaFilesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutMediaFilesInput, Prisma.UserUncheckedCreateWithoutMediaFilesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutMediaFilesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutMediaFilesInput, Prisma.UserUncheckedUpdateWithoutMediaFilesInput>
+}
+
+export type UserUpdateWithoutMediaFilesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutMediaFilesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutOrganizationMembershipsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutOrganizationMembershipsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutOrganizationMembershipsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutOrganizationMembershipsInput, Prisma.UserUncheckedCreateWithoutOrganizationMembershipsInput>
+}
+
+export type UserUpsertWithoutOrganizationMembershipsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutOrganizationMembershipsInput, Prisma.UserUncheckedUpdateWithoutOrganizationMembershipsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutOrganizationMembershipsInput, Prisma.UserUncheckedCreateWithoutOrganizationMembershipsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutOrganizationMembershipsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutOrganizationMembershipsInput, Prisma.UserUncheckedUpdateWithoutOrganizationMembershipsInput>
+}
+
+export type UserUpdateWithoutOrganizationMembershipsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutOrganizationMembershipsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutSentInvitationsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutSentInvitationsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutSentInvitationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSentInvitationsInput, Prisma.UserUncheckedCreateWithoutSentInvitationsInput>
+}
+
+export type UserUpsertWithoutSentInvitationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSentInvitationsInput, Prisma.UserUncheckedUpdateWithoutSentInvitationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSentInvitationsInput, Prisma.UserUncheckedCreateWithoutSentInvitationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSentInvitationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSentInvitationsInput, Prisma.UserUncheckedUpdateWithoutSentInvitationsInput>
+}
+
+export type UserUpdateWithoutSentInvitationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSentInvitationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutAiContentGenerationsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutAiContentGenerationsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutAiContentGenerationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiContentGenerationsInput, Prisma.UserUncheckedCreateWithoutAiContentGenerationsInput>
+}
+
+export type UserUpsertWithoutAiContentGenerationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAiContentGenerationsInput, Prisma.UserUncheckedUpdateWithoutAiContentGenerationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiContentGenerationsInput, Prisma.UserUncheckedCreateWithoutAiContentGenerationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAiContentGenerationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAiContentGenerationsInput, Prisma.UserUncheckedUpdateWithoutAiContentGenerationsInput>
+}
+
+export type UserUpdateWithoutAiContentGenerationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAiContentGenerationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutAiImageGenerationsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutAiImageGenerationsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutAiImageGenerationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiImageGenerationsInput, Prisma.UserUncheckedCreateWithoutAiImageGenerationsInput>
+}
+
+export type UserUpsertWithoutAiImageGenerationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAiImageGenerationsInput, Prisma.UserUncheckedUpdateWithoutAiImageGenerationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiImageGenerationsInput, Prisma.UserUncheckedCreateWithoutAiImageGenerationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAiImageGenerationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAiImageGenerationsInput, Prisma.UserUncheckedUpdateWithoutAiImageGenerationsInput>
+}
+
+export type UserUpdateWithoutAiImageGenerationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAiImageGenerationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutAiUsagesInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutAiUsagesInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutAiUsagesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiUsagesInput, Prisma.UserUncheckedCreateWithoutAiUsagesInput>
+}
+
+export type UserUpsertWithoutAiUsagesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAiUsagesInput, Prisma.UserUncheckedUpdateWithoutAiUsagesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiUsagesInput, Prisma.UserUncheckedCreateWithoutAiUsagesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAiUsagesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAiUsagesInput, Prisma.UserUncheckedUpdateWithoutAiUsagesInput>
+}
+
+export type UserUpdateWithoutAiUsagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAiUsagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutConversationParticipantsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutConversationParticipantsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutConversationParticipantsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutConversationParticipantsInput, Prisma.UserUncheckedCreateWithoutConversationParticipantsInput>
+}
+
+export type UserUpsertWithoutConversationParticipantsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutConversationParticipantsInput, Prisma.UserUncheckedUpdateWithoutConversationParticipantsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutConversationParticipantsInput, Prisma.UserUncheckedCreateWithoutConversationParticipantsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutConversationParticipantsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutConversationParticipantsInput, Prisma.UserUncheckedUpdateWithoutConversationParticipantsInput>
+}
+
+export type UserUpdateWithoutConversationParticipantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutConversationParticipantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutMessagesInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutMessagesInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutMessagesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutMessagesInput, Prisma.UserUncheckedCreateWithoutMessagesInput>
+}
+
+export type UserUpsertWithoutMessagesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutMessagesInput, Prisma.UserUncheckedUpdateWithoutMessagesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutMessagesInput, Prisma.UserUncheckedCreateWithoutMessagesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutMessagesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutMessagesInput, Prisma.UserUncheckedUpdateWithoutMessagesInput>
+}
+
+export type UserUpdateWithoutMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutContentTemplateInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutContentTemplateInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutContentTemplateInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutContentTemplateInput, Prisma.UserUncheckedCreateWithoutContentTemplateInput>
+}
+
+export type UserUpsertWithoutContentTemplateInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutContentTemplateInput, Prisma.UserUncheckedUpdateWithoutContentTemplateInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutContentTemplateInput, Prisma.UserUncheckedCreateWithoutContentTemplateInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutContentTemplateInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutContentTemplateInput, Prisma.UserUncheckedUpdateWithoutContentTemplateInput>
+}
+
+export type UserUpdateWithoutContentTemplateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutContentTemplateInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutFavoriteTemplatesInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutFavoriteTemplatesInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutFavoriteTemplatesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutFavoriteTemplatesInput, Prisma.UserUncheckedCreateWithoutFavoriteTemplatesInput>
+}
+
+export type UserUpsertWithoutFavoriteTemplatesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutFavoriteTemplatesInput, Prisma.UserUncheckedUpdateWithoutFavoriteTemplatesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutFavoriteTemplatesInput, Prisma.UserUncheckedCreateWithoutFavoriteTemplatesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutFavoriteTemplatesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutFavoriteTemplatesInput, Prisma.UserUncheckedUpdateWithoutFavoriteTemplatesInput>
+}
+
+export type UserUpdateWithoutFavoriteTemplatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutFavoriteTemplatesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutNotificationsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutNotificationsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutNotificationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
+}
+
+export type UserUpsertWithoutNotificationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutNotificationsInput, Prisma.UserUncheckedUpdateWithoutNotificationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutNotificationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutNotificationsInput, Prisma.UserUncheckedUpdateWithoutNotificationsInput>
+}
+
+export type UserUpdateWithoutNotificationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutNotificationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserCreateWithoutAuditLogsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalCreateNestedManyWithoutApproverInput
+  aiUsages?: Prisma.AIUsageCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserUncheckedCreateWithoutAuditLogsInput = {
+  id?: string
+  email: string
+  password?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatar?: string | null
+  role?: $Enums.UserRole
+  isEmailVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationSentAt?: Date | string | null
+  refreshToken?: string | null
+  resetPasswordToken?: string | null
+  resetPasswordExpires?: Date | string | null
+  loginAttempts?: number
+  lockedUntil?: Date | string | null
+  lastPasswordChange?: Date | string | null
+  refreshTokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  lastActiveAt?: Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedCreateNestedManyWithoutUserInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedCreateNestedManyWithoutUserInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedCreateNestedManyWithoutInviterInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedCreateNestedManyWithoutUserInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedCreateNestedManyWithoutUserInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  notifications?: Prisma.NotificationEntityUncheckedCreateNestedManyWithoutUserInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedCreateNestedManyWithoutUserInput
+  Post?: Prisma.PostUncheckedCreateNestedManyWithoutAuthorInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutRequesterInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedCreateNestedManyWithoutApproverInput
+  aiUsages?: Prisma.AIUsageUncheckedCreateNestedManyWithoutUserInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedCreateNestedManyWithoutUserInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutUserInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedCreateNestedManyWithoutInvitedByInput
+  socialAccounts?: Prisma.SocialAccountUncheckedCreateNestedManyWithoutConnectedByInput
+}
+
+export type UserCreateOrConnectWithoutAuditLogsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAuditLogsInput, Prisma.UserUncheckedCreateWithoutAuditLogsInput>
+}
+
+export type UserUpsertWithoutAuditLogsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAuditLogsInput, Prisma.UserUncheckedUpdateWithoutAuditLogsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAuditLogsInput, Prisma.UserUncheckedCreateWithoutAuditLogsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAuditLogsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAuditLogsInput, Prisma.UserUncheckedUpdateWithoutAuditLogsInput>
+}
+
+export type UserUpdateWithoutAuditLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUpdateManyWithoutApproverNestedInput
+  aiUsages?: Prisma.AIUsageUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUpdateManyWithoutConnectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAuditLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  isEmailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  resetPasswordExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  loginAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lockedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastPasswordChange?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  refreshTokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastActiveAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  mediaFiles?: Prisma.MediaFileUncheckedUpdateManyWithoutUserNestedInput
+  organizationMemberships?: Prisma.OrganizationMemberUncheckedUpdateManyWithoutUserNestedInput
+  sentInvitations?: Prisma.OrganizationInvitationUncheckedUpdateManyWithoutInviterNestedInput
+  aiContentGenerations?: Prisma.AiContentGenerationUncheckedUpdateManyWithoutUserNestedInput
+  aiImageGenerations?: Prisma.AiImageGenerationUncheckedUpdateManyWithoutUserNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  notifications?: Prisma.NotificationEntityUncheckedUpdateManyWithoutUserNestedInput
+  ContentTemplate?: Prisma.ContentTemplateUncheckedUpdateManyWithoutUserNestedInput
+  Post?: Prisma.PostUncheckedUpdateManyWithoutAuthorNestedInput
+  approvalsRequested?: Prisma.PostApprovalUncheckedUpdateManyWithoutRequesterNestedInput
+  approvalsGiven?: Prisma.PostApprovalUncheckedUpdateManyWithoutApproverNestedInput
+  aiUsages?: Prisma.AIUsageUncheckedUpdateManyWithoutUserNestedInput
+  favoriteTemplates?: Prisma.UserFavoriteTemplateUncheckedUpdateManyWithoutUserNestedInput
+  conversationParticipants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  socialAccountMemberships?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutUserNestedInput
+  invitedSocialMembers?: Prisma.SocialAccountMemberUncheckedUpdateManyWithoutInvitedByNestedInput
+  socialAccounts?: Prisma.SocialAccountUncheckedUpdateManyWithoutConnectedByNestedInput
 }
 
 
@@ -4131,6 +4402,7 @@ export type UserCountOutputType = {
   conversationParticipants: number
   socialAccountMemberships: number
   invitedSocialMembers: number
+  socialAccounts: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4151,6 +4423,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   conversationParticipants?: boolean | UserCountOutputTypeCountConversationParticipantsArgs
   socialAccountMemberships?: boolean | UserCountOutputTypeCountSocialAccountMembershipsArgs
   invitedSocialMembers?: boolean | UserCountOutputTypeCountInvitedSocialMembersArgs
+  socialAccounts?: boolean | UserCountOutputTypeCountSocialAccountsArgs
 }
 
 /**
@@ -4282,6 +4555,13 @@ export type UserCountOutputTypeCountInvitedSocialMembersArgs<ExtArgs extends run
   where?: Prisma.SocialAccountMemberWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountSocialAccountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SocialAccountWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -4322,6 +4602,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   conversationParticipants?: boolean | Prisma.User$conversationParticipantsArgs<ExtArgs>
   socialAccountMemberships?: boolean | Prisma.User$socialAccountMembershipsArgs<ExtArgs>
   invitedSocialMembers?: boolean | Prisma.User$invitedSocialMembersArgs<ExtArgs>
+  socialAccounts?: boolean | Prisma.User$socialAccountsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -4416,6 +4697,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   conversationParticipants?: boolean | Prisma.User$conversationParticipantsArgs<ExtArgs>
   socialAccountMemberships?: boolean | Prisma.User$socialAccountMembershipsArgs<ExtArgs>
   invitedSocialMembers?: boolean | Prisma.User$invitedSocialMembersArgs<ExtArgs>
+  socialAccounts?: boolean | Prisma.User$socialAccountsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -4441,6 +4723,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     conversationParticipants: Prisma.$ConversationParticipantPayload<ExtArgs>[]
     socialAccountMemberships: Prisma.$SocialAccountMemberPayload<ExtArgs>[]
     invitedSocialMembers: Prisma.$SocialAccountMemberPayload<ExtArgs>[]
+    socialAccounts: Prisma.$SocialAccountPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -4875,6 +5158,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   conversationParticipants<T extends Prisma.User$conversationParticipantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$conversationParticipantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationParticipantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   socialAccountMemberships<T extends Prisma.User$socialAccountMembershipsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$socialAccountMembershipsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SocialAccountMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invitedSocialMembers<T extends Prisma.User$invitedSocialMembersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$invitedSocialMembersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SocialAccountMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  socialAccounts<T extends Prisma.User$socialAccountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$socialAccountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SocialAccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5718,6 +6002,30 @@ export type User$invitedSocialMembersArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.SocialAccountMemberScalarFieldEnum | Prisma.SocialAccountMemberScalarFieldEnum[]
+}
+
+/**
+ * User.socialAccounts
+ */
+export type User$socialAccountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SocialAccount
+   */
+  select?: Prisma.SocialAccountSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SocialAccount
+   */
+  omit?: Prisma.SocialAccountOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SocialAccountInclude<ExtArgs> | null
+  where?: Prisma.SocialAccountWhereInput
+  orderBy?: Prisma.SocialAccountOrderByWithRelationInput | Prisma.SocialAccountOrderByWithRelationInput[]
+  cursor?: Prisma.SocialAccountWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SocialAccountScalarFieldEnum | Prisma.SocialAccountScalarFieldEnum[]
 }
 
 /**

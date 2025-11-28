@@ -30,6 +30,7 @@ import { MetaModule } from './social-integration/meta/meta.module';
 import { SocialSchedulerModule } from './social-scheduler/social-scheduler.module';
 import { BullBoardModule } from './common/bull-boad/bull-board.module';
 import { BullModule } from '@nestjs/bullmq';
+import { AccessControlModule } from './access-control/access-control.module';
 
 
 @Module({
@@ -111,7 +112,9 @@ import { BullModule } from '@nestjs/bullmq';
 
     SocialSchedulerModule,
 
-    BullBoardModule, 
+    BullBoardModule,
+
+    AccessControlModule, 
   ],
   controllers: [AppController],
   providers: [AppService,
