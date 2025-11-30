@@ -10,19 +10,27 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
 import { UserFiltersDto } from './dtos/user-filters.dto';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 
 @ApiTags('Users')
-@UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
 @Controller('users')
 export class UserController {
   constructor(private readonly usersService: UserService) {}
 
+  @ApiBearerAuth()
   @Get('me')
   @ApiOperation({
     summary: 'Get current user',
@@ -34,6 +42,7 @@ export class UserController {
     type: SafeUser,
   })
   async getCurrentUser(@Req() req): Promise<SafeUser> {
+    console.log(req)
     return this.usersService.findById(req.user.id);
   }
 
@@ -72,7 +81,7 @@ export class UserController {
   })
   @ApiResponse({ status: 200, description: 'Account deactivated' })
   async deactivateAccount(@Req() req): Promise<void> {
-    return this.usersService.deactivateAccount(req.user.id);
+    return this.usersService.deactivateMyAccount(req.user.id);
   }
 
   //there should be a guard to restrict organization access
@@ -89,5 +98,12 @@ export class UserController {
     return this.usersService.getUsersByOrganization(organizationId, filters);
   }
 
-  //get user socialaccounts
+
+  @Get('me/social-accounts')
+  @ApiOperation({ summary: "Get current user's accessible social accounts" })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  async getMySocialAccounts(@Req() req) {
+    const userId = req.user?.id;
+    return this.usersService.getUserSocialAccounts(userId);
+  }
 }

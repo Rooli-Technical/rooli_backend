@@ -156,6 +156,7 @@ export class AuthService {
         isEmailVerified: true,
         lastActiveAt: true,
         refreshToken: true,
+        refreshTokenVersion: true
       },
     });
 

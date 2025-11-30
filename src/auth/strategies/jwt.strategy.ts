@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -30,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         isEmailVerified: true,
         lockedUntil: true,
         lastPasswordChange: true,
-        refreshTokenVersion: true
+        refreshTokenVersion: true,
       },
     });
 
@@ -39,9 +43,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new ForbiddenException('Account is locked');
     }
 
-      if (payload.ver !== user.refreshTokenVersion) {
-    throw new UnauthorizedException('Session has been revoked');
-  }
+    if (payload.ver !== user.refreshTokenVersion) {
+      throw new UnauthorizedException('Session has been revoked');
+    }
 
     if (!user) {
       throw new UnauthorizedException();
