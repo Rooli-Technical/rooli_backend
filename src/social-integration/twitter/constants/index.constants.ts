@@ -5,17 +5,22 @@ export const TWITTER_CONSTANTS = {
   OAUTH_STATE_MAX_AGE_MS: 10 * 60 * 1000,
 };
 
-export interface TwitterOAuthState {
-  organizationId?: string;
-  userId: string;
-  timestamp: number;
-  codeVerifier: string;
-}
+
 
 export interface TwitterProfile {
   id: string;
   name: string;
   username: string;
   profileImageUrl?: string;
-  raw: any;
+  description?: string;
+  verified?: boolean;
+  followersCount?: number;
+  followingCount?: number;
+  tweetCount?: number;
+  listedCount?: number;
+  likeCount?: number;
+  mediaCount?: number;
+  location?: string;
+  createdAt?: string;
+
 }
