@@ -40,10 +40,10 @@ export class CreateSocialAccountDto {
   @IsString()
   refreshToken?: string;
 
-  @ApiPropertyOptional({ description: 'Token expiration date in ISO format', example: '2025-12-31T23:59:59Z' })
+  @ApiPropertyOptional({ description: 'Token expiration date in UTC format', example: '2025-12-31T23:59:59Z' })
   @IsOptional()
   @IsDateString()
-  tokenExpiresAt?: string;
+  tokenExpiresAt?: Date;
 
   @ApiPropertyOptional({ description: 'Scopes granted by the token', example: ['email','profile'] })
   @IsOptional()
