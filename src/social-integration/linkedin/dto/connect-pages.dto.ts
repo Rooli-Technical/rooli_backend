@@ -9,5 +9,5 @@ export class ConnectPagesBodyDto {
   @ApiProperty({ description: 'Array of LinkedIn page IDs to connect', example: ['page_1', 'page_2'] })
   @IsArray()
   @IsString({ each: true })
-  pageIds: string[];
+  pageUrns: string[];
 }

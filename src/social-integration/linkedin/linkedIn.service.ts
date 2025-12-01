@@ -8,10 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { AxiosResponse } from 'axios';
-import {
-  LINKEDIN_CONSTANTS,
-  ROLE_PERMISSIONS,
-} from './constants/index.constant';
+import { LINKEDIN_CONSTANTS } from './constants/index.constant';
 import { TokenResponse } from '../interfaces/platform-service.interface';
 import {
   LinkedInOAuthState,
@@ -23,6 +20,7 @@ import {
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma } from '@generated/client';
+import * as https from 'https';
 
 @Injectable()
 export class LinkedInService {
@@ -41,9 +39,7 @@ export class LinkedInService {
     this.clientSecret = this.configService.get<string>(
       'LINKEDIN_CLIENT_SECRET',
     );
-    this.redirectUri =
-      this.configService.get<string>('LINKEDIN_REDIRECT_URI') ??
-      `${this.configService.get<string>('API_URL')}/linkedin/auth/callback`;
+    this.redirectUri = this.configService.get<string>('LINKEDIN_REDIRECT_URI');
 
     if (!this.clientId || !this.clientSecret) {
       throw new Error('LinkedIn credentials not configured');
@@ -118,50 +114,49 @@ export class LinkedInService {
   }
 
   private async requestTokenRefresh(
-  refreshToken: string,
-): Promise<TokenResponse> {
-  const url = `${LINKEDIN_CONSTANTS.AUTH_URL}/accessToken`;
-  const params = new URLSearchParams({
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-    client_id: this.clientId,
-    client_secret: this.clientSecret,
-  });
+    refreshToken: string,
+  ): Promise<TokenResponse> {
+    const url = `${LINKEDIN_CONSTANTS.AUTH_URL}/accessToken`;
+    const params = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+    });
 
-  try {
-    const response: AxiosResponse<TokenResponse> = await firstValueFrom(
-      this.httpService.post(url, params.toString(), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        timeout: LINKEDIN_CONSTANTS.TOKEN_REQUEST_TIMEOUT_MS,
-      }),
-    );
+    try {
+      const response: AxiosResponse<TokenResponse> = await firstValueFrom(
+        this.httpService.post(url, params.toString(), {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          timeout: LINKEDIN_CONSTANTS.TOKEN_REQUEST_TIMEOUT_MS,
+        }),
+      );
 
-    const data = response.data;
+      const data = response.data;
 
-    if (!data?.access_token) {
-      this.logger.error('LinkedIn refresh response missing access_token', {
-        hasData: !!data,
+      if (!data?.access_token) {
+        this.logger.error('LinkedIn refresh response missing access_token', {
+          hasData: !!data,
+        });
+        throw new Error('No access token received during refresh');
+      }
+
+      this.logger.debug('LinkedIn token refreshed successfully', {
+        expiresIn: data.expires_in,
+        hasRefreshToken: !!data.refresh_token,
       });
-      throw new Error('No access token received during refresh');
+
+      return data;
+    } catch (error) {
+      this.logger.error('LinkedIn token refresh failed', {
+        error: error?.response?.data || error?.message,
+        status: error?.response?.status,
+      });
+      throw new InternalServerErrorException(
+        'Failed to refresh LinkedIn access token',
+      );
     }
-
-    this.logger.debug('LinkedIn token refreshed successfully', {
-      expiresIn: data.expires_in,
-      hasRefreshToken: !!data.refresh_token,
-    });
-
-    return data;
-  } catch (error) {
-    this.logger.error('LinkedIn token refresh failed', {
-      error: error?.response?.data || error?.message,
-      status: error?.response?.status,
-    });
-    throw new InternalServerErrorException(
-      'Failed to refresh LinkedIn access token',
-    );
   }
-}
-
 
   private async handleProfileConnection(
     profile: LinkedInProfile,
@@ -254,7 +249,7 @@ export class LinkedInService {
     }
 
     // Filter to selected pages
-    const selectedPages = allPages.filter((page) => pageIds.includes(page.id));
+    const selectedPages = allPages.filter((page) => pageIds.includes(page.urn));
 
     if (!selectedPages.length) {
       throw new BadRequestException(
@@ -262,7 +257,7 @@ export class LinkedInService {
       );
     }
 
-    // Decrypt token once (not per page)
+    // Decrypt token once
     const accessToken = await this.encryptionService.decrypt(
       socialAccount.accessToken,
     );
@@ -337,24 +332,19 @@ export class LinkedInService {
   ): Promise<any> {
     const pageMetadata = {
       linkedInPage: {
-        id: page.id,
         urn: page.urn,
         name: page.name,
         vanityName: page.vanityName,
         role: page.role,
-        connectedAt: new Date().toISOString(),
-      },
-      parentAccount: {
-        id: parentSocialAccount.id,
-        platformAccountId: parentSocialAccount.platformAccountId,
-      },
+        connectedAt: new Date(),
+      }
     };
 
     return this.prisma.pageAccount.upsert({
-      where: { platformPageId: page.id },
+      where: { platformPageId: page.urn },
       create: {
         socialAccountId: parentSocialAccount.id,
-        platformPageId: page.id,
+        platformPageId: page.urn,
         name: page.name,
         accessToken: encryptedToken,
         category: null,
@@ -369,7 +359,7 @@ export class LinkedInService {
           ...pageMetadata,
           linkedInPage: {
             ...pageMetadata.linkedInPage,
-            lastSyncedAt: new Date().toISOString(),
+            lastSyncedAt: new Date(),
           },
         },
       },
@@ -470,16 +460,23 @@ export class LinkedInService {
 
   async fetchProfile(accessToken: string): Promise<LinkedInProfile> {
     this.logger.debug('Fetching LinkedIn profile');
-
     try {
+      const httpsAgent = new https.Agent({
+        family: 4, // Force IPv4 (Disable IPv6)
+        keepAlive: true,
+        timeout: 30000,
+      });
+
       const headers = {
         Authorization: `Bearer ${accessToken}`,
         'X-Restli-Protocol-Version': LINKEDIN_CONSTANTS.RESTLI_PROTOCOL_VERSION,
+        Accept: 'application/json',
       };
 
       const response: AxiosResponse = await firstValueFrom(
         this.httpService.get(`${LINKEDIN_CONSTANTS.API_BASE_URL}/me`, {
           headers,
+          httpsAgent,
           timeout: LINKEDIN_CONSTANTS.API_REQUEST_TIMEOUT_MS,
         }),
       );
@@ -494,7 +491,9 @@ export class LinkedInService {
         ? Object.values(raw.lastName.localized)[0]
         : raw?.localizedLastName;
 
-      const profileImage = raw?.profilePicture?.displayImage;
+      const profileImage =
+        this.extractLinkedInImage(raw.profilePicture) ||
+        this.extractLinkedInImage(raw['profilePicture~']);
 
       return {
         id: raw.id,
@@ -504,10 +503,7 @@ export class LinkedInService {
         raw,
       };
     } catch (error) {
-      this.logger.error('Failed to fetch profile', {
-        error: error?.response?.data || error?.message,
-        status: error?.response?.status,
-      });
+      this.logger.error('Failed to fetch profile', error);
       throw new InternalServerErrorException(
         'Failed to fetch LinkedIn profile',
       );
@@ -524,6 +520,12 @@ export class LinkedInService {
     };
 
     try {
+      const httpsAgent = new https.Agent({
+        family: 4, // Force IPv4 (Disable IPv6)
+        keepAlive: true,
+        timeout: 30000,
+      });
+
       const aclsUrl =
         `${LINKEDIN_CONSTANTS.API_BASE_URL}/organizationAcls` +
         `?q=roleAssignee` +
@@ -533,11 +535,10 @@ export class LinkedInService {
       const response: AxiosResponse = await firstValueFrom(
         this.httpService.get(aclsUrl, {
           headers,
+          httpsAgent,
           timeout: LINKEDIN_CONSTANTS.API_REQUEST_TIMEOUT_MS,
         }),
       );
-
-      console.log(response);
 
       const elements: any[] = response.data?.elements ?? [];
 
@@ -593,11 +594,12 @@ export class LinkedInService {
     state: LinkedInOAuthState,
     accountType: 'PAGE' | 'PROFILE',
   ) {
+    
     const tokenExpiresAt = tokenData.expires_in
       ? new Date(Date.now() + tokenData.expires_in * 1000)
       : null;
 
-    const refreshTokenExpiresIn = tokenData.refresh_token_expires_in
+    const refreshTokenExpiresAt = tokenData.refresh_token_expires_in
       ? new Date(Date.now() + tokenData.refresh_token_expires_in * 1000)
       : null;
 
@@ -616,16 +618,16 @@ export class LinkedInService {
       ? await this.encryptionService.encrypt(tokenData.refresh_token)
       : null;
 
-    const metadata: SocialAccountMetadata = {
-      profile: profile.raw,
-    };
+      const dbPlatformAccountId = accountType === 'PAGE' 
+      ? `PAGE-${profile.id}` 
+      : profile.id;
 
     const displayName =
       `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim();
     const username = (profile.firstName ?? '').toLowerCase();
 
     const accountData = {
-      platformAccountId: profile.id,
+      platformAccountId: dbPlatformAccountId,
       username,
       name: displayName,
       displayName,
@@ -634,9 +636,8 @@ export class LinkedInService {
       accessToken: encryptedAccessToken,
       refreshToken: encryptedRefreshToken,
       tokenExpiresAt,
-      refreshTokenExpiresIn,
+      refreshTokenExpiresAt,
       scopes: grantedScopes,
-      metadata: metadata as Prisma.InputJsonValue,
       isActive: true,
       accountType,
       lastSyncAt: new Date(),
@@ -648,7 +649,7 @@ export class LinkedInService {
         where: {
           platform_platformAccountId: {
             platform: 'LINKEDIN',
-            platformAccountId: profile.id,
+            platformAccountId: dbPlatformAccountId,
           },
         },
         create: {
@@ -665,8 +666,7 @@ export class LinkedInService {
       const existing = await this.prisma.socialAccount.findFirst({
         where: {
           platform: 'LINKEDIN',
-          platformAccountId: profile.id,
-          organizationId: null,
+          platformAccountId: dbPlatformAccountId,
         },
       });
 
@@ -678,7 +678,6 @@ export class LinkedInService {
       } else {
         return this.prisma.socialAccount.create({
           data: {
-            organizationId: null,
             platform: 'LINKEDIN',
             ...accountData,
           },
@@ -739,7 +738,6 @@ export class LinkedInService {
       const merged: SocialAccountMetadata = {
         ...existingMeta,
         pageConnection: {
-          lastConnectedAt: new Date().toISOString(),
           pagesFound,
           pagesConnected,
         },
@@ -802,29 +800,20 @@ export class LinkedInService {
     const orgObj = element['organization~'];
     const urn: string = element.organization;
 
-    const id = this.extractIdFromUrn(urn);
-    if (!id) {
-      return null;
-    }
-
-    const name = orgObj?.localizedName
+    const name = orgObj?.localizedName;
     const vanityName = orgObj?.vanityName;
-    const logoUrl = orgObj?.logoV2.original;
+    const logoUrl =
+      this.extractLinkedInImage(orgObj.logoV2) ||
+      this.extractLinkedInImage(orgObj['logoV2~']);
 
     return {
-      id,
+      id: element.id,
       urn,
       name,
       vanityName,
       role: element.role,
       logoUrl,
     };
-  }
-
-  private extractIdFromUrn(urn: string): string | null {
-    if (!urn) return null;
-    const parts = urn.split(':');
-    return parts.length > 0 ? parts[parts.length - 1] : null;
   }
 
   private parseMetadata(metadata: unknown): SocialAccountMetadata {
@@ -836,5 +825,28 @@ export class LinkedInService {
 
   private isValidObject(value: unknown): value is Record<string, any> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private extractLinkedInImage(artifact: any): string | null {
+    if (!artifact) return null;
+
+    //  Direct "original" projection (if simple)
+    if (typeof artifact.original === 'string') return artifact.original;
+
+    //  "displayImage" or "logoV2" acting as a VectorImage
+    // usually found inside "elements" if you didn't project "original"
+    const elements = artifact.elements || artifact['displayImage~']?.elements;
+
+    if (Array.isArray(elements) && elements.length > 0) {
+      // Usually the last element is the largest resolution
+      const lastElement = elements[elements.length - 1];
+
+      // Check identifiers
+      if (lastElement?.identifiers?.[0]?.identifier) {
+        return lastElement.identifiers[0].identifier;
+      }
+    }
+
+    return null;
   }
 }

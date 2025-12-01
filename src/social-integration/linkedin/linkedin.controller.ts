@@ -10,7 +10,7 @@ import {
 import { ConnectPagesBodyDto } from './dto/connect-pages.dto';
 
 @ApiTags('LinkedIn - Auth')
-@Controller('linkedin/auth')
+@Controller('social/linkedin/auth')
 @ApiBearerAuth()
 export class LinkedinController {
   constructor(private readonly service: LinkedInService) {}
@@ -53,11 +53,11 @@ export class LinkedinController {
   })
   @ApiBody({ type: ConnectPagesBodyDto })
   async connectSelectedPages(@Body() body: ConnectPagesBodyDto) {
-    const { socialAccountId, pageIds } = body;
+    const { socialAccountId, pageUrns } = body;
 
     const result = await this.service.connectSelectedPages(
       socialAccountId,
-      pageIds,
+      pageUrns,
     );
 
     return {

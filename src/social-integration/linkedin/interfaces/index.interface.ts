@@ -39,7 +39,6 @@ export interface SocialAccountMetadata {
   profile?: any;
   lastDiscoveredPages?: LinkedInCompanyPage[];
   pageConnection?: {
-    lastConnectedAt: string;
     pagesFound: number;
     pagesConnected: number;
   };

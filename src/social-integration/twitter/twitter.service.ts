@@ -281,7 +281,7 @@ export class TwitterService {
 
     const metadata: Prisma.InputJsonValue = {
       profile: profile.raw,
-      lastSyncedAt: new Date().toISOString(),
+      lastSyncedAt: new Date(),
     };
 
     const accountData = {
@@ -293,7 +293,7 @@ export class TwitterService {
       accessToken: encryptedAccessToken,
       refreshToken: encryptedRefreshToken,
       tokenExpiresAt,
-      refreshTokenExpiresIn: null as Date | null, // Twitter returns refresh token but not its TTL directly
+      refreshTokenExpiresAt: null as Date | null, // Twitter returns refresh token but not its TTL directly
       scopes: tokenData.scopes ?? TWITTER_CONSTANTS.SCOPES,
       metadata,
       isActive: true,
