@@ -7,13 +7,15 @@ import Redis from 'ioredis';
 @Module({
   controllers: [RedisController],
   providers: [
+    RedisService,
+
     {
       provide: 'REDIS_CLIENT',
       useFactory: () => {
         if (process.env.REDIS_URL) {
           console.log('🚀 Connecting to Cloud Redis...');
           return new Redis(process.env.REDIS_URL, {
-             tls: { rejectUnauthorized: false }
+            tls: { rejectUnauthorized: false },
           });
         }
 
@@ -25,6 +27,7 @@ import Redis from 'ioredis';
       },
     },
   ],
+  // 2. NOW you can export it
   exports: [RedisService, 'REDIS_CLIENT'],
 })
 export class RedisModule {}
