@@ -31,29 +31,43 @@ import { BullBoardModule } from './common/bull-boad/bull-board.module';
 import { BullModule } from '@nestjs/bullmq';
 import { AccessControlModule } from './access-control/access-control.module';
 
-
 @Module({
   imports: [
-    // 1. First configure BullMQ root module
-    // BullModule.forRootAsync({
-    //   inject: ['REDIS_CLIENT'],
-    //   useFactory: (redisClient) => ({
-    //     connection: redisClient,
-    //   }),
-    // }),
-    BullModule.forRoot({
+    BullModule.forRootAsync({
+      useFactory: () => {
+        // 1. If running on Render (Cloud)
+        if (process.env.REDIS_URL) {
+          const url = new URL(process.env.REDIS_URL);
+          return {
+            connection: {
+              host: url.hostname,
+              port: Number(url.port),
+              username: url.username,
+              password: url.password,
+              tls: {
+                rejectUnauthorized: false, // Essential for Upstash/Render
+              },
+            },
+          };
+        }
+
+        // 2. If running Locally
+        return {
           connection: {
-            host: 'localhost', // Your Redis host
-            port: 6379, // Your Redis port
+            host: process.env.REDIS_HOST || 'localhost',
+            port: Number(process.env.REDIS_PORT || 6379),
+            password: process.env.REDIS_PASSWORD,
           },
-        }),
+        };
+      },
+    }),
 
     ConfigModule.forRoot({
       isGlobal: true,
     }),
     PrismaModule,
     AuthModule,
-     ThrottlerModule.forRoot([
+    ThrottlerModule.forRoot([
       {
         ttl: 60 * 1000, // 1 minute
         limit: 10, // 100 requests per minute
@@ -65,7 +79,6 @@ import { AccessControlModule } from './access-control/access-control.module';
 
     MailModule,
 
-
     RedisModule,
 
     PostsModule,
@@ -75,7 +88,6 @@ import { AccessControlModule } from './access-control/access-control.module';
     MessagingModule,
 
     TemplatesModule,
-
 
     WebhookModule,
 
@@ -90,7 +102,6 @@ import { AccessControlModule } from './access-control/access-control.module';
     BrandKitModule,
 
     MetaModule,
-
 
     //AuditModule,
 
@@ -112,10 +123,11 @@ import { AccessControlModule } from './access-control/access-control.module';
 
     BullBoardModule,
 
-    AccessControlModule, 
+    AccessControlModule,
   ],
   controllers: [AppController],
-  providers: [AppService,
+  providers: [
+    AppService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
