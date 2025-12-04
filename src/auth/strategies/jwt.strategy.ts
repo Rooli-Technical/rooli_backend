@@ -30,7 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         firstName: true,
         lastName: true,
-        role: true,
+        systemRoleId: true,
         isEmailVerified: true,
         lockedUntil: true,
         lastPasswordChange: true,

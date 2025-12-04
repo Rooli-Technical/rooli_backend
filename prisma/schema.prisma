@@ -14,7 +14,8 @@ model User {
   firstName String?
   lastName  String?
   avatar    String?
-  role      UserRole @default(ANALYST)
+  systemRoleId String?  
+  systemRole   Role?    @relation("UserSystemRole", fields: [systemRoleId], references: [id])
 
   // Email verification
   isEmailVerified         Boolean   @default(false)
@@ -959,6 +960,7 @@ model Role {
 
   // Relations
   organization         Organization?         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  systemUsers          User[]                @relation("UserSystemRole")
   permissions          RolePermission[]
   organizationMembers  OrganizationMember[]
   socialAccountMembers SocialAccountMember[]
@@ -993,6 +995,7 @@ enum PostStatus {
 }
 
 enum RoleScope {
+  SYSTEM
   ORGANIZATION
   SOCIAL_ACCOUNT
 }
@@ -1090,15 +1093,6 @@ enum ScheduleJobStatus {
   PUBLISHED
   RETRYING
 }
-
-enum UserRole {
-  OWNER
-  EDITOR
-  ANALYST
-  VIEWER
-  USER
-}
-
 enum ContentType {
   POST
   STORY
@@ -1196,11 +1190,13 @@ enum GenerationStatus {
 }
 
 enum PermissionScope {
+  SYSTEM
   ORGANIZATION // Organization-wide permissions
   SOCIAL_ACCOUNT // Social account-specific permissions
 }
 
 enum PermissionResource {
+  SYSTEM
   // Organization resources
   ORGANIZATION
   MEMBERS

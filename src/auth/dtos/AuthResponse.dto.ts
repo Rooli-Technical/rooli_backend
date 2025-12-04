@@ -1,4 +1,3 @@
-import { UserRole } from '@generated/enums';
 import { ApiProperty } from '@nestjs/swagger';
 export class SafeUser {
   @ApiProperty({
@@ -35,11 +34,10 @@ export class SafeUser {
   avatar: string | null;
 
   @ApiProperty({
-    enum: UserRole,
-    example: UserRole.USER,
+    example: 'user',
     description: 'Role assigned to the user (e.g., ADMIN, USER).',
   })
-  role: UserRole;
+  role: string;
 
   @ApiProperty({
     example: true,

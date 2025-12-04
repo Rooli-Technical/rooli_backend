@@ -1,4 +1,3 @@
-import { UserRole } from '@generated/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
@@ -43,10 +42,9 @@ export class Register {
 
   @ApiPropertyOptional({
     description: 'Role of the user',
-    enum: UserRole,
-    example: UserRole.USER,
+    example: 'user',
   })
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsString()
+  role?: string;
 }

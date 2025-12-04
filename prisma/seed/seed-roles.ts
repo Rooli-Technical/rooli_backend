@@ -6,21 +6,21 @@ import {
 
 export const SYSTEM_ROLES = [
   {
-    name: 'owner',
-    displayName: 'Owner',
+    name: 'admin',
+    displayName: 'Admin',
     description: 'Full access',
-    scope: RoleScope.ORGANIZATION,
+    scope: RoleScope.SYSTEM,
     isSystem: true,
-    permissions: ['ORGANIZATION:ORGANIZATION:MANAGE'],
+    permissions: ['SYSTEM:ADMIN:MANAGE'],
   },
   {
-    name: 'member',
-    displayName: 'Member',
+    name: 'user',
+    displayName: 'User',
     description: 'Basic user',
-    scope: RoleScope.ORGANIZATION,
+    scope: RoleScope.SYSTEM,
     isSystem: true,
     isDefault: true,
-    permissions: ['ORGANIZATION:MEMBERS:READ'],
+    permissions: ['SYSTEM:USER:READ'],
   },
 ];
 

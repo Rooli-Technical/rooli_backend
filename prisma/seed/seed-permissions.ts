@@ -6,6 +6,9 @@ import {
 } from '../../generated/prisma/client';
 
 export const SYSTEM_PERMISSIONS = [
+  { name: 'Admin', scope: PermissionScope.SYSTEM, resource: PermissionResource.SYSTEM, action: PermissionAction.MANAGE },
+  { name: 'User',  scope: PermissionScope.SYSTEM, resource: PermissionResource.SYSTEM, action: PermissionAction.READ },
+
   { name: 'Organization Management',  scope: PermissionScope.ORGANIZATION, resource: PermissionResource.ORGANIZATION, action: PermissionAction.MANAGE },
   { name: 'Member Management',        scope: PermissionScope.ORGANIZATION, resource: PermissionResource.MEMBERS,     action: PermissionAction.MANAGE },
   { name: 'View Members',             scope: PermissionScope.ORGANIZATION, resource: PermissionResource.MEMBERS,     action: PermissionAction.READ },

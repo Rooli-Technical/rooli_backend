@@ -1,12 +1,11 @@
-import { IsEnum, IsNumber, IsOptional, IsString, Min, Max } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserRole } from '@generated/enums';
 import { PaginationDto } from '@/common/dtos/pagination.dto';
 
 export class UserFiltersDto extends PaginationDto {
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+   @IsString()
+  role?: string;
 
   @IsOptional()
   @IsString()
