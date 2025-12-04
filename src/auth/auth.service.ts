@@ -163,7 +163,11 @@ export class AuthService {
           firstName: true,
           lastName: true,
           avatar: true,
-          systemRole: true,
+          systemRole: {
+            select: {
+              name: true
+            }
+          },
           isEmailVerified: true,
           lastActiveAt: true,
           refreshToken: true,
@@ -589,14 +593,14 @@ export class AuthService {
     }
   }
 
-  private toSafeUser(user: User): SafeUser {
+  private toSafeUser(user): SafeUser {
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       avatar: user.avatar,
-      role: user.systemRoleId,
+      role: user.systemRole.name,
       isEmailVerified: user.isEmailVerified,
       lastActiveAt: user.lastActiveAt,
     };
