@@ -50,6 +50,7 @@ export class LinkedinController {
     return this.service.getProfileAuthUrl(req.user.id);
   }
 
+  @Get('connect/pages')
   @ApiOperation({
     summary: 'Begin OAuth to discover and connect LinkedIn Company Pages',
     description:

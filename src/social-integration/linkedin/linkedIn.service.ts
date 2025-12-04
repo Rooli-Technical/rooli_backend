@@ -61,8 +61,8 @@ export class LinkedInService {
   }
 
   async getPagesAuthUrl(
-    organizationId: string,
     userId: string,
+    organizationId: string,
   ): Promise<string> {
     const state: LinkedInOAuthState = {
       organizationId,
@@ -106,6 +106,7 @@ export class LinkedInService {
         throw new BadRequestException('Invalid connection type');
       }
     } catch (error) {
+      console.log(error)
       this.logger.error('handleCallback failed', {
         error: error?.message,
         stack: error?.stack,
@@ -143,6 +144,7 @@ export class LinkedInService {
     tokenData: TokenResponse,
     state: LinkedInOAuthState,
   ): Promise<any> {
+    
     const socialAccount = await this.upsertSocialAccount(
       profile,
       tokenData,
@@ -153,6 +155,7 @@ export class LinkedInService {
     this.logger.log('LinkedIn pages account created', {
       accountId: socialAccount.id,
       platformAccountId: socialAccount.platformAccountId,
+      state
     });
 
     // Discover available pages
@@ -667,6 +670,8 @@ export class LinkedInService {
     state: LinkedInOAuthState,
     accountType: 'PAGE' | 'PROFILE',
   ) {
+    console.log(state)
+    try{
     const tokenExpiresAt = tokenData.expires_in
       ? this.secondsToUTCDate(tokenData.expires_in)
       : null;
@@ -756,6 +761,10 @@ export class LinkedInService {
         });
       }
     }
+  }catch(err){
+    console.log(err)
+    throw err
+  }
   }
 
   private async updateSocialAccountMetadata(
@@ -850,7 +859,6 @@ export class LinkedInService {
       if (!['PROFILE', 'PAGES'].includes(parsed.connectionType)) {
         throw new Error('Invalid connection type');
       }
-
       return parsed;
     } catch (error) {
       this.logger.warn('State validation failed', {
