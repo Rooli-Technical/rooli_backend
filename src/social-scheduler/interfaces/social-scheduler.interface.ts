@@ -126,6 +126,7 @@ export interface ScheduleResult {
   success: boolean;
   jobId?: string;
   error?: string;
+  message?: string;
 }
 
 export interface CancelResult {
