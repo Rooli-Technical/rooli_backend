@@ -18,6 +18,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { AddOrganizationMemberDto } from './dtos/add-organization-member.dto';
 
 @ApiTags('Organization Members')
 @ApiBearerAuth()
@@ -34,6 +35,21 @@ export class MembersController {
   })
   async getMembers(@Param('orgId') orgId: string, @Req() req) {
     return this.membersService.getOrganizationMembers(orgId, req.user.id);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Directly add a user to an organization (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Member successfully added' })
+  async addMember(
+    @Param('orgId') orgId: string,
+    @Body() dto: AddOrganizationMemberDto,
+    @Req() req: any,
+  ) {
+    return this.membersService.addMember(
+      orgId,
+      dto,
+      req.user.id,
+    );
   }
 
   @Patch(':memberId')

@@ -3,16 +3,17 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { UpdateMemberDto } from './dtos/update-member.dto';
 import { PrismaService } from '@/prisma/prisma.service';
+import { AddOrganizationMemberDto } from './dtos/add-organization-member.dto';
 
 @Injectable()
 export class MembersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getOrganizationMembers(orgId: string, userId: string) {
-    await this.verifyMembership(orgId, userId);
 
     const members = await this.prisma.organizationMember.findMany({
       where: {
@@ -77,6 +78,72 @@ export class MembersService {
     });
 
     return this.toSafeMember(updated);
+  }
+
+  //add admin and org owner guard
+   async addMember(
+    organizationId: string,
+    dto: AddOrganizationMemberDto,
+    currentUserId: string,
+  ) {
+    // Verify org exists
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: { members: true },
+    });
+
+
+    if (!organization) throw new NotFoundException('Organization not found');
+
+    // Enforce member limit
+    const activeMemberCount = await this.prisma.organizationMember.count({
+      where: { organizationId, isActive: true },
+    });
+
+    if (
+      organization.maxMembers !== null &&
+      activeMemberCount >= organization.maxMembers
+    ) {
+      throw new BadRequestException('Member limit reached for this plan');
+    }
+
+    // Prevent duplicates
+    const existingMember = await this.prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId,
+          userId: dto.userId,
+        },
+      },
+    });
+
+    if (existingMember) {
+      throw new BadRequestException('User is already a member');
+    }
+
+    // Validate user & role
+    const [user, role] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: dto.userId } }),
+      this.prisma.role.findUnique({ where: { id: dto.roleId } }),
+    ]);
+
+    if (!user) throw new NotFoundException('User not found');
+    if (!role) throw new NotFoundException('Role not found');
+
+    // Create membership
+    return this.prisma.organizationMember.create({
+      data: {
+        organizationId,
+        userId: dto.userId,
+        roleId: dto.roleId,
+        invitedBy: currentUserId,
+        permissions: dto.permissions ?? null,
+      },
+      include: {
+        user: true,
+        role: true,
+      },
+    });
   }
 
   async removeMember(orgId: string, memberId: string, removerId: string) {
@@ -162,12 +229,6 @@ export class MembersService {
     return member.role?.name === 'ADMIN' || member.role?.name === 'OWNER';
   }
 
-  private async verifyMembership(orgId: string, userId: string) {
-    const membership = await this.getMembership(orgId, userId);
-    if (!membership) {
-      throw new ForbiddenException('Organization access denied');
-    }
-  }
 
   private async logAuditEvent(
     orgId: string,
