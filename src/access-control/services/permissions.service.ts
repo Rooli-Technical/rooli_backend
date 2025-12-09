@@ -196,14 +196,11 @@ export const SYSTEM_PERMISSIONS = [
   },
 ];
 
-
 @Injectable()
 export class PermissionService {
   private readonly logger = new Logger(PermissionService.name);
 
-
   constructor(private readonly prisma: PrismaService) {}
-
 
   async findAll(): Promise<Permission[]> {
     return this.prisma.permission.findMany({
@@ -261,11 +258,8 @@ export class PermissionService {
     await this.prisma.permission.delete({ where: { id } });
   }
 
-
-
   async seedPermissions(): Promise<void> {
     this.logger.log('Seeding permissions...');
-    // ... (Your existing seeding logic) ...
     const operations = SYSTEM_PERMISSIONS.map((p) =>
       this.prisma.permission.upsert({
         where: {
