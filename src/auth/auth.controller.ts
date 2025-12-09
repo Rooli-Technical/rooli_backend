@@ -10,13 +10,13 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { CurrentUser } from './decorators/current-user.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthResponse } from './dtos/AuthResponse.dto';
 import { ForgotPassword } from './dtos/ForgotPassword.dto';
 import { Login } from './dtos/Login.dto';
 import { Register } from './dtos/Register.dto';
 import { ResetPassword } from './dtos/ResetPassword.dto';
-import { Public } from './decorators/public.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { User } from '@generated/client';
 
 @ApiTags('Authentication')

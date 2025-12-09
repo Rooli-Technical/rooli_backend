@@ -30,24 +30,35 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         firstName: true,
         lastName: true,
-        systemRoleId: true,
+        systemRole: {
+          select: { name: true, id: true },
+        },
         isEmailVerified: true,
         lockedUntil: true,
         lastPasswordChange: true,
         refreshTokenVersion: true,
       },
     });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
     // Check if account is locked
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       throw new ForbiddenException('Account is locked');
     }
 
+    // Check token version (Instant Revocation)
     if (payload.ver !== user.refreshTokenVersion) {
       throw new UnauthorizedException('Session has been revoked');
     }
 
-    if (!user) {
-      throw new UnauthorizedException();
+    if (user.lastPasswordChange) {
+      const passwordChangedTime = user.lastPasswordChange.getTime() / 1000;
+      // If token was issued BEFORE the last password change, reject it
+      if (payload.iat < passwordChangedTime) {
+        throw new UnauthorizedException('Password changed, please login again');
+      }
     }
 
     return user;
