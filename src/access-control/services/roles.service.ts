@@ -19,8 +19,6 @@ export class RoleService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  
-
   async getRoleById(roleId: string, organizationId?: string) {
     const where: any = { id: roleId };
     if (organizationId) {
@@ -47,53 +45,47 @@ export class RoleService {
   }
 
   async findAllWithFilters(filters: FilterRolesDto) {
-  const {
-    scope,
-    organizationId,
-    search,
-    includeSystem = true,
-  } = filters;
+    const { scope, organizationId, search, includeSystem = true } = filters;
 
-  const where: any = {};
+    const where: any = {};
 
-  if (scope) where.scope = scope;
+    if (scope) where.scope = scope;
 
-  if (organizationId) {
-    where.OR = [
-      { organizationId },
-      ...(includeSystem
-        ? [{ isSystem: true, scope: RoleScope.ORGANIZATION }]
-        : []),
-    ];
-  } else if (includeSystem === false) {
-    where.isSystem = false;
+    if (organizationId) {
+      where.OR = [
+        { organizationId },
+        ...(includeSystem
+          ? [{ isSystem: true, scope: RoleScope.ORGANIZATION }]
+          : []),
+      ];
+    } else if (includeSystem === false) {
+      where.isSystem = false;
+    }
+
+    // Search Filter
+    if (search) {
+      where.OR = [
+        ...(where.OR || []),
+        { name: { contains: search, mode: 'insensitive' } },
+        { displayName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const roles = await this.prisma.role.findMany({
+      where,
+      include: {
+        permissions: { include: { permission: true } },
+        _count: { select: { organizationMembers: true } },
+      },
+      orderBy: [{ isSystem: 'desc' }, { createdAt: 'asc' }],
+    });
+
+    // Flatten for frontend & guards
+    return roles.map((r) => ({
+      ...r,
+      permissions: r.permissions.map((rp) => rp.permission),
+    }));
   }
-
-  // Search Filter
-  if (search) {
-    where.OR = [
-      ...(where.OR || []),
-      { name: { contains: search, mode: 'insensitive' } },
-      { displayName: { contains: search, mode: 'insensitive' } },
-    ];
-  }
-
-  const roles = await this.prisma.role.findMany({
-    where,
-    include: {
-      permissions: { include: { permission: true } },
-      _count: { select: { organizationMembers: true } },
-    },
-    orderBy: [{ isSystem: 'desc' }, { createdAt: 'asc' }],
-  });
-
-  // Flatten for frontend & guards
-  return roles.map((r) => ({
-    ...r,
-    permissions: r.permissions.map((rp) => rp.permission),
-  }));
-}
-
 
   async getRolesForOrganization(orgId: string) {
     // Fetch Custom Roles AND System Roles applicable to Orgs
@@ -142,7 +134,7 @@ export class RoleService {
         slug,
         scope: dto.scope,
         organizationId: dto.organizationId,
-        isSystem: false,
+        isSystem: dto.isSystem || false,
         permissions: {
           create:
             dto.permissionIds?.map((pid) => ({ permissionId: pid })) || [],
@@ -210,33 +202,52 @@ export class RoleService {
     }
 
     await this.prisma.role.delete({ where: { id: roleId } });
+    return { message: 'Role deleted successfully' };
   }
 
+  async addPermissionsToRole(roleId: string, permissionIds: string[]) {
+    const data = permissionIds.map((permissionId) => ({
+      roleId,
+      permissionId,
+    }));
+    await this.prisma.rolePermission.createMany({
+      data,
+      skipDuplicates: true,
+    });
 
-    async addPermissionsToRole(roleId: string, permissionIds: string[]) {
-      const data = permissionIds.map((permissionId) => ({
-        roleId,
-        permissionId,
-      }));
-      return this.prisma.rolePermission.createMany({
-        data,
-        skipDuplicates: true,
-      });
-    }
-  
-    async removePermissionsFromRole(roleId: string, permissionIds: string[]) {
-      return this.prisma.rolePermission.deleteMany({
-        where: {
-          roleId,
-          permissionId: { in: permissionIds },
+    return this.prisma.role.findUnique({
+      where: { id: roleId },
+      include: {
+        permissions: {
+          include: { permission: true },
         },
-      });
-    }
-  
-    async getPermissionsForRole(roleId: string) {
-      return this.prisma.rolePermission.findMany({
-        where: { roleId },
-        include: { permission: true },
-      });
-    }
+      },
+    });
+  }
+
+  async removePermissionsFromRole(roleId: string, permissionIds: string[]) {
+    await this.prisma.rolePermission.deleteMany({
+      where: {
+        roleId,
+        permissionId: { in: permissionIds },
+      },
+    });
+
+    // Return the role with its remaining permissions
+    return this.prisma.role.findUnique({
+      where: { id: roleId },
+      include: {
+        permissions: {
+          include: { permission: true },
+        },
+      },
+    });
+  }
+
+  async getPermissionsForRole(roleId: string) {
+    return this.prisma.rolePermission.findMany({
+      where: { roleId },
+      include: { permission: true },
+    });
+  }
 }

@@ -1,6 +1,6 @@
 import { RoleScope } from '@generated/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -72,17 +72,17 @@ export class CreateRoleDto {
     example: false,
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true')
   @IsBoolean()
   isDefault?: boolean;
 
-    @ApiPropertyOptional({
+  @ApiPropertyOptional({
     description:
       'If true, this role will be automatically assigned to the system.',
     example: false,
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true')
   @IsBoolean()
   isSystem?: boolean;
 }

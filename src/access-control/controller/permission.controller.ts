@@ -65,12 +65,4 @@ export class PermissionController {
   delete(@Param('id') id: string) {
     return this.permissionService.delete(id);
   }
-
-  @Post('seed')
-  @ApiOperation({ summary: 'Seed default system permissions' })
-  @ApiResponse({ status: 201, description: 'Permissions seeded' })
-  @HttpCode(HttpStatus.CREATED)
-  seedPermissions() {
-    return this.permissionService.seedPermissions();
-  }
 }

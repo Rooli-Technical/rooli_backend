@@ -8,7 +8,6 @@ import {
   Post,
   Query,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dtos/create-organization.dto';
@@ -23,7 +22,6 @@ import {
 import { OrganizationUsageDto } from './dtos/organization-usage.dto';
 import { OrganizationStatsDto } from './dtos/organization-stats.dto';
 import { GetAllOrganizationsDto } from './dtos/get-organiations.dto';
-import { GetOrganizationMediaDto } from './dtos/get-organization-media.dto';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
