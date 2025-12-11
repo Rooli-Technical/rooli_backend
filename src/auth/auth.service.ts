@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -22,6 +23,8 @@ import { RoleScope } from '@generated/enums';
 import * as argon2 from 'argon2';
 import { handlePrismaError } from '@/common/prisma.utils';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { OrganizationsService } from '@/organizations/organizations.service';
+import slugify from 'slugify';
 
 @Injectable()
 export class AuthService {
@@ -36,171 +39,212 @@ export class AuthService {
     private readonly emailService: MailService,
   ) {}
 
-  async register(registerDto: Register): Promise<AuthResponse> {
-    const { email, password, firstName, lastName, role } = registerDto;
+  async register(registerDto: Register) {
+    const { email, password, firstName, lastName, role, companyName } =
+      registerDto;
+    const lowerEmail = email.toLowerCase();
 
-    const roleRecord = await this.prisma.role.findFirst({
-      where: {
-        name: role,
-        scope: RoleScope.SYSTEM,
-      },
-    });
-    if (!roleRecord) {
-      throw new BadRequestException('Invalid role specified');
-    }
+    // Check if User exists AND fetch required Roles simultaneously
+    const [existingUser, systemRole, orgOwnerRole] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { email: lowerEmail },
+        select: { id: true },
+      }),
+      // The role the user has in the system (e.g., 'USER')
+      this.prisma.role.findFirst({
+        where: { name: role, scope: 'SYSTEM' },
+      }),
+      // The role the user has in the Organization (e.g., 'OWNER')
+      this.prisma.role.findFirst({
+        where: { name: 'OWNER', scope: 'ORGANIZATION' },
+      }),
+    ]);
 
-    // Validate password strength before DB work
+    if (existingUser) throw new ConflictException('User already exists');
+    if (!systemRole)
+      throw new BadRequestException(`Invalid system role: ${role}`);
+    if (!orgOwnerRole)
+      throw new InternalServerErrorException(
+        'System configuration error: Owner role missing',
+      );
+
     this.validatePasswordStrength(password);
 
     const hashedPassword = await argon2.hash(password);
-    const { plainToken, hashedToken } = await this.generateVerificationToken();
+    const slug = slugify(companyName, { lower: true, strict: true });
 
-    try {
-      const user = await this.prisma.user.create({
+    const slugExists = await this.prisma.organization.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (slugExists) {
+      throw new ConflictException(
+        'Organization with this name already exists. Please choose a different name.',
+      );
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // A. Create User
+      const newUser = await tx.user.create({
         data: {
-          email: email.toLowerCase(),
+          email: lowerEmail,
           password: hashedPassword,
           firstName: firstName?.trim(),
           lastName: lastName?.trim(),
-          systemRoleId: roleRecord.id,
-          emailVerificationToken: hashedToken,
+          systemRoleId: systemRole.id, // Linked to System Role
           emailVerificationSentAt: new Date(),
           lastPasswordChange: new Date(),
         },
       });
 
-      const tokens = await this.generateTokens(user);
-
-      const refreshHash = await argon2.hash(tokens.refreshToken);
-      await this.prisma.user.update({
-        where: { id: user.id },
+      // Create Organization & Link Member
+      const newOrg = await tx.organization.create({
         data: {
-          refreshToken: refreshHash,
-          refreshTokenVersion: 0, // Initialize version
+          name: companyName,
+          slug: slug, // You might need a loop here to ensure slug uniqueness in prod
+          planTier: 'FREE',
+          members: {
+            create: {
+              userId: newUser.id,
+              roleId: orgOwnerRole.id, // Linked to Organization Role
+            },
+          },
         },
       });
 
-      // this.sendVerificationEmail(user.email, plainToken).catch((err) => {
-      //   this.logger.error('Failed to send verification email (fallback)', {
-      //     userId: user.id,
-      //     email: user.email,
-      //     error: err?.message,
-      //   });
-      // });
+      return { user: newUser, org: newOrg };
+    });
 
-      this.logger.log(`New user registered: ${user.email}`);
-      return {
-        user: this.toSafeUser(user),
-        ...tokens,
-        requiresEmailVerification: !user.isEmailVerified,
-      };
-    } catch (err) {
-      console.log(err)
-      // If unique constraint triggered, check if it's a soft-deleted user to restore
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
-        // find existing user to determine if deletedAt is set
-        const existingUser = await this.prisma.user.findUnique({
-          where: { email: email.toLowerCase() },
-          select: { id: true, deletedAt: true },
-        });
+    // Generate Tokens with Context (Org ID)
+    const tokens = await this.generateTokens(
+      result.user.id,
+      result.user.email,
+      result.org.id,
+      0
+    );
+    const refreshHash = await argon2.hash(tokens.refreshToken);
 
-        if (existingUser?.deletedAt) {
-          // restore path (this will re-hash password and return tokens)
-          return this.restoreUser(existingUser.id, password);
-        }
+    //  Update User Token
+    // We update the user with the refresh token and set their Last Active Org preference
+    await this.prisma.user.update({
+      where: { id: result.user.id },
+      data: {
+        refreshToken: refreshHash,
+        refreshTokenVersion: 0,
+        lastActiveOrgId: result.org.id,
+      },
+    });
 
-        throw new ConflictException('User already exists');
-      }
+    this.logger.log(`Registered user ${lowerEmail} with Org ${result.org.id}`);
 
-      handlePrismaError(err);
-    }
+    return {
+      user: this.toSafeUser(result.user),
+      ...tokens,
+      requiresEmailVerification: true,
+    };
   }
 
-  async login(loginDto: Login): Promise<AuthResponse> {
-    try {
-      const email = loginDto.email.toLowerCase();
-      const user = await this.prisma.user.findFirst({
-        where: {
-          email,
-          deletedAt: null,
+  async login(loginDto: Login) {
+    const email = loginDto.email.toLowerCase();
+
+    // Fetch User & Minimal Membership Info
+    // We need memberships to decide which Org ID goes into the token
+    const user = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null },
+      include: {
+        systemRole: { select: { name: true } },
+        organizationMemberships: {
+          select: { organizationId: true }, 
+          take: 5, // Just grab a few to determine access
+          orderBy: { lastActiveAt: 'desc' } 
         },
-      });
+        lastActiveOrganization: { select: { id: true } },
+        
+      },
+      
+    });
 
-      if (!user) {
-        await this.simulateProcessingDelay();
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      if (user.lockedUntil && user.lockedUntil > new Date()) {
-        throw new ForbiddenException(
-          `Account temporarily locked. Try again at ${user.lockedUntil.toISOString()}`,
-        );
-      }
-
-      const isPasswordValid = await argon2.verify(
-        user.password,
-        loginDto.password,
-      );
-      if (!isPasswordValid) {
-        await this.handleFailedLogin(user.id);
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      // Reset security counters and return the updated user (select updated fields)
-      const updatedUser = await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          loginAttempts: 0,
-          lockedUntil: null,
-          lastActiveAt: new Date(),
-        },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          avatar: true,
-          systemRole: {
-            select: {
-              name: true
-            }
-          },
-          isEmailVerified: true,
-          lastActiveAt: true,
-          refreshToken: true,
-          refreshTokenVersion: true,
-        },
-      });
-
-      // generate tokens
-      const { accessToken, refreshToken } = await this.generateTokens(
-        updatedUser as any,
-      );
-
-      // store hashed refresh token (single refresh token per-user approach)
-      const refreshHash = await argon2.hash(refreshToken);
-      await this.prisma.user.update({
-        where: { id: updatedUser.id },
-        data: {
-          refreshToken: refreshHash,
-        },
-      });
-
-      this.logger.log(`User logged in: ${updatedUser.email}`);
-
-      return {
-        user: this.toSafeUser(updatedUser as any),
-        accessToken,
-        refreshToken,
-        requiresEmailVerification: !updatedUser.isEmailVerified,
-      };
-    } catch (err) {
-      this.logger.error(err);
-      throw err;
+    if (!user) {
+      await this.simulateProcessingDelay(); // Prevent timing attacks
+      throw new UnauthorizedException('Invalid credentials');
     }
+
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new ForbiddenException(
+        `Account locked until ${user.lockedUntil.toISOString()}`,
+      );
+    }
+
+    const isPasswordValid = await argon2.verify(
+      user.password,
+      loginDto.password,
+    );
+    if (!isPasswordValid) {
+      await this.handleFailedLogin(user.id);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    //  Determine Active Organization
+    // Otherwise, default to the first membership found.
+    let activeOrgId = user.lastActiveOrganization.id;
+
+    // CHECK: Does she still have access?
+    const hasAccess = user.organizationMemberships.some(
+      (m) => m.organizationId === activeOrgId,
+    );
+
+    if (!hasAccess) {
+      // Fallback: If she was kicked out, default to her first available org
+      activeOrgId = user.organizationMemberships[0]?.organizationId;
+
+      // Optional: Clean up the database
+      if (activeOrgId) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { lastActiveOrgId: activeOrgId },
+        });
+      }
+    }
+
+    if (!activeOrgId) {
+      // User exists but has no organization access (rare edge case)
+      throw new ForbiddenException('No active workspace found for this user');
+    }
+
+    // Generate Tokens (Baking in the activeOrgId)
+    const tokens = await this.generateTokens(user.id, user.email, activeOrgId, user.refreshTokenVersion);
+    const refreshHash = await argon2.hash(tokens.refreshToken);
+
+    // Reset security counters, update stats, and save refresh token in ONE call
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        loginAttempts: 0,
+        lockedUntil: null,
+        lastActiveAt: new Date(),
+        refreshToken: refreshHash,
+        lastActiveOrgId: activeOrgId,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        isEmailVerified: true,
+        systemRole: { select: { name: true } },
+      },
+    });
+
+    this.logger.log(
+      `Logged in: ${user.email} | Active Context: ${activeOrgId}`,
+    );
+
+    return {
+      user: updatedUser, // Safe object (password excluded via select)
+      ...tokens,
+      requiresEmailVerification: !updatedUser.isEmailVerified,
+    };
   }
 
   async refreshTokens(refreshToken: string): Promise<AuthResponse> {
@@ -211,6 +255,13 @@ export class AuthService {
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub, deletedAt: null },
+        include: {
+          // Check if membership still exists for the Org ID in the token
+          organizationMemberships: {
+            where: { organizationId: payload.orgId },
+            select: { organizationId: true }
+          },
+        }
       });
 
       if (!user) throw new UnauthorizedException('User not found');
@@ -236,12 +287,28 @@ export class AuthService {
         refreshToken,
       );
 
-      if (!isValidRefreshToken) {
-        this.logger.warn('Invalid refresh token attempt', { userId: user.id });
+    if (!isValidRefreshToken) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { refreshToken: null },
+        });
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      const tokens = await this.generateTokens(user);
+      // 4. Determine Org Context
+      let targetOrgId = payload.orgId;
+
+      if (user.organizationMemberships.length === 0) {
+        const fallback = await this.prisma.organizationMember.findFirst({
+           where: { userId: user.id },
+           select: { organizationId: true }
+        });
+        
+        if (!fallback) throw new ForbiddenException('No active workspace found');
+        targetOrgId = fallback.organizationId;
+      }
+
+      const tokens = await this.generateTokens(user.id, user.email, targetOrgId, user.refreshTokenVersion);
       const newHash = await argon2.hash(tokens.refreshToken);
 
       await this.prisma.user.update({
@@ -442,31 +509,26 @@ export class AuthService {
     }
   }
 
-  private async generateTokens(user: User) {
-    try {
-      const payload: JwtPayload = {
-        sub: user.id,
-        email: user.email,
-        role: user.systemRoleId,
-        ver: user.refreshTokenVersion || 0,
-      };
+  private async generateTokens(userId: string, email: string, orgId: string, version: number) {
+    const payload: JwtPayload = {
+      sub: userId,
+      email,
+      orgId,
+      ver: version,
+    };
 
-      const [accessToken, refreshToken] = await Promise.all([
-        this.jwtService.signAsync(payload, {
-          secret: this.configService.get('JWT_SECRET'),
-          expiresIn: this.configService.get('JWT_EXPIRES_IN', '7d'),
-        }),
-        this.jwtService.signAsync(payload, {
-          secret: this.configService.get('JWT_REFRESH_SECRET'),
-          expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', '7d'),
-        }),
-      ]);
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get('JWT_SECRET'),
+        expiresIn: '15m',
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+        expiresIn: '7d',
+      }),
+    ]);
 
-      return { accessToken, refreshToken };
-    } catch (err) {
-      this.logger.error(err);
-      throw err;
-    }
+    return { accessToken, refreshToken };
   }
 
   private async handleFailedLogin(userId: string): Promise<void> {
@@ -547,35 +609,6 @@ export class AuthService {
     // Add random delay between 100-500ms to prevent timing attacks
     const delay = Math.random() * 400 + 100;
     await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-
-  private async restoreUser(
-    userId: string,
-    newPassword: string,
-  ): Promise<AuthResponse> {
-    this.validatePasswordStrength(newPassword);
-    const hashedPassword = await argon2.hash(newPassword);
-
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        password: hashedPassword,
-        deletedAt: null,
-        loginAttempts: 0,
-        lockedUntil: null,
-        lastActiveAt: new Date(),
-        lastPasswordChange: new Date(),
-      },
-    });
-
-    const tokens = await this.generateTokens(user);
-    this.logger.log(`Restored previously deleted user: ${user.email}`);
-
-    return {
-      user: this.toSafeUser(user),
-      ...tokens,
-      requiresEmailVerification: !user.isEmailVerified,
-    };
   }
 
   private async sendVerificationEmail(

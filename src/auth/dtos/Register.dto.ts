@@ -5,6 +5,7 @@ import {
   MinLength,
   IsOptional,
   IsEnum,
+  IsNotEmpty,
 } from 'class-validator';
 
 export class Register {
@@ -47,4 +48,12 @@ export class Register {
   @IsOptional()
   @IsString()
   role?: string;
+
+  @ApiProperty({
+    description: 'Name of the organization',
+    example: 'Acme Corp',
+  })
+  @IsNotEmpty()
+  @IsString()
+  companyName: string;
 }

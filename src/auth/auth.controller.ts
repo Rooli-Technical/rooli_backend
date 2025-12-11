@@ -45,7 +45,7 @@ export class AuthController {
     description: 'Login with email and password to receive JWT tokens',
   })
   @ApiBody({ type: Login, description: 'User login credentials' })
-  async login(@Body() loginDto: Login): Promise<AuthResponse> {
+  async login(@Body() loginDto: Login) {
     return this.authService.login(loginDto);
   }
 
