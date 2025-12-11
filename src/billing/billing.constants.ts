@@ -62,6 +62,21 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       'SLA guarantee',
     ],
   },
+  AGENCY: {
+    tier: 'AGENCY',
+    name: 'Agency',
+    monthlyPrice: 499,
+    yearlyPrice: 4990, // $499 * 10 months
+    credits: 1000000,
+    maxMembers: 200,
+    features: [
+      '1,000,000 AI credits/month',
+      'Up to 200 team members',
+      'Multi-client management',
+      'White-label solutions',
+      '24/7 premium support',
+    ],
+  }
 };
 
 export const CREDIT_COST = {

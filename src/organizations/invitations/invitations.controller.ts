@@ -15,6 +15,7 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+import { OrgAuth } from '@/common/decorators/auth.decorator';
 
 @ApiTags('Organization Invitations')
 @ApiBearerAuth()
@@ -23,6 +24,7 @@ export class InvitationsController {
   constructor(private readonly invitationsService: InvitationsService) {}
 
   @Post('organizations/:orgId/invitations')
+  @OrgAuth({ resource: 'MEMBERS', action: 'MANAGE' })
   @ApiOperation({ summary: 'Invite a new member to the organization' })
   @ApiResponse({ status: 201, description: 'Invitation created successfully' })
   @ApiResponse({

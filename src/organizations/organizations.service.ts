@@ -9,8 +9,8 @@ import { UpdateOrganizationDto } from './dtos/update-organization.dto';
 import { OrganizationUsageDto } from './dtos/organization-usage.dto';
 import { OrganizationStatsDto } from './dtos/organization-stats.dto';
 import { GetAllOrganizationsDto } from './dtos/get-organiations.dto';
-import { GetOrganizationMediaDto } from './dtos/get-organization-media.dto';
 import { PrismaService } from '@/prisma/prisma.service';
+import slugify from 'slugify';
 
 @Injectable()
 export class OrganizationsService {
@@ -18,9 +18,34 @@ export class OrganizationsService {
 
   async createOrganization(userId: string, dto: CreateOrganizationDto) {
     try {
+      const ownedMemberships = await this.prisma.organizationMember.findMany({
+        where: {
+          userId: userId,
+          role: { name: 'OWNER' }, // Only count orgs they OWN, not ones they were invited to
+        },
+        include: { organization: true },
+      });
+      const ownedCount = ownedMemberships.length;
+      if (ownedCount >= 1) {
+    // They already have a workspace. Check if they are allowed another.
+    
+    // Check if ANY of their owned orgs is an AGENCY tier
+    // (Or checking the specific "Billing" org if you separate them)
+    const hasAgencyPlan = ownedMemberships.some(
+      m => m.organization.planTier === 'AGENCY'
+    );
+
+    if (!hasAgencyPlan) {
+      throw new ForbiddenException(
+        "You are on the FREE plan. You can only manage 1 Workspace. Upgrade to Agency to create more."
+      );
+    }
+  }
+      const slug = slugify(dto.name, { lower: true, strict: true });
+
       // Check if slug is available
       const existing = await this.prisma.organization.findUnique({
-        where: { slug: dto.slug },
+        where: { slug },
       });
 
       if (existing) {
@@ -167,13 +192,11 @@ export class OrganizationsService {
     });
   }
 
- async getOrganizationUsage(
-    orgId: string,
-  ): Promise<OrganizationUsageDto> {
+  async getOrganizationUsage(orgId: string): Promise<OrganizationUsageDto> {
     // Validation
     const org = await this.prisma.organization.findUnique({
       where: { id: orgId },
-      select: { maxMembers: true, monthlyCreditLimit: true }
+      select: { maxMembers: true, monthlyCreditLimit: true },
     });
     if (!org) throw new NotFoundException('Organization not found');
 
@@ -208,66 +231,6 @@ export class OrganizationsService {
   }
 
   //this should be in the analytics module
-  async getOrganizationStats(
-    orgId: string,
-    userId: string,
-  ): Promise<OrganizationStatsDto> {
-    await this.verifyMembership(orgId, userId);
-
-    const stats = await this.prisma.organization.findUnique({
-      where: { id: orgId },
-      include: {
-        _count: {
-          select: {
-            members: { where: { isActive: true } },
-            posts: true,
-            aiContentGenerations: true,
-            aiImageGenerations: true,
-          },
-        },
-        posts: {
-          select: {
-            analytics: {
-              select: {
-                likes: true,
-                comments: true,
-                shares: true,
-                impressions: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const totalEngagement = stats.posts.reduce((sum, post) => {
-      const postEngagement = post.analytics.reduce(
-        (acc, a) => acc + (a.likes + a.comments + a.shares),
-        0,
-      );
-      return sum + postEngagement;
-    }, 0);
-
-    const totalImpressions = stats.posts.reduce((sum, post) => {
-      const postImpressions = post.analytics.reduce(
-        (acc, a) => acc + a.impressions,
-        0,
-      );
-      return sum + postImpressions;
-    }, 0);
-
-    const engagementRate =
-      totalImpressions > 0 ? (totalEngagement / totalImpressions) * 100 : 0;
-
-    return {
-      totalPosts: stats._count.posts,
-      scheduledPosts: 0, // You'd need to track this separately
-      aiGenerations:
-        stats._count.aiContentGenerations + stats._count.aiImageGenerations,
-      teamMembers: stats._count.members,
-      engagementRate: parseFloat(engagementRate.toFixed(2)),
-    };
-  }
 
   async checkMemberLimit(orgId: string): Promise<boolean> {
     const organization = await this.prisma.organization.findUnique({
@@ -281,7 +244,6 @@ export class OrganizationsService {
 
     return memberCount < organization.maxMembers;
   }
-
 
   // private async verifyOwnership(orgId: string, userId: string) {
   //   let ownerRole = await this.prisma.role.findUnique({

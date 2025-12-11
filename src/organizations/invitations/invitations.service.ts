@@ -28,7 +28,7 @@ export class InvitationsService {
         },
       },
     }), this.prisma.role.findUnique({
-      where: { id: dto.role },
+      where: { id: dto.roleId },
     }), 
   ]);
     
@@ -72,7 +72,6 @@ export class InvitationsService {
         invitedBy: inviterId,
         roleId: role.id,
         message: dto.message,
-        permissions: dto.permissions,
         token,
         expiresAt,
       },
@@ -82,14 +81,14 @@ export class InvitationsService {
       },
     });
 
-    await this.mailService.sendInvitationEmail({
-      to: dto.email,
-      organizationName: invitation.organization.name,
-      inviterName: this.formatInviterName(invitation.inviter),
-      token,
-      role: dto.role,
-      message: dto.message,
-    });
+    // await this.mailService.sendInvitationEmail({
+    //   to: dto.email,
+    //   organizationName: invitation.organization.name,
+    //   inviterName: this.formatInviterName(invitation.inviter),
+    //   token,
+    //   role: role.name,
+    //   message: dto.message,
+    // });
 
     return invitation;
   }
@@ -126,7 +125,6 @@ export class InvitationsService {
           userId,
           roleId: invitation.role.id,
           invitedBy: invitation.invitedBy,
-          permissions: invitation.permissions,
         },
       });
 

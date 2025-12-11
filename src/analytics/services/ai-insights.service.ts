@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 
+
 export interface AIInsight {
   type: 'performance' | 'recommendation' | 'warning';
   title: string;

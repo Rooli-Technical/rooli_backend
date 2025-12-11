@@ -9,5 +9,6 @@ import { RoleController } from './controller/role.controller';
 @Module({
   controllers: [AccessControlController, RoleController, PermissionController],
   providers: [AccessControlService, RoleService, PermissionService],
+  exports: [RoleService]
 })
 export class AccessControlModule {}

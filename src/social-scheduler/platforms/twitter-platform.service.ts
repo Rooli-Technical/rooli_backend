@@ -231,9 +231,6 @@ private async uploadMedia(client: TwitterApi, url: string): Promise<string> {
     }
   }
 
-  private isVideo(url: string): boolean {
-    return url.match(/\.(mp4|mov|avi|mkv)$/i) !== null;
-  }
 
 private getMimeType(headerType: string, url: string): string {
     // 1. Clean the URL

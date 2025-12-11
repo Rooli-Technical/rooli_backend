@@ -152,22 +152,4 @@ export class OrganizationsController {
   ): Promise<OrganizationUsageDto> {
     return this.organizationsService.getOrganizationUsage(orgId);
   }
-
-  @Get(':id/stats')
-  @ApiOperation({
-    summary: 'Get organization statistics',
-    description:
-      'Returns statistics about engagement, AI generations, scheduled posts, and team members.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Organization stats retrieved',
-    type: OrganizationStatsDto,
-  })
-  async getStats(
-    @Req() req,
-    @Param('id') orgId: string,
-  ): Promise<OrganizationStatsDto> {
-    return this.organizationsService.getOrganizationStats(orgId, req.user.id);
-  }
 }

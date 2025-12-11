@@ -12,11 +12,11 @@ export class InviteMemberDto {
   email: string;
 
   @ApiProperty({
-    example: 'MEMBER',
-    description: 'Role to assign to the invited member',
+    example: 'role_id_12345',
+    description: 'RoleId to assign to the invited member',
   })
   @IsNotEmpty()
-  role: string;
+  roleId: string;
 
   @ApiPropertyOptional({
     example: 'Welcome to our team! Excited to collaborate with you.',
@@ -25,11 +25,4 @@ export class InviteMemberDto {
   @IsOptional()
   @IsString()
   message?: string;
-
-    @ApiPropertyOptional({
-    example: { canEditPosts: true, canDeletePosts: false },
-    description: 'Optional permissions for the member as key-value pairs',
-  })
-  @IsOptional()
-  permissions?: Record<string, boolean>;
 }
