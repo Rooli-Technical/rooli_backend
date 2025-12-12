@@ -8,6 +8,7 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 import * as bodyParser from 'body-parser';
 import { BullBoardModule } from './common/bull-boad/bull-board.module';
 import { AllExceptionsFilter } from './common/filters/all-exception-filter.filter';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -42,6 +43,8 @@ async function bootstrap() {
   );
 
   const httpAdapter = app.get(HttpAdapterHost);
+
+  app.useGlobalInterceptors(new TransformInterceptor());
 
   app.useGlobalFilters(
     new PrismaExceptionFilter(),
