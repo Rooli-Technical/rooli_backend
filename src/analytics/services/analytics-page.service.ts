@@ -1,10 +1,9 @@
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { PrismaService } from '@/prisma/prisma.service';
-import { PageAccount, SocialAccount } from '@generated/client';
-import { Platform } from '@generated/enums';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { TwitterApi } from 'twitter-api-v2';
 
 @Injectable()
 export class AnalyticsPageService {
@@ -19,80 +18,94 @@ export class AnalyticsPageService {
   ) {}
 
   async syncFacebookPage(page: any, dateRange: any) {
-    if (!page.accessToken) return;
-    const token = await this.encryptionService.decrypt(page.accessToken);
+    try {
+      if (!page.accessToken) return;
+      const token = await this.encryptionService.decrypt(page.accessToken);
 
-    const url = `https://graph.facebook.com/${this.META_API_VERSION}/${page.platformPageId}/insights`;
+      const url = `https://graph.facebook.com/${this.META_API_VERSION}/${page.platformPageId}/insights`;
 
-    // We fetch "Daily" metrics for yesterday
-    const response = await firstValueFrom(
-      this.httpService.get(url, {
-        params: {
-          metric:
-            'page_impressions,page_impressions_unique,page_post_engagements',
-          period: 'day',
-          since: dateRange.start,
-          until: dateRange.end,
-          access_token: token,
-        },
-      }),
-    );
+      // We fetch "Daily" metrics for yesterday
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params: {
+            metric:
+              'page_impressions,page_impressions_unique,page_post_engagements',
+            period: 'day',
+            since: dateRange.start,
+            until: dateRange.end,
+            access_token: token,
+          },
+        }),
+      );
 
-    const data = response.data.data;
-    const followers = await this.fetchMetaFollowers(page.platformPageId, token);
+      const data = response.data.data;
+      const followers = await this.fetchMetaFollowers(
+        page.platformPageId,
+        token,
+      );
 
-    await this.saveDailyStats({
-      pageAccountId: page.id,
-      platform: 'FACEBOOK',
-      date: dateRange.dateObj,
-      impressions: this.getFbValue(data, 'page_impressions'),
-      reach: this.getFbValue(data, 'page_impressions_unique'),
-      engagementCount: this.getFbValue(data, 'page_post_engagements'),
-      followersTotal: followers,
-    });
+      await this.saveDailyStats({
+        pageAccountId: page.id,
+        platform: 'FACEBOOK',
+        date: dateRange.dateObj,
+        impressions: this.getFbValue(data, 'page_impressions'),
+        reach: this.getFbValue(data, 'page_impressions_unique'),
+        engagementCount: this.getFbValue(data, 'page_post_engagements'),
+        followersTotal: followers,
+      });
+    } catch (e) {
+      this.handleApiError(page, e);
+      throw e;
+    }
   }
 
   async syncInstagramAccount(page: any, dateRange: any) {
-    if (!page.instagramBusinessId || !page.accessToken) return;
-    const token = await this.encryptionService.decrypt(page.accessToken);
+    try {
+      if (!page.instagramBusinessId || !page.accessToken) return;
+      const token = await this.encryptionService.decrypt(page.accessToken);
 
-    const url = `https://graph.facebook.com/${this.META_API_VERSION}/${page.instagramBusinessId}/insights`;
+      const url = `https://graph.facebook.com/${this.META_API_VERSION}/${page.instagramBusinessId}/insights`;
 
-    const response = await firstValueFrom(
-      this.httpService.get(url, {
-        params: {
-          metric: 'impressions,reach,profile_views',
-          period: 'day',
-          since: dateRange.start,
-          until: dateRange.end,
-          access_token: token,
-        },
-      }),
-    );
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          params: {
+            metric: 'impressions,reach,profile_views',
+            period: 'day',
+            since: dateRange.start,
+            until: dateRange.end,
+            access_token: token,
+          },
+        }),
+      );
 
-    const data = response.data.data;
-    const followers = await this.fetchMetaFollowers(
-      page.instagramBusinessId,
-      token,
-    );
+      const data = response.data.data;
+      const followers = await this.fetchMetaFollowers(
+        page.instagramBusinessId,
+        token,
+      );
 
-    await this.saveDailyStats({
-      pageAccountId: page.id,
-      platform: 'INSTAGRAM',
-      date: dateRange.dateObj,
-      impressions: this.getFbValue(data, 'impressions'),
-      reach: this.getFbValue(data, 'reach'),
-      profileViews: this.getFbValue(data, 'profile_views'),
-      engagementCount: 0, // IG Daily Engagement is hard to get via Insights API directly
-      followersTotal: followers,
-    });
+      await this.saveDailyStats({
+        pageAccountId: page.id,
+        platform: 'INSTAGRAM',
+        date: dateRange.dateObj,
+        impressions: this.getFbValue(data, 'impressions'),
+        reach: this.getFbValue(data, 'reach'),
+        profileViews: this.getFbValue(data, 'profile_views'),
+        engagementCount: 0, // IG Daily Engagement is hard to get via Insights API directly
+        followersTotal: followers,
+      });
+    } catch (e) {
+      this.handleApiError(page, e);
+      throw e;
+    }
   }
 
- async syncLinkedInPage(page: any, dateRange: any) {
+  async syncLinkedInPage(page: any, dateRange: any) {
+    try{
     if (!page.platformPageId || !page.accessToken) return;
     const token = await this.encryptionService.decrypt(page.accessToken);
     const orgUrn = `urn:li:organization:${page.platformPageId}`;
-    
+
     const headers = {
       Authorization: `Bearer ${token}`,
       'LinkedIn-Version': '202401',
@@ -110,9 +123,11 @@ export class AnalyticsPageService {
       ),
     ).catch(() => ({ data: { elements: [] } }));
 
-    const followers = followRes.data.elements?.[0]?.followerCountsByAssociation?.reduce(
-       (acc, curr) => acc + curr.followerCounts, 0
-    ) || 0;
+    const followers =
+      followRes.data.elements?.[0]?.followerCountsByAssociation?.reduce(
+        (acc, curr) => acc + curr.followerCounts,
+        0,
+      ) || 0;
 
     // 2. Fetch Share Stats (Impressions/Engagement for the day)
     const shareRes = await firstValueFrom(
@@ -140,40 +155,93 @@ export class AnalyticsPageService {
       followersTotal: followers,
       impressions: stats.impressionCount || 0,
       reach: stats.uniqueImpressionsCount || 0,
-      engagementCount: (stats.clickCount || 0) + (stats.likeCount || 0) + (stats.shareCount || 0),
+      engagementCount:
+        (stats.clickCount || 0) +
+        (stats.likeCount || 0) +
+        (stats.shareCount || 0),
     });
+  } catch (e) {
+      this.handleApiError(page, e);
+      throw e;
+    }
   }
+
 
  async syncTwitterAccount(account: any, dateRange: any) {
-    if (!account.accessToken) return;
-    // Note: If using OAuth 1.0a, you need token + secret. 
-    // If using OAuth 2.0 (Bearer), just token. Assuming Bearer for simple read.
-    const token = await this.encryptionService.decrypt(account.accessToken);
+    if (!account.accessToken || !account.accessSecret) {
+      this.logger.warn(`Missing Twitter credentials for ${account.username}`);
+      return;
+    }
 
-    // X API v2 User Metrics (Basic)
-    const response = await firstValueFrom(
-        this.httpService.get(`https://api.twitter.com/2/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { 'user.fields': 'public_metrics' },
-        }),
-    );
+    try {
+      // 2. Decrypt Credentials
+      const [token, secret] = await Promise.all([
+        this.encryptionService.decrypt(account.accessToken),
+        this.encryptionService.decrypt(account.accessSecret),
+      ]);
 
-    const metrics = response.data.data.public_metrics;
+      // 3. Initialize Client
+      // We assume you have the app keys in your ConfigService or environment
+      const client = new TwitterApi({
+        appKey: process.env.X_API_KEY, // Your App Consumer Key
+        appSecret: process.env.X_API_SECRET, // Your App Consumer Secret
+        accessToken: token,
+        accessSecret: secret,
+      });
 
-    await this.saveDailyStats({
-      socialAccountId: account.id, 
-      platform: 'X',
-      date: dateRange.dateObj,
-      followersTotal: metrics.followers_count,
-      // X Basic API does not give historical impressions per day easily
-      impressions: 0, 
-      reach: 0,
-      engagementCount: 0,
-    });
+      // 4. Fetch Tweets Posted "Yesterday"
+      // This gets all tweets created within the 24h window we are analyzing
+      const homeTimeline = await client.v2.userTimeline(account.platformId, {
+        start_time: new Date(dateRange.startMs).toISOString(),
+        end_time: new Date(dateRange.endMs).toISOString(),
+        'tweet.fields': ['public_metrics', 'non_public_metrics'],
+        max_results: 100, // Safe limit for one request
+      });
+
+      // 5. Fetch User Profile Stats (for Total Follower Count)
+      const userMe = await client.v2.me({
+        'user.fields': ['public_metrics'],
+      });
+
+      // 6. Calculate Aggregates
+      // We sum up the metrics of all tweets posted yesterday
+      let dailyImpressions = 0;
+      let dailyEngagement = 0; // Likes + Reposts + Quotes + Replies
+
+      for (const tweet of homeTimeline.tweets) {
+        const pub = tweet.public_metrics;
+        const nonPub = tweet.non_public_metrics;
+
+        // Sum Impressions (Private Metric)
+        // If non_public is unavailable (due to permissions), fallback to 0
+        dailyImpressions += nonPub?.impression_count || 0;
+
+        // Sum Engagement
+        dailyEngagement +=
+          (pub?.like_count || 0) +
+          (pub?.retweet_count || 0) +
+          (pub?.reply_count || 0) +
+          (pub?.quote_count || 0);
+      }
+
+      // 7. Save to DB
+      await this.saveDailyStats({
+        socialAccountId: account.id,
+        platform: 'X',
+        date: dateRange.dateObj,
+        followersTotal: userMe.data.public_metrics?.followers_count || 0,
+        impressions: dailyImpressions,
+        engagementCount: dailyEngagement,
+        reach: 0, // X does not provide Reach (Unique Views) on Basic Tier
+        profileViews: 0, // Not available on Basic Tier
+      });
+    } catch (e) {
+      this.handleApiError(account, e);
+      throw e;
+    }
   }
 
-
-// ===========================================================================
+  // ===========================================================================
   // 🛠️ HELPERS & UTILS
   // ===========================================================================
 
@@ -186,9 +254,12 @@ export class AnalyticsPageService {
   private async fetchMetaFollowers(id: string, token: string): Promise<number> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`https://graph.facebook.com/${this.META_API_VERSION}/${id}`, {
-          params: { fields: 'followers_count', access_token: token },
-        }),
+        this.httpService.get(
+          `https://graph.facebook.com/${this.META_API_VERSION}/${id}`,
+          {
+            params: { fields: 'followers_count', access_token: token },
+          },
+        ),
       );
       return response.data.followers_count || 0;
     } catch {
@@ -197,7 +268,7 @@ export class AnalyticsPageService {
   }
 
   // Helper: Calculate "Yesterday" range for APIs
- getYesterdayRange() {
+  getYesterdayRange() {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -208,9 +279,9 @@ export class AnalyticsPageService {
 
     return {
       dateObj: yesterday,
-      start: Math.floor(yesterday.getTime() / 1000),     // Unix Timestamp (Seconds) for FB
+      start: Math.floor(yesterday.getTime() / 1000), // Unix Timestamp (Seconds) for FB
       end: Math.floor(endOfYesterday.getTime() / 1000),
-      startMs: yesterday.getTime(),                      // Timestamp (Milliseconds) for LinkedIn
+      startMs: yesterday.getTime(), // Timestamp (Milliseconds) for LinkedIn
       endMs: endOfYesterday.getTime(),
     };
   }
@@ -282,5 +353,23 @@ export class AnalyticsPageService {
         ...payload,
       },
     });
+  }
+
+  private async handleApiError(post: any, error: any) {
+    // 1. Check for Rate Limits
+    if (error.response?.status === 429) {
+      this.logger.warn(`Rate Limit Hit for ${post.platform}. Backing off.`);
+      // Logic: Push nextAnalyticsCheck forward by 2 hours immediately
+      await this.prisma.post.update({
+        where: { id: post.id },
+        data: { nextAnalyticsCheck: new Date(Date.now() + 2 * 60 * 60 * 1000) },
+      });
+      return;
+    }
+
+    // 2. Check for Expired Tokens (Very Common)
+    if (error.response?.data?.error?.code === 190) {
+      this.logger.error(`Token Expired for Page ${post.pageAccount.id}`);
+    }
   }
 }

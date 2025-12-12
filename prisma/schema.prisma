@@ -282,7 +282,7 @@ model MediaFile {
   filename            String
   originalName        String
   mimeType            String
-  size                Int
+  size                BigInt
   url                 String
   publicId            String
   thumbnailUrl        String?
