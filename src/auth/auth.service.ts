@@ -18,12 +18,9 @@ import { ForgotPassword } from './dtos/ForgotPassword.dto';
 import { ResetPassword } from './dtos/ResetPassword.dto';
 import { MailService } from '@/mail/mail.service';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma, User } from '@generated/client';
-import { RoleScope } from '@generated/enums';
+import { User } from '@generated/client';
 import * as argon2 from 'argon2';
-import { handlePrismaError } from '@/common/prisma.utils';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { OrganizationsService } from '@/organizations/organizations.service';
 import slugify from 'slugify';
 
 @Injectable()
@@ -40,6 +37,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: Register) {
+    try{
     const { email, password, firstName, lastName, role, companyName } =
       registerDto;
     const lowerEmail = email.toLowerCase();
@@ -56,7 +54,7 @@ export class AuthService {
       }),
       // The role the user has in the Organization (e.g., 'OWNER')
       this.prisma.role.findFirst({
-        where: { name: 'OWNER', scope: 'ORGANIZATION' },
+        where: { name: 'owner', scope: 'ORGANIZATION' },
       }),
     ]);
 
@@ -91,10 +89,12 @@ export class AuthService {
           password: hashedPassword,
           firstName: firstName?.trim(),
           lastName: lastName?.trim(),
-          systemRoleId: systemRole.id, // Linked to System Role
+          systemRoleId: systemRole.id,
           emailVerificationSentAt: new Date(),
           lastPasswordChange: new Date(),
-        },
+        },include:  {
+          systemRole: { select: { name: true } },
+        }
       });
 
       // Create Organization & Link Member
@@ -142,12 +142,14 @@ export class AuthService {
       ...tokens,
       requiresEmailVerification: true,
     };
+  } catch (error) {
+    console.log(error);
+    throw error;
   }
-
+  }
   async login(loginDto: Login) {
     const email = loginDto.email.toLowerCase();
 
-    // Fetch User & Minimal Membership Info
     // We need memberships to decide which Org ID goes into the token
     const user = await this.prisma.user.findFirst({
       where: { email, deletedAt: null },
@@ -155,7 +157,7 @@ export class AuthService {
         systemRole: { select: { name: true } },
         organizationMemberships: {
           select: { organizationId: true }, 
-          take: 5, // Just grab a few to determine access
+          take: 5,
           orderBy: { lastActiveAt: 'desc' } 
         },
         lastActiveOrganization: { select: { id: true } },
@@ -165,7 +167,7 @@ export class AuthService {
     });
 
     if (!user) {
-      await this.simulateProcessingDelay(); // Prevent timing attacks
+      await this.simulateProcessingDelay(); 
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -207,11 +209,10 @@ export class AuthService {
     }
 
     if (!activeOrgId) {
-      // User exists but has no organization access (rare edge case)
       throw new ForbiddenException('No active workspace found for this user');
     }
 
-    // Generate Tokens (Baking in the activeOrgId)
+    // Generate Tokens
     const tokens = await this.generateTokens(user.id, user.email, activeOrgId, user.refreshTokenVersion);
     const refreshHash = await argon2.hash(tokens.refreshToken);
 
@@ -241,7 +242,7 @@ export class AuthService {
     );
 
     return {
-      user: updatedUser, // Safe object (password excluded via select)
+      user: updatedUser, 
       ...tokens,
       requiresEmailVerification: !updatedUser.isEmailVerified,
     };
@@ -627,6 +628,7 @@ export class AuthService {
   }
 
   private toSafeUser(user): SafeUser {
+    console.log(user);
     return {
       id: user.id,
       email: user.email,
