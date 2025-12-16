@@ -11,8 +11,17 @@ import { LinkedinPageStrategy } from './strategies/linkedin/linkedIn-page.strate
 import { LinkedinPostStrategy } from './strategies/linkedin/linkedIn-post.strategy';
 import { TwitterPageStrategy } from './strategies/twitter/twitter-page.strategy';
 import { TwitterPostStrategy } from './strategies/twitter/twitter-post.strategy';
+import { BullModule } from '@nestjs/bullmq';
+import { HttpModule } from '@nestjs/axios';
+import { EncryptionService } from '@/common/utility/encryption.service';
 
 @Module({
+  imports:[
+BullModule.registerQueue({
+      name: 'analytics',
+    }),
+    HttpModule
+  ],
   controllers: [AnalyticsController],
   providers: [
     AnalyticsService,
@@ -27,6 +36,7 @@ import { TwitterPostStrategy } from './strategies/twitter/twitter-post.strategy'
     InstagramPageStrategy,
     LinkedinPostStrategy,
     LinkedinPageStrategy,
+    EncryptionService
   ],
 })
 export class AnalyticsModule {}

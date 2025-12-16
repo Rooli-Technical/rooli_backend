@@ -10,7 +10,14 @@ import { AuthContext } from './interfaces/analytics.interface';
 import { Platform } from '@generated/enums';
 
 
-@Processor('analytics')
+@Processor('analytics', {
+  // MOVE 'limiter' HERE
+  limiter: {
+    max: 5,         // Max 5 jobs
+    duration: 1000, // Per 1000ms (1 second)
+  },
+  concurrency: 1} // Optional: How many jobs to process in parallel (usually 1 if rate limiting)
+  )
 export class AnalyticsProcessor extends WorkerHost {
   private readonly logger = new Logger(AnalyticsProcessor.name);
 
@@ -110,25 +117,32 @@ export class AnalyticsProcessor extends WorkerHost {
 
       if (!page) throw new Error(`Page ${pageAccountId} not found`);
 
-      // LOGIC: Facebook/IG use the Page Token. 
-      // LinkedIn uses the Admin's (User) Token to act on the page.
-      
-      let tokenToDecrypt = page.accessToken;
-      
+     // 1. DECIDE WHICH ID TO USE
+      let apiTargetId = page.platformPageId; // Default to FB Page ID
+
+      // If the JOB says Instagram, we MUST use the IG Business ID
+      if (platform === 'INSTAGRAM') {
+         // Safety check: The PageAccount might be 'META', but does it have IG?
+         if (!page.instagramBusinessId) {
+           throw new Error(`PageAccount ${page.id} (Meta) has no instagramBusinessId, but job requested INSTAGRAM analytics`);
+         }
+         apiTargetId = page.instagramBusinessId;
+      }
+      // 2. DECIDE WHICH TOKEN TO USE
+      let tokenToUse = page.accessToken;
 
       if (platform === 'LINKEDIN' && page.socialAccount) {
-        tokenToDecrypt = page.socialAccount.accessToken;
+        tokenToUse = page.socialAccount.accessToken;
       }
 
-      // Decrypt
-      const accessToken = await this.encryptionService.decrypt(tokenToDecrypt);
+      const accessToken = await this.encryptionService.decrypt(tokenToUse);
 
-      return {
-        platformId: page.platformPageId,
+     return {
+        platformId: apiTargetId, 
         auth: {
-          platformAccountId: page.platformPageId, // API needs the Page ID
-          accessToken: accessToken,             // But potentially the User's Token
-          tokenSecret: undefined 
+          platformAccountId: apiTargetId,
+          accessToken,
+          tokenSecret: undefined
         }
       };
     }

@@ -14,6 +14,7 @@ model User {
   firstName    String?
   lastName     String?
   avatar       String?
+  timezone     String? @default("Africa/Lagos")
   systemRoleId String?
   systemRole   Role?   @relation("UserSystemRole", fields: [systemRoleId], references: [id])
 

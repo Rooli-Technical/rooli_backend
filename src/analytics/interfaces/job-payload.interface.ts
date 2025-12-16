@@ -20,7 +20,7 @@ export interface PageStatsJob {
 }
 
 export interface AnalyticsJob {
-  userId: string;
+  organizationId: string;
   platform: Platform;
   
   // Who is this job for?

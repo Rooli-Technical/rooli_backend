@@ -25,7 +25,7 @@ export class AnalyticsService {
     if (platformPostIds.length === 0) return;
 
     try {
-      //  Fetch Posts 
+      //  Fetch Posts
       const posts = await this.prisma.post.findMany({
         where: {
           platformPostId: { in: platformPostIds },
@@ -79,7 +79,7 @@ export class AnalyticsService {
           }),
         );
 
-        // Transaction Op B: Update Post 
+        // Transaction Op B: Update Post
         updates.push(
           this.prisma.post.update({
             where: { id: post.id },
@@ -92,7 +92,7 @@ export class AnalyticsService {
               currentClicks: metrics.clicks || 0,
               engagementRate: engagementRate,
 
-              lastAnalyticsCheck: now, 
+              lastAnalyticsCheck: now,
               nextAnalyticsCheck: nextCheck,
             },
           }),
@@ -105,13 +105,6 @@ export class AnalyticsService {
         this.logger.log(
           `Updated metrics for ${updates.length / 2} posts on ${platform}`,
         );
-
-        // Update summary asynchronously (don't block)
-        if (socialAccountId) {
-          this.updateAccountAnalyticsSummary(socialAccountId, platform).catch(
-            (e) => this.logger.error('Failed to update summary', e),
-          );
-        }
       }
 
       // REMOVED: The redundant updateMany block was deleted here.
@@ -124,7 +117,7 @@ export class AnalyticsService {
    * PAGE UPDATE: Updates the Account/Page Growth stats.
    * Supports both SocialAccount (PROFILE) and PageAccount (PAGE)
    */
-async updatePageMetrics(
+  async updatePageMetrics(
     targetId: string,
     targetModel: 'PROFILE' | 'PAGE',
     platform: Platform,
@@ -138,25 +131,25 @@ async updatePageMetrics(
       // Don't check "Yesterday". Check the "Last Known Record" strictly before today.
       const lastRecord = await this.prisma.accountAnalytics.findFirst({
         where: {
-          ...(targetModel === 'PROFILE' 
-             ? { socialAccountId: targetId } 
-             : { pageAccountId: targetId }),
+          ...(targetModel === 'PROFILE'
+            ? { socialAccountId: targetId }
+            : { pageAccountId: targetId }),
           platform: platform,
           date: { lt: today }, // <--- STRICTLY LESS THAN TODAY
         },
         orderBy: { date: 'desc' }, // <--- GET MOST RECENT
       });
 
-      // If no history exists (Day 1), gain is 0. 
+      // If no history exists (Day 1), gain is 0.
       // If history exists, gain is Current - Previous.
       const previousFollowers = lastRecord?.followersTotal || 0;
-      
+
       // Edge Case: If this is the VERY first run, don't show +1000 gained.
       // If lastRecord is null, we assume gained is 0 for the first entry.
-      const followersGained = lastRecord 
-        ? metrics.followers - previousFollowers 
-        : 0; 
-        
+      const followersGained = lastRecord
+        ? metrics.followers - previousFollowers
+        : 0;
+
       const followersLost = followersGained < 0 ? Math.abs(followersGained) : 0;
 
       // 2. PREPARE OPERATIONS
@@ -201,20 +194,32 @@ async updatePageMetrics(
         pageAccountId: targetModel === 'PAGE' ? targetId : null,
       };
 
-      const uniqueWhere = targetModel === 'PROFILE'
-        ? { socialAccountId_platform_date: { socialAccountId: targetId, platform, date: today } }
-        : { pageAccountId_platform_date: { pageAccountId: targetId, platform, date: today } };
+      const uniqueWhere =
+        targetModel === 'PROFILE'
+          ? {
+              socialAccountId_platform_date: {
+                socialAccountId: targetId,
+                platform,
+                date: today,
+              },
+            }
+          : {
+              pageAccountId_platform_date: {
+                pageAccountId: targetId,
+                platform,
+                date: today,
+              },
+            };
 
       txOperations.push(
         this.prisma.accountAnalytics.upsert({
-          where: uniqueWhere as any, 
+          where: uniqueWhere as any,
           update: analyticsData,
           create: analyticsData,
         }),
       );
 
       await this.prisma.$transaction(txOperations);
-      
     } catch (error) {
       this.logger.error(`Error updating ${targetModel} metrics:`, error);
       throw error;
@@ -224,11 +229,14 @@ async updatePageMetrics(
   /**
    * DASHBOARD QUERY: Get Overview Stats with performance optimizations
    */
-  async getDashboardOverview(userId: string, dateFrom: Date, dateTo: Date) {
+  async getDashboardOverview(
+    organizationId: string,
+    dateFrom: Date,
+    dateTo: Date,
+  ) {
     try {
-      // Use Promise.all with optimized queries
       const [accountStats, postStats, topPosts] = await Promise.all([
-        // Account analytics aggregation
+        // --- A. Aggregated Account Stats ---
         this.prisma.accountAnalytics.aggregate({
           _sum: {
             impressions: true,
@@ -238,15 +246,29 @@ async updatePageMetrics(
             engagementCount: true,
           },
           where: {
+            // 2. Change logic to filter by Organization
+            // We check if the parent SocialAccount belongs to this Org
             OR: [
-              { socialAccount: { userId, isActive: true } },
-              { pageAccount: { socialAccount: { userId, isActive: true } } },
+              {
+                socialAccount: {
+                  organizationId,
+                  isActive: true,
+                },
+              },
+              {
+                pageAccount: {
+                  socialAccount: {
+                    organizationId,
+                    isActive: true,
+                  },
+                },
+              },
             ],
             date: { gte: dateFrom, lte: dateTo },
           },
         }),
 
-        // Post engagement aggregation
+        // --- B. Aggregated Post Stats ---
         this.prisma.post.aggregate({
           _sum: {
             currentLikes: true,
@@ -260,19 +282,19 @@ async updatePageMetrics(
             engagementRate: true,
           },
           where: {
-            userId: userId,
+            organizationId,
             status: 'PUBLISHED',
             publishedAt: { gte: dateFrom, lte: dateTo },
           },
         }),
 
-        // Top performing posts
+        // --- C. Top Performing Posts ---
         this.prisma.post.findMany({
           where: {
-            userId: userId,
+            organizationId,
             status: 'PUBLISHED',
             publishedAt: { gte: dateFrom, lte: dateTo },
-            currentImpressions: { gt: 0 }, // Filter out posts with no impressions
+            currentImpressions: { gt: 0 },
           },
           select: {
             id: true,
@@ -284,6 +306,9 @@ async updatePageMetrics(
             currentImpressions: true,
             engagementRate: true,
             publishedAt: true,
+            socialAccount: {
+              select: { username: true, displayName: true },
+            },
           },
           orderBy: { engagementRate: 'desc' },
           take: 5,
@@ -296,14 +321,11 @@ async updatePageMetrics(
         (postStats._sum.currentShares || 0);
 
       return {
-        // Account metrics
         totalImpressions: accountStats._sum.impressions || 0,
         totalProfileViews: accountStats._sum.profileViews || 0,
         totalWebsiteClicks: accountStats._sum.websiteClicks || 0,
         totalFollowersGained: accountStats._sum.followersGained || 0,
         totalEngagementCount: accountStats._sum.engagementCount || 0,
-
-        // Post metrics
         totalLikes: postStats._sum.currentLikes || 0,
         totalComments: postStats._sum.currentComments || 0,
         totalShares: postStats._sum.currentShares || 0,
@@ -311,31 +333,16 @@ async updatePageMetrics(
         totalPostReach: postStats._sum.currentReach || 0,
         totalPostClicks: postStats._sum.currentClicks || 0,
         averageEngagementRate: postStats._avg.engagementRate || 0,
-
-        // Derived metrics
         totalEngagement: totalEngagement,
-        engagementRate: postStats._sum.currentImpressions
+       engagementRate: postStats._sum.currentImpressions
           ? (totalEngagement / postStats._sum.currentImpressions) * 100
           : 0,
-
-        // Top posts
         topPerformingPosts: topPosts,
       };
     } catch (error) {
       this.logger.error('Error fetching dashboard overview:', error);
       throw error;
     }
-  }
-
-  /**
-   * Helper: Update account analytics summary
-   */
-  private async updateAccountAnalyticsSummary(
-    socialAccountId: string,
-    platform: Platform,
-  ) {
-    // Update weekly/monthly summaries or cache
-    // Implementation depends on your requirements
   }
 
   /**

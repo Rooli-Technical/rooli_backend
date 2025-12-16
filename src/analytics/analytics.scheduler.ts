@@ -119,45 +119,84 @@ export class AnalyticsScheduler {
   async schedulePageUpdates() {
     this.logger.log('Running Daily Page Analytics Scheduler...');
 
-    // A. Profiles (X, LinkedIn Personal)
-    const profiles = await this.prisma.socialAccount.findMany({
-        where: { 
-            isActive: true, 
-            platform: { in: [Platform.X, Platform.LINKEDIN] } // Add others if needed
-        },
-        select: { id: true, platform: true, organizationId: true }
+   // -------------------------------------------------------
+    // 1. PROCESS SOCIAL ACCOUNTS (Profiles)
+    // -------------------------------------------------------
+    // Targets: Twitter & LinkedIn (Personal)
+    const socialAccounts = await this.prisma.socialAccount.findMany({
+      where: { 
+        isActive: true,
+        // Query using the SocialPlatform Enum
+        platform: { in: ['X', 'LINKEDIN'] } 
+      },
+      select: { id: true, platform: true, organizationId: true }
     });
 
-    for (const p of profiles) {
-        await this.analyticsQueue.add('fetch-page-metrics', {
-            targetId: p.id,
-            targetModel: 'PROFILE',
-            platform: p.platform,
-            organizationId: p.organizationId
-        } as PageStatsJob, { 
-            removeOnComplete: true,
-            // Stagger X requests slightly to avoid heavy bursts
-            delay: p.platform === 'X' ? Math.floor(Math.random() * 60000) : 0
-        });
+    for (const acc of socialAccounts) {
+      // Direct Mapping: TWITTER -> TWITTER
+      // We cast the string to the Platform enum since they match names
+      const jobPlatform = acc.platform === 'X' ? 'X' : 'LINKEDIN';
+
+      await this.analyticsQueue.add('fetch-page-metrics', {
+        targetId: acc.id,
+        targetModel: 'PROFILE',
+        platform: jobPlatform as Platform, 
+        organizationId: acc.organizationId
+      });
     }
 
-    // B. Pages (FB, IG, LinkedIn Company)
-    const pages = await this.prisma.pageAccount.findMany({
-        where: { isActive: true },
-        select: { 
-            id: true, 
-            platform: true, 
-            socialAccount: { select: { organizationId: true } } 
-        }
+    // -------------------------------------------------------
+    // 2. PROCESS PAGE ACCOUNTS (Pages)
+    // -------------------------------------------------------
+    // Targets: Meta (FB/IG) & LinkedIn (Company)
+    const pageAccounts = await this.prisma.pageAccount.findMany({
+      where: { isActive: true },
+      select: { 
+        id: true, 
+        // This likely returns 'META' or 'LINKEDIN'
+        socialAccount: { select: { platform: true, organizationId: true } }, 
+        // We need specific fields to know what jobs to spawn
+        instagramBusinessId: true, 
+        platformPageId: true 
+      }
     });
 
-    for (const p of pages) {
+    for (const page of pageAccounts) {
+      const parentPlatform = page.socialAccount.platform; // e.g. 'META' or 'LINKEDIN'
+
+      // CASE A: LINKEDIN COMPANY PAGE
+      if (parentPlatform === 'LINKEDIN') {
         await this.analyticsQueue.add('fetch-page-metrics', {
-            targetId: p.id,
+          targetId: page.id,
+          targetModel: 'PAGE',
+          platform: 'LINKEDIN', 
+          organizationId: page.socialAccount.organizationId
+        });
+      }
+
+      // CASE B: META (The Special Logic)
+      if (parentPlatform === 'META') {
+        
+        // Sub-Job 1: Facebook Page (Always exists if you have a PageAccount)
+        if (page.platformPageId) {
+          await this.analyticsQueue.add('fetch-page-metrics', {
+            targetId: page.id,
             targetModel: 'PAGE',
-            platform: p.platform,
-            organizationId: p.socialAccount.organizationId
-        } as PageStatsJob, { removeOnComplete: true });
+            platform: 'FACEBOOK', // <--- Explicit Translation
+            organizationId: page.socialAccount.organizationId
+          });
+        }
+
+        // Sub-Job 2: Instagram Business (Only if linked)
+        if (page.instagramBusinessId) {
+          await this.analyticsQueue.add('fetch-page-metrics', {
+            targetId: page.id,
+            targetModel: 'PAGE',
+            platform: 'INSTAGRAM', // <--- Explicit Translation
+            organizationId: page.socialAccount.organizationId
+          });
+        }
+      }
     }
   }
 
