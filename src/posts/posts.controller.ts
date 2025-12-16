@@ -53,7 +53,7 @@ export class PostsController {
     @Req() req,
     @Body() dto: CreatePostDto,
   ) {
-    return this.postsService.createPost(req.user.id, dto);
+    return this.postsService.createPost(req.user.id, req.user.timezone, dto);
   }
 
   /**

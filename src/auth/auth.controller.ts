@@ -200,11 +200,19 @@ export class AuthController {
     description:
       'Google redirects here after login. The returned user data is processed, and tokens are generated.',
   })
+  @ApiQuery({
+    name: 'timezone',
+    required: false,
+    description:
+      'Optional timezone parameter to set user timezone after login',
+    example: 'America/New_York',
+  })
   @ApiOkResponse({
     description: 'Successfully authenticated using Google',
   })
-  async googleAuthRedirect(@Req() req) {
-    const result = await this.authService.handleSocialLogin(req.user);
+  async googleAuthRedirect(@Req() req, @Query('timezone') timezone?: string) {
+    const userTimezone = timezone || 'Etc/UTC';
+    const result = await this.authService.handleSocialLogin(req.user, userTimezone);
     // Return JSON or redirect to frontend
     return result;
   }

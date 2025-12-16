@@ -33,7 +33,7 @@ export class PostsService {
   /**
    * Create a new post
    */
-  async createPost(userId: string, dto: CreatePostDto) {
+  async createPost(userId: string, timezone: string,dto: CreatePostDto) {
     try {
       await this.validatePostCreation(userId, dto);
 
@@ -45,10 +45,10 @@ export class PostsService {
 
         let finalScheduledAt: Date | null = null;
 
-        if (dto.scheduledAt && dto.timezone) {
+        if (dto.scheduledAt && timezone) {
           finalScheduledAt = this.calculateUtcTime(
             dto.scheduledAt,
-            dto.timezone,
+            timezone,
           );
           if (finalScheduledAt <= new Date()) {
             throw new BadRequestException(
@@ -75,7 +75,7 @@ export class PostsService {
             content: dto.content,
             ...(mediaRelation ? { mediaFileIds: mediaRelation } : {}),
             status: PostStatus.DRAFT,
-            timezone: dto.timezone,
+            timezone: timezone,
             contentType: dto.contentType,
             scheduledAt: finalScheduledAt,
             platform: dto.platform,

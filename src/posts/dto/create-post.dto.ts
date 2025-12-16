@@ -69,11 +69,4 @@ export class CreatePostDto {
   })
   @IsOptional()
   scheduledAt?: string;
-
-  @ApiProperty({
-    description: 'Timezone of the scheduled time',
-    example: 'Africa/Lagos',
-  })
-  @IsString()
-  timezone: string;
 }

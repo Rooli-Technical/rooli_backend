@@ -1,3 +1,5 @@
+import { AnalyticsStrategy } from "@/analytics/interfaces/analytics.interface";
+import { PostMetrics } from "@/analytics/interfaces/post-metrics.interface";
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { firstValueFrom } from "rxjs";

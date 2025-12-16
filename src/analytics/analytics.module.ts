@@ -14,6 +14,7 @@ import { TwitterPostStrategy } from './strategies/twitter/twitter-post.strategy'
 import { BullModule } from '@nestjs/bullmq';
 import { HttpModule } from '@nestjs/axios';
 import { EncryptionService } from '@/common/utility/encryption.service';
+import { PlatformService } from './platform.service';
 
 @Module({
   imports:[
@@ -36,7 +37,8 @@ BullModule.registerQueue({
     InstagramPageStrategy,
     LinkedinPostStrategy,
     LinkedinPageStrategy,
-    EncryptionService
+    EncryptionService,
+    PlatformService
   ],
 })
 export class AnalyticsModule {}

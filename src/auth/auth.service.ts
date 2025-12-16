@@ -38,7 +38,7 @@ export class AuthService {
 
   async register(registerDto: Register) {
     try{
-    const { email, password, firstName, lastName, role, companyName } =
+    const { email, password, firstName, lastName, role, companyName, timezone } =
       registerDto;
     const lowerEmail = email.toLowerCase();
 
@@ -92,6 +92,7 @@ export class AuthService {
           systemRoleId: systemRole.id,
           emailVerificationSentAt: new Date(),
           lastPasswordChange: new Date(),
+          timezone,
         },include:  {
           systemRole: { select: { name: true } },
         }
@@ -120,7 +121,8 @@ export class AuthService {
       result.user.id,
       result.user.email,
       result.org.id,
-      0
+      0,
+      timezone
     );
     const refreshHash = await argon2.hash(tokens.refreshToken);
 
@@ -161,7 +163,6 @@ export class AuthService {
           orderBy: { lastActiveAt: 'desc' } 
         },
         lastActiveOrganization: { select: { id: true } },
-        
       },
       
     });
@@ -213,7 +214,7 @@ export class AuthService {
     }
 
     // Generate Tokens
-    const tokens = await this.generateTokens(user.id, user.email, activeOrgId, user.refreshTokenVersion);
+    const tokens = await this.generateTokens(user.id, user.email, activeOrgId, user.refreshTokenVersion, user.timezone);
     const refreshHash = await argon2.hash(tokens.refreshToken);
 
     // Reset security counters, update stats, and save refresh token in ONE call
@@ -234,6 +235,7 @@ export class AuthService {
         avatar: true,
         isEmailVerified: true,
         systemRole: { select: { name: true } },
+        
       },
     });
 
@@ -309,7 +311,7 @@ export class AuthService {
         targetOrgId = fallback.organizationId;
       }
 
-      const tokens = await this.generateTokens(user.id, user.email, targetOrgId, user.refreshTokenVersion);
+      const tokens = await this.generateTokens(user.id, user.email, targetOrgId, user.refreshTokenVersion, user.timezone);
       const newHash = await argon2.hash(tokens.refreshToken);
 
       await this.prisma.user.update({
@@ -510,7 +512,7 @@ export class AuthService {
     }
   }
 
-  async handleSocialLogin(googleUser: { email: string; firstName: string; lastName: string; picture: string }) {
+  async handleSocialLogin(googleUser: { email: string; firstName: string; lastName: string; picture: string }, timezone: string) {
   try {
     const lowerEmail = googleUser.email.toLowerCase();
 
@@ -531,7 +533,7 @@ export class AuthService {
       
       if (!activeOrgId) throw new ForbiddenException('User exists but has no active workspace.');
 
-      const tokens = await this.generateTokens(user.id, user.email, activeOrgId, user.refreshTokenVersion);
+      const tokens = await this.generateTokens(user.id, user.email, activeOrgId, user.refreshTokenVersion, user.timezone);
       const refreshHash = await argon2.hash(tokens.refreshToken);
 
       await this.prisma.user.update({
@@ -570,6 +572,7 @@ export class AuthService {
           lastName: googleUser.lastName,
           avatar: googleUser.picture,
           isEmailVerified: true, 
+          timezone,
           systemRoleId: systemRole.id,
           lastPasswordChange: new Date(),
         },
@@ -594,7 +597,7 @@ export class AuthService {
     });
 
     // Generate Tokens
-    const tokens = await this.generateTokens(result.user.id, result.user.email, result.org.id, 0);
+    const tokens = await this.generateTokens(result.user.id, result.user.email, result.org.id, 0, timezone);
     const refreshHash = await argon2.hash(tokens.refreshToken);
 
     // Save Refresh Token
@@ -610,12 +613,13 @@ export class AuthService {
   }
 }
 
-  private async generateTokens(userId: string, email: string, orgId: string, version: number) {
+  private async generateTokens(userId: string, email: string, orgId: string, version: number, timezone: string) {
     const payload: JwtPayload = {
       sub: userId,
       email,
       orgId,
       ver: version,
+      timezone
     };
 
     const [accessToken, refreshToken] = await Promise.all([

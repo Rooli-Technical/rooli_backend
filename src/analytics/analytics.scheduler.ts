@@ -22,7 +22,7 @@ export class AnalyticsScheduler {
   /**
    * JOB 1: POST ANALYTICS SCHEDULER (Smart Polling)
    */
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  //@Cron(CronExpression.EVERY_30_MINUTES)
   async schedulePostUpdates() {
     this.logger.log('Running Post Analytics Scheduler...');
 
@@ -115,7 +115,7 @@ export class AnalyticsScheduler {
   /**
    * JOB 2: PAGE ANALYTICS (Daily Growth)
    */
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+ // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async schedulePageUpdates() {
     this.logger.log('Running Daily Page Analytics Scheduler...');
 

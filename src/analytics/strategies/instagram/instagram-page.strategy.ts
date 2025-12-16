@@ -1,3 +1,5 @@
+import { PageAnalyticsStrategy } from "@/analytics/interfaces/analytics.interface";
+import { PageMetrics } from "@/analytics/interfaces/page-metrics.interface";
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { firstValueFrom } from "rxjs";

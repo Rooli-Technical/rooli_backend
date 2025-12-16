@@ -56,4 +56,12 @@ export class Register {
   @IsNotEmpty()
   @IsString()
   companyName: string;
+
+  @ApiProperty({
+    description: 'Timezone of the user',
+    example: 'Africa/Lagos',
+  })
+  @IsNotEmpty()
+  @IsString()
+  timezone: string;
 }

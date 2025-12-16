@@ -18,7 +18,6 @@ import { AiModule } from './ai/ai.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { TemplatesModule } from './templates/templates.module';
 import { WebhookModule } from './webhook/webhook.module';
-import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationModule } from './notification/notification.module';
 import { SocialIntegrationModule } from './social-integration/social-integration.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
