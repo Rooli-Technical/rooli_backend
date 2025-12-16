@@ -71,6 +71,8 @@ export class MetaService {
         'instagram_basic',
         'instagram_manage_messages',
         'instagram_content_publish',
+        'read_insights',
+        'instagram_manage_insights'
       ].join(','),
     });
 

@@ -17,7 +17,7 @@ model User {
   systemRoleId String?
   systemRole   Role?   @relation("UserSystemRole", fields: [systemRoleId], references: [id])
 
-  lastActiveOrgId String?
+  lastActiveOrgId        String?
   lastActiveOrganization Organization? @relation("UserLastActiveOrg", fields: [lastActiveOrgId], references: [id], onDelete: SetNull)
 
   // Email verification
@@ -40,7 +40,6 @@ model User {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
   lastActiveAt DateTime?
-
 
   mediaFiles              MediaFile[]
   organizationMemberships OrganizationMember[] @relation("UserOrganizationMemberships")
@@ -95,16 +94,23 @@ model SocialAccount {
   lastPostedAt DateTime?
   metadata     Json?
 
+  followersCount Int       @default(0)
+  followingCount Int       @default(0)
+  lastPolledAt   DateTime?
+  profileViews   Int       @default(0)
+  websiteClicks  Int       @default(0)
+  impressions    Int       @default(0)
+
   organization  Organization?          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   posts         Post[]
   rateLimitLogs PlatformRateLimitLog[]
   members       SocialAccountMember[]
 
-  accountType   SocialAccountType    @default(PAGE)
-  notifications NotificationEntity[]
-  conversations Conversation[]
-  pages         PageAccount[]
-  dailyAnalytics AccountAnalyticsDaily[]
+  accountType    SocialAccountType    @default(PROFILE)
+  notifications  NotificationEntity[]
+  conversations  Conversation[]
+  pages          PageAccount[]
+  dailyAnalytics AccountAnalytics[]
 
   @@unique([platform, platformAccountId])
   @@index([platform, isActive])
@@ -138,6 +144,7 @@ model PageAccount {
   socialAccountId     String
   platformPageId      String // Facebook Page ID
   name                String
+  isActive          Boolean @default(true)
   accessToken         String // Page access token (encrypted)
   category            String? // Page category
   instagramBusinessId String? // Linked Instagram account ID
@@ -152,10 +159,17 @@ model PageAccount {
   updatedAt DateTime @updatedAt
 
   // A page can have posts, metrics, etc.
-  posts Post[]
-  dailyAnalytics AccountAnalyticsDaily[]
+  posts          Post[]
+  dailyAnalytics AccountAnalytics[]
   // EngagementMetric EngagementMetric[]
   // conversations    Conversation[]
+
+  followersCount Int       @default(0)
+  followingCount Int       @default(0)
+  lastPolledAt   DateTime?
+  profileViews   Int       @default(0)
+  websiteClicks  Int       @default(0)
+  impressions    Int       @default(0)
 
   @@unique([platformPageId])
   @@index([socialAccountId])
@@ -200,9 +214,21 @@ model Post {
   jobId       String?
   queueStatus ScheduleJobStatus @default(PENDING)
 
-  lastAnalyticsCheck   DateTime?
-  nextAnalyticsCheck   DateTime  @default(now())
-  analyticsPriority    Int       @default(1)
+  lastAnalyticsCheck DateTime?
+  nextAnalyticsCheck DateTime? @default(now())
+  analyticsPriority  Int       @default(1)
+
+  // These represent the LATEST known state.
+  // Updated every time you create a new Snapshot.
+  currentLikes       Int @default(0)
+  currentComments    Int @default(0)
+  currentShares      Int @default(0)
+  currentImpressions Int @default(0)
+  currentReach       Int @default(0)
+  currentClicks      Int @default(0)
+
+  // Calculated field for sorting "Best Performing"
+  engagementRate Float @default(0.0)
 
   // AI relations
   aiContentId        String?              @unique
@@ -402,7 +428,7 @@ model OrganizationInvitation {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   inviter      User?        @relation("UserSentInvitations", fields: [invitedBy], references: [id], onDelete: SetNull)
 
-  message     String?
+  message String?
 
   @@unique([email, organizationId, status]) // Allow re-invite after expiration
   @@index([token])
@@ -658,37 +684,38 @@ model PostAnalyticsSnapshot {
 }
 
 // Store daily aggregate data for the Account/Page itself
-model AccountAnalyticsDaily {
-  id              String   @id @default(cuid())
-  
+model AccountAnalytics {
+  id String @id @default(cuid())
+
   // Link to either SocialAccount (X/LinkedIn Profile) or PageAccount (FB/IG Page)
   socialAccountId String?
   pageAccountId   String?
-  
-  date            DateTime @db.Date // The specific day this data represents
-  platform        Platform
-  
+
+  date     DateTime @db.Date // The specific day this data represents
+  platform Platform
+
   // Growth
-  followersTotal  Int      @default(0)
-  followersGained Int      @default(0)
-  followersLost   Int      @default(0)
+  followersTotal  Int @default(0)
+  followersGained Int @default(0)
+  followersLost   Int @default(0)
 
   // Reach & Traffic (Account Level)
-  impressions     Int      @default(0) // Total views of all content + profile
-  reach           Int      @default(0) // Unique people
-  profileViews    Int      @default(0)
-  websiteClicks   Int      @default(0)
+  impressions   Int @default(0) // Total views of all content + profile
+  reach         Int @default(0) // Unique people
+  profileViews  Int @default(0)
+  websiteClicks Int @default(0)
 
   // Engagement (Aggregate)
-  engagementCount Int      @default(0) // Sum of all interactions that day
+  engagementCount Int @default(0) // Sum of all interactions that day
 
   // Relations
-  socialAccount   SocialAccount? @relation(fields: [socialAccountId], references: [id])
-  pageAccount     PageAccount?   @relation(fields: [pageAccountId], references: [id])
+  socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id])
+  pageAccount   PageAccount?   @relation(fields: [pageAccountId], references: [id])
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
- @@unique([socialAccountId, platform, date])
+  @@unique([socialAccountId, platform, date])
   @@unique([pageAccountId, platform, date])
   @@index([date])
 }

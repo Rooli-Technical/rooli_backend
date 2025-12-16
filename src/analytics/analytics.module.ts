@@ -1,43 +1,32 @@
 import { Module } from '@nestjs/common';
+import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
-import { AiInsightsService } from './services/ai-insights.service';
-import { ExportService } from './services/export.service';
-import { HttpModule } from '@nestjs/axios';
-import { BullModule } from '@nestjs/bullmq';
-import { AnalyticsPageService } from './services/analytics-page.service';
-import { AnalyticsPostService } from './services/analytics-post.service';
-import { AnalyticsProcessor } from './services/analytics.processor';
-import { AnalyticsWorkerService } from './services/analytics.worker';
-import { AnalyticsQueueEvents } from './services/analytics.listener';
-import { AnalyticsService } from './services/analytics.service';
-import { EncryptionService } from '@/common/utility/encryption.service';
+import { AnalyticsProcessor } from './analytics.processor';
+import { AnalyticsScheduler } from './analytics.scheduler';
+import { FacebookPageStrategy } from './strategies/facebook/facebook-page.strategy';
+import { FacebookPostStrategy } from './strategies/facebook/facebook-post.strategy';
+import { InstagramPageStrategy } from './strategies/instagram/instagram-page.strategy';
+import { InstagramPostStrategy } from './strategies/instagram/instagram-post.strategy';
+import { LinkedinPageStrategy } from './strategies/linkedin/linkedIn-page.strategy';
+import { LinkedinPostStrategy } from './strategies/linkedin/linkedIn-post.strategy';
+import { TwitterPageStrategy } from './strategies/twitter/twitter-page.strategy';
+import { TwitterPostStrategy } from './strategies/twitter/twitter-post.strategy';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({
-      name: 'analytics-queue',
-      defaultJobOptions: {
-        attempts: 3, // If FB fails, try 3 times
-        backoff: {
-          type: 'exponential',
-          delay: 5000, // Wait 5s, then 20s, then 80s...
-        },
-        removeOnComplete: true,
-      },
-    }),
-    HttpModule,
-  ],
   controllers: [AnalyticsController],
   providers: [
-    AiInsightsService,
-    ExportService,
-    AnalyticsPageService,
-    AnalyticsPostService,
-    AnalyticsProcessor,
-    AnalyticsWorkerService,
-    AnalyticsQueueEvents,
     AnalyticsService,
-    EncryptionService
+    AnalyticsService,
+    AnalyticsScheduler,
+    AnalyticsProcessor,
+    TwitterPostStrategy,
+    TwitterPageStrategy,
+    FacebookPostStrategy,
+    FacebookPageStrategy,
+    InstagramPostStrategy,
+    InstagramPageStrategy,
+    LinkedinPostStrategy,
+    LinkedinPageStrategy,
   ],
 })
 export class AnalyticsModule {}

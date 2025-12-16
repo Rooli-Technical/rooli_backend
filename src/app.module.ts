@@ -30,6 +30,7 @@ import { SocialSchedulerModule } from './social-scheduler/social-scheduler.modul
 import { BullBoardModule } from './common/bull-boad/bull-board.module';
 import { BullModule } from '@nestjs/bullmq';
 import { AccessControlModule } from './access-control/access-control.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
