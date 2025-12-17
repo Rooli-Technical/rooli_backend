@@ -51,7 +51,7 @@ export class AnalyticsProcessor extends WorkerHost {
   // --- HANDLERS ---
 
   private async handlePostMetrics(data: PostBatchJob) {
-    // 1. Resolve Credentials (with Decryption)
+    // Resolve Credentials (with Decryption)
     const context = await this.resolveAuthContext(
       data.platform,
       data.socialAccountId, 

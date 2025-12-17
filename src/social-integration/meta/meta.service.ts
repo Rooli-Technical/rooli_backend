@@ -389,31 +389,44 @@ export class MetaService {
   }
 
   /**
-   * Refresh token if expired (for future implementation)
+   * Refresh token if expired
    */
-  async refreshTokenIfNeeded(socialAccountId: string): Promise<boolean> {
-    const account = await this.prisma.socialAccount.findUnique({
+async refreshAccessToken(socialAccountId: string): Promise<void> {
+  const account = await this.prisma.socialAccount.findUnique({
+    where: { id: socialAccountId },
+    select: { accessToken: true }
+  });
+
+  // Decrypt current token
+  const currentToken = await this.encryptionService.decrypt(account.accessToken);
+
+  // Meta "Refresh" is actually just exchanging the old token for a new long-lived one
+  const url = `${this.graphApiBase}/oauth/access_token`;
+  const params = new URLSearchParams({
+    grant_type: 'fb_exchange_token',
+    client_id: process.env.META_CLIENT_ID!,
+    client_secret: process.env.META_CLIENT_SECRET!,
+    fb_exchange_token: currentToken,
+  });
+
+  const response = await fetch(`${url}?${params.toString()}`);
+  const data = await response.json();
+
+  if (data.access_token) {
+    // SAVE TO DB
+    await this.prisma.socialAccount.update({
       where: { id: socialAccountId },
-      select: { tokenExpiresAt: true, accessToken: true },
+      data: {
+        accessToken: await this.encryptionService.encrypt(data.access_token),
+        // Update expiration if provided (usually 60 days)
+        tokenExpiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : undefined
+      }
     });
-
-    if (!account) {
-      throw new NotFoundException('Social account not found');
-    }
-
-    // Check if token is expired or about to expire (within 24 hours)
-    if (
-      account.tokenExpiresAt &&
-      new Date(account.tokenExpiresAt) <
-        new Date(Date.now() + 24 * 60 * 60 * 1000)
-    ) {
-      // Implement token refresh logic here
-      this.logger.warn(`Token for account ${socialAccountId} needs refresh`);
-      return false;
-    }
-
-    return true;
+    this.logger.log(`Refreshed Meta token for ${socialAccountId}`);
+  } else {
+    throw new Error('Meta token refresh failed');
   }
+}
 
   /**
    * Decrypt and validate OAuth state with expiration

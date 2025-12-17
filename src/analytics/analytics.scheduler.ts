@@ -1,9 +1,8 @@
 import { PrismaService } from "@/prisma/prisma.service";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Injectable, Logger } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
 import { Queue } from "bullmq";
-import { PostBatchJob, PageStatsJob } from "./interfaces/job-payload.interface";
+import { PostBatchJob } from "./interfaces/job-payload.interface";
 import { Platform } from "@generated/enums";
 import { AnalyticsService } from "./analytics.service";
 
@@ -45,6 +44,7 @@ export class AnalyticsScheduler {
         pageAccountId: true,
         platform: true,
         analyticsPriority: true,
+        organizationId: true,
         socialAccount: { select: { id: true, isActive: true, organizationId: true } },
         pageAccount: { select: { id: true, isActive: true } }
       },
@@ -57,7 +57,7 @@ export class AnalyticsScheduler {
 
     if (duePosts.length === 0) return;
 
-    // 2. Group by Unique Account Identity
+    // Group by Unique Account Identity
     // We create a composite key so we can batch IDs for the exact same API credentials
     const grouped = new Map<string, typeof duePosts>();
 
@@ -92,7 +92,7 @@ export class AnalyticsScheduler {
                 batchNumber: i + 1,
                 platform: platform as Platform,
                 postIds: batch.map(p => p.platformPostId),
-                organizationId: firstPost.socialAccount.organizationId,
+                organizationId: firstPost.organizationId,
                 // Pass the IDs so processor knows where to look
                 socialAccountId: type === 'PROFILE' ? accountId : undefined,
                 pageAccountId: type === 'PAGE' ? accountId : undefined,
@@ -119,9 +119,7 @@ export class AnalyticsScheduler {
   async schedulePageUpdates() {
     this.logger.log('Running Daily Page Analytics Scheduler...');
 
-   // -------------------------------------------------------
-    // 1. PROCESS SOCIAL ACCOUNTS (Profiles)
-    // -------------------------------------------------------
+
     // Targets: Twitter & LinkedIn (Personal)
     const socialAccounts = await this.prisma.socialAccount.findMany({
       where: { 
