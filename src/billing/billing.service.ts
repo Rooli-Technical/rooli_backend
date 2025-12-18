@@ -1,6 +1,12 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
-import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, catchError } from 'rxjs';
 
@@ -12,10 +18,10 @@ export class BillingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
   ) {}
 
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
   // 1. GET AVAILABLE PLANS
   // ---------------------------------------------------------
   async getAvailablePlans() {
@@ -30,7 +36,7 @@ export class BillingService {
         currency: true,
         interval: true,
         features: true,
-      }
+      },
     });
   }
 
@@ -40,29 +46,35 @@ export class BillingService {
   async getSubscription(organizationId: string) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { organizationId },
-      include: { plan: true }
+      include: { plan: true },
     });
 
     if (!subscription) return null;
 
     return {
       ...subscription,
-      isActive: subscription.status === 'active' && new Date() < subscription.currentPeriodEnd
+      isActive:
+        subscription.status === 'active' &&
+        new Date() < subscription.currentPeriodEnd,
     };
   }
 
   // ---------------------------------------------------------
   // 3. INITIALIZE PAYMENT (Upgrade)
   // ---------------------------------------------------------
-  async initializePayment(organizationId: string, planId: string) {
+  async initializePayment(organizationId: string, planId: string, user:any) {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) throw new NotFoundException('Plan not found');
 
-    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
-    const email = org.billingEmail;
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    const email = org.billingEmail || user?.email;
 
     if (!email) {
-      throw new BadRequestException('A billing email is required to process payments.');
+      throw new BadRequestException(
+        'A billing email is required to process payments.',
+      );
     }
 
     const txRef = `rooli_${organizationId}_${Date.now()}`;
@@ -74,90 +86,87 @@ export class BillingService {
       payment_plan: plan.flutterwavePlanId,
       redirect_url: `${this.config.get('FRONTEND_URL')}/billing/callback`,
       customer: {
-        email: email,
+        email: email || user?.email,
         name: org.name,
       },
       meta: {
         organizationId: organizationId,
-        targetPlanId: plan.id
+        targetPlanId: plan.id,
       },
       customizations: {
         title: `Upgrade to ${plan.name}`,
         logo: 'https://your-rooli-url.com/logo.png',
-      }
+      },
     };
 
     try {
       const { data } = await firstValueFrom(
-        this.httpService.post(
-          `${this.FLUTTERWAVE_BASE_URL}/payments`,
-          payload,
-          {
-            headers: { Authorization: `Bearer ${this.config.get('FLUTTERWAVE_SECRET_KEY')}` }
-          }
-        ).pipe(
-          catchError((error) => {
-            this.logger.error('Flutterwave Init Error', error.response?.data);
-            throw new BadRequestException('Payment initialization failed');
+        this.httpService
+          .post(`${this.FLUTTERWAVE_BASE_URL}/payments`, payload, {
+            headers: {
+              Authorization: `Bearer ${this.config.get('FLUTTERWAVE_SECRET_KEY')}`,
+            },
           })
-        )
-      ); 
+          .pipe(
+            catchError((error) => {
+              this.logger.error('Flutterwave Init Error', error.response?.data);
+              throw new BadRequestException('Payment initialization failed');
+            }),
+          ),
+      );
 
-      return { 
-        paymentUrl: data.data.link, 
-        txRef 
+      return {
+        paymentUrl: data.data.link,
+        txRef,
       };
-
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException('Could not connect to payment provider');
+      throw new InternalServerErrorException(
+        'Could not connect to payment provider',
+      );
     }
   }
 
-  // ---------------------------------------------------------
-  // 4. ACTIVATE SUBSCRIPTION (Webhook)
-  // ---------------------------------------------------------
+  // ACTIVATE SUBSCRIPTION (Webhook)
   async activateSubscription(organizationId: string, payload: any) {
-    const { 
-      id: flutterwaveTxId, // This is the Transaction ID
-      tx_ref, 
-      amount, 
-      currency, 
-      payment_plan, 
-      card 
+    const {
+      id: flutterwaveTxId,
+      tx_ref,
+      amount,
+      currency,
+      payment_plan,
+      card,
     } = payload;
 
-    // PLAN VALIDATION
-    // Note: 'payment_plan' might be numeric in payload, convert to string for lookup
+    //  PLAN VALIDATION
     const plan = await this.prisma.plan.findUnique({
-      where: { flutterwavePlanId: payment_plan?.toString() }
+      where: { flutterwavePlanId: payment_plan?.toString() },
     });
 
     if (!plan) {
       this.logger.error(`Webhook received for unknown Plan ID: ${payment_plan}`);
-      // Return successfully to stop Webhook retries, but log error
-      return; 
+      return;
     }
 
-    // B. EXTRACT SUBSCRIPTION ID
-    // Critical: For recurring payments, FW creates a Subscription ID.
-    // It's usually in `payload.subscription_id` or `payload.subscription.id`
-    // If not present, we fallback to transaction ID (but cancellation might fail).
-    const fwSubscriptionId = payload.subscription_id || payload.subscription?.id || flutterwaveTxId.toString();
+    //  EXTRACT SUBSCRIPTION ID
+    const fwSubscriptionId =
+      payload.subscription_id ||
+      payload.subscription?.id ||
+      flutterwaveTxId.toString();
 
-    // C. CALCULATE DATES
+    //  CALCULATE DATES
     const startDate = new Date();
     const endDate = new Date();
-    
+
     if (plan.interval === 'yearly') {
       endDate.setFullYear(endDate.getFullYear() + 1);
     } else {
-      endDate.setMonth(endDate.getMonth() + 1); 
+      endDate.setMonth(endDate.getMonth() + 1);
     }
 
-    // D. DB TRANSACTION
+    // 4. DB TRANSACTION
     return this.prisma.$transaction(async (tx) => {
-      
+      // A. Create/Update Subscription
       const subscription = await tx.subscription.upsert({
         where: { organizationId },
         create: {
@@ -171,7 +180,7 @@ export class BillingService {
         },
         update: {
           planId: plan.id,
-          flutterwaveId: fwSubscriptionId.toString(), 
+          flutterwaveId: fwSubscriptionId.toString(),
           status: 'active',
           currentPeriodStart: startDate,
           currentPeriodEnd: endDate,
@@ -180,24 +189,35 @@ export class BillingService {
         },
       });
 
+      // B. Create Invoice Record
       await tx.transaction.create({
         data: {
           organizationId,
           txRef: tx_ref,
           flutterwaveTxId: flutterwaveTxId.toString(),
-          amount: amount,
+          amount: Number(amount),
           currency: currency,
           status: 'successful',
-          paymentDate: new Date()
-        }
-      });
-      
-      await tx.socialAccount.updateMany({
-        where: { organizationId },
-        data: { isActive: true, errorMessage: null }
+          paymentDate: new Date(),
+        },
       });
 
-      this.logger.log(`Subscription activated for Org ${organizationId}`);
+      // C. Unlock Social Accounts (If they were paused)
+      await tx.socialAccount.updateMany({
+        where: { organizationId },
+        data: { isActive: true, errorMessage: null },
+      });
+
+      // This flips the status from 'PENDING_PAYMENT' to 'ACTIVE'
+      await tx.organization.update({
+        where: { id: organizationId },
+        data: {
+          status: 'ACTIVE',
+          isActive: true,  
+        }
+      });
+
+      this.logger.log(`Subscription activated & Org unlocked: ${organizationId}`);
       return subscription;
     });
   }
@@ -207,7 +227,7 @@ export class BillingService {
   // ---------------------------------------------------------
   async cancelSubscription(organizationId: string) {
     const sub = await this.prisma.subscription.findUnique({
-      where: { organizationId }
+      where: { organizationId },
     });
 
     if (!sub || sub.status !== 'active') {
@@ -215,38 +235,44 @@ export class BillingService {
     }
 
     if (!sub.flutterwaveId) {
-       throw new BadRequestException('Cannot cancel automatically. Contact support.');
+      throw new BadRequestException(
+        'Cannot cancel automatically. Contact support.',
+      );
     }
 
     try {
       await firstValueFrom(
-        this.httpService.put(
-          `${this.FLUTTERWAVE_BASE_URL}/subscriptions/${sub.flutterwaveId}/cancel`,
-          {},
-          {
-             headers: { Authorization: `Bearer ${this.config.get('FLUTTERWAVE_SECRET_KEY')}` }
-          }
-        ).pipe(
-          catchError((error) => {
-            this.logger.error('FW Cancel Error', error.response?.data);
-            throw new BadRequestException('Failed to cancel subscription with provider');
-          })
-        )
+        this.httpService
+          .put(
+            `${this.FLUTTERWAVE_BASE_URL}/subscriptions/${sub.flutterwaveId}/cancel`,
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${this.config.get('FLUTTERWAVE_SECRET_KEY')}`,
+              },
+            },
+          )
+          .pipe(
+            catchError((error) => {
+              this.logger.error('FW Cancel Error', error.response?.data);
+              throw new BadRequestException(
+                'Failed to cancel subscription with provider',
+              );
+            }),
+          ),
       );
 
       return this.prisma.subscription.update({
         where: { organizationId },
         data: {
           status: 'cancelled',
-          cancelAtPeriodEnd: true
-        }
+          cancelAtPeriodEnd: true,
+        },
       });
-
     } catch (error) {
-       // Log the specific error for debugging
-       this.logger.error(`Cancellation failed for Org ${organizationId}`, error);
-       throw error;
+      // Log the specific error for debugging
+      this.logger.error(`Cancellation failed for Org ${organizationId}`, error);
+      throw error;
     }
   }
-
 }

@@ -113,7 +113,6 @@ export class OrganizationsController {
   ) {
     return this.organizationsService.updateOrganization(
       orgId,
-      req.user.id,
       dto,
     );
   }

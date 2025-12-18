@@ -78,6 +78,7 @@ export class BillingController {
     return this.billingService.initializePayment(
       organizationId,
       body.planId,
+      user
     );
   }
 

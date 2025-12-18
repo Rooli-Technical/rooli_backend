@@ -428,7 +428,7 @@ model OrganizationInvitation {
   resentAt       DateTime?
 
   role         Role         @relation(fields: [roleId], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   inviter      User?        @relation("UserSentInvitations", fields: [invitedBy], references: [id], onDelete: SetNull)
 
   message String?

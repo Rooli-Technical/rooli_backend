@@ -14,6 +14,7 @@ export class MembersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getOrganizationMembers(orgId: string, userId: string) {
+    await this.verifyMembershipAccess(orgId, userId);
 
     const members = await this.prisma.organizationMember.findMany({
       where: {
@@ -21,6 +22,7 @@ export class MembersService {
         isActive: true,
       },
       include: {
+        role: true,
         user: {
           select: {
             id: true,
@@ -38,28 +40,132 @@ export class MembersService {
     return members.map((m) => this.toSafeMember(m));
   }
 
+  async addMember(
+    organizationId: string,
+    dto: AddOrganizationMemberDto,
+    currentUserId: string,
+  ) {
+    // A. GUARD: Only Admin/Owner can add members
+    const requester = await this.getMembership(organizationId, currentUserId);
+    if (!requester || !this.isAdminOrOwner(requester)) {
+      throw new ForbiddenException('Only Admins or Owners can add new members');
+    }
+
+    // B. SUBSCRIPTION CHECK: Plan Limits
+    // We fetch the Org + Subscription + Plan in one go to be efficient
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        subscription: {
+          select: {
+            status: true,
+            plan: { select: { maxTeamMembers: true } },
+          },
+        },
+        _count: {
+          select: { members: { where: { isActive: true } } },
+        },
+      },
+    });
+
+    if (!organization) throw new NotFoundException('Organization not found');
+
+    const sub = organization.subscription;
+    const currentCount = organization._count.members;
+
+    // 1. Check if Subscription is Active
+    if (!sub || sub.status !== 'active') {
+      throw new BadRequestException(
+        'Active subscription required to add members',
+      );
+    }
+
+    // 2. Check Limits (Ignored if maxTeamMembers is 0 or -1 for "Unlimited")
+    const limit = sub.plan.maxTeamMembers;
+    if (limit && limit > 0 && currentCount >= limit) {
+      throw new BadRequestException(
+        `Plan limit reached. You can only have ${limit} active members.`,
+      );
+    }
+
+    // C. VALIDATION: User Existence & Uniqueness
+    const [targetUser, targetRole] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: dto.userId } }),
+      this.prisma.role.findUnique({ where: { id: dto.roleId } }),
+    ]);
+
+    if (!targetUser) throw new NotFoundException('User not found');
+    if (!targetRole) throw new NotFoundException('Role not found');
+
+    // Check if they are already a member (Active or Inactive)
+    const existingMembership = await this.prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId,
+          userId: dto.userId,
+        },
+      },
+    });
+
+    // D. EXECUTION: Create or Reactivate
+    if (existingMembership) {
+      if (existingMembership.isActive) {
+        throw new ConflictException('User is already an active member');
+      } else {
+        // Reactivate soft-deleted member
+        const reactivated = await this.prisma.organizationMember.update({
+          where: { id: existingMembership.id },
+          data: {
+            isActive: true,
+            roleId: dto.roleId,
+            permissions: dto.permissions ?? undefined,
+          },
+          include: { user: true, role: true },
+        });
+        return this.toSafeMember(reactivated);
+      }
+    }
+
+    // Create fresh
+    const newMember = await this.prisma.organizationMember.create({
+      data: {
+        organizationId,
+        userId: dto.userId,
+        roleId: dto.roleId,
+        invitedBy: currentUserId,
+        permissions: dto.permissions ?? undefined,
+      },
+      include: { user: true, role: true },
+    });
+
+    return this.toSafeMember(newMember);
+  }
+
   async updateMember(
     orgId: string,
     memberId: string,
     updaterId: string,
     dto: UpdateMemberDto,
   ) {
-    const updaterMembership = await this.getMembership(orgId, updaterId);
-    if (!updaterMembership || !this.isAdminOrOwner(updaterMembership)) {
-      throw new ForbiddenException('Insufficient permissions');
-    }
+    const updater = await this.getMembership(orgId, updaterId);
 
     const targetMember = await this.getMembership(orgId, undefined, memberId);
-    if (!targetMember) {
-      throw new NotFoundException('Member not found');
-    }
+    if (!targetMember) throw new NotFoundException('Member not found');
 
+    // Guard: Protect Owner
     if (this.isOwner(targetMember)) {
-      throw new ForbiddenException('Cannot modify organization owner');
+      throw new ForbiddenException('Cannot modify the Organization Owner');
     }
 
-    if (dto.roleId && !this.isOwner(updaterMembership)) {
-      throw new ForbiddenException('Only owners can assign owner role');
+    //  Only Owners can promote others to Owner/Admin (Optional strictness)
+    if (dto.roleId && !this.isOwner(updater)) {
+      // Fetch the role they are trying to assign
+      const newRole = await this.prisma.role.findUnique({
+        where: { id: dto.roleId },
+      });
+      if (newRole?.name === 'OWNER') {
+        throw new ForbiddenException('Only Owners can transfer ownership');
+      }
     }
 
     const updated = await this.prisma.organizationMember.update({
@@ -69,139 +175,48 @@ export class MembersService {
         isActive: dto.isActive,
         permissions: dto.permissions,
       },
-      include: { user: true },
+      include: { user: true, role: true },
     });
 
     return this.toSafeMember(updated);
   }
 
-  //add admin and org owner guard
- async addMember(
-  organizationId: string,
-  dto: AddOrganizationMemberDto,
-  currentUserId: string,
-) {
-  // 1. Verify organization exists
-  const organization = await this.prisma.organization.findUnique({
-    where: { id: organizationId },
-    select: { id: true },
-  });
-
-  if (!organization) {
-    throw new NotFoundException('Organization not found');
-  }
-
-  // 2. Get active subscription + plan limit
-  const subscription = await this.prisma.subscription.findUnique({
-    where: { organizationId },
-    select: {
-      status: true,
-      plan: {
-        select: {
-          maxTeamMembers: true,
-        },
-      },
-    },
-  });
-
-  // No active subscription = no adding members
-  if (!subscription || subscription.status !== 'active') {
-    throw new BadRequestException(
-      'Your subscription does not allow adding team members',
-    );
-  }
-
-  // 3. Count active members
-  const activeMemberCount = await this.prisma.organizationMember.count({
-    where: {
-      organizationId,
-      isActive: true,
-    },
-  });
-
-  if (activeMemberCount >= subscription.plan.maxTeamMembers) {
-    throw new BadRequestException(
-      'Member limit reached for your current plan',
-    );
-  }
-
-  // 4. Prevent duplicates
-  const existingMember = await this.prisma.organizationMember.findUnique({
-    where: {
-      organizationId_userId: {
-        organizationId,
-        userId: dto.userId,
-      },
-    },
-  });
-
-  if (existingMember) {
-    throw new BadRequestException('User is already a member');
-  }
-
-  // 5. Validate user & role
-  const [user, role] = await Promise.all([
-    this.prisma.user.findUnique({ where: { id: dto.userId } }),
-    this.prisma.role.findUnique({ where: { id: dto.roleId } }),
-  ]);
-
-  if (!user) throw new NotFoundException('User not found');
-  if (!role) throw new NotFoundException('Role not found');
-
-  // 6. Create membership
-  return this.prisma.organizationMember.create({
-    data: {
-      organizationId,
-      userId: dto.userId,
-      roleId: dto.roleId,
-      invitedBy: currentUserId,
-      permissions: dto.permissions ?? null,
-    },
-    include: {
-      user: true,
-      role: true,
-    },
-  });
-}
-
-
   async removeMember(orgId: string, memberId: string, removerId: string) {
-    const removerMembership = await this.getMembership(orgId, removerId);
-    if (!removerMembership || !this.isAdminOrOwner(removerMembership)) {
+    const remover = await this.getMembership(orgId, removerId);
+
+    if (!remover || !this.isAdminOrOwner(remover)) {
       throw new ForbiddenException('Insufficient permissions');
     }
 
     const targetMember = await this.getMembership(orgId, undefined, memberId);
-    if (!targetMember) {
-      throw new NotFoundException('Member not found');
-    }
+    if (!targetMember) throw new NotFoundException('Member not found');
 
     if (targetMember.userId === removerId) {
-      throw new ConflictException('Cannot remove yourself from organization');
+      throw new ConflictException(
+        'You cannot remove yourself. Use "Leave Organization" instead.',
+      );
     }
 
     if (this.isOwner(targetMember)) {
-      throw new ForbiddenException('Cannot remove organization owner');
+      throw new ForbiddenException('Cannot remove the Organization Owner');
     }
 
-    const updatedMember = await this.prisma.organizationMember.update({
+    const updated = await this.prisma.organizationMember.update({
       where: { id: memberId },
       data: { isActive: false },
-      include: { user: true },
+      include: { user: true, role: true },
     });
 
-    return this.toSafeMember(updatedMember);
+    return this.toSafeMember(updated);
   }
 
   async leaveOrganization(orgId: string, userId: string) {
     const membership = await this.getMembership(orgId, userId);
-    if (!membership) {
-      throw new NotFoundException('Membership not found');
-    }
+    if (!membership) throw new NotFoundException('Membership not found');
 
     if (this.isOwner(membership)) {
       throw new ForbiddenException(
-        'Organization owner cannot leave. Transfer ownership first.',
+        'Owner cannot leave. Please transfer ownership to another member first.',
       );
     }
 
@@ -213,7 +228,16 @@ export class MembersService {
     return { success: true, message: 'Successfully left organization' };
   }
 
-  // --- Helpers ---
+  // ===========================================================================
+  // HELPERS
+  // ===========================================================================
+
+  private async verifyMembershipAccess(orgId: string, userId: string) {
+    const count = await this.prisma.organizationMember.count({
+      where: { organizationId: orgId, userId, isActive: true },
+    });
+    if (count === 0) throw new ForbiddenException('Access denied');
+  }
 
   private async getMembership(
     orgId: string,
@@ -231,31 +255,33 @@ export class MembersService {
     });
   }
 
-  private isOwner(member: { role: { name: string } }) {
-    return member.role?.name === 'OWNER';
+  // Flexible check to handle potential casing issues or different schema names
+  private isOwner(member: { role?: { name: string } }) {
+    return member.role?.name?.toUpperCase() === 'OWNER';
   }
 
-  private isAdminOrOwner(member: { role: { name: string } }) {
-    return member.role?.name === 'ADMIN' || member.role?.name === 'OWNER';
+  private isAdminOrOwner(member: { role?: { name: string } }) {
+    const r = member.role?.name?.toUpperCase();
+    return r === 'ADMIN' || r === 'OWNER';
   }
-
-
 
   private toSafeMember(member: any) {
     return {
       id: member.id,
-      role: member.role,
+      role: member.role ? { id: member.role.id, name: member.role.name } : null,
       isActive: member.isActive,
       permissions: member.permissions,
       joinedAt: member.joinedAt,
       lastActiveAt: member.lastActiveAt,
-      user: member.user && {
-        id: member.user.id,
-        email: member.user.email,
-        firstName: member.user.firstName,
-        lastName: member.user.lastName,
-        avatar: member.user.avatar,
-      },
+      user: member.user
+        ? {
+            id: member.user.id,
+            email: member.user.email,
+            firstName: member.user.firstName,
+            lastName: member.user.lastName,
+            avatar: member.user.avatar,
+          }
+        : null,
     };
   }
 }

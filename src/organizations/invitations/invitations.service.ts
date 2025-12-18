@@ -20,137 +20,153 @@ export class InvitationsService {
   ) {}
 
   async inviteMember(orgId: string, inviterId: string, dto: InviteMemberDto) {
-    const [existingUser, role] = await Promise.all([ this.prisma.user.findUnique({
-      where: { email: dto.email },
-      include: {
-        organizationMemberships: {
-          where: { organizationId: orgId, isActive: true },
-        },
-      },
-    }), this.prisma.role.findUnique({
-      where: { id: dto.roleId },
-    }), 
-  ]);
-    
-    if (!role) {
-      throw new BadRequestException('Invalid role specified');
-    }
+    const email = dto.email.toLowerCase();
 
+    // 1. Parallel Checks: User Existence & Role Validity
+    const [existingUser, role] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { email },
+        include: {
+          organizationMemberships: {
+            where: { organizationId: orgId, isActive: true },
+          },
+        },
+      }),
+      this.prisma.role.findUnique({ where: { id: dto.roleId } }),
+    ]);
+
+    if (!role) throw new BadRequestException('Invalid role specified');
+
+    // 2. Conflict: Is user already a member?
     if (existingUser?.organizationMemberships.length > 0) {
       throw new ConflictException(
         'User is already a member of this organization',
       );
     }
 
-    if (!(await this.checkMemberLimit(orgId))) {
-      throw new BadRequestException('Organization member limit reached');
-    }
+    // 3. Conflict: Is there already a pending invite?
+    const existingInvite = await this.prisma.organizationInvitation.findFirst({
+      where: {
+        organizationId: orgId,
+        email: email,
+        status: 'PENDING',
+        expiresAt: { gt: new Date() }, // Still valid
+      },
+    });
 
-    const existingInvitation =
-      await this.prisma.organizationInvitation.findFirst({
-        where: {
-          email: dto.email,
-          organizationId: orgId,
-          status: 'PENDING',
-          expiresAt: { gt: new Date() },
-        },
-      });
-
-    if (existingInvitation) {
+    if (existingInvite) {
       throw new ConflictException(
-        'Pending invitation already exists for this email',
+        'A pending invitation already exists for this email',
       );
     }
 
+    // 4. Limit Check (Including Pending Invites)
+    const canInvite = await this.checkCapacity(orgId);
+    if (!canInvite) {
+      throw new BadRequestException(
+        'Organization member limit reached (including pending invitations)',
+      );
+    }
+
+    // 5. Create Invitation
     const token = this.generateToken();
     const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_MS);
 
     const invitation = await this.prisma.organizationInvitation.create({
       data: {
-        email: dto.email,
+        email: email,
         organizationId: orgId,
         invitedBy: inviterId,
         roleId: role.id,
-        message: dto.message,
         token,
         expiresAt,
+        message: dto.message,
       },
       include: {
         organization: true,
-        inviter: { select: { firstName: true, lastName: true, email: true } },
+        inviter: { select: { firstName: true, lastName: true } },
       },
     });
 
-    // await this.mailService.sendInvitationEmail({
-    //   to: dto.email,
-    //   organizationName: invitation.organization.name,
-    //   inviterName: this.formatInviterName(invitation.inviter),
-    //   token,
-    //   role: role.name,
-    //   message: dto.message,
-    // });
+    // 6. Send Email (Async)
+    // await this.mailService.sendInvitationEmail({...});
 
     return invitation;
   }
 
   async acceptInvitation(token: string, userId: string) {
+    // 1. Validate Invite
     const invitation = await this.prisma.organizationInvitation.findUnique({
       where: { token },
-      include: { organization: true, role: true },
+      include: { role: true },
     });
 
-    if (!invitation || invitation.expiresAt < new Date()) {
-      throw new NotFoundException('Invalid or expired invitation');
+    if (!invitation || invitation.status !== 'PENDING') {
+      throw new NotFoundException('Invalid or inactive invitation');
     }
 
-    if (invitation.status !== 'PENDING') {
-      throw new BadRequestException('Invitation has already been processed');
+    if (invitation.expiresAt < new Date()) {
+      throw new BadRequestException('Invitation has expired');
     }
 
+    // 2. Validate User Match (Security Critical)
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.email !== invitation.email) {
+
+    // Case-insensitive comparison is safer
+    if (!user || user.email.toLowerCase() !== invitation.email.toLowerCase()) {
       throw new BadRequestException(
-        'Invitation email does not match user email',
+        'This invitation belongs to a different email address',
       );
     }
 
-    if (!(await this.checkMemberLimit(invitation.organizationId))) {
-      throw new BadRequestException('Organization member limit reached');
+    // 3. Double Check Capacity (Race Condition Protection)
+    // We strictly count active members now, as this invite transitions from Pending -> Active
+    const hasCapacity = await this.checkCapacity(
+      invitation.organizationId,
+      true,
+    );
+    if (!hasCapacity) {
+      throw new BadRequestException(
+        'Organization capacity reached. Contact the admin.',
+      );
     }
 
+    // 4. Transaction: Execute Join
     return this.prisma.$transaction(async (tx) => {
+      // Create Member
       const membership = await tx.organizationMember.create({
         data: {
           organizationId: invitation.organizationId,
           userId,
-          roleId: invitation.role.id,
+          roleId: invitation.roleId,
           invitedBy: invitation.invitedBy,
         },
       });
 
+      // Update Invite Status
       await tx.organizationInvitation.update({
         where: { id: invitation.id },
         data: { status: 'ACCEPTED' },
       });
+
       return membership;
     });
   }
 
-  async resendInvitation(invitationId: string, inviterId: string) {
+  async resendInvitation(invitationId: string) {
     const invitation = await this.prisma.organizationInvitation.findUnique({
       where: { id: invitationId },
       include: { organization: true, inviter: true, role: true },
     });
 
-    if (!invitation) throw new NotFoundException('Invitation not found');
-    if (invitation.status !== 'PENDING') {
-      throw new BadRequestException('Cannot resend a processed invitation');
+    if (!invitation || invitation.status !== 'PENDING') {
+      throw new BadRequestException('Invitation is not pending');
     }
 
     const newToken = this.generateToken();
     const newExpiresAt = new Date(Date.now() + INVITATION_EXPIRY_MS);
 
-    const updatedInvitation = await this.prisma.organizationInvitation.update({
+    const updated = await this.prisma.organizationInvitation.update({
       where: { id: invitationId },
       data: {
         token: newToken,
@@ -159,64 +175,30 @@ export class InvitationsService {
       },
     });
 
-    await this.mailService.sendInvitationEmail({
-      to: invitation.email,
-      organizationName: invitation.organization.name,
-      inviterName: this.formatInviterName(invitation.inviter),
-      token: newToken,
-      role: invitation.role.name,
-      message: invitation.message,
-    });
+    // await this.mailService.sendInvitationEmail(...)
 
-    return updatedInvitation;
+    return updated;
   }
 
-  async revokeInvitation(invitationId: string, revokerId: string) {
-    const invitation = await this.prisma.organizationInvitation.findUnique({
-      where: { id: invitationId },
-      include: { organization: true },
-    });
-
-    if (!invitation) throw new NotFoundException('Invitation not found');
-
-    const updatedInvitation = await this.prisma.organizationInvitation.update({
+  async revokeInvitation(invitationId: string) {
+    return this.prisma.organizationInvitation.update({
       where: { id: invitationId },
       data: { status: 'REVOKED' },
     });
-
-    return updatedInvitation;
   }
 
-   async declineInvitation(token: string, currentUserId: string) {
+  async declineInvitation(token: string) {
     const invitation = await this.prisma.organizationInvitation.findUnique({
       where: { token },
-      include: {
-        organization: true,
-      },
     });
 
-    if (!invitation) {
-      throw new NotFoundException('Invitation not found');
-    }
-
-    if (invitation.status !== InvitationStatus.PENDING) {
+    if (!invitation || invitation.status !== 'PENDING') {
       throw new BadRequestException('Invitation is no longer active');
     }
 
-    if (invitation.expiresAt < new Date()) {
-      await this.prisma.organizationInvitation.update({
-        where: { id: invitation.id },
-        data: { status: InvitationStatus.EXPIRED },
-      });
-      throw new BadRequestException('Invitation has expired');
-    }
-
-
     return this.prisma.organizationInvitation.update({
       where: { id: invitation.id },
-      data: {
-        status: InvitationStatus.DECLINED,
-      },
+      data: { status: 'DECLINED' },
     });
   }
 
@@ -225,50 +207,58 @@ export class InvitationsService {
       where: { organizationId: orgId },
       include: {
         inviter: { select: { firstName: true, lastName: true, email: true } },
+        role: { select: { name: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-private async checkMemberLimit(orgId: string): Promise<boolean> {
-  const [subscription, memberCount] = await this.prisma.$transaction([
-    this.prisma.subscription.findUnique({
-      where: { organizationId: orgId },
-      select: {
-        status: true,
-        plan: {
-          select: {
-            maxTeamMembers: true,
-          },
-        },
-      },
-    }),
-    this.prisma.organizationMember.count({
-      where: {
-        organizationId: orgId,
-        isActive: true,
-      },
-    }),
-  ]);
+  // ===========================================================================
+  // HELPERS
+  // ===========================================================================
 
-  // No active subscription → deny adding members
-  if (!subscription || subscription.status !== 'active') {
-    return false;
+  /**
+   * Checks if the organization has space for a new member.
+   * Logic: Active Members + Pending Invites < Max Limit
+   */
+  private async checkCapacity(
+    orgId: string,
+    skipPendingCount = false,
+  ): Promise<boolean> {
+    const [subscription, activeCount, pendingCount] = await Promise.all([
+      this.prisma.subscription.findUnique({
+        where: { organizationId: orgId },
+        include: { plan: true },
+      }),
+      this.prisma.organizationMember.count({
+        where: { organizationId: orgId, isActive: true },
+      }),
+      // Only count pending if we are creating a NEW invite.
+      // If we are accepting, the "Pending" slot is technically the one we are claiming.
+      skipPendingCount
+        ? 0
+        : this.prisma.organizationInvitation.count({
+            where: {
+              organizationId: orgId,
+              status: 'PENDING',
+              expiresAt: { gt: new Date() },
+            },
+          }),
+    ]);
+
+    // 1. No Active Subscription = No Invitations
+    if (!subscription || subscription.status !== 'active') return false;
+
+    // 2. Handle "Unlimited" (-1) logic if your plan supports it
+    const maxMembers = subscription.plan.maxTeamMembers;
+    if (maxMembers === -1) return true;
+
+    // 3. The Strict Check
+    const usedSlots = activeCount + pendingCount;
+    return usedSlots < maxMembers;
   }
-
-  const maxMembers = subscription.plan.maxTeamMembers;
-
-  return memberCount < maxMembers;
-}
 
   private generateToken(): string {
     return randomBytes(32).toString('hex');
-  }
-
-  private formatInviterName(inviter: {
-    firstName?: string;
-    lastName?: string;
-  }) {
-    return `${inviter?.firstName ?? ''} ${inviter?.lastName ?? ''}`.trim();
   }
 }

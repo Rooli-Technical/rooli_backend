@@ -25,8 +25,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly MAX_LOGIN_ATTEMPTS = 5;
-  private readonly LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
   constructor(
     private readonly prisma: PrismaService,
