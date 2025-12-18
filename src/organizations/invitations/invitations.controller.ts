@@ -62,15 +62,15 @@ export class InvitationsController {
   @ApiOperation({ summary: 'Resend an invitation email' })
   @ApiResponse({ status: 200, description: 'Invitation resent successfully' })
   @ApiResponse({ status: 404, description: 'Invitation not found' })
-  async resendInvitation(@Param('id') invitationId: string, @Req() req: any) {
-    return this.invitationsService.resendInvitation(invitationId, req.user.id);
+  async resendInvitation(@Param('id') invitationId: string) {
+    return this.invitationsService.resendInvitation(invitationId);
   }
 
   @Post(':token/decline')
   @ApiOperation({ summary: 'Decline an organization invitation' })
   @ApiResponse({ status: 200, description: 'Invitation successfully declined' })
   declineInvitation(@Param('token') token: string, @Req() req: any) {
-    return this.invitationsService.declineInvitation(token, req.user.id);
+    return this.invitationsService.declineInvitation(token);
   }
 
   @Delete('invitations/:id/revoke')
@@ -78,7 +78,7 @@ export class InvitationsController {
   @ApiResponse({ status: 200, description: 'Invitation revoked successfully' })
   @ApiResponse({ status: 404, description: 'Invitation not found' })
   async revokeInvitation(@Param('id') invitationId: string, @Req() req: any) {
-    return this.invitationsService.revokeInvitation(invitationId, req.user.id);
+    return this.invitationsService.revokeInvitation(invitationId);
   }
 
   @Get('organizations/:orgId/invitations')
