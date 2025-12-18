@@ -20,7 +20,6 @@ import {
   ApiOkResponse,
 } from '@nestjs/swagger';
 import { OrganizationUsageDto } from './dtos/organization-usage.dto';
-import { OrganizationStatsDto } from './dtos/organization-stats.dto';
 import { GetAllOrganizationsDto } from './dtos/get-organiations.dto';
 
 @ApiTags('Organizations')
@@ -134,22 +133,5 @@ export class OrganizationsController {
   })
   async deleteOrganization(@Req() req, @Param('id') orgId: string) {
     return this.organizationsService.deleteOrganization(orgId, req.user.id);
-  }
-
-  @Get(':id/usage')
-  @ApiOperation({
-    summary: 'Get organization usage',
-    description:
-      'Returns statistics about organization usage like member count, AI credits, posts, and media storage.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Organization usage data retrieved',
-    type: OrganizationUsageDto,
-  })
-  async getUsage(
-    @Param('id') orgId: string,
-  ): Promise<OrganizationUsageDto> {
-    return this.organizationsService.getOrganizationUsage(orgId);
   }
 }

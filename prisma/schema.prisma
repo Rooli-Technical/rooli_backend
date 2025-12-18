@@ -14,6 +14,7 @@ model User {
   firstName    String?
   lastName     String?
   avatar       String?
+  userType    UserType  @default(INDIVIDUAL)
   timezone     String? @default("Africa/Lagos")
   systemRoleId String?
   systemRole   Role?   @relation("UserSystemRole", fields: [systemRoleId], references: [id])
@@ -145,7 +146,7 @@ model PageAccount {
   socialAccountId     String
   platformPageId      String // Facebook Page ID
   name                String
-  isActive          Boolean @default(true)
+  isActive            Boolean @default(true)
   accessToken         String // Page access token (encrypted)
   category            String? // Page category
   instagramBusinessId String? // Linked Instagram account ID
@@ -341,14 +342,15 @@ model Organization {
   id                 String                   @id @default(cuid())
   name               String
   email              String?
+  timezone     String?                        @default("Africa/Lagos")
   slug               String                   @unique
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
   isActive           Boolean                  @default(true)
-  planTier           PlanTier                 @default(FREE)
-  planStatus         PlanStatus               @default(ACTIVE)
-  subscriptionEndsAt DateTime?
   totalCreditsUsed   Int                      @default(0)
+
+  status OrganizationStatus @default(PENDING_PAYMENT)
+  
   members            OrganizationMember[]
   invitations        OrganizationInvitation[]
   socialAccounts     SocialAccount[]
@@ -360,26 +362,24 @@ model Organization {
   aiImageGenerations   AiImageGeneration[]
   conversations        Conversation[]
   notifications        NotificationEntity[]
-  webhookEvents        WebhookEvent[]
+  webhookLogs          WebhookLog[]
   PostingSchedule      PostingSchedule[]
   ContentTemplate      ContentTemplate[]
   auditLogs            AuditLog[]
 
-  aiUsages           AIUsage[]
-  posts              Post[]
-  subscription       Subscription?
-  creditTransactions CreditTransaction[]
+  aiUsages AIUsage[]
+  posts    Post[]
 
   brandKit     BrandKit[]
   mediaFolders MediaFolder[]
   roles        Role[]
 
-  // billing and limits
-  monthlyCreditLimit Int?    @default(1000) // NULL = unlimited for enterprise
-  maxMembers         Int     @default(5) // Based on your "up to 5 team members"
-  billingEmail       String?
-  timezone           String  @default("UTC")
-  currency           String  @default("USD")
+  // billing
+  billingEmail          String?
+  flutterwaveCustomerId String? // Optional: The numeric ID if you need it (e.g. 15423)
+
+  subscription Subscription? // 1-to-1 relation
+  transactions Transaction[] // Payment history
 
   trialEndsAt   DateTime?
   trialExtended Boolean   @default(false)
@@ -387,7 +387,6 @@ model Organization {
 
   publishingMetrics PublishingMetric[]
 
-  @@index([planTier, planStatus])
   @@index([trialEndsAt])
 }
 
@@ -406,6 +405,9 @@ model OrganizationMember {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation("UserOrganizationMemberships", fields: [userId], references: [id], onDelete: Cascade)
   role         Role         @relation(fields: [roleId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt 
 
   @@unique([organizationId, userId])
   @@index([userId, isActive])
@@ -436,6 +438,78 @@ model OrganizationInvitation {
   @@index([expiresAt]) // For cleanup jobs
   @@index([organizationId, createdAt]) // For org invitation history
   @@index([email, status])
+}
+
+// The Plan Model (Your Tiers)
+model Plan {
+  id          String  @id @default(cuid())
+  name        String // "Starter", "Agency"
+  description String?
+
+  // FLUTTERWAVE MAPPING
+  flutterwavePlanId String @unique // (e.g. "12345") - The ID from Flutterwave Dashboard
+
+  // COST (For display in your UI)
+  price    Decimal @db.Decimal(10, 2)
+  currency String  @default("NGN") // or USD, KES
+  interval String // "monthly", "yearly"
+
+  // LIMITS (The "Guards")
+  maxSocialAccounts Int @default(4)
+  maxTeamMembers    Int @default(1)
+  maxPostsPerMonth  Int @default(100)
+
+  features Json    @default("{}")
+  isActive Boolean @default(true)
+
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// The Active Subscription
+model Subscription {
+  id String @id @default(cuid())
+
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  // FLUTTERWAVE DATA
+  flutterwaveId String @unique // The subscription ID (e.g. "4521")
+  status        String // active, cancelled, successful (Flutterwave statuses)
+
+  // TOKENIZATION (For charging card later if needed)
+  cardToken         String? // "flw_t123..."
+  cancelAtPeriodEnd Boolean @default(false)
+
+  // ACCESS CONTROL
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Transaction History (Invoices)
+model Transaction {
+  id String @id @default(cuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // FLUTTERWAVE REFS
+  txRef           String @unique // Your unique ref (e.g. "rooli_123_xyz")
+  flutterwaveTxId String // The global ID (e.g. "345678")
+
+  amount   Decimal
+  currency String
+  status   String // successful, failed
+
+  paymentDate DateTime @default(now())
 }
 
 model AiContentGeneration {
@@ -725,37 +799,26 @@ model AccountAnalytics {
 // WEBHOOK & INTEGRATION
 // ========================
 
-model WebhookEvent {
-  id                String             @id @default(cuid())
-  organizationId    String
-  platform          Platform
-  eventType         WebhookEventType
-  externalId        String? // Platform’s event ID
-  platformAccountId String?
-  payload           Json
-  processed         Boolean            @default(false)
-  processedAt       DateTime?
-  errorMessage      String?
-  retryCount        Int                @default(0)
-  createdAt         DateTime           @default(now())
-  deadLetter        DeadLetterWebhook?
+model WebhookLog {
+  id String @id @default(cuid())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider   String // "FLUTTERWAVE", "META", "LINKEDIN"
+  resourceId String? // The Payment Ref or User ID involved
+  eventType  String? // "charge.completed", "permissions_revoked"
 
-  @@unique([platform, externalId])
-  @@index([organizationId, processed, createdAt])
-  @@index([platform, eventType, processed])
-  @@index([platformAccountId])
-}
+  payload Json // The FULL raw body sent by the provider
 
-model DeadLetterWebhook {
-  id             String   @id @default(cuid())
-  webhookEventId String   @unique
-  reason         String
-  payload        Json
-  createdAt      DateTime @default(now())
+  status       WebhookStatus @default(PENDING) // PENDING, PROCESSED, FAILED, IGNORED
+  errorMessage String?
 
-  webhookEvent WebhookEvent @relation(fields: [webhookEventId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([provider, status])
+  @@index([createdAt])
 }
 
 model PostingSchedule {
@@ -886,112 +949,6 @@ enum InvoiceStatus {
   UNCOLLECTIBLE
 }
 
-model Subscription {
-  id                   String  @id @default(cuid())
-  organizationId       String  @unique
-  stripeSubscriptionId String? @unique
-  stripeCustomerId     String? @unique
-
-  // Plan details
-  planTier        PlanTier
-  billingInterval BillingInterval @default(MONTHLY)
-  status          PlanStatus      @default(TRIALING)
-
-  // Pricing
-  unitAmount Int // in cents
-  currency   String @default("usd")
-
-  // Limits
-  monthlyCreditLimit Int?
-  maxMembers         Int
-
-  // Billing dates
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  cancelAt           DateTime?
-  canceledAt         DateTime?
-
-  // Trial
-  trialStart DateTime?
-  trialEnd   DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invoices     Invoice[]
-  usageRecords UsageRecord[]
-
-  @@index([status])
-  @@index([currentPeriodEnd])
-  @@index([trialEnd])
-}
-
-model Invoice {
-  id              String        @id @default(cuid())
-  subscriptionId  String
-  stripeInvoiceId String?       @unique
-  number          String? // Human-readable invoice number
-  status          InvoiceStatus @default(DRAFT)
-
-  // Amounts
-  amountDue  Int // in cents
-  amountPaid Int    @default(0)
-  tax        Int    @default(0)
-  currency   String @default("usd")
-
-  // Dates
-  invoiceDate DateTime?
-  dueDate     DateTime?
-  paidAt      DateTime?
-
-  // PDF
-  invoicePdfUrl String?
-
-  // Line items (simplified - could be separate table for complex cases)
-  lineItems Json // Array of { description, amount, quantity }
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-  @@index([status])
-  @@index([dueDate])
-  @@index([subscriptionId, createdAt])
-}
-
-model UsageRecord {
-  id             String   @id @default(cuid())
-  subscriptionId String
-  date           DateTime // Date of usage
-  metric         String // "ai_tokens", "image_generations", "posts"
-  quantity       Int // Amount used
-  recordedAt     DateTime @default(now())
-
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-  @@unique([subscriptionId, date, metric])
-  @@index([date, metric])
-}
-
-model CreditTransaction {
-  id             String     @id @default(cuid())
-  organizationId String
-  type           CreditType // PURCHASE, USAGE, REFUND, BONUS
-  amount         Int // Can be positive (purchase) or negative (usage)
-  description    String
-  referenceId    String? // Stripe payment intent ID or usage record ID
-  balanceAfter   Int // Running balance after this transaction
-
-  createdAt DateTime @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, createdAt])
-  @@index([type, createdAt])
-}
-
 enum SocialAccountRole {
   OWNER
   MANAGER
@@ -1060,6 +1017,11 @@ model RolePermission {
   @@index([roleId])
 }
 
+enum UserType {
+  INDIVIDUAL // Regular business (1 Org limit)
+  AGENCY     // Manages multiple clients (Multiple Orgs allowed)
+}
+
 enum PostStatus {
   DRAFT
   PENDING_APPROVAL
@@ -1121,6 +1083,12 @@ enum PlanStatus {
   CANCELED
   PAST_DUE
   TRIALING
+}
+
+enum OrganizationStatus {
+  PENDING_PAYMENT // Created but not paid yet
+  ACTIVE          // Paid and running
+  SUSPENDED       // Ban or failed payments
 }
 
 enum InvitationStatus {
@@ -1330,4 +1298,11 @@ enum TemplateStatus {
   ACTIVE
   ARCHIVED
   DELETED
+}
+
+enum WebhookStatus {
+  PENDING
+  PROCESSED
+  FAILED
+  IGNORED
 }

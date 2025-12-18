@@ -76,70 +76,94 @@ export class MembersService {
   }
 
   //add admin and org owner guard
-   async addMember(
-    organizationId: string,
-    dto: AddOrganizationMemberDto,
-    currentUserId: string,
-  ) {
-    // Verify org exists
-    const organization = await this.prisma.organization.findUnique({
-      where: { id: organizationId },
-      include: { members: true },
-    });
+ async addMember(
+  organizationId: string,
+  dto: AddOrganizationMemberDto,
+  currentUserId: string,
+) {
+  // 1. Verify organization exists
+  const organization = await this.prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { id: true },
+  });
 
+  if (!organization) {
+    throw new NotFoundException('Organization not found');
+  }
 
-    if (!organization) throw new NotFoundException('Organization not found');
-
-    // Enforce member limit
-    const activeMemberCount = await this.prisma.organizationMember.count({
-      where: { organizationId, isActive: true },
-    });
-
-    if (
-      organization.maxMembers !== null &&
-      activeMemberCount >= organization.maxMembers
-    ) {
-      throw new BadRequestException('Member limit reached for this plan');
-    }
-
-    // Prevent duplicates
-    const existingMember = await this.prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId,
-          userId: dto.userId,
+  // 2. Get active subscription + plan limit
+  const subscription = await this.prisma.subscription.findUnique({
+    where: { organizationId },
+    select: {
+      status: true,
+      plan: {
+        select: {
+          maxTeamMembers: true,
         },
       },
-    });
+    },
+  });
 
-    if (existingMember) {
-      throw new BadRequestException('User is already a member');
-    }
+  // No active subscription = no adding members
+  if (!subscription || subscription.status !== 'active') {
+    throw new BadRequestException(
+      'Your subscription does not allow adding team members',
+    );
+  }
 
-    // Validate user & role
-    const [user, role] = await Promise.all([
-      this.prisma.user.findUnique({ where: { id: dto.userId } }),
-      this.prisma.role.findUnique({ where: { id: dto.roleId } }),
-    ]);
+  // 3. Count active members
+  const activeMemberCount = await this.prisma.organizationMember.count({
+    where: {
+      organizationId,
+      isActive: true,
+    },
+  });
 
-    if (!user) throw new NotFoundException('User not found');
-    if (!role) throw new NotFoundException('Role not found');
+  if (activeMemberCount >= subscription.plan.maxTeamMembers) {
+    throw new BadRequestException(
+      'Member limit reached for your current plan',
+    );
+  }
 
-    // Create membership
-    return this.prisma.organizationMember.create({
-      data: {
+  // 4. Prevent duplicates
+  const existingMember = await this.prisma.organizationMember.findUnique({
+    where: {
+      organizationId_userId: {
         organizationId,
         userId: dto.userId,
-        roleId: dto.roleId,
-        invitedBy: currentUserId,
-        permissions: dto.permissions ?? null,
       },
-      include: {
-        user: true,
-        role: true,
-      },
-    });
+    },
+  });
+
+  if (existingMember) {
+    throw new BadRequestException('User is already a member');
   }
+
+  // 5. Validate user & role
+  const [user, role] = await Promise.all([
+    this.prisma.user.findUnique({ where: { id: dto.userId } }),
+    this.prisma.role.findUnique({ where: { id: dto.roleId } }),
+  ]);
+
+  if (!user) throw new NotFoundException('User not found');
+  if (!role) throw new NotFoundException('Role not found');
+
+  // 6. Create membership
+  return this.prisma.organizationMember.create({
+    data: {
+      organizationId,
+      userId: dto.userId,
+      roleId: dto.roleId,
+      invitedBy: currentUserId,
+      permissions: dto.permissions ?? null,
+    },
+    include: {
+      user: true,
+      role: true,
+    },
+  });
+}
+
 
   async removeMember(orgId: string, memberId: string, removerId: string) {
     const removerMembership = await this.getMembership(orgId, removerId);

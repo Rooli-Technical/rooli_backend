@@ -1,66 +1,104 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { BillingService } from './billing.service';
-import { RecordUsageDto } from './dtos/usage-record.dto';
-import {
-  CreateCheckoutSessionDto,
-  BillingPortalSessionDto,
-} from './types/billing.types';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
-import { OrganizationGuard } from '@/common/guards/organization.guard';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { PlanDto } from './dto/plan-response.dto';
+import { Public } from '@/common/decorators/public.decorator';
 
+@ApiTags('Billing')
+@ApiBearerAuth()
 @Controller('billing')
-
 export class BillingController {
-  constructor(
-    private readonly billingService: BillingService,
-    //private readonly stripeService: StripeService,
-  ) {}
+  constructor(private readonly billingService: BillingService) {}
 
-  @Post('checkout-session')
-  createCheckoutSession(
-    @Req() req,
-    @Body() createCheckoutSessionDto: CreateCheckoutSessionDto,
+
+  @Get('plans')
+  @Public()
+  @ApiOperation({
+    summary: 'Get available subscription plans',
+    description: 'Returns all active billing plans ordered by price.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of available plans',
+    type: [PlanDto],
+  })
+  async getPlans() {
+    return this.billingService.getAvailablePlans();
+  }
+
+  @Get('subscription')
+  @ApiOperation({
+    summary: 'Get current organization subscription',
+    description: 'Returns the active subscription and plan details.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current subscription details',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No subscription found',
+  })
+  async getSubscription(@Req() req: any) {
+    const organizationId = req.user.organizationId;
+    return this.billingService.getSubscription(organizationId);
+  }
+
+
+  @Post('checkout')
+  @Public()
+  @ApiOperation({
+    summary: 'Initialize subscription payment',
+    description:
+      'Creates a Flutterwave checkout session and returns a payment URL.',
+  })
+  @ApiBody({ type: CreatePaymentDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Payment initialized',
+    schema: {
+      example: {
+        paymentUrl: 'https://checkout.flutterwave.com/...',
+        txRef: 'rooli_org123_171500000',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid plan or billing email missing',
+  })
+  async initializePayment(
+    @Req() req: any,
+    body: CreatePaymentDto,
   ) {
-    return this.billingService.createCheckoutSession(
-      req.organization.id,
-      createCheckoutSessionDto,
+    const organizationId = req.user.organizationId;
+    const user = req.user;
+
+    return this.billingService.initializePayment(
+      organizationId,
+      body.planId,
     );
   }
 
-  @Post('portal-session')
-  createBillingPortalSession(
-    @Req() req,
-    @Body() billingPortalSessionDto: BillingPortalSessionDto,
-  ) {
-    return this.billingService.createBillingPortalSession(
-      req.organization.id,
-      billingPortalSessionDto,
-    );
-  }
 
-  @Get('overview')
-  getBillingOverview(@Req() req) {
-    return this.billingService.getBillingOverview(req.organization.id);
+  @Delete('subscription')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Cancel current subscription',
+    description:
+      'Cancels auto-renewal. Access remains until the current period ends.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Subscription cancelled successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'No active subscription to cancel',
+  })
+  async cancelSubscription(@Req() req: any) {
+    const organizationId = req.user.organizationId;
+    return this.billingService.cancelSubscription(organizationId);
   }
-
-  @Post('usage')
-  recordUsage(@Req() req, @Body() recordUsageDto: RecordUsageDto) {
-    return this.billingService.recordUsage(req.organization.id, recordUsageDto);
-  }
-
-  // @Post('webhook')
-  // @RawBodyResponse()
-  // async handleWebhook(
-  //   @Headers('stripe-signature') signature: string,
-  //   @Body() rawBody: Buffer
-  // ) {
-  //   try {
-  //     const event = this.stripeService.constructEvent(rawBody, signature);
-  //     await this.billingService.handleWebhookEvent(event);
-  //     return { received: true };
-  //   } catch (error) {
-  //     console.error('Webhook error:', error);
-  //     throw new Error('Webhook signature verification failed');
-  //   }
-  // }
 }

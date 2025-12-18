@@ -30,6 +30,7 @@ import { BullBoardModule } from './common/bull-boad/bull-board.module';
 import { BullModule } from '@nestjs/bullmq';
 import { AccessControlModule } from './access-control/access-control.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { SubscriptionGuard } from './common/guards/subscription.guard';
 
 @Module({
   imports: [
@@ -133,6 +134,10 @@ import { AnalyticsModule } from './analytics/analytics.module';
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+  // {
+  //   provide: APP_GUARD,
+  //   useClass: SubscriptionGuard, // Applies to EVERYTHING by default
+  // },
   ],
 })
 export class AppModule {}

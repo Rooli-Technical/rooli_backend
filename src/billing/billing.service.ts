@@ -1,499 +1,252 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PLANS, CREDIT_COST } from './billing.constants';
-import { RecordUsageDto } from './dtos/usage-record.dto';
-import { CreateCheckoutSessionDto, BillingPortalSessionDto, UpdateSubscriptionDto } from './types/billing.types';
 import { PrismaService } from '@/prisma/prisma.service';
-import { CreditType, PlanTier, BillingInterval } from '@generated/enums';
-
+import { HttpService } from '@nestjs/axios';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { firstValueFrom, catchError } from 'rxjs';
 
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
+  private readonly FLUTTERWAVE_BASE_URL = 'https://api.flutterwave.com/v3';
 
   constructor(
     private readonly prisma: PrismaService,
-    //private readonly stripeService: StripeService,
+    private readonly httpService: HttpService,
+    private readonly config: ConfigService
   ) {}
 
-  async createCheckoutSession(
-    organizationId: string,
-    dto: CreateCheckoutSessionDto,
-  ) {
-    const organization = await this.prisma.organization.findUnique({
-      where: { id: organizationId },
-      include: { subscription: true },
+// ---------------------------------------------------------
+  // 1. GET AVAILABLE PLANS
+  // ---------------------------------------------------------
+  async getAvailablePlans() {
+    return this.prisma.plan.findMany({
+      where: { isActive: true },
+      orderBy: { price: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        currency: true,
+        interval: true,
+        features: true,
+      }
     });
-
-    if (!organization) {
-      throw new NotFoundException('Organization not found');
-    }
-
-    // Check if already has active subscription
-    if (
-      organization.subscription &&
-      organization.subscription.status === 'ACTIVE'
-    ) {
-      throw new ConflictException(
-        'Organization already has an active subscription',
-      );
-    }
-
-    let customerId = organization.subscription?.stripeCustomerId;
-
-    // Create Stripe customer if doesn't exist
-  //   if (!customerId) {
-  //     const customer = await this.stripeService.createCustomer(
-  //       organizationId,
-  //       organization.billingEmail || 'admin@organization.com',
-  //       organization.name,
-  //     );
-  //     customerId = customer.id;
-
-  //     // Update organization with customer ID
-  //     await this.prisma.subscription.upsert({
-  //       where: { organizationId },
-  //       create: {
-  //         organizationId,
-  //         stripeCustomerId: customerId,
-  //         planTier: dto.planTier,
-  //         billingInterval: dto.billingInterval,
-  //         status: 'INCOMPLETE',
-  //         unitAmount: PLANS[dto.planTier].monthlyPrice * 100,
-  //         maxMembers: PLANS[dto.planTier].maxMembers,
-  //         currentPeriodStart: new Date(),
-  //         currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-  //       },
-  //       update: {
-  //         stripeCustomerId: customerId,
-  //       },
-  //     });
-  //   }
-
-  //   // Create checkout session
-  //   const session = await this.stripeService.createCheckoutSession(
-  //     customerId,
-  //     dto.planTier,
-  //     dto.billingInterval,
-  //     dto.successUrl,
-  //     dto.cancelUrl,
-  //     dto.couponCode,
-  //   );
-
-  //   return { sessionId: session.id, url: session.url };
   }
 
-  async createBillingPortalSession(
-    organizationId: string,
-    dto: BillingPortalSessionDto,
-  ) {
+  // ---------------------------------------------------------
+  // 2. GET CURRENT SUBSCRIPTION
+  // ---------------------------------------------------------
+  async getSubscription(organizationId: string) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { organizationId },
+      include: { plan: true }
     });
 
-    if (!subscription || !subscription.stripeCustomerId) {
-      throw new NotFoundException('No subscription found');
-    }
-
-    // const session = await this.stripeService.createBillingPortalSession(
-    //   subscription.stripeCustomerId,
-    //   dto.returnUrl,
-    // );
-
-    //return { url: session.url };
-    return { url: 'https://example.com' }; // Placeholder
-  }
-
-  async getBillingOverview(organizationId: string) {
-    const [subscription, creditBalance, usageRecords] = await Promise.all([
-      this.prisma.subscription.findUnique({
-        where: { organizationId },
-        include: {
-          invoices: {
-            orderBy: { createdAt: 'desc' },
-            take: 5,
-          },
-        },
-      }),
-      this.getCreditBalance(organizationId),
-      this.getCurrentPeriodUsage(organizationId),
-    ]);
-
-    if (!subscription) {
-      throw new NotFoundException('No subscription found');
-    }
-
-    let upcomingInvoice = null;
-    // if (subscription.stripeCustomerId) {
-    //   try {
-    //     upcomingInvoice = await this.stripeService.getUpcomingInvoice(
-    //       subscription.stripeCustomerId,
-    //     );
-    //   } catch (error) {
-    //     this.logger.warn('Failed to fetch upcoming invoice', error);
-    //   }
-    // }
+    if (!subscription) return null;
 
     return {
-      subscription,
-      currentPeriodUsage: usageRecords,
-      upcomingInvoice,
-      creditBalance,
+      ...subscription,
+      isActive: subscription.status === 'active' && new Date() < subscription.currentPeriodEnd
     };
   }
 
-  async recordUsage(organizationId: string, dto: RecordUsageDto) {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { organizationId },
-    });
+  // ---------------------------------------------------------
+  // 3. INITIALIZE PAYMENT (Upgrade)
+  // ---------------------------------------------------------
+  async initializePayment(organizationId: string, planId: string) {
+    const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
+    if (!plan) throw new NotFoundException('Plan not found');
 
-    if (!subscription) {
-      throw new NotFoundException('No subscription found');
+    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    const email = org.billingEmail;
+
+    if (!email) {
+      throw new BadRequestException('A billing email is required to process payments.');
     }
 
-    // Record usage in database
-    const usageRecord = await this.prisma.usageRecord.upsert({
-      where: {
-        subscriptionId_date_metric: {
-          subscriptionId: subscription.id,
-          date: dto.date || new Date(),
-          metric: dto.metric,
-        },
-      },
-      create: {
-        subscriptionId: subscription.id,
-        date: dto.date || new Date(),
-        metric: dto.metric,
-        quantity: dto.quantity,
-      },
-      update: {
-        quantity: { increment: dto.quantity },
-      },
-    });
+    const txRef = `rooli_${organizationId}_${Date.now()}`;
 
-    // Record usage in Stripe if applicable
-    if (
-      subscription.stripeSubscriptionId &&
-      this.shouldReportToStripe(dto.metric)
-    ) {
-      try {
-        // This requires having subscription item IDs stored
-        // For simplicity, we'll skip this in the example
-        // await this.stripeService.createUsageRecord(subscriptionItemId, dto.quantity);
-      } catch (error) {
-        this.logger.error('Failed to record usage in Stripe', error);
+    const payload = {
+      tx_ref: txRef,
+      amount: plan.price.toString(),
+      currency: plan.currency,
+      payment_plan: plan.flutterwavePlanId,
+      redirect_url: `${this.config.get('FRONTEND_URL')}/billing/callback`,
+      customer: {
+        email: email,
+        name: org.name,
+      },
+      meta: {
+        organizationId: organizationId,
+        targetPlanId: plan.id
+      },
+      customizations: {
+        title: `Upgrade to ${plan.name}`,
+        logo: 'https://your-rooli-url.com/logo.png',
       }
-    }
+    };
 
-    // Deduct credits
-    await this.deductCredits(organizationId, dto.metric, dto.quantity);
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.post(
+          `${this.FLUTTERWAVE_BASE_URL}/payments`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${this.config.get('FLUTTERWAVE_SECRET_KEY')}` }
+          }
+        ).pipe(
+          catchError((error) => {
+            this.logger.error('Flutterwave Init Error', error.response?.data);
+            throw new BadRequestException('Payment initialization failed');
+          })
+        )
+      ); 
 
-    return usageRecord;
-  }
+      return { 
+        paymentUrl: data.data.link, 
+        txRef 
+      };
 
-  async updateSubscription(organizationId: string, dto: UpdateSubscriptionDto) {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { organizationId },
-    });
-
-    if (!subscription || !subscription.stripeSubscriptionId) {
-      throw new NotFoundException('No active subscription found');
-    }
-
-    const newPriceId = await this.getPriceId(dto.planTier, dto.billingInterval);
-
-    // const updatedSubscription = await this.stripeService.updateSubscription(
-    //   subscription.stripeSubscriptionId,
-    //   newPriceId,
-    // );
-
-    // Update local database
-    return this.prisma.subscription.update({
-      where: { organizationId },
-      data: {
-        planTier: dto.planTier,
-        billingInterval: dto.billingInterval,
-        unitAmount: PLANS[dto.planTier].monthlyPrice * 100,
-        maxMembers: PLANS[dto.planTier].maxMembers,
-        updatedAt: new Date(),
-      },
-    });
-  }
-
-  async cancelSubscription(organizationId: string, cancelAtPeriodEnd = true) {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { organizationId },
-    });
-
-    if (!subscription || !subscription.stripeSubscriptionId) {
-      throw new NotFoundException('No active subscription found');
-    }
-
-    // const canceledSubscription = await this.stripeService.cancelSubscription(
-    //   subscription.stripeSubscriptionId,
-    //   cancelAtPeriodEnd,
-    // );
-
-    // return this.prisma.subscription.update({
-    //   where: { organizationId },
-    //   data: {
-    //     status: cancelAtPeriodEnd ? 'ACTIVE' : 'CANCELED',
-    //     cancelAt: cancelAtPeriodEnd
-    //       ? new Date(canceledSubscription.current_period_end * 1000)
-    //       : null,
-    //     canceledAt: cancelAtPeriodEnd ? null : new Date(),
-    //   },
-    // });
-    return this.prisma.subscription.update({
-      where: { organizationId },
-      data: {
-        status: 'CANCELED',
-        canceledAt: new Date(),
-      },
-    });
-  }
-
-  async handleWebhookEvent(event: any) {
-    this.logger.log(`Processing webhook: ${event.type}`);
-
-    switch (event.type) {
-      case 'customer.subscription.created':
-        await this.handleSubscriptionCreated(event.data.object);
-        break;
-      case 'customer.subscription.updated':
-        await this.handleSubscriptionUpdated(event.data.object);
-        break;
-      case 'customer.subscription.deleted':
-        await this.handleSubscriptionDeleted(event.data.object);
-        break;
-      case 'invoice.payment_succeeded':
-        await this.handleInvoicePaid(event.data.object);
-        break;
-      case 'invoice.payment_failed':
-        await this.handleInvoiceFailed(event.data.object);
-        break;
-      default:
-        this.logger.log(`Unhandled event type: ${event.type}`);
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new InternalServerErrorException('Could not connect to payment provider');
     }
   }
 
-  private async handleSubscriptionCreated(subscription: any) {
-    await this.prisma.subscription.update({
-      where: { stripeSubscriptionId: subscription.id },
-      data: {
-        status: subscription.status.toUpperCase(),
-        currentPeriodStart: new Date(subscription.current_period_start * 1000),
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        planTier: subscription.metadata.planTier,
-        billingInterval: subscription.metadata.billingInterval.toUpperCase(),
-      },
-    });
-  }
+  // ---------------------------------------------------------
+  // 4. ACTIVATE SUBSCRIPTION (Webhook)
+  // ---------------------------------------------------------
+  async activateSubscription(organizationId: string, payload: any) {
+    const { 
+      id: flutterwaveTxId, // This is the Transaction ID
+      tx_ref, 
+      amount, 
+      currency, 
+      payment_plan, 
+      card 
+    } = payload;
 
-  private async handleSubscriptionUpdated(subscription: any) {
-    await this.prisma.subscription.update({
-      where: { stripeSubscriptionId: subscription.id },
-      data: {
-        status: subscription.status.toUpperCase(),
-        currentPeriodStart: new Date(subscription.current_period_start * 1000),
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        cancelAt: subscription.cancel_at
-          ? new Date(subscription.cancel_at * 1000)
-          : null,
-        canceledAt: subscription.canceled_at
-          ? new Date(subscription.canceled_at * 1000)
-          : null,
-      },
+    // PLAN VALIDATION
+    // Note: 'payment_plan' might be numeric in payload, convert to string for lookup
+    const plan = await this.prisma.plan.findUnique({
+      where: { flutterwavePlanId: payment_plan?.toString() }
     });
-  }
 
-  private async handleSubscriptionDeleted(subscription: any) {
-    await this.prisma.subscription.update({
-      where: { stripeSubscriptionId: subscription.id },
-      data: {
-        status: 'CANCELED',
-        canceledAt: new Date(),
-      },
-    });
-  }
+    if (!plan) {
+      this.logger.error(`Webhook received for unknown Plan ID: ${payment_plan}`);
+      // Return successfully to stop Webhook retries, but log error
+      return; 
+    }
 
-  private async handleInvoicePaid(invoice: any,) {
-    await this.prisma.invoice.create({
-      data: {
-        subscription: {
-          connect: { stripeSubscriptionId: invoice.subscription },
+    // B. EXTRACT SUBSCRIPTION ID
+    // Critical: For recurring payments, FW creates a Subscription ID.
+    // It's usually in `payload.subscription_id` or `payload.subscription.id`
+    // If not present, we fallback to transaction ID (but cancellation might fail).
+    const fwSubscriptionId = payload.subscription_id || payload.subscription?.id || flutterwaveTxId.toString();
+
+    // C. CALCULATE DATES
+    const startDate = new Date();
+    const endDate = new Date();
+    
+    if (plan.interval === 'yearly') {
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    } else {
+      endDate.setMonth(endDate.getMonth() + 1); 
+    }
+
+    // D. DB TRANSACTION
+    return this.prisma.$transaction(async (tx) => {
+      
+      const subscription = await tx.subscription.upsert({
+        where: { organizationId },
+        create: {
+          organizationId,
+          planId: plan.id,
+          flutterwaveId: fwSubscriptionId.toString(),
+          status: 'active',
+          currentPeriodStart: startDate,
+          currentPeriodEnd: endDate,
+          cardToken: card?.token,
         },
-        stripeInvoiceId: invoice.id,
-        number: invoice.number,
-        status: 'PAID',
-        amountDue: invoice.amount_due,
-        amountPaid: invoice.amount_paid,
-        tax: invoice.tax,
-        invoiceDate: new Date(invoice.created * 1000),
-        paidAt: new Date(),
-        invoicePdfUrl: invoice.invoice_pdf,
-        lineItems: invoice.lines.data.map((line) => ({
-          description: line.description,
-          amount: line.amount,
-          quantity: line.quantity,
-        })),
-      },
+        update: {
+          planId: plan.id,
+          flutterwaveId: fwSubscriptionId.toString(), 
+          status: 'active',
+          currentPeriodStart: startDate,
+          currentPeriodEnd: endDate,
+          cardToken: card?.token,
+          cancelAtPeriodEnd: false,
+        },
+      });
+
+      await tx.transaction.create({
+        data: {
+          organizationId,
+          txRef: tx_ref,
+          flutterwaveTxId: flutterwaveTxId.toString(),
+          amount: amount,
+          currency: currency,
+          status: 'successful',
+          paymentDate: new Date()
+        }
+      });
+      
+      await tx.socialAccount.updateMany({
+        where: { organizationId },
+        data: { isActive: true, errorMessage: null }
+      });
+
+      this.logger.log(`Subscription activated for Org ${organizationId}`);
+      return subscription;
+    });
+  }
+
+  // ---------------------------------------------------------
+  // 5. CANCEL SUBSCRIPTION
+  // ---------------------------------------------------------
+  async cancelSubscription(organizationId: string) {
+    const sub = await this.prisma.subscription.findUnique({
+      where: { organizationId }
     });
 
-    // Add credits to organization
-    if (invoice.amount_paid > 0) {
-      await this.addCredits(
-        invoice.customer,
-        Math.floor(invoice.amount_paid / 100), // Convert cents to dollars
-        'PURCHASE',
-        invoice.id,
+    if (!sub || sub.status !== 'active') {
+      throw new BadRequestException('No active subscription found to cancel');
+    }
+
+    if (!sub.flutterwaveId) {
+       throw new BadRequestException('Cannot cancel automatically. Contact support.');
+    }
+
+    try {
+      await firstValueFrom(
+        this.httpService.put(
+          `${this.FLUTTERWAVE_BASE_URL}/subscriptions/${sub.flutterwaveId}/cancel`,
+          {},
+          {
+             headers: { Authorization: `Bearer ${this.config.get('FLUTTERWAVE_SECRET_KEY')}` }
+          }
+        ).pipe(
+          catchError((error) => {
+            this.logger.error('FW Cancel Error', error.response?.data);
+            throw new BadRequestException('Failed to cancel subscription with provider');
+          })
+        )
       );
+
+      return this.prisma.subscription.update({
+        where: { organizationId },
+        data: {
+          status: 'cancelled',
+          cancelAtPeriodEnd: true
+        }
+      });
+
+    } catch (error) {
+       // Log the specific error for debugging
+       this.logger.error(`Cancellation failed for Org ${organizationId}`, error);
+       throw error;
     }
   }
 
-  private async handleInvoiceFailed(invoice: any) {
-    await this.prisma.invoice.create({
-      data: {
-        subscription: {
-          connect: { stripeSubscriptionId: invoice.subscription },
-        },
-        stripeInvoiceId: invoice.id,
-        number: invoice.number,
-        status: 'UNCOLLECTIBLE',
-        amountDue: invoice.amount_due,
-        invoiceDate: new Date(invoice.created * 1000),
-        lineItems: invoice.lines.data.map((line) => ({
-          description: line.description,
-          amount: line.amount,
-          quantity: line.quantity,
-        })),
-      },
-    });
-  }
-
-  private async getCreditBalance(organizationId: string): Promise<number> {
-    const lastTransaction = await this.prisma.creditTransaction.findFirst({
-      where: { organizationId },
-      orderBy: { createdAt: 'desc' },
-      select: { balanceAfter: true },
-    });
-
-    return lastTransaction?.balanceAfter || 0;
-  }
-
-  private async addCredits(
-    stripeCustomerId: string,
-    amount: number,
-    type: CreditType,
-    referenceId?: string,
-  ) {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { stripeCustomerId },
-    });
-
-    if (!subscription) return;
-
-    const lastTransaction = await this.prisma.creditTransaction.findFirst({
-      where: { organizationId: subscription.organizationId },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const balanceAfter = (lastTransaction?.balanceAfter || 0) + amount;
-
-    await this.prisma.creditTransaction.create({
-      data: {
-        organizationId: subscription.organizationId,
-        type,
-        amount,
-        description: `Credit ${type.toLowerCase()}`,
-        referenceId,
-        balanceAfter,
-      },
-    });
-  }
-
-  private async deductCredits(
-    organizationId: string,
-    metric: string,
-    quantity: number,
-  ) {
-    const creditCost = CREDIT_COST[metric] || 1;
-    const creditDeduction = quantity * creditCost;
-
-    const lastTransaction = await this.prisma.creditTransaction.findFirst({
-      where: { organizationId },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const balanceAfter = (lastTransaction?.balanceAfter || 0) - creditDeduction;
-
-    await this.prisma.creditTransaction.create({
-      data: {
-        organizationId,
-        type: 'USAGE',
-        amount: -creditDeduction,
-        description: `Usage deduction for ${metric}`,
-        balanceAfter,
-      },
-    });
-  }
-
-  private async getCurrentPeriodUsage(organizationId: string) {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { organizationId },
-    });
-
-    if (!subscription) return [];
-
-    const usageRecords = await this.prisma.usageRecord.groupBy({
-      by: ['metric'],
-      where: {
-        subscriptionId: subscription.id,
-        date: {
-          gte: subscription.currentPeriodStart,
-          lte: subscription.currentPeriodEnd,
-        },
-      },
-      _sum: { quantity: true },
-    });
-
-    return usageRecords.map((record) => ({
-      metric: record.metric,
-      currentUsage: record._sum.quantity || 0,
-      allowedUsage: this.getAllowedUsage(subscription.planTier, record.metric),
-      percentage: Math.min(
-        100,
-        ((record._sum.quantity || 0) /
-          this.getAllowedUsage(subscription.planTier, record.metric)) *
-          100,
-      ),
-    }));
-  }
-
-  private getAllowedUsage(planTier: PlanTier, metric: string): number {
-    const plan = PLANS[planTier];
-    switch (metric) {
-      case 'ai_tokens':
-        return plan.credits;
-      case 'image_generations':
-        return Math.floor(plan.credits / CREDIT_COST.AI_IMAGE);
-      case 'posts':
-        return Math.floor(plan.credits / CREDIT_COST.POST);
-      default:
-        return plan.credits;
-    }
-  }
-
-  private shouldReportToStripe(metric: string): boolean {
-    // Only report usage-based metrics to Stripe
-    return ['ai_tokens', 'image_generations'].includes(metric);
-  }
-
-  private async getPriceId(
-    planTier: PlanTier,
-    billingInterval: BillingInterval,
-  ): Promise<string> {
-    // This would be implemented based on your Stripe price setup
-    // For now, return a placeholder
-    return `price_${planTier.toLowerCase()}_${billingInterval.toLowerCase()}`;
-  }
 }

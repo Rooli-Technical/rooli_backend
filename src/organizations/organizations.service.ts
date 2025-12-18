@@ -2,68 +2,84 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateOrganizationDto } from './dtos/create-organization.dto';
 import { UpdateOrganizationDto } from './dtos/update-organization.dto';
-import { OrganizationUsageDto } from './dtos/organization-usage.dto';
 import { GetAllOrganizationsDto } from './dtos/get-organiations.dto';
 import { PrismaService } from '@/prisma/prisma.service';
 import slugify from 'slugify';
 import dayjs from 'dayjs';
+import { BillingService } from '@/billing/billing.service';
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(OrganizationsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billingService: BillingService,
+  ) {}
 
   async createOrganization(userId: string, dto: CreateOrganizationDto) {
     try {
-      const ownedMemberships = await this.prisma.organizationMember.findMany({
-        where: {
-          userId: userId,
-          role: { name: 'OWNER' }, // Only count orgs they OWN, not ones they were invited to
-        },
-        include: { organization: true },
-      });
-      const ownedCount = ownedMemberships.length;
-      if (ownedCount >= 1) {
-        // They already have a workspace. Check if they are allowed another.
-
-        // Check if ANY of their owned orgs is an AGENCY tier
-        // (Or checking the specific "Billing" org if you separate them)
-        const hasAgencyPlan = ownedMemberships.some(
-          (m) => m.organization.planTier === 'AGENCY',
-        );
-
-        if (!hasAgencyPlan) {
-          throw new ForbiddenException(
-            'You are on the FREE plan. You can only manage 1 Workspace. Upgrade to Agency to create more.',
-          );
-        }
+      if (dto.userType) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { userType: dto.userType },
+        });
       }
+
+      // 1. Fetch User and their owned organizations count in one go
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          organizationMemberships: {
+            where: { role: { name: 'owner' } }, // Assuming 'Role' model has a 'name' field
+          },
+        },
+      });
+
+      if (!user) throw new NotFoundException('User not found');
+
+      // GUARD: Enforce Organization Limits based on User Type
+      // We assume user.userType was set during a previous Onboarding step
+      const ownedOrgCount = user.organizationMemberships.length;
+
+      // If user is INDIVIDUAL (or undefined, defaulting to individual logic), allow max 1
+      if (user.userType === 'INDIVIDUAL' && ownedOrgCount >= 1) {
+        throw new ForbiddenException({
+          message: 'Individual accounts are limited to 1 Organization.',
+        });
+      }
+
+      //  Prepare Slug
+      // If dto.slug is provided, use it; otherwise generate from name
       const slug = slugify(dto.name, { lower: true, strict: true });
 
-      // Check if slug is available
+      //  Check Slug Uniqueness
       const existing = await this.prisma.organization.findUnique({
         where: { slug },
       });
 
       if (existing) {
-        throw new ConflictException('Organization slug already exists');
+        throw new ConflictException(
+          'Organization URL (slug) is already taken. Please try another.',
+        );
       }
 
-      // Create organization and make user the owner
-      return await this.prisma.$transaction(async (tx) => {
-        const organization = await tx.organization.create({
+      // Transaction: Create Org + Member + BrandKit
+      const organization = await this.prisma.$transaction(async (tx) => {
+        const org = await tx.organization.create({
           data: {
             name: dto.name,
-            slug: dto.slug,
-            timezone: dto.timezone || 'UTC',
-            email: dto.email,
-            planTier: 'FREE',
-            planStatus: 'ACTIVE',
-            maxMembers: 5, // Default limit
-            monthlyCreditLimit: 1000, // Default credits
+            slug,
+            timezone: dto.timezone ?? 'UTC',
+            email: dto.email ?? user.email,
+            status: 'PENDING_PAYMENT', // ✅ new lifecycle state
+            isActive: true,
           },
         });
 
@@ -72,33 +88,44 @@ export class OrganizationsService {
         });
 
         if (!ownerRole) {
-          throw new NotFoundException(
-            "Role 'owner' does not exist. Seed your roles table first.",
+          throw new InternalServerErrorException(
+            "System Error: 'owner' role not found.",
           );
         }
 
-        // Add user as owner
         await tx.organizationMember.create({
           data: {
-            organizationId: organization.id,
-            userId: userId,
+            organizationId: org.id,
+            userId,
             roleId: ownerRole.id,
             invitedBy: userId,
           },
         });
 
-        // Create default brand kit
         await tx.brandKit.create({
           data: {
-            organizationId: organization.id,
-            name: 'Our Brand',
+            organizationId: org.id,
+            name: `${dto.name} Brand Kit`,
           },
         });
 
-        return organization;
+        return org;
       });
+
+      // 4. Initialize payment (OUTSIDE transaction)
+      const paymentData = await this.billingService.initializePayment(
+        organization.id,
+        dto.planId,
+      );
+
+      // 5. Return combined response
+      return {
+        organization,
+        payment: paymentData,
+      };
     } catch (err) {
-      console.log(err);
+      // Log error for debugging but rethrow purely
+      this.logger.error('Failed to create organization', err);
       throw err;
     }
   }
@@ -190,44 +217,6 @@ export class OrganizationsService {
 
       return { success: true, message: 'Organization deleted successfully' };
     });
-  }
-
-  async getOrganizationUsage(orgId: string): Promise<OrganizationUsageDto> {
-    // Validation
-    const org = await this.prisma.organization.findUnique({
-      where: { id: orgId },
-      select: { maxMembers: true, monthlyCreditLimit: true },
-    });
-    if (!org) throw new NotFoundException('Organization not found');
-
-    // 2. Parallel Count Queries
-    const [memberCount, creditUsage, postCount, mediaStorage] =
-      await Promise.all([
-        this.prisma.organizationMember.count({
-          where: { organizationId: orgId, isActive: true },
-        }),
-        // Sum of tokens
-        this.prisma.aIUsage.aggregate({
-          where: { organizationId: orgId },
-          _sum: { tokensUsed: true },
-        }),
-        // Count posts
-        this.prisma.post.count({ where: { organizationId: orgId } }),
-        // Sum file size (Storage usage)
-        this.prisma.mediaFile.aggregate({
-          where: { organizationId: orgId },
-          _sum: { size: true },
-        }),
-      ]);
-
-    return {
-      memberCount,
-      creditUsage: creditUsage._sum.tokensUsed || 0,
-      postCount,
-      mediaStorage: mediaStorage._sum.size ? Number(mediaStorage._sum.size) : 0,
-      maxMembers: org.maxMembers,
-      monthlyCreditLimit: org.monthlyCreditLimit,
-    };
   }
 
   // async getDashboard(orgId: string, daysCount: number = 30) {
@@ -463,10 +452,10 @@ export class OrganizationsService {
     });
   }
 
-async getDashboardAggregates(organizationId: string) {
+  async getDashboardAggregates(organizationId: string) {
     const now = dayjs();
-    
-    const startOfWeek = now.startOf('week').toDate(); 
+
+    const startOfWeek = now.startOf('week').toDate();
     const endOfWeek = now.endOf('week').toDate();
 
     // Start of Month to End of Month
@@ -475,13 +464,12 @@ async getDashboardAggregates(organizationId: string) {
 
     // 2. Execute Queries in Parallel
     const [
-        draftsWeek, 
-        scheduledWeek, 
-        publishedMonth, 
-        socialAccountsCount, 
-        pageAccountsCount
+      draftsWeek,
+      scheduledWeek,
+      publishedMonth,
+      socialAccountsCount,
+      pageAccountsCount,
     ] = await Promise.all([
-      
       // A. Drafts (This Week) - Based on activity (updatedAt)
       this.prisma.post.count({
         where: {
@@ -541,7 +529,7 @@ async getDashboardAggregates(organizationId: string) {
       meta: {
         weekRange: { start: startOfWeek, end: endOfWeek },
         monthRange: { start: startOfMonth, end: endOfMonth },
-      }
+      },
     };
   }
 
@@ -567,13 +555,12 @@ async getDashboardAggregates(organizationId: string) {
 
     const totalBytes = fileStats._sum.size ? Number(fileStats._sum.size) : 0;
 
-
     return {
       fileCount: fileStats._count._all,
       folderCount: folderCount,
       templateCount: templateCount,
       totalSizeBytes: totalBytes,
-      formattedSize: this.formatBytes(totalBytes), 
+      formattedSize: this.formatBytes(totalBytes),
     };
   }
 
@@ -699,8 +686,13 @@ async getDashboardAggregates(organizationId: string) {
     const sortedPosts = posts
       .map((post) => {
         // Handle cases where a post might not have a snapshot yet
-        const stats = post.snapShots[0] || { likes: 0, comments: 0, shares: 0, impressions: 0 };
-        
+        const stats = post.snapShots[0] || {
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          impressions: 0,
+        };
+
         // Weighted Score Formula:
         // You can tweak this! e.g., Shares might be worth 2x Points.
         // Current: Simple Sum (Likes + Comments + Shares)
@@ -717,40 +709,6 @@ async getDashboardAggregates(organizationId: string) {
 
     return sortedPosts;
   }
-
-  async checkMemberLimit(orgId: string): Promise<boolean> {
-    const organization = await this.prisma.organization.findUnique({
-      where: { id: orgId },
-      select: { maxMembers: true },
-    });
-
-    const memberCount = await this.prisma.organizationMember.count({
-      where: { organizationId: orgId, isActive: true },
-    });
-
-    return memberCount < organization.maxMembers;
-  }
-
-  // private async verifyOwnership(orgId: string, userId: string) {
-  //   let ownerRole = await this.prisma.role.findUnique({
-  //     where: { name: 'OWNER' },
-  //   });
-
-  //   const membership = await this.prisma.organizationMember.findFirst({
-  //     where: {
-  //       organizationId: orgId,
-  //       userId: userId,
-  //       roleId: ownerRole.id,
-  //       isActive: true,
-  //     },
-  //   });
-
-  //   if (!membership) {
-  //     throw new ForbiddenException(
-  //       'Only organization owners can perform this action',
-  //     );
-  //   }
-  // }
 
   private async verifyMembership(orgId: string, userId: string) {
     const membership = await this.prisma.organizationMember.findFirst({

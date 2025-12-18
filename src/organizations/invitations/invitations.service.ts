@@ -230,19 +230,36 @@ export class InvitationsService {
     });
   }
 
-  private async checkMemberLimit(orgId: string): Promise<boolean> {
-    const [organization, memberCount] = await this.prisma.$transaction([
-      this.prisma.organization.findUnique({
-        where: { id: orgId },
-        select: { maxMembers: true },
-      }),
-      this.prisma.organizationMember.count({
-        where: { organizationId: orgId, isActive: true },
-      }),
-    ]);
+private async checkMemberLimit(orgId: string): Promise<boolean> {
+  const [subscription, memberCount] = await this.prisma.$transaction([
+    this.prisma.subscription.findUnique({
+      where: { organizationId: orgId },
+      select: {
+        status: true,
+        plan: {
+          select: {
+            maxTeamMembers: true,
+          },
+        },
+      },
+    }),
+    this.prisma.organizationMember.count({
+      where: {
+        organizationId: orgId,
+        isActive: true,
+      },
+    }),
+  ]);
 
-    return memberCount < (organization?.maxMembers ?? 0);
+  // No active subscription → deny adding members
+  if (!subscription || subscription.status !== 'active') {
+    return false;
   }
+
+  const maxMembers = subscription.plan.maxTeamMembers;
+
+  return memberCount < maxMembers;
+}
 
   private generateToken(): string {
     return randomBytes(32).toString('hex');

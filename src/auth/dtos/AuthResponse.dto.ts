@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class SafeUser {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
@@ -73,9 +73,9 @@ export class AuthResponse {
   })
   refreshToken: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: true,
     description: 'Indicates if the user needs to verify their email.',
   })
-  requiresEmailVerification: boolean;
+  requiresEmailVerification?: boolean;
 }

@@ -33,9 +33,21 @@ export class PostsService {
   /**
    * Create a new post
    */
-  async createPost(userId: string, timezone: string,dto: CreatePostDto) {
+  async createPost(userId: string, orgId: string,dto: CreatePostDto) {
     try {
       await this.validatePostCreation(userId, dto);
+
+      // find the organization to get timezone
+      const organization = await this.prisma.organization.findUnique({
+        where: { id: orgId },
+        select: { timezone: true },
+      });
+
+      if (!organization) {
+        throw new NotFoundException('Organization not found');
+      }
+
+      const timezone = organization.timezone;
 
       // 2. Determine if this is a profile post or page post
       const isProfilePost = !dto.pageAccountId;

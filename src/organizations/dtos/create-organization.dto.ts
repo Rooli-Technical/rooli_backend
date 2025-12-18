@@ -1,5 +1,6 @@
+import { UserType } from '@generated/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsEmail, IsOptional, IsBoolean, IsNotEmpty } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsBoolean, IsNotEmpty, IsEnum } from 'class-validator';
 
 export class CreateOrganizationDto {
   @ApiProperty({
@@ -33,4 +34,12 @@ export class CreateOrganizationDto {
   @IsNotEmpty()
   @IsString()
   email: string;
+
+  @IsNotEmpty() 
+  @IsString() 
+  planId: string;
+
+  @IsOptional() 
+  @IsEnum(UserType)
+  userType?: UserType;
 }
