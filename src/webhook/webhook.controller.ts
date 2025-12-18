@@ -38,6 +38,7 @@ export class WebhookController {
   @Post('flutterwave')
   @UseGuards(FlutterwaveWebhookGuard)
   async handleFlutterwave(@Body() payload: any) {
+    console.log(payload)
     // 1. Log Raw Data (Organization is NULL for now)
     const log = await this.prisma.webhookLog.create({
       data: {

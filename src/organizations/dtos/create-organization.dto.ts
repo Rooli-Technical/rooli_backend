@@ -11,14 +11,6 @@ export class CreateOrganizationDto {
   @IsString()
   name: string;
 
-  @ApiProperty({
-    description: 'A URL-friendly unique identifier for the organization',
-    example: 'acme-corp',
-  })
-  @IsNotEmpty()
-  @IsString()
-  slug: string;
-
   @ApiPropertyOptional({
     description: 'The timezone of the organization',
     example: 'Africa/Lagos',

@@ -1,3 +1,4 @@
+import { BillingService } from '@/billing/billing.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Processor } from '@nestjs/bullmq';
 import { WorkerHost } from '@nestjs/bullmq';
@@ -8,7 +9,7 @@ import { Job } from 'bullmq';
 export class WebhooksProcessor extends WorkerHost {
   private readonly logger = new Logger(WebhooksProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(private readonly prisma: PrismaService, private readonly billingService: BillingService) {
     super();
   }
 
@@ -55,7 +56,7 @@ export class WebhooksProcessor extends WorkerHost {
     // 2. Business Logic: Activate Subscription
     if (status === 'successful' && organizationId) {
       // Logic to update Subscription model goes here...
-      // e.g., await this.billingService.activateSubscription(organizationId, payload.data);
+      await this.billingService.activateSubscription(organizationId, payload.data);
       this.logger.log(`Activated subscription for Org: ${organizationId}`);
     } else if (!organizationId) {
       this.logger.warn(`Flutterwave Webhook: Could not find Org for email ${customer?.email}`);

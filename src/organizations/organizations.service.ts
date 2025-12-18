@@ -109,6 +109,7 @@ export class OrganizationsService {
 
         return org;
       });
+      
 
       // 4. Initialize payment (OUTSIDE transaction)
       const paymentData = await this.billingService.initializePayment(

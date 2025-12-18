@@ -84,7 +84,7 @@ export class BillingService {
       amount: plan.price.toString(),
       currency: plan.currency,
       payment_plan: plan.flutterwavePlanId,
-      redirect_url: `${this.config.get('FRONTEND_URL')}/billing/callback`,
+      redirect_url: `${this.config.get('NGROK_URL')}/billing/callback`,
       customer: {
         email: email || user?.email,
         name: org.name,
@@ -114,12 +114,14 @@ export class BillingService {
             }),
           ),
       );
+      console.log(data)
 
       return {
         paymentUrl: data.data.link,
         txRef,
       };
     } catch (error) {
+      console.log(error)
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(
         'Could not connect to payment provider',
