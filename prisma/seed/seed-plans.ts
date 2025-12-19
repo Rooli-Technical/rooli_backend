@@ -8,7 +8,7 @@ export async function seedPlans() {
     {
       name: 'Starter',
       description: 'For freelancers and solopreneurs',
-      flutterwavePlanId: '228186',
+      paystackPlanCode: 'PLN_u9jzjn5g3as3wk8',
       price: new Prisma.Decimal(27705.61),
       currency: 'NGN',
       interval: 'monthly',
@@ -28,7 +28,7 @@ export async function seedPlans() {
     {
       name: 'Growth',
       description: 'For small teams and growing businesses',
-      flutterwavePlanId: '228187',
+      paystackPlanCode: 'PLN_50f99tizrj3mp5m',
       price: new Prisma.Decimal(73500),
       currency: 'NGN',
       interval: 'monthly',
@@ -49,7 +49,7 @@ export async function seedPlans() {
     {
       name: 'Agency',
       description: 'For agencies managing multiple brands',
-      flutterwavePlanId: '228188',
+      paystackPlanCode: 'PLN_of4tu83cw2og4s5',
       price: new Prisma.Decimal(223500), 
       currency: 'NGN',
       interval: 'monthly',
@@ -70,7 +70,7 @@ export async function seedPlans() {
 
   for (const plan of plans) {
     await prisma.plan.upsert({
-      where: { flutterwavePlanId: plan.flutterwavePlanId },
+      where: { paystackPlanCode: plan.paystackPlanCode },
       update: plan,
       create: plan,
     });
