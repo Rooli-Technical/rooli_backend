@@ -109,6 +109,7 @@ export class AuthService {
           take: 1,
           orderBy: { createdAt: 'desc' },
         },
+        systemRole: true,
       },
     });
 
@@ -619,7 +620,7 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get('JWT_SECRET'),
-        expiresIn: '15m',
+        expiresIn: '7d',
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
@@ -638,7 +639,6 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
     try {
       const plainToken = crypto.randomBytes(32).toString('hex');
       const hashedToken = await argon2.hash(plainToken);
-      console.log(plainToken);
       return { plainToken, hashedToken };
     } catch (err) {
       this.logger.error(err);
@@ -691,7 +691,6 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
   }
 
   private toSafeUser(user): SafeUser {
-    console.log(user);
     return {
       id: user.id,
       email: user.email,

@@ -435,7 +435,6 @@ export class LinkedInService {
       const pages: LinkedInCompanyPage[] = [];
 
       for (const element of elements) {
-        console.log(element);
         try {
           const page = this.parseCompanyPageElement(element);
           if (page) {

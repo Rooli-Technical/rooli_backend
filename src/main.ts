@@ -11,7 +11,9 @@ import { AllExceptionsFilter } from './common/filters/all-exception-filter.filte
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   app.enableCors();
   app.setGlobalPrefix('api');
@@ -51,30 +53,6 @@ async function bootstrap() {
     new AllExceptionsFilter(httpAdapter),
   );
 
-  //  app.use(new LoggerMiddleware().use);
-  //   const bullBoard = app.get(BullBoardModule);
-  //   bullBoard.setup(app);
-
-  app.use('/webhooks', (req, res, next) => {
-    if (req.method === 'POST') {
-      bodyParser.json({
-        verify: (req: any, res, buf) => {
-          req.rawBody = buf.toString();
-        },
-      })(req, res, next);
-    } else {
-      next();
-    }
-  });
-
-  // Other middleware for other routes
-  app.use(bodyParser.json());
-
-  // // app.use('/health', (req, res) => {
-  // //   const workerManager = app.get(WorkerManager);
-  // //   const health = workerManager.healthCheck();
-  // //   res.json(health);
-  // // });
 
   await app.listen(process.env.PORT ?? 3000);
 }

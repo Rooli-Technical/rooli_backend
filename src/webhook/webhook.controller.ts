@@ -17,7 +17,7 @@ import { Public } from '@/common/decorators/public.decorator';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
-import { FlutterwaveWebhookGuard } from './guards/flutterwave.guard';
+import { PaystackWebhookGuard } from './guards/paystack.guard';
 import { MetaWebhookGuard } from './guards/meta.guard';
 import { PrismaService } from '@/prisma/prisma.service';
 
@@ -33,31 +33,30 @@ export class WebhookController {
   ) {}
 
 // ==========================================
-  // 1. FLUTTERWAVE (Billing)
+  // 1. Paystack(Billing)
   // ==========================================
-  @Post('flutterwave')
-  @UseGuards(FlutterwaveWebhookGuard)
-  async handleFlutterwave(@Body() payload: any) {
-    console.log(payload)
-    // 1. Log Raw Data (Organization is NULL for now)
-    const log = await this.prisma.webhookLog.create({
-      data: {
-        provider: 'FLUTTERWAVE',
-        eventType: payload.event || 'charge.completed',
-        resourceId: payload.data?.tx_ref,
-        payload: payload, // Store full JSON
-        status: 'PENDING',
-      }
-    });
+  @Post('paystack')
+@UseGuards(PaystackWebhookGuard)
+async handlePaystack(@Body() payload: any) {
+  // 1. Log Raw Data
+  const log = await this.prisma.webhookLog.create({
+    data: {
+      provider: 'PAYSTACK',
+      eventType: payload.event || 'charge.success',
+      resourceId: payload.data?.reference,
+      payload: payload, // Store full JSON
+      status: 'PENDING',
+    },
+  });
 
-    // 2. Offload to Worker
-    await this.webhooksQueue.add('flutterwave-event', {
-      logId: log.id,
-      data: payload
-    });
+  // 2. Offload to Worker Queue
+  await this.webhooksQueue.add('paystack-event', {
+    logId: log.id,
+    data: payload,
+  });
 
-    return { status: 'success' };
-  }
+  return { status: 'success' };
+}
 
   // ==========================================
   // 2. META (Social - De-auth)

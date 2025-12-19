@@ -71,7 +71,6 @@ export class ContentTemplatesController {
     @Body() dto: UpdateTemplateDto,
     @Req() req: any,
   ) {
-    console.log('UpdateTemplateDto:', dto);
     return this.templatesService.updateTemplate(
       id,
       organizationId,

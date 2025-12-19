@@ -466,7 +466,6 @@ async refreshAccessToken(socialAccountId: string): Promise<void> {
       `${this.graphApiBase}/debug_token?input_token=${accessToken}&access_token=${this.getAppAccessToken()}`,
     );
     const data = await response.json();
-    console.log('Debug Token Response:', data);
 
     if (!response.ok || data.error || !data.data?.is_valid) {
       throw new Error(data.error?.message || 'Invalid token');

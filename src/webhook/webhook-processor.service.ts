@@ -17,8 +17,8 @@ export class WebhooksProcessor extends WorkerHost {
     const { logId, data } = job.data;
 
     try {
-      if (job.name === 'flutterwave-event') {
-        await this.processFlutterwave(logId, data);
+      if (job.name === 'paystack-event') {
+        await this.processPaystack(logId, data);
       } else if (job.name === 'meta-event') {
         await this.processMeta(logId, data);
       }
@@ -39,38 +39,33 @@ export class WebhooksProcessor extends WorkerHost {
   }
 
   // ==========================================
-  // FLUTTERWAVE LOGIC
+  // PAYSTACK LOGIC
   // ==========================================
-  private async processFlutterwave(logId: string, payload: any) {
-    const { status, tx_ref, customer } = payload.data || {};
-    let organizationId: string | null = null;
+  private async processPaystack(logId: string, payload: any) {
+    const event = payload.event;
+    let organizationId = payload.data?.metadata?.organizationId;
 
-    // 1. Attempt to identify Organization
-    if (customer?.email) {
-      const org = await this.prisma.organization.findFirst({
-        where: { billingEmail: customer.email },
-      });
-      if (org) organizationId = org.id;
-    }
-
-    // 2. Business Logic: Activate Subscription
-    if (status === 'successful' && organizationId) {
-      // Logic to update Subscription model goes here...
-      await this.billingService.activateSubscription(organizationId, payload.data);
-      this.logger.log(`Activated subscription for Org: ${organizationId}`);
-    } else if (!organizationId) {
-      this.logger.warn(`Flutterwave Webhook: Could not find Org for email ${customer?.email}`);
-    }
-
-    // 3. Finalize Log (Link Org and mark Processed)
-    await this.prisma.webhookLog.update({
-      where: { id: logId },
-      data: {
-        status: 'PROCESSED',
-        organizationId: organizationId, // <--- LINKING HAPPENS HERE
-        processedAt: new Date(),
+    try {
+      if (event === 'charge.success') {
+        await this.billingService.activateSubscription(payload);
+      } 
+      else if (event === 'subscription.create') {
+        // This event runs in parallel to charge.success to save the email_token
+        await this.billingService.saveSubscriptionDetails(payload);
+      }else if (event === 'invoice.payment_failed') {
+         // Logic to email user: "Your renewal failed"
+         this.logger.warn(`Renewal failed for ${payload.data.customer.email}`);
       }
-    });
+
+      // Mark Log as Processed
+      await this.prisma.webhookLog.update({
+        where: { id: logId },
+        data: { status: 'PROCESSED', organizationId, processedAt: new Date() }
+      });
+    } catch (error) {
+      this.logger.error(`Paystack Processing Error [LogID: ${logId}]: ${error.message}`);
+      throw error; // Rethrow to be caught by outer handler
+    }
   }
 
   // ==========================================

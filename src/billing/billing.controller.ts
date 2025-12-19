@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { BillingService } from './billing.service';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -101,5 +101,10 @@ export class BillingController {
   async cancelSubscription(@Req() req: any) {
     const organizationId = req.user.organizationId;
     return this.billingService.cancelSubscription(organizationId);
+  }
+
+  @Get('verify')
+  async verifyPayment(@Query('reference') reference: string) {
+    return this.billingService.verifyPayment(reference);
   }
 }

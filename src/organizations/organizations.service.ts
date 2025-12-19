@@ -23,53 +23,53 @@ export class OrganizationsService {
     private readonly billingService: BillingService,
   ) {}
 
-  async createOrganization(userId: string, dto: CreateOrganizationDto) {
-    try {
-      if (dto.userType) {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { userType: dto.userType },
-        });
-      }
-
-      // 1. Fetch User and their owned organizations count in one go
-      const user = await this.prisma.user.findUnique({
+ async createOrganization(userId: string, dto: CreateOrganizationDto) {
+    // 1. Update User Type (Onboarding)
+    if (dto.userType) {
+      await this.prisma.user.update({
         where: { id: userId },
-        include: {
-          organizationMemberships: {
-            where: { role: { name: 'owner' } }, // Assuming 'Role' model has a 'name' field
-          },
+        data: { userType: dto.userType },
+      });
+    }
+
+    // 2. Fetch User & Check Limits
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        organizationMemberships: {
+          where: { role: { name: 'owner' } },
         },
-      });
+      },
+    });
 
-      if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException('User not found');
 
-      // 3. Guard: Enforce Individual Limits
-      const ownedOrgCount = user.organizationMemberships.length;
-      if (user.userType === 'INDIVIDUAL' && ownedOrgCount >= 1) {
-        throw new ForbiddenException({
-          message:
-            'Individual accounts are limited to 1 Workspace. Please upgrade to Agency.',
-        });
-      }
+    const ownedOrgCount = user.organizationMemberships.length;
+    // if (user.userType === 'INDIVIDUAL' && ownedOrgCount >= 1) {
+    //   throw new ForbiddenException({
+    //     message: 'Individual accounts are limited to 1 Workspace. Please upgrade to Agency.',
+    //   });
+    // }
 
-      //  Prepare Slug
-      // If dto.slug is provided, use it; otherwise generate from name
-      const slug = slugify(dto.name, { lower: true, strict: true });
+    // 3. Prepare Slug (Respect DTO, Fallback to Name)
+    let slug = dto.slug;
+    if (!slug) {
+      slug = slugify(dto.name, { lower: true, strict: true });
+    }
 
-      //  Check Slug Uniqueness
-      const existing = await this.prisma.organization.findUnique({
-        where: { slug },
-      });
+    // 4. Check Uniqueness
+    const existing = await this.prisma.organization.findUnique({
+      where: { slug },
+    });
+    if (existing) {
+      throw new ConflictException('Organization URL (slug) is already taken.');
+    }
 
-      if (existing) {
-        throw new ConflictException(
-          'Organization URL (slug) is already taken. Please try another.',
-        );
-      }
+    let organization; // Declare outside to access in catch block
 
-      // Transaction: Create Org + Member + BrandKit
-      const organization = await this.prisma.$transaction(async (tx) => {
+    try {
+      // 5. Transaction: Create DB Record
+      organization = await this.prisma.$transaction(async (tx) => {
         const org = await tx.organization.create({
           data: {
             name: dto.name,
@@ -81,50 +81,46 @@ export class OrganizationsService {
           },
         });
 
-        const ownerRole = await tx.role.findFirst({
-          where: { name: 'owner' },
-        });
+        const ownerRole = await tx.role.findFirst({ where: { name: 'owner' } });
+        if (!ownerRole) throw new InternalServerErrorException("Role 'owner' missing");
 
-        if (!ownerRole) {
-          throw new InternalServerErrorException(
-            "System Error: 'owner' role not found.",
-          );
-        }
+        // await tx.organizationMember.create({
+        //   data: {
+        //     organizationId: org.id,
+        //     userId,
+        //     roleId: ownerRole.id,
+        //     invitedBy: userId,
+        //   },
+        // });
 
-        await tx.organizationMember.create({
-          data: {
-            organizationId: org.id,
-            userId,
-            roleId: ownerRole.id,
-            invitedBy: userId,
-          },
-        });
-
-        await tx.brandKit.create({
-          data: {
-            organizationId: org.id,
-            name: `${dto.name} Brand Kit`,
-          },
-        });
+        // await tx.brandKit.create({
+        //   data: { organizationId: org.id, name: `${dto.name} Brand Kit` },
+        // });
 
         return org;
       });
-      
 
-      // 4. Initialize payment (OUTSIDE transaction)
+      // 6. Initialize Payment
       const paymentData = await this.billingService.initializePayment(
         organization.id,
         dto.planId,
         user,
       );
 
-      // 5. Return combined response
       return {
         organization,
         payment: paymentData,
       };
+
     } catch (err) {
-      // Log error for debugging but rethrow purely
+      console.log(err);
+      // COMPENSATING TRANSACTION:
+      // If payment failed (or any other error after DB creation), 
+      // we should delete the 'Zombie' org so the user can retry with the same slug.
+      if (organization?.id) {
+        await this.prisma.organization.delete({ where: { id: organization.id } }).catch(() => {});
+      }
+      
       this.logger.error('Failed to create organization', err);
       throw err;
     }
@@ -431,6 +427,24 @@ export class OrganizationsService {
     ]);
 
     return { recentFiles: files, recentPosts: posts };
+  }
+
+  //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Run once a day
+  async cleanupAbandonedOrganizations() {
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - 48); // 48 Hours ago
+
+    // Find orgs that were created > 48 hours ago but never paid
+    const abandoned = await this.prisma.organization.deleteMany({
+      where: {
+        status: 'PENDING_PAYMENT',
+        createdAt: { lt: cutoffDate } // Older than 48 hours
+      }
+    });
+
+    if (abandoned.count > 0) {
+      this.logger.log(`Cleaned up ${abandoned.count} abandoned organizations.`);
+    }
   }
 
   // Helper

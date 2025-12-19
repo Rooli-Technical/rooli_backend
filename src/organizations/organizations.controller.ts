@@ -19,7 +19,6 @@ import {
   ApiBearerAuth,
   ApiOkResponse,
 } from '@nestjs/swagger';
-import { OrganizationUsageDto } from './dtos/organization-usage.dto';
 import { GetAllOrganizationsDto } from './dtos/get-organiations.dto';
 
 @ApiTags('Organizations')
