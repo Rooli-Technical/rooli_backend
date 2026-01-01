@@ -81,4 +81,10 @@ export class AuthResponse {
     description: 'Indicates if the user needs to verify their email.',
   })
   requiresEmailVerification?: boolean;
+
+  @ApiProperty({
+    example: "cmg...",
+    description: "the last active workspace of the user"
+  })
+  lastActiveWorkspaceId: string
 }

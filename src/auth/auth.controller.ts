@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Ip,
   Param,
   Post,
   Query,
@@ -30,6 +31,7 @@ import { ResetPassword } from './dtos/ResetPassword.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { User } from '@generated/client';
 import { AuthGuard } from '@nestjs/passport';
+import { OnboardingDto } from './dtos/user-onboarding.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -45,8 +47,8 @@ export class AuthController {
       'Registers a user with email/password and sends verification email',
   })
   @ApiBody({ type: Register, description: 'User registration data' })
-  async register(@Body() registerDto: Register): Promise<AuthResponse> {
-    return this.authService.register(registerDto);
+  async register(@Body() registerDto: Register, @Ip() ip: string): Promise<AuthResponse> {
+    return this.authService.register(registerDto, ip);
   }
 
   @Post('login')
@@ -200,21 +202,40 @@ export class AuthController {
     description:
       'Google redirects here after login. The returned user data is processed, and tokens are generated.',
   })
-  @ApiQuery({
-    name: 'timezone',
-    required: false,
-    description:
-      'Optional timezone parameter to set user timezone after login',
-    example: 'America/New_York',
-  })
   @ApiOkResponse({
     description: 'Successfully authenticated using Google',
   })
-  async googleAuthRedirect(@Req() req, @Query('timezone') timezone?: string) {
-    const userTimezone = timezone || 'Etc/UTC';
-    const result = await this.authService.handleSocialLogin(req.user, userTimezone);
+  async googleAuthRedirect(@Req() req, @Ip() ip: string) {
+    const result = await this.authService.handleSocialLogin(req.user, ip);
     // Return JSON or redirect to frontend
     return result;
+  }
+
+  @Post('onboarding')
+  @ApiOperation({
+    summary: 'User Onboarding',
+    description:
+      'Onboarding for the new user',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'User onboarded successfully',
+    schema: {
+      example: {
+        id: 'org-uuid',
+        name: 'Acme Corp',
+        slug: 'acme-corp',
+        timezone: 'UTC',
+        billingEmail: 'billing@acme.com',
+        planTier: 'FREE',
+        planStatus: 'ACTIVE',
+        maxMembers: 5,
+        monthlyCreditLimit: 1000,
+      },
+    },
+  })
+  async userOnboarding(@Req() req, @Body() dto: OnboardingDto) {
+    return this.authService.userOnboarding(req.user.id, dto);
   }
 
   @Post('logout')

@@ -47,9 +47,9 @@ model User {
 
   mediaFiles              MediaFile[]
   organizationMemberships OrganizationMember[] @relation("UserOrganizationMemberships")
-  members  WorkspaceMember[]
+  workspaceMemberships  WorkspaceMember[]
 
-  sentInvitations OrganizationInvitation[] @relation("UserSentInvitations")
+ sentInvitations         Invitation[] @relation("UserSentInvitations")
 
   aiContentGenerations     AiContentGeneration[]
   aiImageGenerations       AiImageGeneration[]
@@ -336,9 +336,8 @@ model Organization {
   totalCreditsUsed Int      @default(0)
 
   members        OrganizationMember[]
-  invitations    OrganizationInvitation[]
+  invitations      Invitation[]
 
-  // An Org owns Workspaces
   workspaces       Workspace[]
 
 
@@ -377,6 +376,8 @@ model Workspace {
 
   // Social Accounts belong to a Workspace
   socialAccounts SocialAccount[] 
+
+  invitations    Invitation[]
   
   // Posts belong to a Workspace
   posts          Post[]
@@ -409,7 +410,10 @@ model WorkspaceMember {
 
   workspace    Workspace @relation(fields: [workspaceId], references: [id])
   user         User      @relation(fields: [userId], references: [id])
-  role         Role      @relation(fields: [roleId], references: [id]) // <--- The Join
+  role         Role      @relation(fields: [roleId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@unique([workspaceId, userId])
 }
@@ -443,17 +447,27 @@ model Invitation {
   email          String
   token          String   @unique // The secret key sent in email
   
- organizationId String  // Always required (You always belong to a billing entity)
-  workspaceId    String? // Optional (If null, you are joining the Org generally)
-  roleId         String   // The role they will get upon acceptance
+  inviterId      String
+  inviter        User     @relation("UserSentInvitations", fields: [inviterId], references: [id])
   
-  inviterId      String   // Who sent the invite?
-  inviter        User     @relation(fields: [inviterId], references: [id])
-  
-  expiresAt      DateTime
-  createdAt      DateTime @default(now())
+  // 2. Which Organization is paying? (Required)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@unique([email, workspaceId])
+  // 3. Which Workspace? (Optional - null means Org-wide invite)
+  workspaceId    String? 
+  workspace      Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+
+  roleId         String
+  role           Role         @relation(fields: [roleId], references: [id])
+
+    expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  
+  // Prevents sending the exact same invite twice, but allows inviting 
+  // the same email to different workspaces within the same Org.
+  @@unique([email, organizationId, workspaceId])
 }
 
 // The Plan Model (Your Tiers)
@@ -1017,12 +1031,13 @@ model Role {
   updatedAt      DateTime  @updatedAt
   scope          RoleScope
 
+  invitations             Invitation[]
+
   // Relations
   organization            Organization?            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   systemUsers             User[]                   @relation("UserSystemRole")
   permissions             RolePermission[]
   organizationMembers     OrganizationMember[]
-  organizationInvitations OrganizationInvitation[]
   workspaceMembers        WorkspaceMember[]
 
   @@unique([scope, organizationId, name])

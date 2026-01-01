@@ -100,31 +100,4 @@ export class UserController {
     return this.usersService.getUsersByOrganization(organizationId, filters);
   }
 
-
-  @Post('onboarding')
-  @ApiOperation({
-    summary: 'User Onboarding',
-    description:
-      'Onboarding for the new user',
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'User onboarded successfully',
-    schema: {
-      example: {
-        id: 'org-uuid',
-        name: 'Acme Corp',
-        slug: 'acme-corp',
-        timezone: 'UTC',
-        billingEmail: 'billing@acme.com',
-        planTier: 'FREE',
-        planStatus: 'ACTIVE',
-        maxMembers: 5,
-        monthlyCreditLimit: 1000,
-      },
-    },
-  })
-  async createOrganization(@Req() req, @Body() dto: CreateOrganizationDto) {
-    return this.usersService.userOnboarding(req.user.id, dto);
-  }
 }

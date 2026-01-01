@@ -15,7 +15,7 @@ import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma, SubscriptionGateway, UserType } from '@generated/client';
 import slugify from 'slugify';
-import { OnboardingDto } from './dtos/user-onboarding.dto';
+import { OnboardingDto } from '../auth/dtos/user-onboarding.dto';
 import { BillingService } from '@/billing/billing.service';
 
 @Injectable()
@@ -166,117 +166,96 @@ export class UserService {
     this.logger.log(`User account deactivated`, { userId });
   }
 
-  async userOnboarding(userId: string, dto: OnboardingDto) {
-    const ownerRole = await this.fetchSystemRole('owner');
+// auth.service.ts
 
-    let user = await this.prisma.user.findUnique({ where: { id: userId } });
+async userOnboarding(userId: string, dto: OnboardingDto) {
+  const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new NotFoundException('User not found');
 
-    if (!user) throw new NotFoundException('User not found');
+  // Prevent double onboarding
+  const existingOrg = await this.prisma.organizationMember.findFirst({
+    where: { userId: user.id }
+  });
+  if (existingOrg) throw new ConflictException('User already has an organization');
 
-    // If DTO has a type, update it. Otherwise keep existing.
-    if (dto.userType && dto.userType !== user.userType) {
-      user = await this.prisma.user.update({
-        where: { id: userId },
-        data: { userType: dto.userType },
-      });
+  // 1. Prepare Slugs & Roles
+  const orgName = dto.name;
+  const workspaceName = dto.initialWorkspaceName || 'General';
+  const orgSlug = await this.generateUniqueOrgSlug(orgName);
+
+  // 2. TRANSACTION: Create Everything
+  const result = await this.prisma.$transaction(async (tx) => {
+    // A. Update User Type (if selected)
+    if (dto.userType) {
+      await tx.user.update({ where: { id: userId }, data: { userType: dto.userType } });
     }
 
-    // 3. Workspace Name Logic
-    // Default: Match Organization Name (e.g. "Jane's Bakery")
-    let workspaceName = dto.name;
-
-    // Agency Logic: Use specific client name if provided
-    if (user.userType === UserType.AGENCY) {
-      workspaceName = dto.initialWorkspaceName || `${dto.name} Client 1`;
-    }
-
-    // 4. Slug Logic
-    let slug = dto.slug || slugify(dto.name, { lower: true, strict: true });
-
-    // Check Uniqueness
-    const existing = await this.prisma.organization.findUnique({
-      where: { slug },
+    // B. Create Organization
+    const org = await tx.organization.create({
+      data: {
+        name: orgName,
+        slug: orgSlug,
+        billingEmail: user.email,
+        members: {
+          create: {
+            userId: user.id,
+            roleId: (await this.fetchRole(tx, 'owner', 'ORGANIZATION')).id,
+          },
+        },
+      },
     });
-    if (existing) {
-      throw new ConflictException('Organization URL (slug) is already taken.');
-    }
 
-    // 5. Gateway Logic
-    const billingCountry = dto.billingCountry || 'NG';
-    const isGlobal = billingCountry !== 'NG';
-    const currency = isGlobal ? 'USD' : 'NGN';
-    const subscriptionGateway = isGlobal
-      ? SubscriptionGateway.STRIPE
-      : SubscriptionGateway.PAYSTACK;
-
-    let organization;
-
-    try {
-      organization = await this.prisma.$transaction(async (tx) => {
-        // A. Create Organization (Billing Entity)
-        const org = await tx.organization.create({
-          data: {
-            name: dto.name,
-            slug,
-            timezone: dto.timezone ?? 'UTC',
-            email: dto.email ?? user.email,
-            status: 'PENDING_PAYMENT',
-            isActive: true,
-            billingCountry,
-            currency,
-            subscriptionGateway,
-            members: {
-              create: {
-                userId,
-                roleId: ownerRole.id,
-                permissions: {}, // Owners get all permissions via Role
-              },
-            },
+    // C. Create Default Workspace
+    const workspace = await tx.workspace.create({
+      data: {
+        name: workspaceName,
+        slug: slugify(workspaceName, { lower: true }),
+        organizationId: org.id,
+        members: {
+          create: {
+            userId: user.id,
+            roleId: (await this.fetchRole(tx, 'admin', 'WORKSPACE')).id,
           },
-        });
+        },
+      },
+    });
 
-        // B. Create Default Workspace (Social Context)
-        const workspace = await tx.workspace.create({
-          data: {
-            name: workspaceName,
-            organizationId: org.id,
-            slug: slugify(workspaceName, { lower: true }),
-          },
-        });
+    // D. Create Brand Kit
+    await tx.brandKit.create({
+      data: { workspaceId: workspace.id, name: `${orgName} Brand Kit` },
+    });
 
-        // C. Create Brand Kit (Linked to Workspace)
-        await tx.brandKit.create({
-          data: {
-            workspaceId: workspace.id,
-            name: `${workspaceName} Brand Kit`,
-          },
-        });
+    // E. Update User Context (Sticky Session)
+    const updatedUser = await tx.user.update({
+      where: { id: user.id },
+      data: { 
+        lastActiveWorkspaceId: workspace.id,
+        isOnboardingComplete: true
+      },
+      include: { systemRole: true }
+    });
 
-        return org;
-      });
+    // F. Generate NEW Tokens (Now containing the OrgID and WorkspaceID)
+    // The old token is invalid for accessing app features because orgId was null.
+    const newTokens = await this.generateTokens(
+      updatedUser.id, updatedUser.email, org.id, workspace.id, updatedUser.refreshTokenVersion
+    );
+    
+    // Save new refresh token
+    await tx.user.update({
+      where: { id: user.id },
+      data: { refreshToken: await argon2.hash(newTokens.refreshToken) }
+    });
 
-      // 6. Initialize Payment
-      const paymentData = await this.billingService.initializePayment(
-        organization.id,
-        dto.planId,
-        user,
-      );
+    return { user: updatedUser, tokens: newTokens, workspaceId: workspace.id };
+  });
 
-      return {
-        organization,
-        payment: paymentData,
-      };
-    } catch (err) {
-      this.logger.error('Failed to create organization', err);
-
-      if (organization?.id) {
-        await this.prisma.organization
-          .delete({ where: { id: organization.id } })
-          .catch(() => {});
-      }
-      throw err;
-    }
-  }
+  return {
+    user: this.toSafeUser(result.user),
+    ...result.tokens, // Frontend must replace the old token with this one!
+    activeWorkspaceId: result.workspaceId
+  };
+}
 
   private validatePasswordStrength(password: string): void {
     if (password.length < 8)

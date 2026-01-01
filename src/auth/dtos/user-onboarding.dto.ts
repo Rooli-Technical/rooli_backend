@@ -54,15 +54,15 @@ export class OnboardingDto {
 
   @ApiPropertyOptional({
     description: 'The country for billing',
-    example: "NG"
+    example: 'NG',
   })
   @IsString()
   @IsOptional()
   billingCountry?: string;
 
   @ApiPropertyOptional({
-    description: "New workSpace for agencies",
-    example: "Coca Cola"
+    description: 'New workSpace for agencies',
+    example: 'Coca Cola',
   })
   @IsString()
   @IsOptional()
