@@ -21,7 +21,7 @@ export async function seedPlans() {
       interval: BillingInterval.MONTHLY,
 
       maxWorkspaces: 1,
-      maxSocialAccountsPerWorkspace: 3,
+      maxSocialProfilesPerWorkspace: 3,
       maxTeamMembers: 1,
       monthlyAiCredits: 50,
 
@@ -51,7 +51,7 @@ export async function seedPlans() {
       interval: BillingInterval.YEARLY,
 
       maxWorkspaces: 1,
-      maxSocialAccountsPerWorkspace: 3,
+      maxSocialProfilesPerWorkspace: 3,
       maxTeamMembers: 1,
       monthlyAiCredits: 50,
 
@@ -81,7 +81,7 @@ export async function seedPlans() {
       interval: BillingInterval.MONTHLY,
 
       maxWorkspaces: 1,
-      maxSocialAccountsPerWorkspace: 4,
+      maxSocialProfilesPerWorkspace: 4,
       maxTeamMembers: 3,
       monthlyAiCredits: 1000,
 
@@ -109,7 +109,7 @@ export async function seedPlans() {
       interval: BillingInterval.YEARLY,
 
       maxWorkspaces: 1,
-      maxSocialAccountsPerWorkspace: 4,
+      maxSocialProfilesPerWorkspace: 4,
       maxTeamMembers: 3,
       monthlyAiCredits: 1000,
 
@@ -140,7 +140,7 @@ export async function seedPlans() {
       interval: BillingInterval.MONTHLY,
 
       maxWorkspaces: 5,
-      maxSocialAccountsPerWorkspace: 4,
+      maxSocialProfilesPerWorkspace: 4,
       maxTeamMembers: 9999,
       monthlyAiCredits: 5000,
 
@@ -169,7 +169,7 @@ export async function seedPlans() {
       interval: BillingInterval.YEARLY,
 
       maxWorkspaces: 5,
-      maxSocialAccountsPerWorkspace: 4,
+      maxSocialProfilesPerWorkspace: 4,
       maxTeamMembers: 9999,
       monthlyAiCredits: 5000,
 
