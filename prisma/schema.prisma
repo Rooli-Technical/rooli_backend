@@ -261,6 +261,8 @@ model SocialProfile {
   username           String?  // "@nike"
   picture            String?
 
+  followerCount    Int  @default(0)
+
   // 🔐 PAGE CREDENTIALS (The "Room Key")
   // Specific token to post to THIS page. 
   // For FB/IG: This is the Page Access Token.
@@ -493,7 +495,7 @@ model Plan {
   maxWorkspaces Int @default(1) 
 
   // "Up to 3 social profiles" (Creator) vs "4 per workspace" (Rocket)
-  maxSocialAccountsPerWorkspace Int @default(3) 
+  maxSocialProfilesPerWorkspace Int @default(3) 
 
   // "1 user" (Creator) vs "Unlimited" (Rocket - set to -1 or 9999)
   maxTeamMembers Int @default(1)
