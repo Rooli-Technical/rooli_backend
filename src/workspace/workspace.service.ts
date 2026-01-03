@@ -98,9 +98,9 @@ async findAll(orgId: string, userId: string) {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(orgId: string, id: string) {
     const workspace = await this.prisma.workspace.findUnique({
-      where: { id },
+      where: { id, organizationId: orgId },
       include: {
         // Full list for the detail view
         socialProfiles: {
@@ -148,7 +148,7 @@ async findAll(orgId: string, userId: string) {
   // --------------------------------------------------------
 
 async addMember(workspaceId: string, dto: AddWorkspaceMemberDto) {
-    // 1. 🛑 CHECK LIMITS FIRST (Billing Fix)
+    // 1.CHECK LIMITS FIRST (Billing Fix)
     await this.checkSeatLimit(workspaceId, dto.email);
 
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });

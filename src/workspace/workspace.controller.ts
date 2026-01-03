@@ -45,8 +45,8 @@ export class WorkspaceController {
   @ApiOperation({ summary: 'Get workspace by ID' })
   @ApiParam({ name: 'id', description: 'Workspace ID' })
   @ApiResponse({ status: 404, description: 'Workspace not found' })
-  async findOne(@Param('id') id: string) {
-    return this.workspaceService.findOne(id);
+  async findOne(@Param('orgId') orgId: string,@Param('id') id: string) {
+    return this.workspaceService.findOne(orgId, id);
   }
 
 
