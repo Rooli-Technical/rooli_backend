@@ -13,7 +13,6 @@ import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 
-
 @Injectable()
 export class InvitationsService {
   constructor(
@@ -26,70 +25,92 @@ export class InvitationsService {
   // ===========================================================================
   // 1. SEND INVITATION
   // ===========================================================================
-// invitations.service.ts
+  // invitations.service.ts
 
   async inviteUser(
     inviterId: string,
     organizationId: string,
     email: string,
     roleId: string,
-    workspaceId: string | null = null
+    workspaceId: string | null = null,
   ) {
     const lowerEmail = email.toLowerCase();
 
-    // 1. FEATURE GUARD: Check Capacity (Max Team Members)
-    const canInvite = await this.checkCapacity(organizationId);
-    if (!canInvite) {
-      throw new ForbiddenException(
-        'Organization has reached its member limit. Please upgrade your plan.'
-      );
-    }
-
-    // 2. CHECK EXISTING MEMBERSHIP (The Fix)
+    // 1. CHECK EXISTING USER & MEMBERSHIP
+    // We need to know if they exist to decide if this costs a "Seat"
     const existingUser = await this.prisma.user.findUnique({
       where: { email: lowerEmail },
-      select: { id: true } 
+      select: { id: true },
     });
 
-    // Only check for duplicates if the user actually exists in our system
+    let isNewSeat = true;
+
     if (existingUser) {
-      if (workspaceId) {
-        // Check Workspace Membership using the ID we just found
-        const wsMember = await this.prisma.workspaceMember.findUnique({
-          where: { 
-            workspaceId_userId: { 
-              workspaceId, 
-              userId: existingUser.id 
-            } 
-          }
-        });
-        if (wsMember) throw new ConflictException('User is already a member of this workspace');
-      } else {
-        // Check Organization Membership
-        const orgMember = await this.prisma.organizationMember.findUnique({
-          where: { 
-            organizationId_userId: { 
-              organizationId, 
-              userId: existingUser.id // <--- CORRECT: Using ID
-            } 
-          }
-        });
-        if (orgMember) throw new ConflictException('User is already a member of this organization');
+      // Check if they are already in the Organization (Billing Check)
+      const orgMember = await this.prisma.organizationMember.findUnique({
+        where: {
+          organizationId_userId: { organizationId, userId: existingUser.id },
+        },
+      });
+
+      if (orgMember) {
+        isNewSeat = false; // They are already paying! Don't block them.
+
+        // DUPLICATE CHECK: Are they already in the target?
+        if (!workspaceId) {
+          throw new ConflictException(
+            'User is already a member of this organization',
+          );
+        } else {
+          const wsMember = await this.prisma.workspaceMember.findUnique({
+            where: {
+              workspaceId_userId: { workspaceId, userId: existingUser.id },
+            },
+          });
+          if (wsMember)
+            throw new ConflictException(
+              'User is already a member of this workspace',
+            );
+        }
       }
     }
 
-    // 3. CLEAN UP OLD INVITES
-    // If they were invited before but lost the email, we delete the old one
-    // so we can send a fresh one.
+    // 2. FEATURE GUARD (Only check if it consumes a NEW seat)
+    if (isNewSeat) {
+      const canInvite = await this.checkCapacity(organizationId);
+      if (!canInvite) {
+        throw new ForbiddenException(
+          'Organization seat limit reached. Upgrade your plan to invite new members.',
+        );
+      }
+    }
+
+    // 3. VALIDATE ROLE SCOPE
+    // Prevents assigning an Org Role to a Workspace invite
+    const role = await this.prisma.role.findUnique({ where: { id: roleId } });
+    if (!role) throw new BadRequestException('Invalid Role');
+
+    if (workspaceId && role.scope !== 'WORKSPACE') {
+      throw new BadRequestException(
+        'Cannot assign Organization Role to Workspace Invite',
+      );
+    }
+    if (!workspaceId && role.scope !== 'ORGANIZATION') {
+      throw new BadRequestException(
+        'Cannot assign Workspace Role to Organization Invite',
+      );
+    }
+
+    // 4. CLEAN UP OLD INVITES
     await this.prisma.invitation.deleteMany({
       where: {
         email: lowerEmail,
         organizationId,
-        workspaceId: workspaceId // Matches null if it's an Org invite
-      }
+        workspaceId, // Matches null if Org invite, or ID if Workspace invite
+      },
     });
 
-    // 4. CREATE NEW INVITATION
+    // 5. CREATE NEW INVITATION
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 Days
@@ -102,13 +123,12 @@ export class InvitationsService {
         roleId,
         inviterId,
         token,
-        expiresAt
-      }
+        expiresAt,
+      },
     });
 
-    // 5. SEND EMAIL
-    const context = workspaceId ? 'workspace' : 'organization';
-    //await this.mailService.sendInvite(lowerEmail, token, context);
+    // 6. SEND EMAIL
+    // await this.mailService.sendInvite(...)
 
     return { message: 'Invitation sent successfully' };
   }
@@ -291,7 +311,7 @@ export class InvitationsService {
       include: { plan: true, organization: { include: { members: true } } },
     });
 
-    if (!subscription || subscription.status !== 'active' ) return false;
+    if (!subscription || subscription.status !== 'active') return false;
 
     const maxMembers = subscription.plan.maxTeamMembers;
 
@@ -308,7 +328,6 @@ export class InvitationsService {
 
     return activeCount + pendingCount < maxMembers;
   }
-
 
   private async generateTokens(
     userId: string,
