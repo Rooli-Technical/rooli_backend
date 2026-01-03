@@ -283,6 +283,9 @@ model SocialProfile {
 
   isActive           Boolean  @default(true)
 
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
   @@unique([workspaceId, platform, platformId])
   @@index([workspaceId])
 }
@@ -1149,19 +1152,6 @@ enum InvoiceStatus {
   UNCOLLECTIBLE
 }
 
-enum SocialAccountRole {
-  OWNER
-  MANAGER
-  CONTRIBUTOR
-  ANALYST
-}
-
-enum SocialAccountType {
-  PAGE
-  PROFILE
-}
-
-
 enum OrganizationStatus {
   PENDING_PAYMENT // Created but not paid yet
   ACTIVE // Paid and running
@@ -1194,7 +1184,6 @@ enum MessageStatus {
 
 enum Platform {
   X
-  META
   LINKEDIN
   FACEBOOK
   INSTAGRAM
