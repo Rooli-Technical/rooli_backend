@@ -17,16 +17,14 @@ import * as crypto from 'crypto';
 export class WorkspaceService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: string, orgId: string, dto: CreateWorkspaceDto) {
-    // A. Validate Limits & Fetch Features
-    // We get the 'features' back here to avoid querying the DB twice
+ async create(userId: string, orgId: string, dto: CreateWorkspaceDto) {
+    // 1. Validate Billing Limits
     const { features } = await this.checkWorkspaceLimitAndGetFeatures(orgId);
 
-    // B. Generate Unique Slug (Scoped to Organization)
+    // 2. Generate Slug
     const slug = await this.generateUniqueSlug(orgId, dto.name);
 
-    // C. Prepare Data (Feature Gating)
-    // Only save Client CRM fields if the plan allows 'clientLabels'
+    // 3. Prepare Feature-Gated Data
     const clientData = features['clientLabels']
       ? {
           clientName: dto.clientName,
@@ -36,51 +34,67 @@ export class WorkspaceService {
         }
       : {};
 
-    // D. Create Workspace
-    const workspace = await this.prisma.workspace.create({
+    const defaultRole = await this.fetchDefaultWorkspaceRole();
+
+    // 4. Transaction: Create & Link
+    return this.prisma.workspace.create({
       data: {
         name: dto.name,
         slug: slug,
         organizationId: orgId,
-        ...clientData, // Spread the conditional data
+        ...clientData,
         members: {
-          create: {
-            userId,
-            roleId: (await this.fetchDefaultWorkspaceRole()).id,
-          },
+          create: { userId, roleId: defaultRole.id },
         },
       },
     });
-
-    return workspace;
   }
 
-  async findAll(orgId: string, userId: string) {
-    // 1. Check if user is Org Admin/Owner (The "Super View")
-    // Optimization: Select only the role name to be faster
+async findAll(orgId: string, userId: string) {
+    // Optimization: Check Org Admin status once
     const orgMember = await this.prisma.organizationMember.findUnique({
       where: { organizationId_userId: { organizationId: orgId, userId } },
       select: { role: { select: { name: true } } },
     });
 
-    if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role.name)) {
+    const isOrgAdmin = ['OWNER', 'ADMIN'].includes(orgMember?.role?.name || '');
+
+    // Common Select object to ensure frontend gets consistent data
+    // We explicitly select SocialProfile (Not Connection)
+    const selectArgs = {
+      id: true,
+      name: true,
+      slug: true,
+      createdAt: true,
+      _count: { select: { members: true, posts: true } }, // Quick Stats
+      
+      socialProfiles: {
+        select: {
+          id: true,
+          platform: true,
+          username: true,
+          picture: true,
+          isActive: true
+        },
+        take: 5 // Don't fetch 100 profiles if they have them, just show previews
+      }
+    };
+
+    if (isOrgAdmin) {
       return this.prisma.workspace.findMany({
         where: { organizationId: orgId },
         orderBy: { createdAt: 'desc' },
-        include: {
-          _count: { select: { members: true, socialAccounts: true } },
-        }, // Useful UI stats
+        select: selectArgs,
       });
     }
 
-    // 2. Otherwise, return only workspaces where they are a member
     return this.prisma.workspace.findMany({
       where: {
         organizationId: orgId,
         members: { some: { userId } },
       },
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { members: true, socialAccounts: true } } },
+      select: selectArgs,
     });
   }
 
@@ -88,16 +102,25 @@ export class WorkspaceService {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id },
       include: {
-        _count: {
-          select: { socialAccounts: true, posts: true, members: true },
+        // Full list for the detail view
+        socialProfiles: {
+           select: { id: true, platform: true, name: true, picture: true, isActive: true, followerCount: true } 
         },
-        // Include BrandKit so the frontend can load colors immediately
         brandKit: true,
+        _count: { select: { members: true, posts: true } },
       },
     });
 
     if (!workspace) throw new NotFoundException('Workspace not found');
     return workspace;
+  }
+
+
+  async switchWorkspace(userId: string, workspaceId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { lastActiveWorkspaceId: workspaceId },
+    });
   }
 
   async update(workspaceId: string, dto: UpdateWorkspaceDto) {
@@ -121,95 +144,33 @@ export class WorkspaceService {
   }
 
   // --------------------------------------------------------
-  // 2. SWITCHING LOGIC
-  // --------------------------------------------------------
-
-  async switchWorkspace(userId: string, workspaceId: string) {
-    // 1. Verify Access
-    const hasAccess = await this.verifyAccess(userId, workspaceId);
-    if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this workspace');
-    }
-
-    // 2. Update User State ("Sticky Session")
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { lastActiveWorkspaceId: workspaceId },
-    });
-  }
-
-  async verifyAccess(userId: string, workspaceId: string): Promise<boolean> {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { organizationId: true },
-    });
-
-    if (!workspace) throw new NotFoundException('Workspace not found');
-
-    // Optimization: Run both checks in parallel using Promise.all is unsafe
-    // because we need the Org ID first.
-    // But we can check Org Membership efficiently.
-
-    const orgMember = await this.prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: workspace.organizationId,
-          userId,
-        },
-      },
-      select: { role: { select: { name: true } } },
-    });
-
-    if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role.name)) {
-      return true;
-    }
-
-    const wsMember = await this.prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId } },
-    });
-
-    return !!wsMember;
-  }
-
-  // --------------------------------------------------------
   // 3. MEMBER MANAGEMENT (Agency Features)
   // --------------------------------------------------------
 
-  async addMember(workspaceId: string, dto: AddWorkspaceMemberDto) {
-    // 1. Find User by Email
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+async addMember(workspaceId: string, dto: AddWorkspaceMemberDto) {
+    // 1. 🛑 CHECK LIMITS FIRST (Billing Fix)
+    await this.checkSeatLimit(workspaceId, dto.email);
+
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (!user) throw new NotFoundException('User not found');
 
-    // 2. Check for Duplicates
-    const exists = await this.prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId: user.id } },
-    });
-    if (exists)
-      throw new ConflictException('User is already a member of this workspace');
-
-    // 3. Validate Role Scope 
-    const role = await this.prisma.role.findUnique({
-      where: { id: dto.roleId },
-    });
-    if (!role) throw new NotFoundException('Role not found');
-
-    // Ensure we don't assign an "Organization" role (like Billing Admin) to a "Workspace"
-    if (role.scope !== RoleScope.WORKSPACE) {
-      throw new BadRequestException(
-        'Invalid role: Must be a Workspace-level role',
-      );
+    // 2. Check Role Scope
+    const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
+    if (!role || role.scope !== 'WORKSPACE') {
+      throw new BadRequestException('Role must be Workspace-scoped');
     }
 
-    return this.prisma.workspaceMember.create({
-      data: {
-        workspaceId,
-        userId: user.id,
-        roleId: dto.roleId,
-      },
-    });
+    // 3. Add Member (Use upsert or handle error for cleaner logs)
+    try {
+      return await this.prisma.workspaceMember.create({
+        data: { workspaceId, userId: user.id, roleId: dto.roleId },
+      });
+    } catch (e) {
+      if (e.code === 'P2002') throw new ConflictException('User already in workspace');
+      throw e;
+    }
   }
+
 
   async removeMember(workspaceId: string, userIdToRemove: string) {
     return this.prisma.workspaceMember.delete({
@@ -218,83 +179,6 @@ export class WorkspaceService {
       },
     });
   }
-
-
-
-async inviteMember(inviterId: string, workspaceId: string, email: string, roleId: string) {
-  const lowerEmail = email.toLowerCase();
-
-  // 1. VALIDATE WORKSPACE & FETCH CONTEXT
-  // We need the Organization ID for the Invitation record
-  const workspace = await this.prisma.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { id: true, organizationId: true, name: true }
-  });
-
-  if (!workspace) throw new NotFoundException('Workspace not found');
-
-  // 2. VALIDATE ROLE (Security Check)
-  // Ensure the Role ID passed is actually meant for a Workspace, not an Org
-  const role = await this.prisma.role.findUnique({ where: { id: roleId } });
-  
-  if (!role || role.scope !== 'WORKSPACE') {
-    throw new BadRequestException('Invalid role. Must be a Workspace-level role.');
-  }
-
-  // 3. CHECK EXISTING MEMBERSHIP
-  const existingMember = await this.prisma.workspaceMember.findFirst({
-    where: { 
-      workspaceId, 
-      user: { email: lowerEmail } 
-    }
-  });
-
-  if (existingMember) throw new ConflictException('User is already a member of this workspace');
-
-  // 4. UPSERT INVITATION
-  // Using a transaction isn't strictly necessary here, but good for safety
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 Days
-
-  await this.prisma.invitation.upsert({
-    where: { 
-      email_organizationId_workspaceId: { 
-        email: lowerEmail, 
-        organizationId: workspace.organizationId, // <--- You must include this
-        workspaceId: workspaceId 
-      } 
-    },
-    update: { 
-      token, 
-      expiresAt, 
-      roleId, // Allow updating role if re-inviting
-      inviterId 
-    },
-    create: {
-      email: lowerEmail,
-      workspaceId,
-      organizationId: workspace.organizationId,
-      roleId,
-      inviterId,
-      token,
-      expiresAt
-    }
-  });
-
-  // 5. SEND EMAIL
-  // It is cleaner to wrap the email logic in a helper method inside MailService
- // const inviteLink = `${this.configService.get('FRONTEND_URL')}/join?token=${token}`;
-  
-  // Use a dedicated method in your MailService for better templating
-  // await this.emailService.sendWorkspaceInvite({
-  //   to: lowerEmail,
-  //   workspaceName: workspace.name,
-  //   link: inviteLink
-  // });
-
-  return { message: 'Invitation sent' };
-}
 
   // --------------------------------------------------------
   // 4. HELPERS
@@ -344,6 +228,62 @@ async inviteMember(inviterId: string, workspaceId: string, email: string, roleId
     }
 
     return { features: (plan?.features as any) || {} };
+  }
+
+ private async checkSeatLimit(workspaceId: string, email: string) {
+    const lowerEmail = email.toLowerCase();
+
+    // 1. GET CONTEXT (Org & Plan)
+    // We fetch the Organization through the Workspace
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        organization: {
+          include: {
+            subscription: { include: { plan: true } },
+          },
+        },
+      },
+    });
+
+    if (!workspace) throw new NotFoundException('Workspace not found');
+    const org = workspace.organization;
+
+    // 2. CHECK "ALREADY PAID" STATUS (The Free Pass)
+    // If this user is ALREADY a member of the Organization (in any workspace),
+    // they have already consumed a seat. We do NOT block them.
+    const existingOrgMember = await this.prisma.organizationMember.findFirst({
+      where: {
+        organizationId: org.id,
+        user: { email: lowerEmail },
+      },
+    });
+
+    if (existingOrgMember) {
+      return; // ✅ PASS: They are an existing, paid seat.
+    }
+
+    // 3. CHECK "NEW SEAT" AVAILABILITY
+    // If we reach here, this is a BRAND NEW user for the Organization.
+    const seatLimit = org.subscription?.plan?.maxTeamMembers || 1; // Default to 1 (Solo)
+
+    // A. Count Active Members (Seats taken)
+    const currentSeats = await this.prisma.organizationMember.count({
+      where: { organizationId: org.id },
+    });
+
+    // B. Count Pending Invites (Seats reserved)
+    // We must count these, otherwise users could blast 100 invites on a 3-user plan
+    const pendingInvites = await this.prisma.invitation.count({
+      where: { organizationId: org.id },
+    });
+
+    // 4. THE VERDICT
+    if (currentSeats + pendingInvites >= seatLimit) {
+      throw new ForbiddenException(
+        `Organization seat limit reached (${seatLimit} users). Upgrade your plan to invite new team members.`,
+      );
+    }
   }
 
   private async fetchDefaultWorkspaceRole() {
