@@ -53,8 +53,8 @@ model User {
 
   aiContentGenerations     AiContentGeneration[]
   aiImageGenerations       AiImageGeneration[]
-  messages                 Message[]
-  notifications            NotificationEntity[]
+  // messages                 Message[]
+  // notifications            NotificationEntity[]
   ContentTemplate          ContentTemplate[]
   Post                     Post[]
   approvalsRequested       PostApproval[]            @relation("ApprovalRequester")
@@ -62,258 +62,12 @@ model User {
   auditLogs                AuditLog[]
   aiUsages                 AIUsage[]
   favoriteTemplates        UserFavoriteTemplate[]
-  conversationParticipants ConversationParticipant[]
+  //conversationParticipants ConversationParticipant[]
 
 
   @@index([email, deletedAt])
   @@index([createdAt])
   @@index([lastActiveAt])
-}
-
-model SocialAccount {
-  id                    String    @id @default(cuid())
-  organizationId        String?
-  platform              Platform
-  platformAccountId     String // Platform-specific account ID
-  username              String?
-  name                  String?
-  displayName           String?
-  profileImage          String?
-  accessToken           String
-  refreshToken          String?
-  refreshTokenExpiresAt DateTime?
-  accessSecret          String? // For Twitter OAuth 1.0a
-  tokenExpiresAt        DateTime?
-  errorMessage          String?
-  isActive              Boolean   @default(true)
-  lastSyncAt            DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  scopes       String[]
-  lastPostedAt DateTime?
-  metadata     Json?
-
-  followersCount Int       @default(0)
-  followingCount Int       @default(0)
-  lastPolledAt   DateTime?
-  profileViews   Int       @default(0)
-  websiteClicks  Int       @default(0)
-  impressions    Int       @default(0)
-
- workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  posts         Post[]
-  rateLimitLogs PlatformRateLimitLog[]
-
-  accountType    SocialAccountType    @default(PROFILE)
-  notifications  NotificationEntity[]
-  conversations  Conversation[]
-  pages          PageAccount[]
-  dailyAnalytics AccountAnalytics[]
-
-  @@unique([platform, platformAccountId])
-  @@index([platform, isActive])
-  @@index([organizationId])
-  @@index([accountType])
-}
-
-
-model PageAccount {
-  id                  String  @id @default(cuid())
-  socialAccountId     String
-  platformPageId      String // Facebook Page ID
-  name                String
-  isActive            Boolean @default(true)
-  accessToken         String // Page access token (encrypted)
-  category            String? // Page category
-  instagramBusinessId String? // Linked Instagram account ID
-  instagramUsername   String? // Linked Instagram username
-  profilePicture      String? // Page/Instagram profile picture
-  metadata            Json? // Additional page data
-
-  // Relations
-  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // A page can have posts, metrics, etc.
-  posts          Post[]
-  dailyAnalytics AccountAnalytics[]
-  // EngagementMetric EngagementMetric[]
-  // conversations    Conversation[]
-
-  followersCount Int       @default(0)
-  followingCount Int       @default(0)
-  lastPolledAt   DateTime?
-  profileViews   Int       @default(0)
-  websiteClicks  Int       @default(0)
-  impressions    Int       @default(0)
-
-  @@unique([platformPageId])
-  @@index([socialAccountId])
-  @@index([instagramBusinessId])
-}
-
-model Post {
-  id              String      @id @default(cuid())
-  authorId        String?
-  socialAccountId String
-  pageAccountId   String?
-  content         String
-  contentType     ContentType @default(POST)
-  platform        Platform
-  mediaFileIds    MediaFile[]
-  scheduledAt     DateTime?
-  timezone        String
-  publishedAt     DateTime?
-  status          PostStatus  @default(DRAFT)
-  errorMessage    String?
-  retryCount      Int         @default(0)
-  metadata        Json?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-
-  maxRetries Int @default(3)
-
-  // Platform metadata
-  platformPostId String? // ID returned by platform after publishing
-
-  parentPostId String? // Points to the previous tweet in the thread
-  parentPost   Post?   @relation("PostThread", fields: [parentPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  childPosts   Post[]  @relation("PostThread")
-
-  // RELATIONS
-  author        User?                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  socialAccount SocialAccount           @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
-  pageAccount   PageAccount?            @relation(fields: [pageAccountId], references: [id], onDelete: Cascade)
-  approvals     PostApproval[]
-  snapShots     PostAnalyticsSnapshot[]
-
-  jobId       String?
-  queueStatus ScheduleJobStatus @default(PENDING)
-
-  lastAnalyticsCheck DateTime?
-  nextAnalyticsCheck DateTime? @default(now())
-  analyticsPriority  Int       @default(1)
-
-  // These represent the LATEST known state.
-  // Updated every time you create a new Snapshot.
-  currentLikes       Int @default(0)
-  currentComments    Int @default(0)
-  currentShares      Int @default(0)
-  currentImpressions Int @default(0)
-  currentReach       Int @default(0)
-  currentClicks      Int @default(0)
-
-  // Calculated field for sorting "Best Performing"
-  engagementRate Float @default(0.0)
-
-  // AI relations
-  aiContentId        String?              @unique
-  aiContent          AiContentGeneration? @relation(fields: [aiContentId], references: [id])
-  aiImageGenerations AiImageGeneration[]
-
-  notifications NotificationEntity[]
-
- workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([socialAccountId, status, scheduledAt])
-  @@index([workspaceId, status])
-  @@index([status, scheduledAt])
-  @@index([status, nextAnalyticsCheck])
-  @@index([socialAccountId, scheduledAt])
-  @@index([jobId])
-}
-
-model PostApproval {
-  id            String         @id @default(cuid())
-  postId        String
-  requesterId   String
-  approverId    String?
-  status        ApprovalStatus @default(PENDING)
-  comments      String?
-  requestedAt   DateTime       @default(now())
-  reviewedAt    DateTime?
-  revisionNotes String?        @db.Text
-
-  post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
-  requester User  @relation("ApprovalRequester", fields: [requesterId], references: [id])
-  approver  User? @relation("ApprovalApprover", fields: [approverId], references: [id])
-
-  @@unique([postId])
-  @@index([status, requestedAt])
-  @@index([requesterId, status])
-}
-
-model PublishingMetric {
-  id             String   @id @default(uuid())
-  organizationId String
-  platform       Platform
-  success        Boolean
-  errorMessage   String? // optional, only filled on failure
-  timestamp      DateTime @default(now())
-
-  // relations
-  organization Organization @relation(fields: [organizationId], references: [id])
-
-  @@index([organizationId, platform, timestamp])
-}
-
-model MediaFolder {
-  id             String  @id @default(cuid())
-  name           String
-  parentId       String?
-
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  parent       MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: NoAction)
-  children     MediaFolder[] @relation("FolderHierarchy")
-  files        MediaFile[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([workspaceId, parentId, name])
-  @@index([workspaceId])
-  @@index([parentId])
-}
-
-model MediaFile {
-  id                  String    @id @default(cuid())
-  userId              String
-  filename            String
-  originalName        String
-  mimeType            String
-  size                BigInt
-  url                 String
-  publicId            String
-  thumbnailUrl        String?
-  folderId            String?
-  duration            Int?
-  metadata            Json?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  expiresAt           DateTime?
-  isAIGenerated       Boolean   @default(false)
-  aiGenerationContext Json?
-  // Not unique to allow multiple files per generation:
-  aiGenerationId      String?
-  posts               Post[]
-
-  folder MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-
-  // Relation field (many media files -> one generation)
-  aiImageGeneration AiImageGeneration? @relation(fields: [aiGenerationId], references: [id], onDelete: SetNull)
-
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([isAIGenerated])
-  @@index([workspaceId, isAIGenerated])
 }
 
 model Organization {
@@ -339,12 +93,13 @@ model Organization {
   invitations      Invitation[]
 
   workspaces       Workspace[]
+  socialConnections SocialConnection[]
 
 
   aiContentGenerations AiContentGeneration[]
   aiImageGenerations   AiImageGeneration[]
-  conversations        Conversation[]
-  notifications        NotificationEntity[]
+  // conversations        Conversation[]
+  // notifications        NotificationEntity[]
   webhookLogs          WebhookLog[]
   PostingSchedule      PostingSchedule[]
   ContentTemplate      ContentTemplate[]
@@ -374,10 +129,9 @@ model Workspace {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  // Social Accounts belong to a Workspace
-  socialAccounts SocialAccount[] 
 
   invitations    Invitation[]
+  socialProfiles SocialProfile[]
   
   // Posts belong to a Workspace
   posts          Post[]
@@ -469,6 +223,251 @@ model Invitation {
   // the same email to different workspaces within the same Org.
   @@unique([email, organizationId, workspaceId])
 }
+
+model SocialConnection {
+  id               String   @id @default(cuid())
+  organizationId   String
+  platform         Platform // FACEBOOK, LINKEDIN, TWITTER
+  
+  // 🔐 USER CREDENTIALS (The "Master Key")
+  // Used to refresh tokens and fetch list of pages
+  platformUserId   String   // The generic User ID (e.g. FB User ID)
+  platformUsername String?
+
+
+  accessToken      String   @db.Text // Encrypted
+  refreshToken     String?  @db.Text // Encrypted
+  tokenExpiresAt   DateTime?
+
+  // Relations
+  organization     Organization    @relation(fields: [organizationId], references: [id])
+  profiles         SocialProfile[] // One Login -> Many Pages
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([organizationId, platform, platformUserId]) // Prevent duplicate logins
+  @@index([organizationId])
+}
+
+model SocialProfile {
+  id                 String   @id @default(cuid())
+  workspaceId        String
+  socialConnectionId String   // Link back to the parent login
+
+  platform           Platform
+  platformId         String   // The Page ID / IG Business ID
+  name               String   // "Nike Official"
+  username           String?  // "@nike"
+  picture            String?
+
+  // 🔐 PAGE CREDENTIALS (The "Room Key")
+  // Specific token to post to THIS page. 
+  // For FB/IG: This is the Page Access Token.
+  // For X/LinkedIn: Often a copy of the User Token.
+  accessToken        String?  @db.Text 
+
+  type           SocialProfileType
+
+  // Relations
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id])
+  connection         SocialConnection @relation(fields: [socialConnectionId], references: [id], onDelete: Cascade)
+  
+  // The posts scheduled for this specific profile
+  postDestinations   PostDestination[] 
+  
+  // Analytics for this specific profile
+  //dailyAnalytics     AccountAnalytics[]
+
+  isActive           Boolean  @default(true)
+
+  @@unique([workspaceId, platform, platformId])
+  @@index([workspaceId])
+}
+
+
+model Post {
+  id              String      @id @default(cuid())
+  authorId        String?
+  socialAccountId String
+  pageAccountId   String?
+  content         String
+  contentType     ContentType @default(POST)
+  platform        Platform
+  mediaFileIds    MediaFile[]
+  scheduledAt     DateTime?
+  timezone        String
+  publishedAt     DateTime?
+  status          PostStatus  @default(DRAFT)
+  errorMessage    String?
+  retryCount      Int         @default(0)
+  metadata        Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  isAutoSchedule Boolean @default(false)
+  // 🔗 THE OMNICHANNEL LINK
+  destinations  PostDestination[]
+
+  maxRetries Int @default(3)
+
+  // Platform metadata
+  platformPostId String? // ID returned by platform after publishing
+
+  parentPostId String? // Points to the previous tweet in the thread
+  parentPost   Post?   @relation("PostThread", fields: [parentPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childPosts   Post[]  @relation("PostThread")
+
+  // RELATIONS
+  author        User?                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  approvals     PostApproval[]
+  snapShots     PostAnalyticsSnapshot[]
+
+  jobId       String?
+  queueStatus ScheduleJobStatus @default(PENDING)
+
+  lastAnalyticsCheck DateTime?
+  nextAnalyticsCheck DateTime? @default(now())
+  analyticsPriority  Int       @default(1)
+
+  // These represent the LATEST known state.
+  // Updated every time you create a new Snapshot.
+  currentLikes       Int @default(0)
+  currentComments    Int @default(0)
+  currentShares      Int @default(0)
+  currentImpressions Int @default(0)
+  currentReach       Int @default(0)
+  currentClicks      Int @default(0)
+
+  // Calculated field for sorting "Best Performing"
+  engagementRate Float @default(0.0)
+
+  // AI relations
+  aiContentId        String?              @unique
+  aiContent          AiContentGeneration? @relation(fields: [aiContentId], references: [id])
+  aiImageGenerations AiImageGeneration[]
+
+  //notifications NotificationEntity[]
+
+ workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([socialAccountId, status, scheduledAt])
+  @@index([workspaceId, status])
+  @@index([status, scheduledAt])
+  @@index([status, nextAnalyticsCheck])
+  @@index([socialAccountId, scheduledAt])
+  @@index([jobId])
+}
+
+model PostDestination {
+  id              String         @id @default(cuid())
+  postId          String
+  socialProfileId String         // Which specific account is this for?
+
+  // 🎨 PLATFORM SPECIFIC OVERRIDES (Requirement: "AI Copy Suggestions")
+  // Allows different text for Twitter (short) vs LinkedIn (long)
+  contentOverride String?        @db.Text 
+
+  // Twitter might fail, while Facebook succeeds. We need to track them separately.
+  status          PublishStatus  @default(SCHEDULED)
+  platformPostId  String?        // The ID given by FB/Twitter after posting (for analytics)
+  errorMessage    String?        // "Image aspect ratio not supported"
+
+  post            Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  profile         SocialProfile  @relation(fields: [socialProfileId], references: [id])
+
+  @@unique([postId, socialProfileId]) // Prevent duplicate sending to same profile
+}
+
+model PostApproval {
+  id            String         @id @default(cuid())
+  postId        String
+  requesterId   String
+  approverId    String?
+  status        ApprovalStatus @default(PENDING)
+  comments      String?
+  requestedAt   DateTime       @default(now())
+  reviewedAt    DateTime?
+  revisionNotes String?        @db.Text
+
+  post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  requester User  @relation("ApprovalRequester", fields: [requesterId], references: [id])
+  approver  User? @relation("ApprovalApprover", fields: [approverId], references: [id])
+
+  @@unique([postId])
+  @@index([status, requestedAt])
+  @@index([requesterId, status])
+}
+
+model PublishingMetric {
+  id             String   @id @default(uuid())
+  organizationId String
+  platform       Platform
+  success        Boolean
+  errorMessage   String? // optional, only filled on failure
+  timestamp      DateTime @default(now())
+
+  // relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, platform, timestamp])
+}
+
+model MediaFolder {
+  id             String  @id @default(cuid())
+  name           String
+  parentId       String?
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent       MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: NoAction)
+  children     MediaFolder[] @relation("FolderHierarchy")
+  files        MediaFile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, parentId, name])
+  @@index([workspaceId])
+  @@index([parentId])
+}
+
+model MediaFile {
+  id                  String    @id @default(cuid())
+  userId              String
+  filename            String
+  originalName        String
+  mimeType            String
+  size                BigInt
+  url                 String
+  publicId            String
+  thumbnailUrl        String?
+  folderId            String?
+  duration            Int?
+  metadata            Json?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  expiresAt           DateTime?
+  isAIGenerated       Boolean   @default(false)
+  aiGenerationContext Json?
+  // Not unique to allow multiple files per generation:
+  aiGenerationId      String?
+  posts               Post[]
+
+  folder MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  // Relation field (many media files -> one generation)
+  aiImageGeneration AiImageGeneration? @relation(fields: [aiGenerationId], references: [id], onDelete: SetNull)
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([isAIGenerated])
+  @@index([workspaceId, isAIGenerated])
+}
+
 
 // The Plan Model (Your Tiers)
 model Plan {
@@ -658,69 +657,69 @@ model AIUsage {
 }
 
 // Conversation = a thread of messages with a user on a platform
-model Conversation {
-  id                 String    @id @default(cuid())
-  organizationId     String
-  platform           Platform
-  externalId         String
-  subject            String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  lastMessageAt      DateTime?
-  lastMessagePreview String?
-  unreadCount        Int       @default(0)
-  externalUserId     String
-  externalUsername   String?
-  tags               String[]
-  // ADD: Social account context for permission checks
-  socialAccountId    String?
+// model Conversation {
+//   id                 String    @id @default(cuid())
+//   organizationId     String
+//   platform           Platform
+//   externalId         String
+//   subject            String?
+//   createdAt          DateTime  @default(now())
+//   updatedAt          DateTime  @updatedAt
+//   lastMessageAt      DateTime?
+//   lastMessagePreview String?
+//   unreadCount        Int       @default(0)
+//   externalUserId     String
+//   externalUsername   String?
+//   tags               String[]
+//   // ADD: Social account context for permission checks
+//   socialAccountId    String?
 
-  organization  Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  socialAccount SocialAccount?            @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
-  messages      Message[]
-  // ADD: Track participants for efficient notification targeting
-  participants  ConversationParticipant[]
+//   organization  Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+//   socialAccount SocialAccount?            @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+//   messages      Message[]
+//   // ADD: Track participants for efficient notification targeting
+//   participants  ConversationParticipant[]
 
-  @@unique([organizationId, platform, externalId])
-  @@index([socialAccountId]) // ADD
-  @@index([lastMessageAt]) // ADD for sorting
-  @@index([platform, organizationId]) // ADD
-}
+//   @@unique([organizationId, platform, externalId])
+//   @@index([socialAccountId]) // ADD
+//   @@index([lastMessageAt]) // ADD for sorting
+//   @@index([platform, organizationId]) // ADD
+// }
 
-// NEW: Track conversation participants
-model ConversationParticipant {
-  id             String    @id @default(cuid())
-  conversationId String
-  userId         String
-  joinedAt       DateTime  @default(now())
-  lastReadAt     DateTime? // For read receipts
+// // NEW: Track conversation participants
+// model ConversationParticipant {
+//   id             String    @id @default(cuid())
+//   conversationId String
+//   userId         String
+//   joinedAt       DateTime  @default(now())
+//   lastReadAt     DateTime? // For read receipts
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+//   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([conversationId, userId])
-  @@index([userId])
-}
+//   @@unique([conversationId, userId])
+//   @@index([userId])
+// }
 
-model Message {
-  id             String        @id @default(cuid())
-  conversationId String
-  senderId       String?
-  externalSender String?
-  content        String?
-  mediaUrl       String?
-  status         MessageStatus @default(UNREAD)
-  sentAt         DateTime
-  createdAt      DateTime      @default(now())
+// model Message {
+//   id             String        @id @default(cuid())
+//   conversationId String
+//   senderId       String?
+//   externalSender String?
+//   content        String?
+//   mediaUrl       String?
+//   status         MessageStatus @default(UNREAD)
+//   sentAt         DateTime
+//   createdAt      DateTime      @default(now())
 
-  conversation  Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender        User?                @relation(fields: [senderId], references: [id], onDelete: SetNull)
-  notifications NotificationEntity[]
+//   conversation  Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+//   sender        User?                @relation(fields: [senderId], references: [id], onDelete: SetNull)
+//   notifications NotificationEntity[]
 
-  // ADD indexes for efficient querying
-  @@index([conversationId, sentAt]) // For loading conversation messages
-  @@index([sentAt]) // For global search/sorting
-}
+//   // ADD indexes for efficient querying
+//   @@index([conversationId, sentAt]) // For loading conversation messages
+//   @@index([sentAt]) // For global search/sorting
+// }
 
 model ContentTemplate {
   id             String  @id @default(cuid())
@@ -797,8 +796,6 @@ model PlatformRateLimitLog {
   windowEnd       DateTime
   status          String // "allowed" | "blocked"
 
-  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id])
-
   @@index([platform, socialAccountId, windowStart, windowEnd])
 }
 
@@ -850,8 +847,8 @@ model AccountAnalytics {
   engagementCount Int @default(0) // Sum of all interactions that day
 
   // Relations
-  socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id])
-  pageAccount   PageAccount?   @relation(fields: [pageAccountId], references: [id])
+  // socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id])
+  // pageAccount   PageAccount?   @relation(fields: [pageAccountId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -905,36 +902,36 @@ model PostingSchedule {
   @@index([isActive, platform])
 }
 
-model NotificationEntity {
-  id              String               @id @default(cuid())
-  userId          String
-  organizationId  String
-  type            NotificationType
-  socialAccountId String?
-  title           String
-  content         String
-  data            Json? // Flexible data storage
-  priority        NotificationPriority @default(NORMAL)
-  read            Boolean              @default(false)
-  readAt          DateTime?
-  expiresAt       DateTime? // Auto-cleanup of old notifications
-  createdAt       DateTime             @default(now())
+// model NotificationEntity {
+//   id              String               @id @default(cuid())
+//   userId          String
+//   organizationId  String
+//   type            NotificationType
+//   socialAccountId String?
+//   title           String
+//   content         String
+//   data            Json? // Flexible data storage
+//   priority        NotificationPriority @default(NORMAL)
+//   read            Boolean              @default(false)
+//   readAt          DateTime?
+//   expiresAt       DateTime? // Auto-cleanup of old notifications
+//   createdAt       DateTime             @default(now())
 
-  // Relations
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  message       Message?       @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  post          Post?          @relation(fields: [postId], references: [id], onDelete: SetNull)
-  socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+//   // Relations
+//   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+//   message       Message?       @relation(fields: [messageId], references: [id], onDelete: SetNull)
+//   post          Post?          @relation(fields: [postId], references: [id], onDelete: SetNull)
+//   socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
 
-  // Optional references
-  messageId String?
-  postId    String?
+//   // Optional references
+//   messageId String?
+//   postId    String?
 
-  @@index([userId, read])
-  @@index([createdAt])
-  @@index([expiresAt])
-}
+//   @@index([userId, read])
+//   @@index([createdAt])
+//   @@index([expiresAt])
+// }
 
 enum NotificationType {
   MESSAGE_RECEIVED
@@ -1058,6 +1055,14 @@ model RolePermission {
   @@index([roleId])
 }
 
+enum SocialProfileType {
+  FACEBOOK_PAGE
+  INSTAGRAM_BUSINESS
+  LINKEDIN_PAGE
+  LINKEDIN_PROFILE
+  TWITTER_PROFILE
+}
+
 enum UserType {
   INDIVIDUAL // Regular business (1 Org limit)
   AGENCY // Manages multiple clients (Multiple Orgs allowed)
@@ -1066,13 +1071,17 @@ enum UserType {
 enum PostStatus {
   DRAFT
   PENDING_APPROVAL
-  APPROVED
+  SCHEDULED
+  PUBLISHED
+  PARTIALLY_PUBLISHED
+  FAILED
+}
+
+enum PublishStatus {
   SCHEDULED
   PUBLISHING
-  PUBLISHED
+  SUCCESS
   FAILED
-  CANCELED
-  RETRYING
 }
 
 enum RoleScope {
