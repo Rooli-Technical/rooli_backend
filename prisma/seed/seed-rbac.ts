@@ -203,6 +203,7 @@ export async function seedRBAC() {
       action: 'READ',
       description: 'View logs',
     },
+    //add @WorkspaceAuth({ resource: 'SOCIAL_ACCOUNT', action: 'READ' })
 
     // WORKSPACE
     {
