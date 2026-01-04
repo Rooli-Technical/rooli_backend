@@ -315,8 +315,6 @@ export class InvitationsService {
 
     const maxMembers = subscription.plan.maxTeamMembers;
 
-    // Unlimited Logic
-    if (maxMembers === -1) return true;
 
     // Count Active Members + Pending Invites
     const activeCount = await this.prisma.organizationMember.count({

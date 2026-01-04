@@ -135,8 +135,6 @@ async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
     // Fallback if no plan found (shouldn't happen with correct onboarding)
     const limit = plan?. maxSocialProfilesPerWorkspace || 3; 
 
-    // Unlimited check
-    if (limit === -1) return true;
 
     const currentCount = await this.prisma.socialProfile.count({
       where: { workspaceId }
