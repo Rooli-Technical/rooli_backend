@@ -212,7 +212,6 @@ export class AuthController {
   }
 
   @Post('onboarding')
-  @Public()
   @ApiOperation({
     summary: 'User Onboarding',
     description:
