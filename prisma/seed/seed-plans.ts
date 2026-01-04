@@ -9,7 +9,7 @@ export async function seedPlans() {
   const plans: Prisma.PlanCreateInput[] = [
     // ======================
     // CREATOR
-    // ======================
+    //======================
     {
       name: 'Creator Monthly',
       description: 'For creators, solo founders, freelancers & small brands.',
@@ -67,9 +67,9 @@ export async function seedPlans() {
       paystackPlanCodeUsd: 'DUMMY_USD_CREATOR_ANNUAL',
     },
 
-    // ======================
-    // BUSINESS
-    // ======================
+    // // ======================
+    // // BUSINESS
+    // // ======================
     {
       name: 'Business Monthly',
       description: 'For growing businesses & small teams.',
@@ -126,9 +126,9 @@ export async function seedPlans() {
       paystackPlanCodeUsd: 'DUMMY_USD_BUSINESS_ANNUAL',
     },
 
-    // ======================
-    // ROCKET
-    // ======================
+    // // ======================
+    // // ROCKET
+    // // ======================
     {
       name: 'Rocket Monthly',
       description: 'For agencies & large teams.',
@@ -186,6 +186,49 @@ export async function seedPlans() {
       paystackPlanCodeNgn: 'PLN_oiwln4pt1wxbw61',
       paystackPlanCodeUsd: 'DUMMY_USD_ROCKET_ANNUAL',
     },
+
+  
+   // ======================
+    // ENTERPRISE (Contact Sales)
+    // ======================
+    {
+      name: 'Enterprise', 
+      description: 'Custom solutions for large organizations.',
+      tier: PlanTier.ENTERPRISE,
+      
+      // Price is just a placeholder/baseline. 
+      // In reality, you charge what you negotiate.
+      priceNgn: 294000, 
+      priceUsd: 200,
+      
+      interval: BillingInterval.MONTHLY, // Default to monthly for system calculation
+      
+      // "Custom" means you likely manually edit these per org, 
+      // but these serve as the high defaults:
+      maxWorkspaces: 9999, // Unlimited
+      maxSocialProfilesPerWorkspace: 9999, // Unlimited
+      maxTeamMembers: 9999, // Unlimited
+      monthlyAiCredits: 999999, // Effectively Unlimited
+      
+      features: {
+        canRemoveBranding: true,
+        advancedAnalytics: true,
+        approvalWorkflow: true,
+        whiteLabelReports: true,
+        prioritySupport: true,
+        dedicatedAccountManager: true,
+        sla: true,
+        customIntegrations: true,
+      },
+      
+      // HIDDEN FROM PUBLIC UI
+      // Use this flag in your frontend to show a "Contact Sales" button instead of "Subscribe"
+      isActive: false, 
+      
+      // No automatic billing
+      paystackPlanCodeNgn: 'MANUAL_BILLING',
+      paystackPlanCodeUsd: 'MANUAL_BILLING',
+    }
   ];
 
   await prisma.$transaction(async (tx) => {
