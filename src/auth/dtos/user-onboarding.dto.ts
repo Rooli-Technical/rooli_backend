@@ -54,15 +54,6 @@ export class OnboardingDto {
   userType?: UserType;
 
   @ApiPropertyOptional({
-    description: 'Custom slug for the organization',
-    example: 'acme-corp',
-  })
-  @IsOptional()
-  @IsString()
-  slug?: string;
-
-
-  @ApiPropertyOptional({
     description: 'New workSpace for agencies',
     example: 'Coca Cola',
   })
