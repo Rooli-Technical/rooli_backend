@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -19,7 +18,6 @@ import { ForgotPassword } from './dtos/ForgotPassword.dto';
 import { ResetPassword } from './dtos/ResetPassword.dto';
 import { MailService } from '@/mail/mail.service';
 import { PrismaService } from '@/prisma/prisma.service';
-import { User } from '@generated/client';
 import * as argon2 from 'argon2';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import slugify from 'slugify';
@@ -43,25 +41,28 @@ export class AuthService {
     const { email, password, firstName, lastName } = registerDto;
     const lowerEmail = email.toLowerCase();
 
-    const geo = geoip.lookup(ip);
-
-    const timezone = geo?.timezone ?? 'Africa/Lagos';
-
+    // 1. Check existence
     const existingUser = await this.prisma.user.findUnique({
       where: { email: lowerEmail },
     });
     if (existingUser) throw new ConflictException('User already exists');
 
-    const hashedPassword = await argon2.hash(password);
+    // 2. Hash Password & Geo lookup (Concurrent for speed)
+    const [hashedPassword, geo] = await Promise.all([
+      argon2.hash(password),
+      geoip.lookup(ip),
+    ]);
 
-    // Create User
+    const timezone = geo?.timezone ?? 'Africa/Lagos';
+
+    // 3. Create User
     const newUser = await this.prisma.user.create({
       data: {
         email: lowerEmail,
         password: hashedPassword,
         firstName,
         lastName,
-        timezone: timezone,
+        timezone,
         userType: 'INDIVIDUAL',
         isEmailVerified: false,
         systemRoleId: (await this.fetchSystemRole('USER')).id,
@@ -69,23 +70,37 @@ export class AuthService {
       include: { systemRole: true },
     });
 
-    // Generate "Onboarding Token" (Org & Workspace are NULL)
+    // 4. Generate Verification JWT
+    const verificationToken = this.jwtService.sign(
+      { sub: newUser.id },
+      {
+        secret: this.configService.get('JWT_VERIFICATION_SECRET'),
+        expiresIn: '24h',
+      },
+    );
+
+    // 5. Send Email
+    this.emailService
+      .sendVerificationEmail(newUser.email, verificationToken)
+      .catch((err) =>
+        this.logger.error('Failed to send verification email', err),
+      );
+
+    // 6. Generate Auth Tokens (Login)
     const tokens = await this.generateTokens(
       newUser.id,
       newUser.email,
-      null, // No Org
-      null, // No Workspace
+      null,
+      null,
       0,
     );
 
     await this.updateRefreshToken(newUser.id, tokens.refreshToken);
 
-    //this.resendVerificationEmail(lowerEmail).catch((e) => this.logger.error(e));
-
     return {
       user: this.toSafeUser(newUser),
       ...tokens,
-      organizationId: null, // Signals frontend to redirect to /onboarding
+      organizationId: null,
       lastActiveWorkspaceId: null,
     };
   }
@@ -172,6 +187,10 @@ export class AuthService {
         },
         include: { systemRole: true },
       });
+
+      this.emailService
+        .sendWelcomeEmail(txResult.user.email, txResult.user.firstName, txResult.workspace.name)
+        .catch((e) => console.error(e));
 
       // Return everything we need for the next step
       return { org, workspace, user: updatedUser };
@@ -532,132 +551,92 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<void> {
     try {
-      const expirationTime = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours
-
-      const candidates = await this.prisma.user.findMany({
-        where: {
-          emailVerificationToken: { not: null },
-          emailVerificationSentAt: { gte: expirationTime },
-          deletedAt: null,
-        },
-        select: { id: true, email: true, emailVerificationToken: true },
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: this.configService.get('JWT_SECRET'),
       });
 
-      let matched: { id: string; email: string } | null = null;
-      for (const c of candidates) {
-        if (!c.emailVerificationToken) continue;
-        const ok = await argon2.verify(c.emailVerificationToken, token);
-        if (ok) {
-          matched = { id: c.id, email: c.email };
-          break;
-        }
-      }
+      // 2. Extract User ID from payload
+      const userId = payload.sub;
 
-      if (!matched) {
-        await this.simulateProcessingDelay();
-        throw new BadRequestException('Invalid or expired verification token');
-      }
-
-      await this.prisma.user.update({
-        where: { id: matched.id },
-        data: {
-          isEmailVerified: true,
-          emailVerificationToken: null,
-          emailVerificationSentAt: null,
-        },
+      // 3. Update User Directly
+      const user = await this.prisma.user.update({
+        where: { id: userId },
+        data: { isEmailVerified: true },
       });
 
-      this.logger.log(`Email verified for user: ${matched.email}`);
-    } catch (err) {
-      throw err;
+      this.logger.log(`Email verified for user: ${user.email}`);
+    } catch (error) {
+      if (
+        error?.name === 'JsonWebTokenError' ||
+        error?.name === 'TokenExpiredError'
+      ) {
+        throw new BadRequestException('Invalid or expired verification link');
+      }
+      if (error?.code === 'P2025') {
+        throw new BadRequestException('User not found');
+      }
+      throw error;
     }
   }
 
-  async forgotPassword(dto: ForgotPassword): Promise<User> {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: {
-          email: dto.email.toLowerCase(),
-          deletedAt: null,
-        },
-      });
+  async forgotPassword(dto: ForgotPassword): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase(), deletedAt: null },
+    });
 
-      if (!user) {
-        await this.simulateProcessingDelay();
-        return;
-      }
+    if (!user) return;
 
-      const { plainToken, hashedToken } =
-        await this.generateVerificationToken();
-      const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    // Generate JWT (1 hour expiry)
+    // We use a DIFFERENT secret for passwords to separate concerns
+    const token = this.jwtService.sign(
+      { sub: user.id },
+      {
+        secret: this.configService.get('JWT_PASSWORD_RESET_SECRET'),
+        expiresIn: '1h',
+      },
+    );
 
-      const _user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          resetPasswordToken: hashedToken,
-          resetPasswordExpires: resetExpires,
-        },
-      });
+    // Send Email directly
+    await this.emailService.sendPasswordResetEmail(user.email, token);
 
-      this.emailService
-        .sendPasswordResetEmail(user.email, plainToken)
-        .catch((err) => this.logger.error('Failed to send reset email:', err));
-
-      this.logger.log(`Password reset requested for: ${user.email}`);
-      return _user;
-    } catch (err) {
-      throw err;
-    }
+    this.logger.log(`Password reset requested for: ${user.email}`);
   }
 
   async resetPassword(dto: ResetPassword): Promise<void> {
     try {
-      const now = new Date();
-
-      const candidates = await this.prisma.user.findMany({
-        where: {
-          resetPasswordToken: { not: null },
-          resetPasswordExpires: { gt: now },
-          deletedAt: null,
-        },
-        select: { id: true, email: true, resetPasswordToken: true },
+      // 1. Verify Token (No DB lookup needed yet)
+      const payload = await this.jwtService.verifyAsync(dto.token, {
+        secret: this.configService.get('JWT_PASSWORD_RESET_SECRET'),
       });
 
-      let matched: { id: string; email: string } | null = null;
-      for (const c of candidates) {
-        if (!c.resetPasswordToken) continue;
-        const ok = await argon2.verify(c.resetPasswordToken, dto.token);
-        if (ok) {
-          matched = { id: c.id, email: c.email };
-          break;
-        }
-      }
+      const userId = payload.sub;
 
-      if (!matched) {
-        await this.simulateProcessingDelay();
-        throw new BadRequestException('Invalid or expired reset token');
-      }
-
+      // 2. Validate Password Strength
       this.validatePasswordStrength(dto.password);
       const hashedPassword = await argon2.hash(dto.password);
 
+      // 3. Update User
+      // We check 'lastPasswordChange' to invalidate old tokens if needed
       await this.prisma.user.update({
-        where: { id: matched.id },
+        where: { id: userId },
         data: {
           password: hashedPassword,
-          resetPasswordToken: null,
-          resetPasswordExpires: null,
-          loginAttempts: 0,
-          lockedUntil: null,
           lastPasswordChange: new Date(),
-          refreshTokenVersion: { increment: 1 },
+          refreshTokenVersion: { increment: 1 }, // Logout all other sessions
+          lockedUntil: null,
+          loginAttempts: 0,
         },
       });
 
-      this.logger.log(`Password reset successful for ${matched.email}`);
-    } catch (err) {
-      this.logger.error(err);
-      throw err;
+      this.logger.log(`Password reset successful for user ID: ${userId}`);
+    } catch (error) {
+      if (
+        error?.name === 'JsonWebTokenError' ||
+        error?.name === 'TokenExpiredError'
+      ) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+      throw error;
     }
   }
 
@@ -679,47 +658,21 @@ export class AuthService {
   }
 
   async resendVerificationEmail(email: string): Promise<void> {
-    try {
-      const user = await this.prisma.user.findFirst({
-        where: {
-          email: email.toLowerCase(),
-          deletedAt: null,
-          isEmailVerified: false,
-        },
-      });
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
 
-      if (!user) return; // Silent fail for security
+    if (!user || user.isEmailVerified) return;
 
-      const { plainToken, hashedToken } =
-        await this.generateVerificationToken();
+    // 1. Generate JWT (Stateless)
+    const payload = { sub: user.id };
+    const token = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_SECRET'),
+      expiresIn: '24h',
+    });
 
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          emailVerificationToken: hashedToken,
-          emailVerificationSentAt: new Date(),
-        },
-      });
-
-      this.sendVerificationEmail(user.email, plainToken);
-    } catch (err) {
-      this.logger.error(err);
-      throw err;
-    }
-  }
-
-  private async generateVerificationToken(): Promise<{
-    plainToken: string;
-    hashedToken: string;
-  }> {
-    try {
-      const plainToken = crypto.randomBytes(32).toString('hex');
-      const hashedToken = await argon2.hash(plainToken);
-      return { plainToken, hashedToken };
-    } catch (err) {
-      this.logger.error(err);
-      throw err;
-    }
+    // Send Email
+    await this.emailService.sendVerificationEmail(user.email, token);
   }
 
   validatePasswordStrength(password: string): void {
@@ -742,27 +695,6 @@ export class AuthService {
       throw new BadRequestException(
         'Password must contain at least 3 of the following: lowercase, uppercase, numbers, special characters',
       );
-    }
-  }
-
-  private async simulateProcessingDelay(): Promise<void> {
-    // Add random delay between 100-500ms to prevent timing attacks
-    const delay = Math.random() * 400 + 100;
-    await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-
-  private async sendVerificationEmail(
-    email: string,
-    token: string,
-  ): Promise<void> {
-    try {
-      await this.emailService.sendVerificationEmail(email, token);
-      this.logger.log(`Verification email sent to ${email}`);
-    } catch (error) {
-      this.logger.error(`Failed to send verification email to ${email}`, {
-        error,
-      });
-      throw error;
     }
   }
 
