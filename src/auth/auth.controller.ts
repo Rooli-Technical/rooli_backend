@@ -205,7 +205,7 @@ export class AuthController {
 
     // 2. Pass the WHOLE user object (not .userId)
     const result = await this.authService.handleSocialLogin(req.user, ip);  
-        
+
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
     // Determine where to land (Onboarding if no Org, Dashboard if Org exists)
@@ -217,6 +217,7 @@ export class AuthController {
   }
 
   @Post('onboarding')
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'User Onboarding',
     description:
