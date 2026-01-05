@@ -72,12 +72,12 @@ export class BillingController {
   async initializePayment(
     @Req() req: any,
     @Body() body: CreatePaymentDto,
-    @Ip() ip: string // <--- Capture IP for Currency Logic
+    @Ip() ip: string 
   ) {
     return this.billingService.initializePayment(
       req.user.organizationId,
       body.planId,
-      req.user, // Pass user object for email fallback
+      req.user,
     );
   }
 
