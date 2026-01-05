@@ -44,8 +44,8 @@ export class UserController {
     type: SafeUser,
   })
   async getCurrentUser(@Req() req): Promise<SafeUser> {
-    console.log(req);
-    return this.usersService.findById(req.user.id);
+
+    return this.usersService.findById(req.user.userId);
   }
 
   @Patch('me/profile')

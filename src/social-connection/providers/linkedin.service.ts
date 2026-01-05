@@ -61,10 +61,8 @@ export class LinkedInService {
         ),
       );
 
-      console.log(data);
       // Fetch basic user info to identify the connection
       const userProfile = await this.getUserProfile(data.access_token);
-      console.log(userProfile);
 
       return {
         providerUserId: userProfile.sub,
@@ -89,8 +87,6 @@ export class LinkedInService {
 
     // B. Get Companies the user Administers
     const companies = await this.getUserCompanies(accessToken);
-    console.log('companies');
-    console.log(companies);
 
     // C. Merge them into a standard format
     const importable = [];
