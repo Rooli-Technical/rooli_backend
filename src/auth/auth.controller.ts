@@ -175,6 +175,7 @@ export class AuthController {
       lastName: user.lastName,
       role: user.systemRoleId,
       isEmailVerified: user.isEmailVerified,
+      isOnboardingComplete: user.isOnboardingComplete
     };
   }
 
@@ -206,7 +207,7 @@ export class AuthController {
     description: 'Successfully authenticated using Google',
   })
   async googleAuthRedirect(@Req() req, @Ip() ip: string) {
-    const result = await this.authService.handleSocialLogin(req.user, ip);
+    const result = await this.authService.handleSocialLogin(req.user.userId, ip);
     // Return JSON or redirect to frontend
     return result;
   }
@@ -234,8 +235,8 @@ export class AuthController {
       },
     },
   })
-  async userOnboarding(@Body() dto: OnboardingDto) {
-    return this.authService.userOnboarding(dto);
+  async userOnboarding(@Body() dto: OnboardingDto, @Req() req) {
+    return this.authService.userOnboarding(dto, req.user.userId);
   }
 
   @Post('logout')
