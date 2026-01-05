@@ -199,14 +199,13 @@ export class AuthController {
     description: 'Successfully authenticated using Google',
   })
   async googleAuthRedirect(@Req() req, @Res() res) {
-    console.log("google callback")
-    console.log(req.user)
+  
     // 1. Get the IP for geolocation
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     // 2. Pass the WHOLE user object (not .userId)
     const result = await this.authService.handleSocialLogin(req.user, ip);  
-    
+        
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
     // Determine where to land (Onboarding if no Org, Dashboard if Org exists)
