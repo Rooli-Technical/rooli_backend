@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import * as geoip from 'geoip-lite';
+import { MailService } from '@/mail/mail.service';
 
 @Injectable()
 export class BillingService {
@@ -19,6 +20,7 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
     private readonly config: ConfigService,
+     private readonly emailService: MailService,
   ) {}
 
   // ---------------------------------------------------------
@@ -151,7 +153,15 @@ export class BillingService {
     }
 
     // 4. DB Transaction
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
+      const previousSuccessCount = await tx.transaction.count({
+        where: {
+          organizationId,
+          status: 'successful',
+        },
+      });
+      const isNewSignup = previousSuccessCount === 0;
+
       await tx.subscription.upsert({
         where: { organizationId },
         create: {
@@ -189,9 +199,20 @@ export class BillingService {
       });
 
       // Unlock Org
-      await tx.organization.update({
+      const org = await tx.organization.update({
         where: { id: organizationId },
         data: { status: 'ACTIVE', isActive: true },
+        include: {
+          members: {
+            where: { role: { name: 'OWNER' } },
+            include: { user: true },
+            take: 1,
+          },
+          workspaces: {
+            take: 1,
+            orderBy: { createdAt: 'asc' },
+          },
+        },
       });
 
       //unlock social profiles too
@@ -201,7 +222,26 @@ export class BillingService {
         },
         data: { isActive: true },
       });
+
+      return { org, isNewSignup };
     });
+
+    if (result.isNewSignup) {
+      const owner = result.org.members[0]?.user;
+      const defaultWorkspace = result.org.workspaces[0];
+
+      if (owner && defaultWorkspace) {
+        this.emailService
+          .sendWelcomeEmail(owner.email, owner.firstName, defaultWorkspace.name)
+          .catch((e) => this.logger.error(`Failed to send welcome email`, e));
+      }
+    } else {
+      this.logger.log(
+        `Renewal payment processed for Org: ${organizationId}. No welcome email sent.`,
+      );
+    }
+
+    return result;
   }
 
   // ---------------------------------------------------------
