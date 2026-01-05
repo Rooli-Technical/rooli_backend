@@ -404,7 +404,9 @@ export class AuthService {
       return {
         user: this.toSafeUser(user),
         ...tokens,
+        isOnboardingComplete: user.isOnboardingComplete,
         lastActiveWorkspaceId: context.workspaceId,
+        organizationId: context.orgId,
       };
     }
 
@@ -437,7 +439,8 @@ export class AuthService {
       user: this.toSafeUser(newUser),
       ...tokens,
       organizationId: null, // Force redirect to Onboarding
-      activeWorkspaceId: null,
+      lastActiveWorkspaceId: null,
+      isOnboardingComplete: false
     };
   }
 
@@ -655,6 +658,36 @@ export class AuthService {
       throw err;
     }
   }
+
+async getUserById(userId: string) {
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      systemRoleId: true,
+      isEmailVerified: true,
+      isOnboardingComplete: true,
+    },
+  });
+
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.systemRoleId,
+    isEmailVerified: user.isEmailVerified,
+    isOnboardingComplete: user.isOnboardingComplete,
+  };
+}
+
 
   async resendVerificationEmail(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({

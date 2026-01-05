@@ -16,7 +16,7 @@ model User {
   avatar       String?
   userType     UserType @default(INDIVIDUAL)
   timezone     String?  @default("Africa/Lagos")
-  isOnboardingComplete Boolean @default(true)
+  isOnboardingComplete Boolean @default(false)
   systemRoleId String?
   systemRole   Role?    @relation("UserSystemRole", fields: [systemRoleId], references: [id])
 

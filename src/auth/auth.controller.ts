@@ -167,16 +167,8 @@ export class AuthController {
       },
     },
   })
-  async getProfile(@CurrentUser() user: User) {
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.systemRoleId,
-      isEmailVerified: user.isEmailVerified,
-      isOnboardingComplete: user.isOnboardingComplete
-    };
+  async getProfile(@Req() req) {
+  return this.authService.getUserById(req.user.userId);
   }
 
   @Get('google')
@@ -206,10 +198,23 @@ export class AuthController {
   @ApiOkResponse({
     description: 'Successfully authenticated using Google',
   })
-  async googleAuthRedirect(@Req() req, @Ip() ip: string) {
-    const result = await this.authService.handleSocialLogin(req.user.userId, ip);
-    // Return JSON or redirect to frontend
-    return result;
+  async googleAuthRedirect(@Req() req, @Res() res) {
+    console.log("google callback")
+    console.log(req.user)
+    // 1. Get the IP for geolocation
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    // 2. Pass the WHOLE user object (not .userId)
+    const result = await this.authService.handleSocialLogin(req.user, ip);  
+    
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    // Determine where to land (Onboarding if no Org, Dashboard if Org exists)
+    const nextPath = result.isOnboardingComplete ? '/dashboard' : '/auth/onboarding';
+    
+    return res.redirect(
+      `${frontendUrl}?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}&next=${nextPath}`
+    );
   }
 
   @Post('onboarding')
