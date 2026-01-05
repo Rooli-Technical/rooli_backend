@@ -104,9 +104,9 @@ export class AuthService {
     };
   }
 
-  async userOnboarding(dto: OnboardingDto) {
+  async userOnboarding(dto: OnboardingDto, userId: string) {
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.userEmail },
+      where: { id: userId },
     });
     if (!user) throw new NotFoundException('User not found');
 

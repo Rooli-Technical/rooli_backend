@@ -5,14 +5,6 @@ import { IsNotEmpty, IsString, IsOptional, IsEnum, IsEmail } from 'class-validat
 export class OnboardingDto {
 
   @ApiProperty({
-    description: 'The email of the registered user',
-    example: 'user@example.com',
-  })
-  @IsNotEmpty()
-  @IsEmail()
-  userEmail: string
-
-  @ApiProperty({
     description: 'The name of the organization',
     example: 'Acme Corporation',
   })
