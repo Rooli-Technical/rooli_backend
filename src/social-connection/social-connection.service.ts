@@ -62,9 +62,6 @@ export class SocialConnectionService {
       decodedState = decodeURIComponent(decodedState);
     }
 
-    // Now remove the fragment part
-    const cleanState = decodedState.split('#')[0];
-
     let organizationId: string;
     try {
       const jsonString = Buffer.from(decodedState, 'base64').toString('utf-8');
