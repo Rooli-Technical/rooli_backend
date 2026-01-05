@@ -7,9 +7,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OAuthResult, SocialPageOption } from './interfaces/social-provider.interface';
+import {
+  OAuthResult,
+  SocialPageOption,
+} from './interfaces/social-provider.interface';
 import { FacebookService } from './providers/facebook.service';
 import { EncryptionService } from '@/common/utility/encryption.service';
+import { LinkedInService } from './providers/linkedin.service';
 
 @Injectable()
 export class SocialConnectionService {
@@ -20,7 +24,7 @@ export class SocialConnectionService {
     private readonly config: ConfigService,
     private readonly encryptionService: EncryptionService,
     private readonly facebook: FacebookService,
-    //private readonly linkedin: LinkedInService,
+    private readonly linkedin: LinkedInService,
     // private readonly twitter: TwitterService,
   ) {}
 
@@ -29,16 +33,17 @@ export class SocialConnectionService {
    * Generates the redirect URL to send the user to (e.g. "facebook.com/dialog/oauth...")
    */
   getAuthUrl(platform: Platform, organizationId: string): string {
-   const rawState = Buffer.from(JSON.stringify({ organizationId })).toString('base64');
-  
-  // 🛡️ ENCODE IT: Ensures special chars like '+', '/', '=' travel safely in URL
-  const state = encodeURIComponent(rawState);
+    const rawState = Buffer.from(JSON.stringify({ organizationId })).toString(
+      'base64',
+    );
+
+    const state = encodeURIComponent(rawState);
 
     switch (platform) {
       case 'FACEBOOK':
         return this.facebook.generateAuthUrl(state);
       case 'LINKEDIN':
-       // return this.linkedin.generateAuthUrl(state);
+        return this.linkedin.generateAuthUrl(state);
       // case 'TWITTER': return this.twitter.generateAuthUrl(state);
       default:
         throw new BadRequestException(`Platform ${platform} not supported yet`);
@@ -51,18 +56,24 @@ export class SocialConnectionService {
    * Returns the Connection ID and a list of Pages user can import.
    */
   async handleCallback(platform: Platform, code: string, state: string) {
+    let decodedState = decodeURIComponent(state);
+    //  If the string still contains encoded characters (like %3D), decode again.
+    if (decodedState.includes('%')) {
+      decodedState = decodeURIComponent(decodedState);
+    }
 
-    const decodedState = decodeURIComponent(state).split('#')[0];
+    // Now remove the fragment part
+    const cleanState = decodedState.split('#')[0];
 
-   let organizationId: string;
-  try {
-    const jsonString = Buffer.from(decodedState, 'base64').toString('utf-8');
-    const decoded = JSON.parse(jsonString);
-    organizationId = decoded.organizationId;
-  } catch (e) {
-    this.logger.error(`State Decode Failed. Input: ${state}`);
-    throw new BadRequestException('Invalid OAuth state');
-  }
+    let organizationId: string;
+    try {
+      const jsonString = Buffer.from(decodedState, 'base64').toString('utf-8');
+      const decoded = JSON.parse(jsonString);
+      organizationId = decoded.organizationId;
+    } catch (e) {
+      this.logger.error(`State Decode Failed. Input: ${state}`);
+      throw new BadRequestException('Invalid OAuth state');
+    }
     // 2. Exchange Code for Tokens (Platform Specific)
     let authData: OAuthResult;
     try {
@@ -71,7 +82,7 @@ export class SocialConnectionService {
           authData = await this.facebook.exchangeCode(code);
           break;
         case 'LINKEDIN':
-         // authData = await this.linkedin.exchangeCode(code);
+          authData = await this.linkedin.exchangeCode(code);
           break;
         default:
           throw new BadRequestException('Platform not implemented');
@@ -93,8 +104,8 @@ export class SocialConnectionService {
       },
       update: {
         accessToken: await this.encryptionService.encrypt(authData.accessToken),
-        refreshToken: authData.refreshToken 
-          ? await this.encryptionService.encrypt(authData.refreshToken) 
+        refreshToken: authData.refreshToken
+          ? await this.encryptionService.encrypt(authData.refreshToken)
           : null,
         tokenExpiresAt: authData.expiresAt,
         updatedAt: new Date(),
@@ -105,8 +116,8 @@ export class SocialConnectionService {
         platformUserId: authData.providerUserId,
         platformUsername: authData.providerUsername,
         accessToken: await this.encryptionService.encrypt(authData.accessToken),
-        refreshToken: authData.refreshToken 
-          ? await this.encryptionService.encrypt(authData.refreshToken) 
+        refreshToken: authData.refreshToken
+          ? await this.encryptionService.encrypt(authData.refreshToken)
           : null,
         tokenExpiresAt: authData.expiresAt,
       },
@@ -134,7 +145,9 @@ export class SocialConnectionService {
 
     if (!connection) throw new NotFoundException('Connection not found');
 
-    const decryptedToken = await this.encryptionService.decrypt(connection.accessToken);
+    const decryptedToken = await this.encryptionService.decrypt(
+      connection.accessToken,
+    );
 
     try {
       switch (connection.platform) {
@@ -144,7 +157,7 @@ export class SocialConnectionService {
 
         case 'LINKEDIN':
           // Returns LinkedIn Company Pages
-          //return await this.linkedin.getCompanies(connection.accessToken);
+          return await this.linkedin.getImportablePages(decryptedToken);
 
         // case 'TWITTER':
         //   // Twitter is usually just the profile itself
