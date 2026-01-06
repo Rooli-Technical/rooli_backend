@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
-import path from 'path';
+import * as path from 'path';
 import { SendMailClient } from 'zeptomail';
 import * as fs from 'fs';
 import * as handlebars from 'handlebars';
@@ -43,7 +42,7 @@ export class MailService {
     try {
       await this.client.sendMail({
         from: {
-          address: this.configService.get<string>('MAIL_FROM'),
+          address: this.configService.get<string>('MAIL_FROM_ADDRESS'),
           name: "Rooli",
         },
         to: [
