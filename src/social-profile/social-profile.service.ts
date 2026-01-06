@@ -2,27 +2,23 @@ import { EncryptionService } from '@/common/utility/encryption.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { FacebookService } from '@/social-connection/providers/facebook.service';
 import { SocialConnectionService } from '@/social-connection/social-connection.service';
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { BulkAddProfilesDto } from './dto/bulk-add-profile.dto';
 import { Platform } from '@generated/enums';
 
 @Injectable()
 export class SocialProfileService {
+   private readonly logger = new Logger(SocialProfileService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly connectionService: SocialConnectionService,
     private readonly encryption: EncryptionService,
   ) {}
 
-  // social/services/social-profile.service.ts
-
 async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
-  // 1. CHECK LIMITS (Pre-computation)
-  // We need to know if adding X profiles will break the limit
+
   await this.checkWorkspaceLimits(workspaceId, dto.platformIds.length);
 
-  // 2. FETCH VALID PAGES
-  // Get all pages this connection has access to
   const importablePages = await this.connectionService.getImportablePages(dto.connectionId);
   
   const results = {
@@ -30,18 +26,32 @@ async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
     errors: []
   };
 
-  // 3. PROCESS EACH ID
+  // 2. PROCESS EACH ID
   for (const platformId of dto.platformIds) {
     const pageData = importablePages.find(p => p.id === platformId);
 
     if (!pageData) {
-      results.errors.push({ id: platformId, message: 'Page not found in this connection' });
+      results.errors.push({ id: platformId, message: 'Page not found' });
       continue;
     }
 
     try {
-      const profile = await this.prisma.socialProfile.create({
-        data: {
+      const profile = await this.prisma.socialProfile.upsert({
+        where: {
+          workspaceId_platform_platformId: {
+            workspaceId,
+            platform: pageData.platform as Platform,
+            platformId: pageData.id,
+          },
+        },
+        update: {
+          socialConnectionId: dto.connectionId, 
+          name: pageData.name,
+          username: pageData.username,
+          picture: pageData.picture,
+          accessToken: await this.encryption.encrypt(pageData.accessToken), 
+        },
+        create: {
           workspaceId,
           socialConnectionId: dto.connectionId,
           platform: pageData.platform as Platform,
@@ -49,32 +59,26 @@ async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
           name: pageData.name,
           username: pageData.username,
           picture: pageData.picture,
-          accessToken: pageData.accessToken, // The "Key to Post"
+          accessToken: await this.encryption.encrypt(pageData.accessToken),
           type: this.mapAccountType(pageData.type, pageData.platform),
         },
-        select: { id: true, name: true, platform: true }
       });
       
       results.success.push(profile);
 
     } catch (error) {
-      if (error.code === 'P2002') { // Unique constraint violation
-        results.errors.push({ id: platformId, message: 'Already added to this workspace' });
-      } else {
-        results.errors.push({ id: platformId, message: 'Database error' });
-      }
+      this.logger.error(error);
+      results.errors.push({ id: platformId, message: 'Database error' });
     }
   }
 
-  // 4. RETURN REPORT
-  // We return partial success so the UI can say "Added 2 accounts, but 1 was already there."
+  // 3. RETURN REPORT
   return {
-    message: `Successfully added ${results.success.length} profiles.`,
+    message: `Processed ${results.success.length} profiles.`,
     added: results.success,
     failures: results.errors
   };
 }
-
   /**
    * 2. LIST WORKSPACE PROFILES
    * Used for the Sidebar or "Accounts" page.

@@ -16,6 +16,7 @@ import { EncryptionService } from '@/common/utility/encryption.service';
 import { LinkedInService } from './providers/linkedin.service';
 import { TwitterService } from './providers/twitter.service';
 import { RedisService } from '@/redis/redis.service';
+import { InstagramService } from './providers/instagram.service';
 
 @Injectable()
 export class SocialConnectionService {
@@ -28,6 +29,7 @@ export class SocialConnectionService {
     private readonly facebook: FacebookService,
     private readonly linkedin: LinkedInService,
     private readonly twitter: TwitterService,
+    private readonly instagram: InstagramService,
     private readonly redisService: RedisService, 
   ) {}
 
@@ -45,6 +47,8 @@ export class SocialConnectionService {
     switch (platform) {
       case 'FACEBOOK':
         return this.facebook.generateAuthUrl(state);
+      case 'INSTAGRAM':
+        return this.instagram.generateAuthUrl(state);
       case 'LINKEDIN':
         return this.linkedin.generateAuthUrl(state);
       case 'TWITTER': 
@@ -63,7 +67,6 @@ export class SocialConnectionService {
  async handleCallback(platform: Platform, query: any) {
     let authData: OAuthResult;
     let organizationId: string;
-    console.log(query)
 
     if (platform === 'TWITTER') {
       const { token, verifier } = query;
@@ -92,6 +95,7 @@ export class SocialConnectionService {
 
       // Exchange
       if (platform === 'FACEBOOK') authData = await this.facebook.exchangeCode(code);
+      else if(platform === 'INSTAGRAM') authData = await this.instagram.exchangeCode(code);
       else if (platform === 'LINKEDIN') authData = await this.linkedin.exchangeCode(code);
     }
 
@@ -150,6 +154,8 @@ export class SocialConnectionService {
       switch (connection.platform) {
         case 'FACEBOOK':
           return await this.facebook.getPages(accessToken);
+        case 'INSTAGRAM':
+           return (await this.instagram.getAccount(accessToken)) as SocialPageOption[];
         case 'LINKEDIN':
           return await this.linkedin.getImportablePages(accessToken);
         case 'TWITTER':

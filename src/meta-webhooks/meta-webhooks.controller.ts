@@ -7,7 +7,7 @@ import { Public } from '@/common/decorators/public.decorator';
 
 @Controller('webhooks/meta')
 @Public()
-export class SocialPrivacyController {
+export class MetaWebhooksController {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,

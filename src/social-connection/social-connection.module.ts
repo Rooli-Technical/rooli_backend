@@ -6,11 +6,12 @@ import { FacebookService } from './providers/facebook.service';
 import { HttpModule } from '@nestjs/axios';
 import { LinkedInService } from './providers/linkedin.service';
 import { TwitterService } from './providers/twitter.service';
+import { InstagramService } from './providers/instagram.service';
 
 @Module({
   imports: [HttpModule],
   controllers: [SocialConnectionController],
-  providers: [SocialConnectionService, EncryptionService, FacebookService, LinkedInService, TwitterService],
+  providers: [SocialConnectionService, EncryptionService, FacebookService, LinkedInService, TwitterService, InstagramService],
   exports:[SocialConnectionService]
 })
 export class SocialConnectionModule {}
