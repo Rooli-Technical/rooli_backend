@@ -14,6 +14,8 @@ import {
 import { FacebookService } from './providers/facebook.service';
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { LinkedInService } from './providers/linkedin.service';
+import { TwitterService } from './providers/twitter.service';
+import { RedisService } from '@/redis/redis.service';
 
 @Injectable()
 export class SocialConnectionService {
@@ -25,14 +27,15 @@ export class SocialConnectionService {
     private readonly encryptionService: EncryptionService,
     private readonly facebook: FacebookService,
     private readonly linkedin: LinkedInService,
-    // private readonly twitter: TwitterService,
+    private readonly twitter: TwitterService,
+    private readonly redisService: RedisService, 
   ) {}
 
   /**
    * 1. GET AUTH URL
    * Generates the redirect URL to send the user to (e.g. "facebook.com/dialog/oauth...")
    */
-  getAuthUrl(platform: Platform, organizationId: string): string {
+  async getAuthUrl(platform: Platform, organizationId: string): Promise<string> {
     const rawState = Buffer.from(JSON.stringify({ organizationId })).toString(
       'base64',
     );
@@ -44,7 +47,9 @@ export class SocialConnectionService {
         return this.facebook.generateAuthUrl(state);
       case 'LINKEDIN':
         return this.linkedin.generateAuthUrl(state);
-      // case 'TWITTER': return this.twitter.generateAuthUrl(state);
+      case 'TWITTER': 
+        // Twitter needs to talk to API first to get a token!
+        return this.twitter.generateAuthLink(organizationId);
       default:
         throw new BadRequestException(`Platform ${platform} not supported yet`);
     }
@@ -55,42 +60,42 @@ export class SocialConnectionService {
    * Exchanges code for tokens and creates/updates the SocialConnection.
    * Returns the Connection ID and a list of Pages user can import.
    */
-  async handleCallback(platform: Platform, code: string, state: string) {
-    let decodedState = decodeURIComponent(state);
-    //  If the string still contains encoded characters (like %3D), decode again.
-    if (decodedState.includes('%')) {
-      decodedState = decodeURIComponent(decodedState);
-    }
-
-    let organizationId: string;
-    try {
-      const jsonString = Buffer.from(decodedState, 'base64').toString('utf-8');
-      const decoded = JSON.parse(jsonString);
-      organizationId = decoded.organizationId;
-    } catch (e) {
-      this.logger.error(`State Decode Failed. Input: ${state}`);
-      throw new BadRequestException('Invalid OAuth state');
-    }
-    // 2. Exchange Code for Tokens (Platform Specific)
+ async handleCallback(platform: Platform, query: any) {
     let authData: OAuthResult;
-    try {
-      switch (platform) {
-        case 'FACEBOOK':
-          authData = await this.facebook.exchangeCode(code);
-          break;
-        case 'LINKEDIN':
-          authData = await this.linkedin.exchangeCode(code);
-          break;
-        default:
-          throw new BadRequestException('Platform not implemented');
+    let organizationId: string;
+    console.log(query)
+
+    if (platform === 'TWITTER') {
+      const { token, verifier } = query;
+      if (!token || !verifier) throw new BadRequestException('Missing Twitter tokens');
+      
+      // We recover orgId from Redis inside the service or passing logic
+      const cached = await this.redisService.get(`twitter_auth:${token}`);
+      if(cached) organizationId = JSON.parse(cached).organizationId;
+      
+      authData = await this.twitter.login(token, verifier);
+    } 
+    
+    else {
+      const { code, state } = query;
+      
+      // Decode State
+      let decodedState = decodeURIComponent(state);
+      if (decodedState.includes('%')) decodedState = decodeURIComponent(decodedState);
+      
+      try {
+        const jsonString = Buffer.from(decodedState, 'base64').toString('utf-8');
+        organizationId = JSON.parse(jsonString).organizationId;
+      } catch (e) {
+        throw new BadRequestException('Invalid OAuth state');
       }
-    } catch (error) {
-      this.logger.error(`OAuth Exchange Failed: ${error.message}`);
-      throw new BadRequestException('Failed to connect with social provider');
+
+      // Exchange
+      if (platform === 'FACEBOOK') authData = await this.facebook.exchangeCode(code);
+      else if (platform === 'LINKEDIN') authData = await this.linkedin.exchangeCode(code);
     }
 
-    // 3. Upsert SocialConnection (The "Master Key")
-    // We maintain ONE connection per Platform per User per Org.
+    // 3. UPSERT CONNECTION
     const connection = await this.prisma.socialConnection.upsert({
       where: {
         organizationId_platform_platformUserId: {
@@ -120,62 +125,44 @@ export class SocialConnectionService {
       },
     });
 
-    // 4. Fetch Available Pages (Immediate Gratification)
-    // We want to show the user "Here is what you can connect" immediately.
+    // 4. RETURN PAGES
     const availablePages = await this.getImportablePages(connection.id);
 
     return {
       message: 'Connection successful',
       connectionId: connection.id,
-      availablePages, // Frontend displays these in a selection modal
+      availablePages, 
     };
   }
 
   /**
    * 3. GET IMPORTABLE PAGES
-   * Uses the stored "Master Key" to ask the provider for a list of pages.
    */
   async getImportablePages(connectionId: string): Promise<SocialPageOption[]> {
     const connection = await this.prisma.socialConnection.findUnique({
       where: { id: connectionId },
     });
-
     if (!connection) throw new NotFoundException('Connection not found');
 
-    const decryptedToken = await this.encryptionService.decrypt(
-      connection.accessToken,
-    );
+    const accessToken = await this.encryptionService.decrypt(connection.accessToken);
 
     try {
       switch (connection.platform) {
         case 'FACEBOOK':
-          // Returns Facebook Pages AND Instagram Business Accounts
-          return await this.facebook.getPages(decryptedToken);
-
+          return await this.facebook.getPages(accessToken);
         case 'LINKEDIN':
-          // Returns LinkedIn Company Pages
-          return await this.linkedin.getImportablePages(decryptedToken);
-
-        // case 'TWITTER':
-        //   // Twitter is usually just the profile itself
-        //   return [
-        //     {
-        //       id: connection.platformUserId,
-        //       name: connection.platformUsername || 'Twitter Profile',
-        //       platform: 'TWITTER',
-        //       type: 'PROFILE',
-        //       accessToken: connection.accessToken, // User token is the posting token
-        //     },
-        //   ];
+          return await this.linkedin.getImportablePages(accessToken);
+        case 'TWITTER':
+           const accessSecret = connection.refreshToken 
+             ? await this.encryptionService.decrypt(connection.refreshToken) 
+             : '';
+           return await this.twitter.getProfile(accessToken, accessSecret);
 
         default:
           return [];
       }
     } catch (error) {
-      // If token is invalid, we might need to flag the connection as expired here
-      this.logger.warn(
-        `Failed to fetch pages for ${connectionId}: ${error.message}`,
-      );
+      this.logger.warn(`Failed to fetch pages: ${error.message}`);
       return [];
     }
   }

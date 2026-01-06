@@ -7,6 +7,7 @@ import { EncryptionService } from '@/common/utility/encryption.service';
 import { FacebookService } from '@/social-connection/providers/facebook.service';
 import { HttpModule } from '@nestjs/axios';
 import { LinkedInService } from '@/social-connection/providers/linkedin.service';
+import { TwitterService } from '@/social-connection/providers/twitter.service';
 
 @Module({
   imports: [SocialConnectionModule, HttpModule],
@@ -16,7 +17,8 @@ import { LinkedInService } from '@/social-connection/providers/linkedin.service'
     SocialConnectionService,
     EncryptionService,
     FacebookService,
-    LinkedInService
+    LinkedInService,
+    TwitterService
   ],
 })
 export class SocialProfileModule {}

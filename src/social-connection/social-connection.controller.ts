@@ -1,7 +1,23 @@
-import { BadRequestException, Controller, Delete, Get, Param, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { SocialConnectionService } from './social-connection.service';
 import { Platform } from '@generated/enums';
-import { ApiTags, ApiOperation, ApiQuery, ApiOkResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiQuery,
+  ApiOkResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { SocialCallbackDto } from './dto/callback-dto';
 
 @ApiTags('Social Connections')
 @ApiBearerAuth()
@@ -36,7 +52,7 @@ export class SocialConnectionController {
       },
     },
   })
-  getAuthUrl(
+  async getAuthUrl(
     @Query('platform') platform: Platform,
     @Query('organizationId') organizationId: string,
   ) {
@@ -44,7 +60,7 @@ export class SocialConnectionController {
       throw new BadRequestException('organizationId is required');
     }
 
-    const url = this.socialConnectionService.getAuthUrl(
+    const url = await this.socialConnectionService.getAuthUrl(
       platform,
       organizationId,
     );
@@ -66,14 +82,6 @@ export class SocialConnectionController {
     enum: Platform,
     example: 'FACEBOOK',
   })
-  @ApiQuery({
-    name: 'code',
-    example: 'AQABc123...',
-  })
-  @ApiQuery({
-    name: 'state',
-    example: 'eyJvcmdhbml6YXRpb25JZCI6Im9yZ18xMjMifQ==',
-  })
   @ApiOkResponse({
     schema: {
       example: {
@@ -92,18 +100,35 @@ export class SocialConnectionController {
   })
   async handleCallback(
     @Param('platform') platform: Platform,
-    @Query('code') code: string,
-    @Query('state') state: string,
+    @Query() query: SocialCallbackDto,
   ) {
-    if (!code || !state) {
-      throw new BadRequestException('Missing OAuth code or state');
+    if (platform === Platform.TWITTER) {
+      const { oauth_token, oauth_verifier } = query;
+
+      if (!oauth_token || !oauth_verifier) {
+        throw new BadRequestException(
+          'Missing Twitter OAuth token or verifier',
+        );
+      }
+      return this.socialConnectionService.handleCallback(platform, {
+        token: oauth_token,
+        verifier: oauth_verifier,
+      });
     }
 
-    return this.socialConnectionService.handleCallback(
-      platform,
-      code,
-      state,
-    );
+    //  Logic for OAuth 2.0 (Facebook, LinkedIn, etc.)
+    else {
+      const { code, state } = query;
+
+      if (!code || !state) {
+        throw new BadRequestException('Missing OAuth code or state');
+      }
+
+      return this.socialConnectionService.handleCallback(platform, {
+        code,
+        state,
+      });
+    }
   }
 
   /**
@@ -112,8 +137,7 @@ export class SocialConnectionController {
   @Get(':connectionId/pages')
   @ApiOperation({
     summary: 'Get importable social pages',
-    description:
-      'Returns pages/accounts that can be linked to a workspace.',
+    description: 'Returns pages/accounts that can be linked to a workspace.',
   })
   @ApiParam({
     name: 'connectionId',
