@@ -102,7 +102,7 @@ export class AuthController {
   ): Promise<{ message: string }> {
     await this.authService.verifyEmail(token);
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-    return res.redirect(`${frontendUrl}/onboarding?verified=true`);
+    return res.redirect(`${frontendUrl}/auth/onboarding?verified=true`);
   }
 
   @Post('forgot-password')
@@ -130,10 +130,11 @@ export class AuthController {
   })
   @ApiBody({ type: ResetPassword, description: 'Reset token and new password' })
   async resetPassword(
-    @Body() dto: ResetPassword,
+    @Body() dto: ResetPassword, @Res() res
   ): Promise<{ message: string }> {
     await this.authService.resetPassword(dto);
-    return { message: 'Password reset successful' };
+     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    return res.redirect(`${frontendUrl}/auth/change-password`);
   }
 
   @Post('resend-verification')
