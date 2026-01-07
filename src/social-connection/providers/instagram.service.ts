@@ -6,6 +6,8 @@ import { lastValueFrom } from 'rxjs';
 @Injectable()
 export class InstagramService {
   private readonly logger = new Logger(InstagramService.name);
+  
+
   private readonly AUTH_HOST = 'https://www.instagram.com';
   private readonly API_HOST = 'https://api.instagram.com';
   private readonly GRAPH_HOST = 'https://graph.instagram.com';
@@ -15,12 +17,10 @@ export class InstagramService {
     private readonly config: ConfigService,
   ) {}
 
-  // 1. AUTH URL
   generateAuthUrl(state: string): string {
     const clientId = this.config.get('INSTAGRAM_CLIENT_ID');
     const redirectUri = this.config.get('INSTAGRAM_CALLBACK_URL'); 
 
-    // Scopes specific to "Instagram for Business"
     const scopes = [
       'instagram_business_basic',
       'instagram_business_manage_insights',
@@ -34,16 +34,13 @@ export class InstagramService {
     );
   }
 
-  // 2. EXCHANGE CODE (With Long-Lived Swap)
   async exchangeCode(code: string) {
     const clientId = this.config.get('INSTAGRAM_CLIENT_ID');
     const clientSecret = this.config.get('INSTAGRAM_CLIENT_SECRET');
     const redirectUri = this.config.get('INSTAGRAM_CALLBACK_URL');
 
     try {
-      // STEP A: Get Short-Lived Token (Valid ~1 Hour)
-      // Note: IG requires FORM data, not query params for this step usually, 
-      // but checking docs, FormData is safer.
+      // 1. Exchange Code for Short-Lived Token
       const params = new URLSearchParams();
       params.append('client_id', clientId);
       params.append('client_secret', clientSecret);
@@ -51,49 +48,51 @@ export class InstagramService {
       params.append('redirect_uri', redirectUri);
       params.append('code', code);
 
-      const { data: shortData } = await lastValueFrom(
-        this.httpService.post(`${this.API_HOST}/oauth/access_token`, params, {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        }),
+      const { data: shortTokenData } = await lastValueFrom(
+        this.httpService.post(`${this.API_HOST}/oauth/access_token`, params)
       );
 
-      const shortToken = shortData.access_token;
-      const userId = shortData.user_id; // IG returns ID here
-
-      // STEP B: Swap for Long-Lived Token (Valid ~60 Days)
-      const { data: longData } = await lastValueFrom(
+      // 2. Exchange Short-Lived for Long-Lived Token (60 Days)
+      const { data: longTokenData } = await lastValueFrom(
         this.httpService.get(`${this.GRAPH_HOST}/access_token`, {
           params: {
             grant_type: 'ig_exchange_token',
             client_secret: clientSecret,
-            access_token: shortToken,
+            access_token: shortTokenData.access_token,
           },
         }),
       );
 
-      const finalToken = longData.access_token;
-      const expiresAt = new Date(Date.now() + (longData.expires_in || 5184000) * 1000);
-
-      // STEP C: Get User Details (Username/Name)
-      const { data: userData } = await lastValueFrom(
+      // 3. Get User Profile (to confirm it's a Professional Account)
+      const { data: userProfile } = await lastValueFrom(
         this.httpService.get(`${this.GRAPH_HOST}/me`, {
           params: {
-            access_token: finalToken,
-            fields: 'id,username,name,profile_picture_url',
+            fields: 'id,username,account_type,name,profile_picture_url',
+            access_token: longTokenData.access_token,
           },
         }),
       );
 
+      // GUARD: Ensure it is not a Personal account
+      // "Instagram Login" flow supports BUSINESS and CREATOR.
+      // Personal accounts might log in but will fail on publishing APIs.
+      if (userProfile.account_type === 'PERSONAL') {
+        throw new BadRequestException('Rooli requires a Professional (Creator/Business) Instagram account.');
+      }
+
       return {
-        providerUserId: userData.id,
-        providerUsername: userData.username, // IG uses username as primary
-        accessToken: finalToken,
-        expiresAt,
+        providerUserId: userProfile.id,
+        providerUsername: userProfile.username,
+        accessToken: longTokenData.access_token,
+        expiresAt: new Date(Date.now() + (longTokenData.expires_in * 1000)),
+        accountType: userProfile.account_type, 
         scopes: [], // IG doesn't return scopes in token response usually
+
       };
+
     } catch (error) {
-      this.logger.error('IG Exchange Failed', error.response?.data);
-      throw new BadRequestException('Failed to connect Instagram account');
+      this.logger.error('IG (No-Page) Exchange Failed', error.response?.data || error.message);
+      throw new BadRequestException(error.message || 'Failed to connect Instagram account');
     }
   }
 
