@@ -508,6 +508,9 @@ model Plan {
   isActive      Boolean @default(true)
   subscriptions Subscription[]
 
+  // list allowed platforms
+  allowedPlatforms Platform[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

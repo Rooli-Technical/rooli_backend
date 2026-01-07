@@ -20,6 +20,8 @@ export async function seedPlans() {
 
       interval: BillingInterval.MONTHLY,
 
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN'],
+
       maxWorkspaces: 1,
       maxSocialProfilesPerWorkspace: 3,
       maxTeamMembers: 1,
@@ -50,6 +52,8 @@ export async function seedPlans() {
 
       interval: BillingInterval.YEARLY,
 
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN'],
+
       maxWorkspaces: 1,
       maxSocialProfilesPerWorkspace: 3,
       maxTeamMembers: 1,
@@ -74,6 +78,7 @@ export async function seedPlans() {
       name: 'Business Monthly',
       description: 'For growing businesses & small teams.',
       tier: PlanTier.BUSINESS,
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
 
       priceNgn: 14700,
       priceUsd: 10,
@@ -101,6 +106,7 @@ export async function seedPlans() {
     {
       name: 'Business Annual',
       description: 'Annual - For growing businesses.',
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
       tier: PlanTier.BUSINESS,
 
       priceNgn: 167580,
@@ -131,6 +137,7 @@ export async function seedPlans() {
     // // ======================
     {
       name: 'Rocket Monthly',
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
       description: 'For agencies & large teams.',
       tier: PlanTier.ROCKET,
 
@@ -162,6 +169,7 @@ export async function seedPlans() {
       name: 'Rocket Annual',
       description: 'Annual - For agencies & companies.',
       tier: PlanTier.ROCKET,
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
 
       priceNgn: 502740,
       priceUsd: 342,
@@ -202,6 +210,8 @@ export async function seedPlans() {
       priceUsd: 200,
       
       interval: BillingInterval.MONTHLY, // Default to monthly for system calculation
+
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
       
       // "Custom" means you likely manually edit these per org, 
       // but these serve as the high defaults:
