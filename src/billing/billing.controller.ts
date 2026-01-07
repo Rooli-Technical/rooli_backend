@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Ip, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Ip, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { BillingService } from './billing.service';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -27,8 +27,9 @@ export class BillingController {
     description: 'List of available plans',
     type: [PlanDto],
   })
-  async getPlans(@Ip() ip: string) {
-    return this.billingService.getAvailablePlans(ip);
+  async getPlans(@Ip() ip: string, @Headers('x-timezone') clientTimezone?: string) {
+   
+    return this.billingService.getAvailablePlans(ip, clientTimezone);
   }
 
   @Get('verify')

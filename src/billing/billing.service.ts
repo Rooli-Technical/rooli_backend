@@ -20,21 +20,21 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
     private readonly config: ConfigService,
-     private readonly emailService: MailService,
+    private readonly emailService: MailService,
   ) {}
 
   // ---------------------------------------------------------
   // 1. GET AVAILABLE PLANS
   // ---------------------------------------------------------
-  async getAvailablePlans(userIp: string) {
+  async getAvailablePlans(userIp: string, timeZone?: string) {
     const geo = geoip.lookup(userIp);
-    const country = geo ? geo.country : 'NG';
+    const country = this.inferCountry(geo?.country, timeZone);
 
     const isNigeria = country === 'NG';
 
     const plans = await this.prisma.plan.findMany({
       where: { isActive: true },
-      orderBy: { priceNgn: 'asc' }, // Default sort
+      orderBy: isNigeria ? { priceNgn: 'asc' } : { priceUsd: 'asc' },
     });
 
     // Transform Data (The Magic Step)
@@ -462,5 +462,11 @@ export class BillingService {
 
       this.logger.log(`🔒 Locked Organization: ${sub.organizationId}`);
     }
+  }
+
+  private inferCountry(ipCountry?: string, timeZone?: string) {
+    if (timeZone === 'Africa/Lagos') return 'NG';
+    if (ipCountry) return ipCountry;
+    return 'NG';
   }
 }
