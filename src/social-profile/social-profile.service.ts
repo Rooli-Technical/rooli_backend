@@ -3,7 +3,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { FacebookService } from '@/social-connection/providers/facebook.service';
 import { SocialConnectionService } from '@/social-connection/social-connection.service';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { BulkAddProfilesDto } from './dto/bulk-add-profile.dto';
+import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
 import { Platform } from '@generated/enums';
 
 @Injectable()

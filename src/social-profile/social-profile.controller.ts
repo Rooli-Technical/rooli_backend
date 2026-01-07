@@ -9,7 +9,9 @@ import {
 } from '@nestjs/swagger';
 import { SocialProfileService } from './social-profile.service';
 import { WorkspaceAuth } from '@/common/decorators/auth.decorator';
-import { BulkAddProfilesDto } from './dto/bulk-add-profile.dto';
+import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
+import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
+import { BulkAddProfilesResponseDto } from './dto/response/add-profile-response.dto';
 
 @ApiTags('Workspace Social Profiles')
 @ApiBearerAuth()
@@ -27,16 +29,7 @@ export class SocialProfileController {
     name: 'workspaceId',
     example: 'ws_abc123',
   })
-  @ApiCreatedResponse({
-    schema: {
-      example: {
-        id: 'profile_123',
-        platform: 'FACEBOOK',
-        platformId: '123456789',
-        workspaceId: 'ws_abc123',
-      },
-    },
-  })
+@ApiStandardResponse(BulkAddProfilesResponseDto)
   //@WorkspaceAuth({ resource: 'SOCIAL_ACCOUNT', action: 'CREATE' })
   async addProfile(
     @Param('workspaceId') workspaceId: string,

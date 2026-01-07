@@ -63,6 +63,7 @@ export class InstagramService {
         }),
       );
 
+
       // 3. Get User Profile (to confirm it's a Professional Account)
       const { data: userProfile } = await lastValueFrom(
         this.httpService.get(`${this.GRAPH_HOST}/me`, {
@@ -72,8 +73,6 @@ export class InstagramService {
           },
         }),
       );
-
-      console.log(userProfile)
 
       // GUARD: Ensure it is not a Personal account
       // "Instagram Login" flow supports BUSINESS and CREATOR.
@@ -99,7 +98,7 @@ export class InstagramService {
     }
   }
 
-  // 3. GET ACCOUNT (Importable Page)
+// GET ACCOUNT (Importable Page)
   async getAccount(accessToken: string) {
     try {
       const { data } = await lastValueFrom(
@@ -111,25 +110,25 @@ export class InstagramService {
         }),
       );
 
-      // Ensure it's a Business/Creator account
-      // (Personal accounts cannot use the Graph API for publishing)
-      if (data.account_type !== 'BUSINESS' && data.account_type !== 'CREATOR') {
+      const validTypes = ['BUSINESS', 'CREATOR', 'MEDIA_CREATOR'];
+      
+      if (!validTypes.includes(data.account_type)) {
         throw new BadRequestException('Only Instagram Business or Creator accounts are supported.');
       }
 
       return [
         {
           id: data.id,
-          name: data.username, // IG Name is usually the handle
+          name: data.username, 
           username: data.username,
           platform: 'INSTAGRAM',
-          type: 'PAGE', // Treated as a Page in your system
+          type: 'PAGE', 
           picture: data.profile_picture_url,
-          accessToken: accessToken, // The User Token IS the Posting Token for IG Direct
+          accessToken: accessToken, 
         },
       ];
     } catch (error) {
-      this.logger.error('IG Fetch Failed', error.response?.data);
+      this.logger.error(`IG Fetch Failed: ${error.message}`, error.response?.data);
       return [];
     }
   }

@@ -17,7 +17,11 @@ import {
   ApiParam,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { SocialCallbackDto } from './dto/callback-dto';
+import { SocialCallbackDto } from './dto/request/callback-dto';
+import { Public } from '@/common/decorators/public.decorator';
+import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
+import { AuthUrlResponseDto } from './dto/response/auth-url.dto';
+import { SocialConnectionResponseDto } from './dto/response/social-connection-response.dto';
 
 @ApiTags('Social Connections')
 @ApiBearerAuth()
@@ -45,17 +49,11 @@ export class SocialConnectionController {
     name: 'organizationId',
     example: 'org_abc123',
   })
-  @ApiOkResponse({
-    schema: {
-      example: {
-        url: 'https://www.facebook.com/v19.0/dialog/oauth?...',
-      },
-    },
-  })
+  @ApiStandardResponse(AuthUrlResponseDto)
   async getAuthUrl(
     @Query('platform') platform: Platform,
     @Query('organizationId') organizationId: string,
-  ) {
+  ): Promise<AuthUrlResponseDto> {
     if (!organizationId) {
       throw new BadRequestException('organizationId is required');
     }
@@ -72,6 +70,7 @@ export class SocialConnectionController {
    * OAUTH CALLBACK
    */
   @Get('callback/:platform')
+  @Public()
   @ApiOperation({
     summary: 'Handle OAuth callback',
     description:
@@ -82,22 +81,7 @@ export class SocialConnectionController {
     enum: Platform,
     example: 'FACEBOOK',
   })
-  @ApiOkResponse({
-    schema: {
-      example: {
-        message: 'Connection successful',
-        connectionId: 'conn_123456',
-        availablePages: [
-          {
-            id: '123456789',
-            name: 'My Business Page',
-            platform: 'FACEBOOK',
-            type: 'PAGE',
-          },
-        ],
-      },
-    },
-  })
+@ApiStandardResponse(SocialConnectionResponseDto)
   async handleCallback(
     @Param('platform') platform: Platform,
     @Query() query: SocialCallbackDto,
