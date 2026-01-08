@@ -44,6 +44,7 @@ import { SocialProfileModule } from './social-profile/social-profile.module';
 import { SubscriptionGuard } from './common/guards/subscription.guard';
 import { MetaWebhooksModule } from './meta-webhooks/meta-webhooks.module';
 import { PostModule } from './post/post.module';
+import { PostMediaModule } from './post-media/post-media.module';
 
 @Module({
   imports: [
@@ -149,6 +150,8 @@ import { PostModule } from './post/post.module';
     MetaWebhooksModule,
 
     PostModule,
+
+    PostMediaModule,
   ],
   controllers: [AppController],
   providers: [
