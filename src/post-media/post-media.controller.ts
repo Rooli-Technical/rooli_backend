@@ -27,11 +27,13 @@ import {
   ApiBody,
   ApiConsumes,
   ApiQuery,
+  ApiOkResponse,
 } from '@nestjs/swagger';
 import { ApiStandardListResponse } from '@/common/decorators/api-standard-list-response.decorator';
 import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
 import { MediaFileDto } from './dto/response/media-file.dto';
 import { MediaFolderDto } from './dto/response/media-folder.dto';
+import { MediaLibraryResponseDto } from './dto/response/media-library.dto';
 
 @ApiTags('Media Library')
 @Controller('workspaces/:workspaceId/media')
@@ -129,7 +131,7 @@ export class PostMediaController {
     required: false,
     type: String,
   })
-  @ApiStandardListResponse(MediaFileDto)
+  @ApiOkResponse({ type: MediaLibraryResponseDto })
   async getLibrary(
     @Param('workspaceId') wsId: string,
     @Query('folderId') folderId?: string,
