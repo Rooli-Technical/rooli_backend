@@ -11,6 +11,8 @@ import {
   UploadedFile,
   UseInterceptors,
   BadRequestException,
+  Delete,
+  Patch,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { RequireFeature } from '@/common/decorators/require-feature.decorator';
@@ -23,6 +25,9 @@ import { BulkExecuteResponseDto } from './dto/response/bulk-execute.response.dto
 import { BulkValidateResponseDto } from './dto/response/bulk-validate.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { ExecuteBulkScheduleDto } from './dto/request/execute-bulk-schedule.dto';
+import { file } from 'pdfkit';
+import { UpdatePostDto } from './dto/request/update-post.dto';
+import { PostDto } from './dto/response/post.dto';
 
 @Controller('workspaces/:workspaceId/posts')
 @UseGuards(FeatureGuard)
@@ -41,6 +46,41 @@ export class PostController {
   @Get()
   findAll(@Param('workspaceId') workspaceId: string) {
     return this.postService.getWorkspacePosts(workspaceId);
+  }
+
+
+  @Get(':postId')
+  @ApiOperation({ summary: 'Get a single post by ID' })
+  @ApiStandardResponse(PostDto)
+  async getOne(
+    @Param('workspaceId') workspaceId: string,
+    @Param('postId') postId: string,
+  ) {
+    const post = await this.postService.getOne(workspaceId, postId);
+    return { data: post };
+  }
+
+  @Patch(':postId')
+  @ApiOperation({ summary: 'Update a post by ID' })
+  @ApiStandardResponse(PostDto)
+  async update(
+    @Param('workspaceId') workspaceId: string,
+    @Param('postId') postId: string,
+    @Body() dto: UpdatePostDto,
+  ) {
+    const post = await this.postService.updatePost(workspaceId, postId, dto);
+    return { data: post };
+  }
+
+  @Delete(':postId')
+  @ApiOperation({ summary: 'Delete a post by ID (including its thread children)' })
+  @ApiStandardResponse(PostDto)
+  async delete(
+    @Param('workspaceId') workspaceId: string,
+    @Param('postId') postId: string,
+  ) {
+    const result = await this.postService.deletePost(workspaceId, postId);
+    return { data: result };
   }
 
   // ==================================

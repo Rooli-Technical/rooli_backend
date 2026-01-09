@@ -54,6 +54,22 @@ export class PostMediaService {
     };
   }
 
+  async uploadMany(user: User, workspaceId: string, files: Array<Express.Multer.File>, folderId?: string) {
+    // 1. Validate Folder Once (Optimization)
+    if (folderId) {
+      const folder = await this.prisma.mediaFolder.findFirst({
+        where: { id: folderId, workspaceId }
+      });
+      if (!folder) throw new BadRequestException('Folder not found');
+    }
+    
+    const uploadPromises = files.map(file => this.uploadFile(user, workspaceId, file, folderId));
+
+    const results = await Promise.all(uploadPromises);
+
+    return results;
+  }
+
   // ==========================================
   // 2. FOLDER MANAGEMENT (Rocket Plan)
   // ==========================================

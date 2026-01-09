@@ -1,4 +1,3 @@
-// src/organizations/dto/update-organization.dto.ts
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateOrganizationDto } from './create-organization.dto';
 import { IsBoolean, IsOptional } from 'class-validator';

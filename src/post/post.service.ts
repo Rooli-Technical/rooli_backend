@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { CreatePostDto } from './dto/request/create-post.dto';
 import csv from 'csv-parser';
@@ -15,6 +16,7 @@ import {
 } from './interfaces/post.interface';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { UpdatePostDto } from './dto/request/update-post.dto';
 
 @Injectable()
 export class PostService {
@@ -391,6 +393,115 @@ export class PostService {
       );
     }
   }
+
+async updatePost(workspaceId: string, postId: string, dto: UpdatePostDto) {
+  //  Fetch the post to check permissions & status
+  const post = await this.prisma.post.findFirst({
+    where: { id: postId, workspaceId },
+    include: { media: true }
+  });
+
+  if (!post) throw new NotFoundException('Post not found');
+
+  // 2. STATUS CHECK: Can't edit if it's already publishing
+  if (post.status === 'PUBLISHING' || post.status === 'PUBLISHED') {
+    throw new BadRequestException('Cannot edit a post that is published or processing.');
+  }
+
+  // 3. TRANSACTION (Update content & media)
+  return this.prisma.$transaction(async (tx) => {
+    
+    // A. Update Basic Fields
+    const updatedPost = await tx.post.update({
+      where: { id: postId },
+      data: {
+        content: dto.content,
+        scheduledAt: dto.scheduledAt, // Changing this moves the post in the calendar
+        // If the status was 'FAILED', reset it to 'SCHEDULED' or 'DRAFT'
+        status: post.status === 'FAILED' ? 'DRAFT' : undefined, 
+      }
+    });
+
+    // B. Handle Media Updates (If provided)
+    // The simplest strategy: "Wipe and Replace" for the specific post
+    if (dto.mediaIds) {
+      // 1. Remove old links
+      await tx.postMedia.deleteMany({ where: { postId } });
+      
+      // 2. Add new links
+      await tx.postMedia.createMany({
+        data: dto.mediaIds.map((mid, idx) => ({
+          postId,
+          mediaFileId: mid,
+          order: idx
+        }))
+      });
+    }
+
+    // C. Special Thread Handling (If updating the ROOT post's time)
+    // If you move the Root Post from 9:00 AM to 10:00 AM, 
+    // you must move ALL children threads to 10:00 AM too.
+    if (dto.scheduledAt && post.contentType !== 'THREAD') {
+       // Find all children (recursive update is hard, but 1-level deep is usually enough for threads)
+       // Or better: update all posts in this "thread chain"
+       // We can find them by parentPostId, or walk the tree.
+       // For MVP: Just update direct children.
+       await tx.post.updateMany({
+         where: { parentPostId: postId },
+         data: { scheduledAt: dto.scheduledAt }
+       });
+    }
+
+    return updatedPost;
+  });
+}
+
+async deletePost(workspaceId: string, postId: string) {
+  const post = await this.getOne(workspaceId, postId);
+
+  // 1. Recursive Delete Helper
+  // We need to find all children, grandchildren, etc.
+  // Since Prisma "NoAction" doesn't cascade automatically for self-relations sometimes,
+  // we do it manually to be safe.
+  
+  const deleteIds = [postId];
+  
+  // Find children
+  const children = await this.prisma.post.findMany({ where: { parentPostId: postId } });
+  for (const child of children) {
+    deleteIds.push(child.id);
+    // (If you allow deep nesting, you'd recurse here, but Twitter threads are usually flat linked lists)
+    // For simplicity, we assume we delete the chain.
+  }
+
+  return this.prisma.post.deleteMany({
+    where: { id: { in: deleteIds } }
+  });
+}
+
+async getOne(workspaceId: string, postId: string) {
+  const post = await this.prisma.post.findFirst({
+    where: { id: postId, workspaceId },
+    include: {
+      destinations: { include: { profile: true } },
+      media: { include: { mediaFile: true }, orderBy: { order: 'asc' } },
+      
+      // INCLUDE CHILDREN (The Thread)
+      childPosts: {
+        orderBy: { createdAt: 'asc' }, // Threads are usually ordered by creation
+        include: {
+           media: { include: { mediaFile: true } }
+        }
+      },
+      
+      // INCLUDE PARENT (If I clicked a reply, show me what it replies to)
+      parentPost: true 
+    }
+  });
+
+  if (!post) throw new NotFoundException('Post not found');
+  return post;
+}
 
   private ensureBulkFeature(user: any) {
     const features =
