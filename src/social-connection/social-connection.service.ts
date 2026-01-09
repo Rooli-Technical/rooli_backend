@@ -2,6 +2,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { Platform } from '@generated/enums';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -30,14 +31,21 @@ export class SocialConnectionService {
     private readonly linkedin: LinkedInService,
     private readonly twitter: TwitterService,
     private readonly instagram: InstagramService,
-    private readonly redisService: RedisService, 
+    private readonly redisService: RedisService,
   ) {}
 
   /**
    * 1. GET AUTH URL
    * Generates the redirect URL to send the user to (e.g. "facebook.com/dialog/oauth...")
    */
-  async getAuthUrl(platform: Platform, organizationId: string): Promise<string> {
+  async getAuthUrl(
+    platform: Platform,
+    organizationId: string,
+  ): Promise<string> {
+    // 1. CHECK FEATURE ACCESS
+    // Stop them here if their plan doesn't support this platform
+    await this.ensurePlatformAllowed(organizationId, platform);
+
     const rawState = Buffer.from(JSON.stringify({ organizationId })).toString(
       'base64',
     );
@@ -51,7 +59,7 @@ export class SocialConnectionService {
         return this.instagram.generateAuthUrl(state);
       case 'LINKEDIN':
         return this.linkedin.generateAuthUrl(state);
-      case 'TWITTER': 
+      case 'TWITTER':
         // Twitter needs to talk to API first to get a token!
         return this.twitter.generateAuthLink(organizationId);
       default:
@@ -64,39 +72,44 @@ export class SocialConnectionService {
    * Exchanges code for tokens and creates/updates the SocialConnection.
    * Returns the Connection ID and a list of Pages user can import.
    */
- async handleCallback(platform: Platform, query: any) {
+  async handleCallback(platform: Platform, query: any) {
     let authData: OAuthResult;
     let organizationId: string;
 
     if (platform === 'TWITTER') {
       const { token, verifier } = query;
-      if (!token || !verifier) throw new BadRequestException('Missing Twitter tokens');
-      
+      if (!token || !verifier)
+        throw new BadRequestException('Missing Twitter tokens');
+
       // We recover orgId from Redis inside the service or passing logic
       const cached = await this.redisService.get(`twitter_auth:${token}`);
-      if(cached) organizationId = JSON.parse(cached).organizationId;
-      
+      if (cached) organizationId = JSON.parse(cached).organizationId;
+
       authData = await this.twitter.login(token, verifier);
-    } 
-    
-    else {
+    } else {
       const { code, state } = query;
-      
+
       // Decode State
       let decodedState = decodeURIComponent(state);
-      if (decodedState.includes('%')) decodedState = decodeURIComponent(decodedState);
-      
+      if (decodedState.includes('%'))
+        decodedState = decodeURIComponent(decodedState);
+
       try {
-        const jsonString = Buffer.from(decodedState, 'base64').toString('utf-8');
+        const jsonString = Buffer.from(decodedState, 'base64').toString(
+          'utf-8',
+        );
         organizationId = JSON.parse(jsonString).organizationId;
       } catch (e) {
         throw new BadRequestException('Invalid OAuth state');
       }
 
       // Exchange
-      if (platform === 'FACEBOOK') authData = await this.facebook.exchangeCode(code);
-      else if(platform === 'INSTAGRAM') authData = await this.instagram.exchangeCode(code);
-      else if (platform === 'LINKEDIN') authData = await this.linkedin.exchangeCode(code);
+      if (platform === 'FACEBOOK')
+        authData = await this.facebook.exchangeCode(code);
+      else if (platform === 'INSTAGRAM')
+        authData = await this.instagram.exchangeCode(code);
+      else if (platform === 'LINKEDIN')
+        authData = await this.linkedin.exchangeCode(code);
     }
 
     // 3. UPSERT CONNECTION
@@ -135,7 +148,7 @@ export class SocialConnectionService {
     return {
       message: 'Connection successful',
       connectionId: connection.id,
-      availablePages, 
+      availablePages,
     };
   }
 
@@ -148,21 +161,25 @@ export class SocialConnectionService {
     });
     if (!connection) throw new NotFoundException('Connection not found');
 
-    const accessToken = await this.encryptionService.decrypt(connection.accessToken);
+    const accessToken = await this.encryptionService.decrypt(
+      connection.accessToken,
+    );
 
     try {
       switch (connection.platform) {
         case 'FACEBOOK':
           return await this.facebook.getPages(accessToken);
         case 'INSTAGRAM':
-           return (await this.instagram.getAccount(accessToken)) as SocialPageOption[];
+          return (await this.instagram.getAccount(
+            accessToken,
+          )) as SocialPageOption[];
         case 'LINKEDIN':
           return await this.linkedin.getImportablePages(accessToken);
         case 'TWITTER':
-           const accessSecret = connection.refreshToken 
-             ? await this.encryptionService.decrypt(connection.refreshToken) 
-             : '';
-           return await this.twitter.getProfile(accessToken, accessSecret);
+          const accessSecret = connection.refreshToken
+            ? await this.encryptionService.decrypt(connection.refreshToken)
+            : '';
+          return await this.twitter.getProfile(accessToken, accessSecret);
 
         default:
           return [];
@@ -193,5 +210,23 @@ export class SocialConnectionService {
     });
 
     return { message: 'Connection removed and associated profiles unlinked.' };
+  }
+
+  private async ensurePlatformAllowed(orgId: string, platform: Platform) {
+    const sub = await this.prisma.subscription.findUnique({
+      where: { organizationId: orgId, status: 'active' },
+      include: { plan: true },
+    });
+
+    // If no active sub, maybe allow free tier logic or throw
+    if (!sub) throw new ForbiddenException('No active subscription found.');
+
+    const allowed = sub.plan.allowedPlatforms;
+
+    if (!allowed.includes(platform)) {
+      throw new ForbiddenException(
+        `Your current plan (${sub.plan.name}) does not support ${platform}. Please upgrade.`,
+      );
+    }
   }
 }
