@@ -121,6 +121,7 @@ model Workspace {
   id             String   @id @default(cuid())
   name           String   // e.g. "Coca Cola Account" or "Personal Brand"
   slug           String   // unique-per-org logic needed in app code, or globally unique
+  timezone       String   @default("UTC") // For scheduling posts
   
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

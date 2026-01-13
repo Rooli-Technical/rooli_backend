@@ -155,6 +155,7 @@ export class AuthService {
         data: {
           name: workspaceName,
           slug: slugify(workspaceName, { lower: true }),
+          timezone: org.timezone,
           organizationId: org.id,
           members: {
             create: { userId: user.id, roleId: adminRole.id },
@@ -707,7 +708,8 @@ export class AuthService {
       organizationId:
         user.organizationMemberships?.[0]?.organization?.id ?? null,
       allowedPlatforms: user.organizationMemberships?.[0]?.organization.subscription.plan.allowedPlatforms,
-      UserType: user.userType
+      UserType: user.userType,
+      plan: user.organizationMemberships?.[0]?.organization.subscription.plan,
     };
   }
 

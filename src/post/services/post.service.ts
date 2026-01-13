@@ -22,6 +22,7 @@ import { QueryMode } from '@generated/internal/prismaNamespace';
 import { DestinationBuilder } from './destination-builder.service';
 import { PostFactory } from './post-factory.service';
 import { PlatformRulesService } from './platform-rules.service';
+import { QueueService } from '@/queue/queue.service';
 
 @Injectable()
 export class PostService {
@@ -30,6 +31,7 @@ export class PostService {
     @InjectQueue('media-ingest') private mediaIngestQueue: Queue,
     private postFactory: PostFactory,
     private destinationBuilder: DestinationBuilder,
+    private queueService: QueueService,
   ) {}
 
 
@@ -37,17 +39,31 @@ async createPost(user: User, workspaceId: string, dto: CreatePostDto) {
   // 1. Basic Validation (Fail fast)
   this.validateFeatures(user, dto);
 
+  // ---------------------------------------------------------
+  // 🕰️ HANDLE AUTO-SCHEDULE
+  // ---------------------------------------------------------
+
+  let finalScheduledAt: Date | null = dto.scheduledAt ? new Date(dto.scheduledAt) : null;
+
+    if (dto.isAutoSchedule) {
+      // 1. Calculate the magic date
+      finalScheduledAt = await this.queueService.getNextAvailableSlot(workspaceId);
+      
+      // 2. IMPORTANT: Update the DTO or use a variable
+      // (The logic below uses 'status', so we need to ensure status becomes SCHEDULED)
+    }
+
   // 2. Heavy Lifting (Validation & Transformation)
   // This runs OUTSIDE the transaction. If it fails (e.g., Twitter too long), 
   // we haven't touched the DB yet.
   const payloads = await this.destinationBuilder.preparePayloads(workspaceId, dto);
 
-  // 3. Prepare Status
-  const status: PostStatus = dto.needsApproval
-    ? 'PENDING_APPROVAL'
-    : dto.scheduledAt || dto.isAutoSchedule
-    ? 'SCHEDULED'
-    : 'DRAFT';
+ // 3. Prepare Status (Updated Logic)
+    const status: PostStatus = dto.needsApproval
+      ? 'PENDING_APPROVAL'
+      : (finalScheduledAt) // Check our calculated variable
+      ? 'SCHEDULED'
+      : 'DRAFT';
 
   // 4. Database Transaction (Fast & Safe)
   return this.prisma.$transaction(async (tx) => {
@@ -56,7 +72,7 @@ async createPost(user: User, workspaceId: string, dto: CreatePostDto) {
       tx,
       user,
       workspaceId,
-      dto,
+      { ...dto, scheduledAt: finalScheduledAt?.toISOString() },
       status, // Use the calculated status, not hardcoded 'SCHEDULED'
     );
 
