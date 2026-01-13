@@ -11,6 +11,8 @@ export interface PlanFeatures {
   hasCampaigns?: boolean;  
   hasLabels?: boolean;
   bulkScheduling?: boolean;
+  queueScheduling?: boolean;
+  aiContentGeneration?: boolean;
 
   // --- Enterprise Extras ---
   dedicatedAccountManager?: boolean;
