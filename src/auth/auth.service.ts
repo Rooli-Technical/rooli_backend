@@ -705,8 +705,8 @@ export class AuthService {
       isEmailVerified: user.isEmailVerified,
       isOnboardingComplete: user.isOnboardingComplete,
       lastActiveWorkspace: user.lastActiveWorkspaceId,
-      organizationId:
-        user.organizationMemberships?.[0]?.organization?.id ?? null,
+      organization:
+        user.organizationMemberships?.[0]?.organization,
       allowedPlatforms: user.organizationMemberships?.[0]?.organization.subscription.plan.allowedPlatforms,
       UserType: user.userType,
       plan: user.organizationMemberships?.[0]?.organization.subscription.plan,
