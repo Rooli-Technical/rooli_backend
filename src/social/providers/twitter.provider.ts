@@ -1,101 +1,157 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { TwitterApi } from 'twitter-api-v2';
+import { TwitterApi, TwitterApiReadWrite } from 'twitter-api-v2';
 import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import { pipeline } from 'stream/promises';
+import { randomUUID } from 'crypto';
 import { ISocialProvider, SocialCredentials } from '../interfaces/social-provider.interface';
 
 @Injectable()
 export class TwitterProvider implements ISocialProvider {
   private readonly logger = new Logger(TwitterProvider.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) {}
 
   async publish(
     credentials: SocialCredentials,
     content: string,
     mediaFiles: { url: string; mimeType: string }[],
-    metadata?: { replyToPostId?: string }
+    metadata?: { replyToPostId?: string },
   ) {
-    // 1. Initialize Client (OAuth 1.0a)
-    // We mix Global App Keys with User Specific Tokens
     const client = new TwitterApi({
-      appKey: this.configService.get('TWITTER_API_KEY'),
-      appSecret: this.configService.get('TWITTER_API_SECRET'),
+      appKey: this.configService.get<string>('TWITTER_API_KEY'),
+      appSecret: this.configService.get<string>('TWITTER_API_SECRET'),
       accessToken: credentials.accessToken,
-      accessSecret: credentials.accessSecret,
+      accessSecret: credentials.refreshToken,
     });
 
-    // We need the read-write client
     const rwClient = client.readWrite;
 
     try {
-      // 2. Handle Media Uploads (The Hard Part)
-      let mediaIds: string[] = [];
-      
+      const mediaIds: string[] = [];
+
       if (mediaFiles.length > 0) {
-        this.logger.log(`Uploading ${mediaFiles.length} media files to Twitter...`);
-        
-        // Upload all in parallel
-        mediaIds = await Promise.all(
-          mediaFiles.map((file) => this.uploadMedia(rwClient, file.url, file.mimeType))
-        );
+        this.logger.log(`Processing ${mediaFiles.length} media file(s) for Twitter`);
+
+        // Sequential is best for temporary file handling
+        for (const file of mediaFiles) {
+          const mediaId = await this.uploadMediaViaTempFile(
+            rwClient,
+            file.url,
+            file.mimeType,
+          );
+          mediaIds.push(mediaId);
+        }
       }
 
-      // 3. Prepare the Tweet Payload
       const payload: any = { text: content };
 
-      // Attach Media
       if (mediaIds.length > 0) {
         payload.media = { media_ids: mediaIds };
       }
 
-      // Attach Threading (Reply Logic)
       if (metadata?.replyToPostId) {
-        payload.reply = { in_reply_to_tweet_id: metadata.replyToPostId };
+        payload.reply = {
+          in_reply_to_tweet_id: metadata.replyToPostId,
+        };
       }
 
-      // 4. Send the Tweet (v2 API)
-      this.logger.log('Sending tweet...');
+      this.logger.log('Publishing tweet...');
       const response = await rwClient.v2.tweet(payload);
-
-      this.logger.log(`Tweet sent! ID: ${response.data.id}`);
 
       return {
         platformPostId: response.data.id,
         url: `https://twitter.com/user/status/${response.data.id}`,
       };
-
     } catch (error) {
-      this.logger.error(`Twitter Publish Failed`, error);
-      // Pass the error up so BullMQ handles retries
-      throw new InternalServerErrorException(`Twitter Error: ${error.message}`);
+      this.logger.error('Twitter publish failed', error);
+      const message =
+        error?.data?.detail ||
+        error?.message ||
+        'Unknown Twitter error';
+      throw new InternalServerErrorException(`Twitter Error: ${message}`);
     }
   }
 
   // ==================================================
-  // 📸 HELPER: Download URL -> Upload to Twitter
+  // 📸 STREAM-TO-DISK -> UPLOAD -> CLEANUP
   // ==================================================
-  private async uploadMedia(client: TwitterApi, url: string, mimeType: string): Promise<string> {
+  private async uploadMediaViaTempFile(
+    client: TwitterApiReadWrite,
+    url: string,
+    mimeType: string,
+  ): Promise<string> {
+    // 1. Create a Temp File Path
+    const tmpDir = os.tmpdir();
+    const ext = this.getExtension(mimeType);
+    const tempFilePath = path.join(tmpDir, `rooli-upload-${randomUUID()}.${ext}`);
+
     try {
-      // A. Download the image/video from Cloudinary/S3
-      const fileResponse = await axios.get(url, { responseType: 'arraybuffer' });
-      const buffer = Buffer.from(fileResponse.data);
+      this.logger.log(`Streaming to temp file: ${tempFilePath}`);
 
-      // B. Determine Upload Type
-      // Twitter handles videos differently (chunked upload) than images.
-      const isVideo = mimeType.startsWith('video');
+      // 2. Download Stream -> Disk
+      const response = await axios.get(url, {
+        responseType: 'stream',
+        timeout: 30_000,
+      });
 
-      // C. Upload using v1.1 API (v2 doesn't support media upload yet)
-      // .uploadMedia() automatically handles chunking for us!
-      const mediaId = await client.v1.uploadMedia(buffer, {
-        mimeType: mimeType, 
-        target: isVideo ? 'tweet_video' : 'tweet_image'
+      // Pipeline handles backpressure and error propagation automatically
+      await pipeline(response.data, fs.createWriteStream(tempFilePath));
+
+      // 3. Determine Category (Required for v1.1 upload)
+      // Note: The library uses 'type', NOT 'media_category' in the options object
+      let type: 'tweet_video' | 'tweet_gif' | 'tweet_image' = 'tweet_image';
+
+      if (mimeType.startsWith('video/')) {
+        type = 'tweet_video';
+      } else if (mimeType === 'image/gif') {
+        type = 'tweet_gif';
+      }
+
+      this.logger.log(`Uploading from disk to Twitter (type=${type})`);
+
+      // 4. Upload from Disk
+      // The library is happy because it gets a file path. 
+      // It handles reading the file size and chunking automatically.
+      const mediaId = await client.v1.uploadMedia(tempFilePath, {
+        mimeType,
+        type, 
+        target: 'tweet',
       });
 
       return mediaId;
+
     } catch (error) {
-      this.logger.error(`Failed to upload media from URL: ${url}`, error);
-      throw new Error('Media Upload Failed');
+      this.logger.error(`Media upload failed: ${url}`, error);
+      throw error;
+    } finally {
+      // 5. Cleanup: Always delete the temp file
+      try {
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+          this.logger.debug(`Cleaned up temp file: ${tempFilePath}`);
+        }
+      } catch (cleanupError) {
+        this.logger.warn(`Failed to cleanup temp file: ${tempFilePath}`, cleanupError);
+      }
     }
+  }
+
+  private getExtension(mimeType: string): string {
+    const map = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'video/mp4': 'mp4',
+      'video/quicktime': 'mov',
+    };
+    return map[mimeType] || 'bin';
   }
 }

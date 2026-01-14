@@ -216,7 +216,7 @@ export class AuthController {
     // 2. Pass the WHOLE user object (not .userId)
     const result = await this.authService.handleSocialLogin(req.user, ip);
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL + '/auth/google-success';
 
     // Determine where to land (Onboarding if no Org, Dashboard if Org exists)
     const nextPath = result.isOnboardingComplete

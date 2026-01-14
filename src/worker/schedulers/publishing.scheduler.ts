@@ -28,6 +28,7 @@ export class PublishingScheduler {
       where: {
         status: 'SCHEDULED',
         scheduledAt: { lte: now }, // Less than or equal to Now
+        parentPostId: null,
       },
       select: { id: true },
       take: 50, // Process in batches to avoid RAM spikes

@@ -5,7 +5,7 @@ export interface PostResult {
 
 export interface SocialCredentials {
   accessToken: string;
-  accessSecret?: string; // Required for Twitter OAuth 1.0a
+  refreshToken?: string; // Required for Twitter OAuth 1.0a
 }
 
 export interface ISocialProvider {
@@ -16,3 +16,14 @@ export interface ISocialProvider {
     metadata?: any
   ): Promise<any>;
 }
+
+type MediaFile = { 
+  url: string; 
+  mimeType: string; 
+  // Optional: Only strictly required for Reels
+  metadata?: { 
+    durationSeconds?: number; 
+    width?: number; 
+    height?: number; 
+  } 
+};

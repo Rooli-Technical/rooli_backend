@@ -421,6 +421,8 @@ model PostDestination {
   profile         SocialProfile  @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
 
   updatedAt       DateTime       @updatedAt
+  createdAt       DateTime       @default(now())
+  publishedAt     DateTime?
 
   @@unique([postId, socialProfileId]) 
   @@index([status])
