@@ -49,6 +49,8 @@ import { WorkerModule } from './worker/worker.module';
 import { QueueModule } from './queue/queue.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SocialModule } from './social/social.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
+import { LabelsModule } from './labels/labels.module';
 
 @Module({
   imports: [
@@ -133,6 +135,10 @@ import { SocialModule } from './social/social.module';
     QueueModule,
 
     SocialModule,
+
+    CampaignsModule,
+
+    LabelsModule,
   ],
   controllers: [AppController],
   providers: [
