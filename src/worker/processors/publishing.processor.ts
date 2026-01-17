@@ -37,158 +37,152 @@ export class PublishingProcessor extends WorkerHost {
    */
   async processPostChain(postId: string, parentPlatformId?: string) {
     try {
-      // A. Fetch Data
+      // 1. Fetch Post
+      // We do NOT need to fetch 'parentPost' anymore because we passed the ID in the arguments.
+      // This makes the query faster and lighter.
       const post = await this.prisma.post.findUnique({
         where: { id: postId },
         include: {
           media: { include: { mediaFile: true }, orderBy: { order: 'asc' } },
           destinations: {
-            include: {
-              profile: {
-                include: { connection: true },
-              },
-            },
+            include: { profile: { include: { connection: true } } },
           },
-          childPosts: {
-            take: 1,
-            orderBy: { createdAt: 'asc' },
-          },
+          childPosts: { take: 1, orderBy: { createdAt: 'asc' } },
         },
       });
 
-      if (!post) {
-        this.logger.warn(`Post ${postId} not found during chain processing.`);
-        return;
-      }
+      if (!post) return;
 
-      // B. Prepare Common Data
       const mediaPayload = post.media.map((m) => ({
         url: m.mediaFile.url,
         mimeType: m.mediaFile.mimeType,
-        height: m.mediaFile.height,
-        width: m.mediaFile.width,
       }));
 
-      // C. Publish to All Destinations
-      // We map over destinations and return the promise so Promise.allSettled tracks them
+      // 2. Process Destinations
       const results = await Promise.allSettled(
         post.destinations.map(async (dest) => {
-          const provider = this.socialFactory.getProvider(
-            dest.profile.platform,
-          );
+          
+          // 🛑 GUARD: THREAD LOGIC (Safety Net)
+          // Even if the Service layer filtered these out, this protects us 
+          // from accidental DB manual inserts.
+          if (post.parentPostId && dest.profile.platform !== 'TWITTER') {
+             return { 
+               destinationId: dest.id, 
+               status: 'SKIPPED', 
+               message: 'Threading not supported on this platform' 
+             };
+          }
 
+          // A. Resolve Reply ID (Twitter Only)
+          let replyToId: string | undefined;
+
+          // If we are in a recursion (parentPlatformId exists) AND this is Twitter
+          if (parentPlatformId && dest.profile.platform === 'TWITTER') {
+             replyToId = parentPlatformId;
+          }
+
+          // B. Publish
+          const provider = this.socialFactory.getProvider(dest.profile.platform);
+          
           const credentials = {
-            accessToken:
-              dest.profile.accessToken || dest.profile.connection.accessToken,
-            accessSecret: dest.profile.connection.refreshToken,
+            accessToken: dest.profile.accessToken || dest.profile.connection.accessToken,
+            accessSecret: dest.profile.connection.refreshToken, 
           };
 
-          const content = dest.contentOverride || post.content;
-
-          const metadata = {
-            pageId: dest.profile.platformId,
-            authorUrn: dest.profile.platformId,
-            replyToPostId: parentPlatformId,
-          };
-
-          // This might throw, which is caught by allSettled as 'rejected'
           const result = await provider.publish(
             credentials,
-            content,
+            dest.contentOverride || post.content,
             mediaPayload,
-            metadata,
+            {
+              pageId: dest.profile.platformId,
+              replyToPostId: replyToId, // 👈 Uses the ID passed from the previous loop
+            },
           );
 
-          return {
-            destinationId: dest.id,
-            platformPostId: result.platformPostId,
-          };
+          return { destinationId: dest.id, platformPostId: result.platformPostId };
         }),
       );
 
-      // D. Handle Results & Update DB
+      // 3. Handle Results
       let successCount = 0;
       let failCount = 0;
-      let nextParentId = parentPlatformId;
+      let nextParentId = parentPlatformId; // Default to current, update if we get a new one
 
-      // We loop through the RESULTS, matching them back to destinations by index if needed
-      // But simpler: we just handle the outcome based on the result status
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
-        const dest = post.destinations[i]; // 👈 Access the destination object here by index
+        
+        // ⚠️ Access destination by index because Promise.allSettled preserves order
+        const dest = post.destinations[i]; 
 
         if (result.status === 'fulfilled') {
-          // ✅ SUCCESS CASE
-          const data = result.value;
+          const val = result.value as any;
 
-          await this.prisma.postDestination.update({
-            where: { id: data.destinationId },
-            data: {
-              status: 'SUCCESS',
-              publishedAt: new Date(),
-              platformPostId: data.platformPostId,
-              errorMessage: null, // Clear any previous errors
-            },
-          });
-
-          if (data.platformPostId) {
-            nextParentId = data.platformPostId;
+          // Handle SKIP logic (Don't count as success or fail, just ignore)
+          if (val.status === 'SKIPPED') {
+             continue; 
           }
-          successCount++;
-        } else {
-          // ❌ FAILURE CASE
-          failCount++;
-          const error = result.reason; // The error thrown by provider.publish
-
-          let errorMessage = error.message || 'Unknown error';
-          let status = 'FAILED';
-
-          // 🚨 RATE LIMIT HANDLING (Moved Here)
-          // Now we have access to 'dest' and 'error'
-          if (error.response?.status === 429 || error.code === 429) {
-            this.logger.warn(`Rate Limit Hit for Profile ${dest.profile.name}`);
-            errorMessage = 'Rate limit reached. Please try again later.';
-            // You might not want to mark it FAILED permanently if you plan to retry,
-            // but for now, we mark it failed with a specific message.
-          }
-
-          this.logger.error(
-            `Publishing failed for ${dest.profile.platform}: ${errorMessage}`,
-          );
 
           await this.prisma.postDestination.update({
             where: { id: dest.id },
             data: {
-              status: 'FAILED', // Or 'FAILED' based on your enum
-              errorMessage: errorMessage,
+              status: 'SUCCESS',
+              publishedAt: new Date(),
+              platformPostId: val.platformPostId,
+              errorMessage: null,
+            },
+          });
+          
+          // 🔑 CAPTURE THE ID FOR THE NEXT CHILD
+          // If this was a Twitter post, this is the ID Tweet #2 needs to reply to.
+          if (val.platformPostId) {
+            nextParentId = val.platformPostId;
+          }
+          
+          successCount++;
+        } else {
+          failCount++;
+          const error = result.reason;
+          const isRateLimit = error.response?.status === 429;
+          
+          await this.prisma.postDestination.update({
+            where: { id: dest.id },
+            data: {
+              status: 'FAILED',
+              errorMessage: isRateLimit ? 'Rate limit hit' : (error.message || 'Unknown error'),
             },
           });
         }
       }
 
-      // E. Update Master Post Status
-      const finalStatus =
-        failCount === post.destinations.length ? 'FAILED' : 'PUBLISHED';
+      // 4. Update Master Status
+      let finalStatus = 'PUBLISHED';
+      
+      // Calculate status based on actual attempts (excluding skipped)
+      const attemptCount = post.destinations.length; 
+      
+      if (attemptCount > 0 && failCount === attemptCount) {
+         finalStatus = 'FAILED';
+      } else if (failCount > 0) {
+         finalStatus = 'PARTIAL';
+      }
 
       await this.prisma.post.update({
         where: { id: postId },
-        data: { status: finalStatus, publishedAt: new Date() },
+        data: { status: finalStatus as any },
       });
 
-      // F. 🚀 RECURSION STEP
-      if (post.childPosts.length > 0 && nextParentId && successCount > 0) {
-        this.logger.log(
-          `Found child post. Continuing chain to ${post.childPosts[0].id}`,
-        );
+      // 5. Continue Chain
+      // 🛑 CORRECTION 2: Pass the ID we captured ('nextParentId') to the child
+      if (post.childPosts.length > 0 && nextParentId) {
+        
+        // Recursive Call:
+        // "Hey Child Post, here is your Parent's Twitter ID (nextParentId). Reply to it."
         await this.processPostChain(post.childPosts[0].id, nextParentId);
       }
+
     } catch (error) {
-      // This catch block now only catches DB errors or Logic errors (bugs).
-      // Provider errors are handled in the loop above.
-      this.logger.error(
-        `Critical System Error processing post ${postId}:`,
-        error,
-      );
+      this.logger.error(`System Error: ${error.message}`, error);
+      // Don't rethrow unless you want the job to retry indefinitely
     }
   }
 }

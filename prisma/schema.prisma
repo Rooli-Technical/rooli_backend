@@ -47,8 +47,6 @@ lastVerificationEmailSentAt DateTime?
 
  sentInvitations         Invitation[] @relation("UserSentInvitations")
 
-  aiContentGenerations     AiContentGeneration[]
-  aiImageGenerations       AiImageGeneration[]
   // messages                 Message[]
   // notifications            NotificationEntity[]
   ContentTemplate          ContentTemplate[]
@@ -91,9 +89,6 @@ model Organization {
   workspaces       Workspace[]
   socialConnections SocialConnection[]
 
-
-  aiContentGenerations AiContentGeneration[]
-  aiImageGenerations   AiImageGeneration[]
   // conversations        Conversation[]
   // notifications        NotificationEntity[]
   webhookLogs          WebhookLog[]
@@ -101,7 +96,7 @@ model Organization {
   ContentTemplate      ContentTemplate[]
   auditLogs            AuditLog[]
 
-  aiUsages AIUsage[]
+  aiUsage AIUsage[]
 
 
   roles        Role[]
@@ -134,7 +129,6 @@ model Workspace {
   posts          Post[]
   mediaFolders MediaFolder[]
   mediaFiles     MediaFile[]
-  brandKit       BrandKit?
 
   usersActiveHere User[] @relation("UserLastActiveWorkspace")
   
@@ -150,6 +144,9 @@ model Workspace {
   queueSlots     QueueSlot[]
   campaigns      Campaign[]
   labels         Label[]
+
+  aiUsage       AIUsage[]  
+  brandKits     BrandKit[]
 
 
   createdAt      DateTime @default(now())
@@ -374,10 +371,7 @@ model Post {
   labels          Label[]
   approvals       PostApproval[]
 
-  // AI & ANALYTICS
-  aiContentId     String?              @unique
-  aiContent       AiContentGeneration? @relation(fields: [aiContentId], references: [id])
-  
+ 
   // Aggregated stats (Sum of all destinations)
   totalLikes         Int @default(0)
   totalImpressions   Int @default(0)
@@ -386,6 +380,11 @@ model Post {
 
   workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   author          User?     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // 🤖 AI METADATA
+  // If this post was written by AI, we just flag it.
+  isAiGenerated   Boolean   @default(false)
+  aiPrompt        String?   @db.Text
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -483,9 +482,11 @@ model MediaFile {
   height          Int?
   duration        Int?      // In seconds (for Videos)
 
-  // AI Context
-  isAIGenerated   Boolean   @default(false)
-  aiGenerationId  String?
+// 🤖 AI METADATA (Embedded)
+  // Just flags to help you filter "Show me AI images" in the library
+  isAiGenerated   Boolean   @default(false)
+  aiProvider      String?   // "dall-e-3", "midjourney"
+  aiPrompt        String?   @db.Text // Store the prompt so user can "Reuse" it
   
   postUsage       PostMedia[] // Relation to posts
 
@@ -493,8 +494,6 @@ model MediaFile {
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   
-  // (Optional) Relation to your existing AI generation model
-  aiImageGeneration AiImageGeneration? @relation(fields: [aiGenerationId], references: [id], onDelete: SetNull)
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -716,83 +715,53 @@ model Transaction {
   updatedAt DateTime @updatedAt
 }
 
-model AiContentGeneration {
-  id             String      @id @default(cuid())
-  organizationId String
-  userId         String
-  platform       Platform
-  contentType    ContentType
-  topic          String
-  tone           ToneType
-  creditsUsed    Int
-
-  prompt        String   @db.Text
-  generatedText String   @db.Text
-  hashtags      String[]
-
-  cost      Float    @default(0)
-  provider  String
-  model     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Post relation (moved to Post as aiContentId)
-  post Post?
-
-  brandKitId String?
-  brandKit   BrandKit? @relation(fields: [brandKitId], references: [id], onDelete: SetNull)
-
-  @@index([organizationId, createdAt])
-  @@index([userId])
-}
-
-model AiImageGeneration {
-  id             String   @id @default(cuid())
-  organizationId String
-  userId         String
-  prompt         String   @db.Text
-  creditsUsed    Int
-  imageUrl       String?
-  publicId       String?
-  revisedPrompt  String?  @db.Text
-  cost           Float    @default(0)
-  provider       String
-  model          String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now())
-
-  mediaFiles MediaFile[]
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  postId String?
-  //post   Post?   @relation(fields: [postId], references: [id])
-
-  brandKitId String?
-  brandKit   BrandKit? @relation(fields: [brandKitId], references: [id], onDelete: SetNull)
-
-  @@index([organizationId, createdAt])
-}
-
 model AIUsage {
   id             String   @id @default(cuid())
   organizationId String
+  workspaceId String
   userId         String
-  type           String // 'content_generation' | 'image_generation'
+ type           AiType     
+  provider       AiProvider
+  model          String   // "gpt-4o", "dall-e-3"
   tokensUsed     Int
   cost           Float
   metadata       Json?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+organization Organization @relation(fields: [organizationId], references: [id])
+workspace   Workspace @relation(fields: [workspaceId], references: [id])
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
+}
+
+model BrandKit {
+  id             String @id @default(cuid())
+  workspaceId    String  
+  name           String @default("Our Brand")
+  handle         String?
+
+  // Visual identity - flexible JSON structure
+  logoUrl String?
+  colors  Json? // { primary: "#1E40AF", secondary: "#F59E0B", ... }
+
+  // Brand voice
+  brandVoice String? @db.VarChar(500)
+  tone       String? // Could use enum or free text
+  guidelines Json? // Additional brand guidelines
+
+  // Status
+  isActive  Boolean  @default(true)
+  isDefault Boolean  @default(false) // Mark as default brand kit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+    workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  //ContentTemplate      ContentTemplate[]
+
+  @@index([isActive])
 }
 
 // Conversation = a thread of messages with a user on a platform
@@ -1040,36 +1009,6 @@ model AuditLog {
 
   @@index([organizationId, createdAt])
   @@index([action, resourceType])
-}
-
-model BrandKit {
-  id             String @id @default(cuid())
-  workspaceId    String  @unique
-  name           String @default("Our Brand")
-  version        Int    @default(1) // For version tracking
-
-  // Visual identity - flexible JSON structure
-  logoUrl String?
-  colors  Json? // { primary: "#1E40AF", secondary: "#F59E0B", ... }
-
-  // Brand voice
-  brandVoice String? @db.VarChar(500)
-  tone       String? // Could use enum or free text
-  guidelines Json? // Additional brand guidelines
-
-  // Status
-  isActive  Boolean  @default(true)
-  isDefault Boolean  @default(false) // Mark as default brand kit
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-    workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  aiContentGenerations AiContentGeneration[]
-  aiImageGenerations   AiImageGeneration[]
-  //ContentTemplate      ContentTemplate[]
-
-  @@index([isActive])
 }
 
 model Permission {
@@ -1457,4 +1396,16 @@ enum WebhookStatus {
 enum SubscriptionGateway {
   PAYSTACK
   STRIPE
+}
+
+enum AiType {
+  TEXT
+  IMAGE
+  VIDEO
+}
+
+enum AiProvider {
+  OPENAI
+  ANTHROPIC
+  GEMINI
 }
