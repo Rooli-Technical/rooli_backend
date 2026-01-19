@@ -42,7 +42,7 @@ export class PostMediaService {
         height: uploadResult.height,
         duration: uploadResult.duration ? Math.round(uploadResult.duration) : null, // Videos only
         
-        isAIGenerated: false
+        isAiGenerated: false
       }
     });
 

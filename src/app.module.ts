@@ -52,7 +52,7 @@ import { SocialModule } from './social/social.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { LabelsModule } from './labels/labels.module';
 import { AiModule } from './ai/ai.module';
-import { AiModule } from './ai/ai.module';
+
 
 @Module({
   imports: [

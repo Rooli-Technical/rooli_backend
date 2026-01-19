@@ -6,7 +6,6 @@ import { RedisService } from '@/redis/redis.service';
 export class QuotaService {
   constructor(
     private redisService: RedisService,
-    private subscriptionService: BillingService,
   ) {}
 
   /**

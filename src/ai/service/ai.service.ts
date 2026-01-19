@@ -53,10 +53,6 @@ export class AiService {
       let providerEnum: AiProvider = 'GEMINI';
       let model = 'gemini-2.5-flash'; // ⚡ Free & Fast (2026 Standard)
 
-      if (planTier === 'ROCKET' || planTier === 'AGENCY') {
-        providerEnum = 'ANTHROPIC';
-        model = 'claude-3-5-sonnet-20240620'; // 🧠 Smart & Human
-      }
 
       // C. Build Context (Brand Voice)
       const systemPrompt = await this.buildSystemPrompt(
