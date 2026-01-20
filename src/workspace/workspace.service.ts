@@ -221,11 +221,11 @@ async addMember(workspaceId: string, dto: AddWorkspaceMemberDto) {
     const maxWorkspaces = plan?.maxWorkspaces || 1;
     const currentCount = org.workspaces.length;
 
-    // if (currentCount >= maxWorkspaces) {
-    //   throw new ForbiddenException(
-    //     `Workspace limit reached. Your plan allows ${maxWorkspaces} workspaces.`,
-    //   );
-    // }
+    if (currentCount >= maxWorkspaces) {
+      throw new ForbiddenException(
+        `Workspace limit reached. Your plan allows ${maxWorkspaces} workspaces.`,
+      );
+    }
 
     return { features: (plan?.features as any) || {} };
   }
