@@ -44,7 +44,7 @@ export class SocialConnectionService {
   ): Promise<string> {
     // 1. CHECK FEATURE ACCESS
     // Stop them here if their plan doesn't support this platform
-    //await this.ensurePlatformAllowed(organizationId, platform);
+    await this.ensurePlatformAllowed(organizationId, platform);
 
     const rawState = Buffer.from(JSON.stringify({ organizationId })).toString(
       'base64',
