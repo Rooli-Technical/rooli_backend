@@ -21,7 +21,6 @@ export class EncryptionService {
   }
 
   async encrypt(plaintext: string): Promise<string> {
-    console.log('Encrypting data:', plaintext);
     const iv = crypto.randomBytes(this.ivLength);
     const cipher = crypto.createCipheriv(this.algorithm, this.key, iv);
 
@@ -31,13 +30,11 @@ export class EncryptionService {
 
     // Combine IV + AuthTag + Ciphertext
     const combined = Buffer.concat([iv, authTag, encrypted]);
-    console.log('Encrypted data:', combined.toString('base64'));
     return combined.toString('base64');
   }
 
   async decrypt(encryptedData: string): Promise<string> {
     try {
-      console.log('Decrypting data:', encryptedData);
       const combined = Buffer.from(encryptedData, 'base64');
 
       const iv = combined.slice(0, this.ivLength);
@@ -53,7 +50,6 @@ export class EncryptionService {
       let decrypted = decipher.update(encrypted);
       decrypted = Buffer.concat([decrypted, decipher.final()]);
 
-      console.log('Decrypted data:', decrypted.toString('utf8'));
 
       return decrypted.toString('utf8');
     } catch (error) {

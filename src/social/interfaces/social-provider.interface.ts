@@ -6,6 +6,7 @@ export interface PostResult {
 export interface SocialCredentials {
   accessToken: string;
   refreshToken?: string; // Required for Twitter OAuth 1.0a
+  accessSecret?: string; // Required for Twitter OAuth 1.0a
 }
 
 export interface ISocialProvider {

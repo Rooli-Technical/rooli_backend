@@ -110,7 +110,7 @@ async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
         username: true,
         isActive: true,
         followerCount: true,
-      }
+      },
     });
   }
 

@@ -32,13 +32,9 @@ export class TwitterProvider implements ISocialProvider {
       appKey: this.configService.getOrThrow('TWITTER_API_KEY'),
       appSecret: this.configService.getOrThrow('TWITTER_API_SECRET'),
       accessToken: credentials.accessToken,
-      accessSecret: credentials.refreshToken,
+      accessSecret: credentials.accessSecret,
     });
 
-    console.log('Twitter credentials:');
-    console.log(credentials);
-
-    console.log('Initialized Twitter client');
 
     try {
       const mediaIds: string[] = [];
@@ -74,7 +70,6 @@ export class TwitterProvider implements ISocialProvider {
       this.logger.log('Publishing tweet...');
       const response = await client.v2.tweet(payload);
 
-      console.log('Tweet published successfully:', response);
 
       return {
         platformPostId: response.data.id,
@@ -140,8 +135,6 @@ export class TwitterProvider implements ISocialProvider {
         target: 'tweet',
       });
 
-      console.log('Uploaded media ID:');
-      console.log(mediaId);
 
       return mediaId;
     } catch (error) {
