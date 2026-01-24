@@ -130,6 +130,21 @@ export class PlatformRulesService {
     if (media.length > 9) {
       throw new Error('LinkedIn recommends max 9 images.');
     }
+      // --- A. VALIDATION: Check counts ---
+      const videoCount = media.filter(f => f.mimeType.startsWith('video/')).length;
+      const imageCount = media.filter(f => f.mimeType.startsWith('image/')).length;
+      const docCount = media.filter(f => f.mimeType === 'application/pdf').length;
+
+      // Rule: Documents must be standalone
+      if (docCount > 0 && (videoCount > 0 || imageCount > 0)) {
+        throw new BadRequestException('LinkedIn Documents (PDFs) cannot be mixed with images or videos.');
+      }
+      if (docCount > 1) {
+        throw new BadRequestException('LinkedIn allows only 1 Document (PDF) per post.');
+      }
+      if (videoCount > 1) {
+        throw new BadRequestException('LinkedIn allows only 1 Video per post.');
+      }
     return { isValid: true, finalContent: content };
   }
 }

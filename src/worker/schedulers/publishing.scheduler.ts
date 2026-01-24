@@ -17,7 +17,7 @@ export class PublishingScheduler {
   ) {}
 
   // Runs every minute (at :00 seconds)
-  //@Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleScheduledPosts() {
     this.logger.debug('⏰ CRON IS ALIVE: Checking for posts...');
     

@@ -11,39 +11,58 @@ import * as path from 'path';
 import * as os from 'os';
 import { pipeline } from 'stream/promises';
 import { randomUUID } from 'crypto';
-import { ISocialProvider, SocialCredentials } from '../interfaces/social-provider.interface';
+import {
+  ISocialProvider,
+  SocialCredentials,
+} from '../interfaces/social-provider.interface';
+import * as https from 'https';
 
 @Injectable()
 export class LinkedInProvider implements ISocialProvider {
   private readonly logger = new Logger(LinkedInProvider.name);
   private readonly API_BASE = 'https://api.linkedin.com';
-  // ⚠️ ALWAYS CHECK FOR LATEST VERSION (Currently ~202501)
-  private readonly API_VERSION = '202501';
+  private readonly API_VERSION = '202601';
+
+    private readonly httpsAgent = new https.Agent({
+    family: 4, // FORCE IPv4
+    keepAlive: true,
+    timeout: 30000,
+  });
 
   constructor(private readonly configService: ConfigService) {}
 
-async publish(
+  async publish(
     credentials: SocialCredentials,
     content: string,
     mediaFiles: { url: string; mimeType: string; title?: string }[], // Added 'title' to type
-    metadata: { authorUrn: string },
+    metadata: { pageId: string },
   ) {
-    if (!metadata?.authorUrn) throw new BadRequestException('Author URN required');
-
+    if (!metadata?.pageId) throw new BadRequestException('Page ID required');
     try {
+      const authorUrn = this.formatAuthorUrn(metadata.pageId);
       const mediaUrns: { id: string; title?: string }[] = [];
 
       // --- A. VALIDATION: Check counts ---
-      const videoCount = mediaFiles.filter(f => f.mimeType.startsWith('video/')).length;
-      const imageCount = mediaFiles.filter(f => f.mimeType.startsWith('image/')).length;
-      const docCount = mediaFiles.filter(f => f.mimeType === 'application/pdf').length;
+      const videoCount = mediaFiles.filter((f) =>
+        f.mimeType.startsWith('video/'),
+      ).length;
+      const imageCount = mediaFiles.filter((f) =>
+        f.mimeType.startsWith('image/'),
+      ).length;
+      const docCount = mediaFiles.filter(
+        (f) => f.mimeType === 'application/pdf',
+      ).length;
 
       // Rule: Documents must be standalone
       if (docCount > 0 && (videoCount > 0 || imageCount > 0)) {
-        throw new BadRequestException('LinkedIn Documents (PDFs) cannot be mixed with images or videos.');
+        throw new BadRequestException(
+          'LinkedIn Documents (PDFs) cannot be mixed with images or videos.',
+        );
       }
       if (docCount > 1) {
-        throw new BadRequestException('LinkedIn allows only 1 Document (PDF) per post.');
+        throw new BadRequestException(
+          'LinkedIn allows only 1 Document (PDF) per post.',
+        );
       }
       if (videoCount > 1) {
         throw new BadRequestException('LinkedIn allows only 1 Video per post.');
@@ -54,26 +73,41 @@ async publish(
         let result: string | { id: string; title?: string };
 
         if (file.mimeType.startsWith('image/')) {
-          result = await this.uploadImageStream(credentials.accessToken, metadata.authorUrn, file);
+          result = await this.uploadImageStream(
+            credentials.accessToken,
+            authorUrn,
+            file,
+          );
           mediaUrns.push({ id: result, title: file.title });
-        } 
-        else if (file.mimeType.startsWith('video/')) {
-          result = await this.uploadVideo(credentials.accessToken, metadata.authorUrn, file);
+        } else if (file.mimeType.startsWith('video/')) {
+          result = await this.uploadVideo(
+            credentials.accessToken,
+            authorUrn,
+            file,
+          );
           mediaUrns.push({ id: result, title: file.title });
-        } 
-        else if (file.mimeType === 'application/pdf') {
-          // 📄 Handle PDF
-          const docInfo = await this.uploadDocument(credentials.accessToken, metadata.authorUrn, file);
+        } else if (file.mimeType === 'application/pdf') {
+          const docInfo = await this.uploadDocument(
+            credentials.accessToken,
+            authorUrn,
+            file,
+          );
           mediaUrns.push(docInfo);
         }
       }
 
+
+
       // --- C. PAYLOAD BUILDER ---
       const postBody: any = {
-        author: metadata.authorUrn,
+        author: authorUrn,
         commentary: content,
         visibility: 'PUBLIC',
-        distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] },
+        distribution: {
+          feedDistribution: 'MAIN_FEED',
+          targetEntities: [],
+          thirdPartyDistributionChannels: [],
+        },
         lifecycleState: 'PUBLISHED',
         isReshareDisabledByAuthor: false,
       };
@@ -81,21 +115,21 @@ async publish(
       if (mediaUrns.length > 0) {
         // CASE 1: Single Asset (Video OR Document OR Single Image)
         if (mediaUrns.length === 1 && docCount === 1) {
-             // 📄 Document Payload
-             postBody.content = {
-               media: {
-                 id: mediaUrns[0].id,
-                 title: mediaUrns[0].title || 'Document', // 👈 Critical for PDF Sliders
-               }
-             };
+          // 📄 Document Payload
+          postBody.content = {
+            media: {
+              id: mediaUrns[0].id,
+              title: mediaUrns[0].title || 'Document', // 👈 Critical for PDF Sliders
+            },
+          };
         } else if (mediaUrns.length === 1) {
-             // 🎥 Video or 🖼️ Single Image
-             postBody.content = {
-               media: {
-                 id: mediaUrns[0].id,
-                 title: mediaUrns[0].title || 'Shared Media',
-               }
-             };
+          // 🎥 Video or 🖼️ Single Image
+          postBody.content = {
+            media: {
+              id: mediaUrns[0].id,
+              title: mediaUrns[0].title || 'Shared Media',
+            },
+          };
         }
         // CASE 2: Multi-Image Carousel
         else {
@@ -111,21 +145,25 @@ async publish(
       }
 
       // --- D. EXECUTE ---
-      const response = await axios.post(`${this.API_BASE}/rest/posts`, postBody, {
-        headers: {
-          Authorization: `Bearer ${credentials.accessToken}`,
-          'X-Restli-Protocol-Version': '2.0.0',
-          'LinkedIn-Version': this.API_VERSION,
-          'Content-Type': 'application/json',
+      const response = await axios.post(
+        `${this.API_BASE}/rest/posts`,
+        postBody,
+        {httpsAgent: this.httpsAgent,
+          headers: {
+            Authorization: `Bearer ${credentials.accessToken}`,
+            'X-Restli-Protocol-Version': '2.0.0',
+            'Linkedin-Version': this.API_VERSION,
+            'Content-Type': 'application/json',
+          },
         },
-      });
+      );
+
 
       const urn = response.headers['x-restli-id'] || response.data.id;
       return {
-        platformPostId: urn,
         url: `https://www.linkedin.com/feed/update/${urn}`,
+        platformPostId: urn,
       };
-
     } catch (error) {
       this.handleError(error);
     }
@@ -150,6 +188,7 @@ async publish(
       `${this.API_BASE}/rest/images?action=initializeUpload`,
       registerBody,
       {
+        httpsAgent: this.httpsAgent,
         headers: {
           Authorization: `Bearer ${token}`,
           'X-Restli-Protocol-Version': '2.0.0',
@@ -157,9 +196,6 @@ async publish(
         },
       },
     );
-
-    console.log('LinkedIn Image Upload Init Response:');
-    console.log(initResp.data);
 
     const uploadUrl = initResp.data.value.uploadUrl;
     const assetUrn = initResp.data.value.image;
@@ -185,12 +221,14 @@ async publish(
     // 1. Download to Temp File (Needed to calculate exact size and handle chunks)
     const tmpDir = os.tmpdir();
     const tempFilePath = path.join(tmpDir, `rooli-vid-${randomUUID()}.mp4`);
-    
+
     try {
       this.logger.log(`Downloading video to temp for processing: ${file.url}`);
-      const downloadStream = await axios.get(file.url, { responseType: 'stream' });
+      const downloadStream = await axios.get(file.url, {
+        responseType: 'stream',
+      });
       await pipeline(downloadStream.data, fs.createWriteStream(tempFilePath));
-      
+
       const stats = fs.statSync(tempFilePath);
       const fileSizeBytes = stats.size;
 
@@ -208,6 +246,7 @@ async publish(
         `${this.API_BASE}/rest/videos?action=initializeUpload`,
         initBody,
         {
+          httpsAgent: this.httpsAgent,
           headers: {
             Authorization: `Bearer ${token}`,
             'X-Restli-Protocol-Version': '2.0.0',
@@ -216,9 +255,6 @@ async publish(
           },
         },
       );
-
-      console.log('LinkedIn Video Upload Init Response:');
-      console.log(initResp.data);
 
       const instructions = initResp.data.value.uploadInstructions; // Array of chunks
       const uploadToken = initResp.data.value.uploadToken;
@@ -230,7 +266,7 @@ async publish(
       // 3. Upload Each Part
       for (const instruction of instructions) {
         const { uploadUrl, firstByte, lastByte } = instruction;
-        
+
         // Read specific byte range from disk
         const fileStream = fs.createReadStream(tempFilePath, {
           start: firstByte,
@@ -272,7 +308,6 @@ async publish(
 
       this.logger.log('Video upload finalized.');
       return videoUrn;
-
     } catch (error) {
       this.logger.error(`Video upload failed: ${file.url}`, error);
       throw new InternalServerErrorException('LinkedIn Video Upload Failed');
@@ -303,6 +338,7 @@ async publish(
       `${this.API_BASE}/rest/documents?action=initializeUpload`,
       initBody,
       {
+        httpsAgent: this.httpsAgent,
         headers: {
           Authorization: `Bearer ${token}`,
           'X-Restli-Protocol-Version': '2.0.0',
@@ -311,9 +347,6 @@ async publish(
         },
       },
     );
-
-    console.log('LinkedIn Document Upload Init Response:');
-    console.log(initResp.data);
 
     const uploadUrl = initResp.data.value.uploadUrl;
     const docUrn = initResp.data.value.document; // e.g. urn:li:document:123...
@@ -329,16 +362,32 @@ async publish(
       maxBodyLength: Infinity,
     });
 
-    return { 
-      id: docUrn, 
+    return {
+      id: docUrn,
       // Use provided title or fallback to a default (Visible to users!)
-      title: file.title || 'Presentation', 
+      title: file.title || 'Presentation',
     };
   }
 
+  private formatAuthorUrn(id: string): string {
+    // 1. If it already starts with 'urn:li:', trust the database (It's a Page)
+    if (id.startsWith('urn:li:')) {
+      return id;
+    }
+
+    // 2. If it's a raw ID, assume it is a Person (Profile)
+    return `urn:li:person:${id}`;
+  }
+
+  
+
   private handleError(error: any) {
+    console.log(error);
     const msg = error.response?.data?.message || error.message;
-    this.logger.error('LinkedIn API Error', JSON.stringify(error.response?.data || error));
+    this.logger.error(
+      'LinkedIn API Error',
+      JSON.stringify(error.response?.data || error),
+    );
     throw new InternalServerErrorException(`LinkedIn Failed: ${msg}`);
   }
 }

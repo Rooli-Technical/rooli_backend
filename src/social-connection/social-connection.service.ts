@@ -166,25 +166,28 @@ export class SocialConnectionService {
       connection.accessToken,
     );
 
+    let pages;
+
     try {
       switch (connection.platform) {
         case 'FACEBOOK':
-          return await this.facebook.getPages(accessToken);
+          pages = await this.facebook.getPages(accessToken);
         case 'INSTAGRAM':
-          return (await this.instagram.getAccount(
+          pages = (await this.instagram.getAccount(
             accessToken,
           )) as SocialPageOption[];
         case 'LINKEDIN':
-          return await this.linkedin.getImportablePages(accessToken);
+          pages = await this.linkedin.getImportablePages(accessToken);
         case 'TWITTER':
           const accessSecret = connection.refreshToken
             ? await this.encryptionService.decrypt(connection.refreshToken)
             : '';
-          return await this.twitter.getProfile(accessToken, accessSecret);
+          pages = await this.twitter.getProfile(accessToken, accessSecret);
 
         default:
-          return [];
+          pages = [];
       }
+      return pages.map(({ accessToken, refreshToken, ...safe }) => safe);
     } catch (error) {
       this.logger.warn(`Failed to fetch pages: ${error.message}`);
       return [];

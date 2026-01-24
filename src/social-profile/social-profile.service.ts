@@ -23,26 +23,28 @@ export class SocialProfileService {
   ) {}
 
   async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
-    const { remaining, allowedPlatforms } =
-      await this.getWorkspaceLimitInfo(workspaceId);
+    // const { remaining, allowedPlatforms } =
+    //   await this.getWorkspaceLimitInfo(workspaceId);
 
-    // 2. CHECK 1: Is this Platform allowed?
-    if (!allowedPlatforms.includes(dto.platform)) {
-      throw new ForbiddenException(
-        `The ${dto.platform} platform is not available on your current plan. Please upgrade to connect X (Twitter).`,
-      );
-    }
+    // // 2. CHECK 1: Is this Platform allowed?
+    // if (!allowedPlatforms.includes(dto.platform)) {
+    //   throw new ForbiddenException(
+    //     `The ${dto.platform} platform is not available on your current plan. Please upgrade to connect X (Twitter).`,
+    //   );
+    // }
 
-    // 3. CHECK 2: Numeric Limits
-    if (dto.platformIds.length > remaining) {
-      throw new ForbiddenException(
-        `You have ${remaining} slots left, but tried to add ${dto.platformIds.length} profiles.`,
-      );
-    }
+    // // 3. CHECK 2: Numeric Limits
+    // if (dto.platformIds.length > remaining) {
+    //   throw new ForbiddenException(
+    //     `You have ${remaining} slots left, but tried to add ${dto.platformIds.length} profiles.`,
+    //   );
+    // }
 
     const importablePages = await this.connectionService.getImportablePages(
       dto.connectionId,
     );
+
+    console.log(importablePages);
 
     const results = {
       success: [],

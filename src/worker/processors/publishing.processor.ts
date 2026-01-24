@@ -52,7 +52,7 @@ export class PublishingProcessor extends WorkerHost {
         },
       });
 
-      console.log(post)
+      console.log(post);
 
       if (!post) return;
 
@@ -88,38 +88,52 @@ export class PublishingProcessor extends WorkerHost {
             dest.profile.platform,
           );
 
+          const platform = dest.profile.platform;
 
-         const rawAccessToken = await this.encryptionService.decrypt(
-             dest.profile.accessToken || dest.profile.connection.accessToken
-          );
-          console.log(rawAccessToken)
-          
-          // Note: Ensure 'refreshToken' is actually the secret you want. 
-          // For Twitter v1, you usually have a separate 'accessSecret' column.
-          // If you are using refreshToken as a placeholder, decrypt it too.
-          const rawAccessSecret = dest.profile.connection.refreshToken 
-             ? await this.encryptionService.decrypt(dest.profile.connection.refreshToken)
-             : '';
+          const encryptedAccessToken =
+            dest.profile.accessToken ?? dest.profile.connection.accessToken;
 
-             console.log(rawAccessSecret)
+          const rawAccessToken = encryptedAccessToken
+            ? await this.encryptionService.decrypt(encryptedAccessToken)
+            : undefined;
 
-          const credentials = {
-            accessToken: rawAccessToken,
-            accessSecret: rawAccessSecret,
-          };
+          let rawAccessSecret: string | undefined;
 
-          console.log(credentials)
+          if (platform === 'TWITTER') {
+            const encryptedSecret = dest.profile.connection.refreshToken;
 
+            rawAccessSecret = encryptedSecret
+              ? await this.encryptionService.decrypt(encryptedSecret)
+              : undefined;
+
+            if (!rawAccessToken || !rawAccessSecret) {
+              throw new Error(
+                'Missing Twitter OAuth1 credentials (token/secret)',
+              );
+            }
+          } else {
+            if (!rawAccessToken) {
+              throw new Error(`Missing ${platform} access token`);
+            }
+          }
+
+          const credentials =
+            platform === 'TWITTER'
+              ? { accessToken: rawAccessToken!, accessSecret: rawAccessSecret! }
+              : { accessToken: rawAccessToken! };
+
+              console.log('Publishing to', platform, 'with credentials', credentials);
           const result = await provider.publish(
-            credentials,
+            credentials as any,
             dest.contentOverride || post.content,
             mediaPayload,
             {
               pageId: dest.profile.platformId,
-              replyToPostId: replyToId, // 👈 Uses the ID passed from the previous loop
-              postType: post.contentType
+              replyToPostId: replyToId,
+              postType: post.contentType,
             },
           );
+          console.log('Publishing result:', result);
 
           return {
             destinationId: dest.id,

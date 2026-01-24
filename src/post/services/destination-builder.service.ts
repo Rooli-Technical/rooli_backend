@@ -66,7 +66,7 @@ export class DestinationBuilder {
       // We only need dimensions, not the whole blob
       mediaItems = await this.prisma.mediaFile.findMany({
         where: { id: { in: dto.mediaIds } },
-        select: { url: true, width: true, height: true },
+        select: { url: true, width: true, height: true, mimeType: true },
       });
     }
 
