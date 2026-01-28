@@ -8,27 +8,27 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  password     String? // Optional for OAuth users
-  firstName    String?
-  lastName     String?
-  avatar       String?
-  userType     UserType @default(INDIVIDUAL)
-  timezone     String?  @default("Africa/Lagos")
-  isOnboardingComplete Boolean @default(false)
-  systemRoleId String?
-  systemRole   Role?    @relation("UserSystemRole", fields: [systemRoleId], references: [id])
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  password             String? // Optional for OAuth users
+  firstName            String?
+  lastName             String?
+  avatar               String?
+  userType             UserType @default(INDIVIDUAL)
+  timezone             String?  @default("Africa/Lagos")
+  isOnboardingComplete Boolean  @default(false)
+  systemRoleId         String?
+  systemRole           Role?    @relation("UserSystemRole", fields: [systemRoleId], references: [id])
 
-lastVerificationEmailSentAt DateTime?
+  lastVerificationEmailSentAt DateTime?
 
   // Tracks which Workspace (Client) the user was looking at last
-  lastActiveWorkspaceId    String?
-  lastActiveWorkspace      Workspace?    @relation("UserLastActiveWorkspace", fields: [lastActiveWorkspaceId], references: [id], onDelete: SetNull)
+  lastActiveWorkspaceId String?
+  lastActiveWorkspace   Workspace? @relation("UserLastActiveWorkspace", fields: [lastActiveWorkspaceId], references: [id], onDelete: SetNull)
 
   // Email verification
-  isEmailVerified         Boolean   @default(false)
-  refreshToken            String?
+  isEmailVerified Boolean @default(false)
+  refreshToken    String?
 
   // Security
   loginAttempts       Int       @default(0)
@@ -43,21 +43,20 @@ lastVerificationEmailSentAt DateTime?
 
   mediaFiles              MediaFile[]
   organizationMemberships OrganizationMember[] @relation("UserOrganizationMemberships")
-  workspaceMemberships  WorkspaceMember[]
+  workspaceMemberships    WorkspaceMember[]
 
- sentInvitations         Invitation[] @relation("UserSentInvitations")
+  sentInvitations Invitation[] @relation("UserSentInvitations")
 
   // messages                 Message[]
   // notifications            NotificationEntity[]
-  ContentTemplate          ContentTemplate[]
-  Post                     Post[]
-  approvalsRequested       PostApproval[]            @relation("ApprovalRequester")
-  approvalsGiven           PostApproval[]            @relation("ApprovalApprover")
-  auditLogs                AuditLog[]
-  aiUsages                 AIUsage[]
-  favoriteTemplates        UserFavoriteTemplate[]
+  ContentTemplate    ContentTemplate[]
+  Post               Post[]
+  approvalsRequested PostApproval[]         @relation("ApprovalRequester")
+  approvalsGiven     PostApproval[]         @relation("ApprovalApprover")
+  auditLogs          AuditLog[]
+  aiUsages           AIUsage[]
+  favoriteTemplates  UserFavoriteTemplate[]
   //conversationParticipants ConversationParticipant[]
-
 
   @@index([email, deletedAt])
   @@index([createdAt])
@@ -65,108 +64,104 @@ lastVerificationEmailSentAt DateTime?
 }
 
 model Organization {
-  id               String   @id @default(cuid())
+  id               String             @id @default(cuid())
   name             String
   email            String?
-  timezone         String  @default("Africa/Lagos") //All scheduling logic (cron jobs, "best time to post" AI) defaults to this timezone.
-  slug             String   @unique
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  isActive         Boolean  @default(true)
- // Branding
-  agencyLogoUrl  String?
-  agencyColor    String?
+  timezone         String             @default("Africa/Lagos") //All scheduling logic (cron jobs, "best time to post" AI) defaults to this timezone.
+  slug             String             @unique
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  isActive         Boolean            @default(true)
+  // Branding
+  agencyLogoUrl    String?
+  agencyColor      String?
   // Billing & Status
   billingEmail     String?
-  billingCountry   String   @default("NG")
-  currency         String   @default("NGN")
+  billingCountry   String             @default("NG")
+  currency         String             @default("NGN")
   status           OrganizationStatus @default(PENDING_PAYMENT)
-  totalCreditsUsed Int      @default(0)
+  totalCreditsUsed Int                @default(0)
 
-  members        OrganizationMember[]
-  invitations      Invitation[]
+  members     OrganizationMember[]
+  invitations Invitation[]
 
-  workspaces       Workspace[]
+  workspaces        Workspace[]
   socialConnections SocialConnection[]
 
   // conversations        Conversation[]
   // notifications        NotificationEntity[]
-  webhookLogs          WebhookLog[]
-  PostingSchedule      PostingSchedule[]
-  ContentTemplate      ContentTemplate[]
-  auditLogs            AuditLog[]
+  webhookLogs     WebhookLog[]
+  PostingSchedule PostingSchedule[]
+  ContentTemplate ContentTemplate[]
+  auditLogs       AuditLog[]
 
   aiUsage AIUsage[]
 
+  roles Role[]
 
-  roles        Role[]
-
-  subscriptionGateway  SubscriptionGateway  @default(PAYSTACK)
+  subscriptionGateway SubscriptionGateway @default(PAYSTACK)
 
   subscription Subscription? // 1-to-1 relation
   transactions Transaction[] // Payment history
 
-  settings      Json?
+  settings Json?
 
   publishingMetrics PublishingMetric[]
-
 }
 
 model Workspace {
-  id             String   @id @default(cuid())
-  name           String   // e.g. "Coca Cola Account" or "Personal Brand"
-  slug           String   // unique-per-org logic needed in app code, or globally unique
-  timezone       String   @default("UTC") // For scheduling posts
-  
+  id       String @id @default(cuid())
+  name     String // e.g. "Coca Cola Account" or "Personal Brand"
+  slug     String // unique-per-org logic needed in app code, or globally unique
+  timezone String @default("UTC") // For scheduling posts
+
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-
   invitations    Invitation[]
   socialProfiles SocialProfile[]
-  
+
   // Posts belong to a Workspace
-  posts          Post[]
+  posts        Post[]
   mediaFolders MediaFolder[]
-  mediaFiles     MediaFile[]
+  mediaFiles   MediaFile[]
 
   usersActiveHere User[] @relation("UserLastActiveWorkspace")
-  
+
   // --- THE "CLIENT LABEL" FEATURES ---
   // These fields are only used if the Plan allows "clientLabels"
-  clientName     String? 
-  clientStatus   String?  // "Active", "Onboarding", "Churned"
-  clientContact  String?  // "Jane Doe (jane@coke.com)"
-  clientColor    String?  // "#FF0000" (To color-code the dashboard card)
+  clientName    String?
+  clientStatus  String? // "Active", "Onboarding", "Churned"
+  clientContact String? // "Jane Doe (jane@coke.com)"
+  clientColor   String? // "#FF0000" (To color-code the dashboard card)
 
-  members  WorkspaceMember[]
+  members WorkspaceMember[]
 
-  queueSlots     QueueSlot[]
-  campaigns      Campaign[]
-  labels         Label[]
+  queueSlots QueueSlot[]
+  campaigns  Campaign[]
+  labels     Label[]
 
-  aiUsage       AIUsage[]  
-  brandKits     BrandKit[]
+  aiUsage   AIUsage[]
+  brandKits BrandKit[]
 
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([organizationId, slug]) // Slugs must be unique within an organization
 }
 
 model WorkspaceMember {
-  id           String    @id @default(cuid())
-  workspaceId  String
-  userId       String
-  roleId       String  
+  id          String @id @default(cuid())
+  workspaceId String
+  userId      String
+  roleId      String
 
-  workspace    Workspace @relation(fields: [workspaceId], references: [id])
-  user         User      @relation(fields: [userId], references: [id])
-  role         Role      @relation(fields: [roleId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  role      Role      @relation(fields: [roleId], references: [id])
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([workspaceId, userId])
 }
@@ -196,133 +191,132 @@ model OrganizationMember {
 }
 
 model Invitation {
-  id             String   @id @default(cuid())
-  email          String
-  token          String   @unique // The secret key sent in email
-  
-  inviterId      String
-  inviter        User     @relation("UserSentInvitations", fields: [inviterId], references: [id])
-  
+  id    String @id @default(cuid())
+  email String
+  token String @unique // The secret key sent in email
+
+  inviterId String
+  inviter   User   @relation("UserSentInvitations", fields: [inviterId], references: [id])
+
   // 2. Which Organization is paying? (Required)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // 3. Which Workspace? (Optional - null means Org-wide invite)
-  workspaceId    String? 
-  workspace      Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
 
-  roleId         String
-  role           Role         @relation(fields: [roleId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
-    expiresAt      DateTime
-  createdAt      DateTime @default(now())
-  
   // Prevents sending the exact same invite twice, but allows inviting 
   // the same email to different workspaces within the same Org.
   @@unique([email, organizationId, workspaceId])
 }
 
 model SocialConnection {
-  id               String   @id @default(cuid())
-  organizationId   String
-  platform         Platform // FACEBOOK, LINKEDIN, TWITTER
-  
+  id             String   @id @default(cuid())
+  organizationId String
+  platform       Platform // FACEBOOK, LINKEDIN, TWITTER
+
   // 🔐 USER CREDENTIALS (The "Master Key")
   // Used to refresh tokens and fetch list of pages
-  platformUserId   String   // The generic User ID (e.g. FB User ID)
+  platformUserId   String // The generic User ID (e.g. FB User ID)
   platformUsername String?
 
-
-  accessToken      String   @db.Text // Encrypted
-  refreshToken     String?  @db.Text // Encrypted  //twitter access secret
-  tokenExpiresAt   DateTime?
+  accessToken    String    @db.Text // Encrypted
+  refreshToken   String?   @db.Text // Encrypted  //twitter access secret
+  tokenExpiresAt DateTime?
 
   // Relations
-  organization     Organization    @relation(fields: [organizationId], references: [id])
-  profiles         SocialProfile[] // One Login -> Many Pages
+  organization Organization    @relation(fields: [organizationId], references: [id])
+  profiles     SocialProfile[] // One Login -> Many Pages
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([organizationId, platform, platformUserId]) // Prevent duplicate logins
   @@index([organizationId])
 }
 
 model SocialProfile {
-  id                 String   @id @default(cuid())
+  id                 String @id @default(cuid())
   workspaceId        String
-  socialConnectionId String   // Link back to the parent login
+  socialConnectionId String // Link back to the parent login
 
-  platform           Platform
-  platformId         String   // The Page ID / IG Business ID
-  name               String   // "Nike Official"
-  username           String?  // "@nike"
-  picture            String?
+  platform   Platform
+  platformId String // The Page ID / IG Business ID
+  name       String // "Nike Official"
+  username   String? // "@nike"
+  picture    String?
 
-  followerCount    Int  @default(0)
+  followerCount Int @default(0)
 
   // 🔐 PAGE CREDENTIALS (The "Room Key")
   // Specific token to post to THIS page. 
   // For FB/IG: This is the Page Access Token.
   // For X/LinkedIn: Often a copy of the User Token.
-  accessToken        String?  @db.Text 
+  accessToken String? @db.Text
 
-  type           SocialProfileType
+  type SocialProfileType
 
   // Relations
-  workspace          Workspace        @relation(fields: [workspaceId], references: [id])
-  connection         SocialConnection @relation(fields: [socialConnectionId], references: [id], onDelete: Cascade)
-  
+  workspace  Workspace        @relation(fields: [workspaceId], references: [id])
+  connection SocialConnection @relation(fields: [socialConnectionId], references: [id], onDelete: Cascade)
+
   // The posts scheduled for this specific profile
-  postDestinations   PostDestination[] 
-  
+  postDestinations PostDestination[]
+
+  accountAnalytics AccountAnalytics[]
+
   // Analytics for this specific profile
   //dailyAnalytics     AccountAnalytics[]
 
-  isActive           Boolean  @default(true)
+  isActive Boolean @default(true)
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([workspaceId, platform, platformId])
   @@index([workspaceId])
 }
-
 
 // ==========================================
 // 1. CAMPAIGNS & ORGANIZATION
 // ==========================================
 
 model Campaign {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   workspaceId String
   name        String
   description String?
-  color       String?  @default("#1877F2") // For Calendar UI
+  color       String?        @default("#1877F2") // For Calendar UI
   startDate   DateTime
   endDate     DateTime?
   status      CampaignStatus @default(ACTIVE)
 
-  posts       Post[]
-  
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  posts Post[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([workspaceId, status])
 }
 
 model Label {
-  id          String   @id @default(cuid())
+  id          String @id @default(cuid())
   workspaceId String
   name        String
-  color       String   @default("#000000")
+  color       String @default("#000000")
 
-  posts       Post[]   // Many-to-Many (Implicit is fine here)
+  posts Post[] // Many-to-Many (Implicit is fine here)
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, name])
 }
@@ -332,112 +326,99 @@ model Label {
 // ==========================================
 
 model Post {
-  id              String      @id @default(cuid())
-  workspaceId     String
-  authorId        String?
-  
+  id          String  @id @default(cuid())
+  workspaceId String
+  authorId    String?
+
   // 📝 CONTENT
   // The "Master" content. Platform-specific versions live in PostDestination.
-  content         String?      @db.Text 
-  
+  content String? @db.Text
+
   // 🖼️ MEDIA
   // We use a join table to ensure ORDER (Critical for Carousels)
-  media           PostMedia[] 
+  media PostMedia[]
 
   // ⚙️ TYPE & STATE
-  contentType     ContentType @default(POST) // REEL, STORY, THREAD, POST
-  status          PostStatus  @default(DRAFT)
-  
+  contentType ContentType @default(POST) // REEL, STORY, THREAD, POST
+  status      PostStatus  @default(DRAFT)
+
   // 🗓️ SCHEDULING
-  scheduledAt     DateTime?   // The intended publish time
-  publishedAt     DateTime?   // When it actually went out
-  timezone        String      @default("UTC")
-  isAutoSchedule  Boolean     @default(false) // If true, uses QueueSlot
-  
+  scheduledAt    DateTime? // The intended publish time
+  publishedAt    DateTime? // When it actually went out
+  timezone       String    @default("UTC")
+  isAutoSchedule Boolean   @default(false) // If true, uses QueueSlot
+
   // 🚨 ERROR HANDLING
-  errorMessage    String?     // General error (if all failed)
-  maxRetries      Int         @default(3)
-  retryCount      Int         @default(0)
+  errorMessage String? // General error (if all failed)
+  maxRetries   Int     @default(3)
+  retryCount   Int     @default(0)
 
   // 🧵 THREADS (X/Twitter)
-  parentPostId    String? 
-  parentPost      Post?       @relation("PostThread", fields: [parentPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  childPosts      Post[]      @relation("PostThread")
+  parentPostId String?
+  parentPost   Post?   @relation("PostThread", fields: [parentPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childPosts   Post[]  @relation("PostThread")
 
   // 🔗 RELATIONS
-  destinations    PostDestination[]
-  campaignId      String?
-  campaign        Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  labels          Label[]
-  approvals       PostApproval[]
+  destinations PostDestination[]
+  campaignId   String?
+  campaign     Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  labels       Label[]
+  approvals    PostApproval[]
 
- 
-  // Aggregated stats (Sum of all destinations)
-  totalLikes         Int @default(0)
-  totalImpressions   Int @default(0)
-  totalClicks        Int @default(0)
-  engagementRate     Float @default(0.0)
-
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  author          User?     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    User?     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   // 🤖 AI METADATA
   // If this post was written by AI, we just flag it.
-  isAiGenerated   Boolean   @default(false)
-  aiPrompt        String?   @db.Text
+  isAiGenerated Boolean @default(false)
+  aiPrompt      String? @db.Text
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([workspaceId, status, scheduledAt])
   @@index([campaignId])
 }
 
 model PostDestination {
-  id              String         @id @default(cuid())
+  id              String @id @default(cuid())
   postId          String
-  socialProfileId String         // The specific account (Nike FB, Nike IG)
+  socialProfileId String // The specific account (Nike FB, Nike IG)
 
   // 🎨 OVERRIDES
   // If null, falls back to Post.content
-  contentOverride String?        @db.Text 
-  
+  contentOverride String? @db.Text
+
   // 🚦 STATUS
-  status          PublishStatus  @default(SCHEDULED)
-  platformPostId  String?        // The ID from FB/LinkedIn after posting
-  platformUrl     String?        // Link to the live post
-  errorMessage    String?        
+  status         PublishStatus @default(SCHEDULED)
+  platformPostId String? // The ID from FB/LinkedIn after posting
+  platformUrl    String? // Link to the live post
+  errorMessage   String?
 
-  // 📊 PER-DESTINATION ANALYTICS
-  // We track stats per destination because FB performance != LinkedIn performance
-  likes           Int @default(0)
-  comments        Int @default(0)
-  shares          Int @default(0)
-  impressions     Int @default(0)
-  clicks          Int @default(0)
+  post    Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  profile SocialProfile @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
 
-  post            Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
-  profile         SocialProfile  @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
 
-  updatedAt       DateTime       @updatedAt
-  createdAt       DateTime       @default(now())
-  publishedAt     DateTime?
+  metadata Json?
 
-  metadata        Json? 
+  postAnalyticsSnapshots PostAnalyticsSnapshot[]
 
-  @@unique([postId, socialProfileId]) 
+  @@unique([postId, socialProfileId])
   @@index([status])
 }
 
 // 🖼️ Explicit Join for Media Ordering
 model PostMedia {
-  id          String    @id @default(cuid())
+  id          String @id @default(cuid())
   postId      String
   mediaFileId String
-  order       Int       @default(0) // 0 = Cover image, 1 = Next, etc.
+  order       Int    @default(0) // 0 = Cover image, 1 = Next, etc.
 
-  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  mediaFile   MediaFile @relation(fields: [mediaFileId], references: [id], onDelete: Cascade)
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  mediaFile MediaFile @relation(fields: [mediaFileId], references: [id], onDelete: Cascade)
 
   @@unique([postId, mediaFileId])
   @@index([postId, order])
@@ -448,55 +429,54 @@ model PostMedia {
 // ==========================================
 
 model MediaFolder {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   workspaceId String
   name        String
   parentId    String?
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  parent      MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children    MediaFolder[] @relation("FolderHierarchy")
-  files       MediaFile[]
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent    MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children  MediaFolder[] @relation("FolderHierarchy")
+  files     MediaFile[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([workspaceId, parentId, name])
 }
 
 model MediaFile {
-  id              String    @id @default(cuid())
-  workspaceId     String
-  userId          String
-  folderId        String?
-  
-  filename        String
-  originalName    String
-  mimeType        String    // image/jpeg, video/mp4
-  size            BigInt
-  url             String    // Cloudinary/S3 URL
-  publicId        String    // For Cloudinary deletion
-  thumbnailUrl    String?
-  
-  width           Int?      // Important for aspect ratio checks
-  height          Int?
-  duration        Int?      // In seconds (for Videos)
+  id          String  @id @default(cuid())
+  workspaceId String
+  userId      String
+  folderId    String?
 
-// 🤖 AI METADATA (Embedded)
+  filename     String
+  originalName String
+  mimeType     String // image/jpeg, video/mp4
+  size         BigInt
+  url          String // Cloudinary/S3 URL
+  publicId     String // For Cloudinary deletion
+  thumbnailUrl String?
+
+  width    Int? // Important for aspect ratio checks
+  height   Int?
+  duration Int? // In seconds (for Videos)
+
+  // 🤖 AI METADATA (Embedded)
   // Just flags to help you filter "Show me AI images" in the library
-  isAiGenerated   Boolean   @default(false)
-  aiProvider      String?   // "dall-e-3", "midjourney"
-  aiPrompt        String?   @db.Text // Store the prompt so user can "Reuse" it
-  
-  postUsage       PostMedia[] // Relation to posts
+  isAiGenerated Boolean @default(false)
+  aiProvider    String? // "dall-e-3", "midjourney"
+  aiPrompt      String? @db.Text // Store the prompt so user can "Reuse" it
 
-  folder          MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  
+  postUsage PostMedia[] // Relation to posts
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  folder    MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([workspaceId, mimeType])
 }
@@ -506,16 +486,16 @@ model MediaFile {
 // ==========================================
 
 model QueueSlot {
-  id          String    @id @default(cuid())
+  id          String @id @default(cuid())
   workspaceId String
-  
-  // "Every Monday"
-  dayOfWeek   DayOfWeek // Enum: MONDAY, TUESDAY...
-  time        String    // "09:00" (24h format)
-  
-  isActive    Boolean   @default(true)
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  // "Every Monday"
+  dayOfWeek DayOfWeek // Enum: MONDAY, TUESDAY...
+  time      String // "09:00" (24h format)
+
+  isActive Boolean @default(true)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
@@ -525,21 +505,21 @@ model QueueSlot {
 // ==========================================
 
 model PostApproval {
-  id            String         @id @default(cuid())
-  postId        String
-  requesterId   String
-  approverId    String?
-  
-  status        ApprovalStatus @default(PENDING) // PENDING, APPROVED, REJECTED
-  
-  notes         String?        @db.Text // "Please change the image"
-  
-  requestedAt   DateTime       @default(now())
-  reviewedAt    DateTime?
+  id          String  @id @default(cuid())
+  postId      String
+  requesterId String
+  approverId  String?
 
-  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
-  requester     User           @relation("ApprovalRequester", fields: [requesterId], references: [id])
-  approver      User?          @relation("ApprovalApprover", fields: [approverId], references: [id])
+  status ApprovalStatus @default(PENDING) // PENDING, APPROVED, REJECTED
+
+  notes String? @db.Text // "Please change the image"
+
+  requestedAt DateTime  @default(now())
+  reviewedAt  DateTime?
+
+  post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  requester User  @relation("ApprovalRequester", fields: [requesterId], references: [id])
+  approver  User? @relation("ApprovalApprover", fields: [approverId], references: [id])
 
   @@unique([postId]) // One active approval process per post
 }
@@ -552,43 +532,44 @@ model ContentTemplate {
   id             String  @id @default(cuid())
   organizationId String?
   userId         String
-  
-  name           String
-  description    String?
-  
-  // Usage Metadata
-  platform       Platform
-  contentType    ContentType
-  category       TemplateCategory
-  tags           String[]
-  
-  content        Json // Structured content
-  
-  isPublic       Boolean        @default(false)
-  usageCount     Int            @default(0)
-  
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  favorites      UserFavoriteTemplate[]
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  name        String
+  description String?
+
+  // Usage Metadata
+  platform    Platform
+  contentType ContentType
+  category    TemplateCategory
+  tags        String[]
+
+  content Json // Structured content
+
+  isPublic   Boolean @default(false)
+  usageCount Int     @default(0)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  favorites UserFavoriteTemplate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([organizationId, platform])
   @@index([isPublic, category])
 }
 
 model UserFavoriteTemplate {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   userId     String
   templateId String
 
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  template   ContentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template ContentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@unique([userId, templateId])
 }
+
 model PublishingMetric {
   id             String   @id @default(uuid())
   organizationId String
@@ -603,32 +584,29 @@ model PublishingMetric {
   @@index([organizationId, platform, timestamp])
 }
 
-
 // The Plan Model (Your Tiers)
 model Plan {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String   @unique
   description String?
-  tier         PlanTier   @default(CREATOR)
-
+  tier        PlanTier @default(CREATOR)
 
   // BILLING MAPPING
- paystackPlanCodeNgn String? @unique 
- paystackPlanCodeUsd String? @unique
+  paystackPlanCodeNgn String? @unique
+  paystackPlanCodeUsd String? @unique
 
   // PRICING (Display purposes)
-  priceNgn      Decimal     @db.Decimal(10, 2) @default(0.00)
-  priceUsd      Decimal     @db.Decimal(10, 2) @default(0.00)
-  interval      BillingInterval
-
+  priceNgn Decimal         @default(0.00) @db.Decimal(10, 2)
+  priceUsd Decimal         @default(0.00) @db.Decimal(10, 2)
+  interval BillingInterval
 
   // --- LIMITS (The "Guards") ---
-  
+
   // Rocket Plan specific: "Up to 5 workspaces"
-  maxWorkspaces Int @default(1) 
+  maxWorkspaces Int @default(1)
 
   // "Up to 3 social profiles" (Creator) vs "4 per workspace" (Rocket)
-  maxSocialProfilesPerWorkspace Int @default(3) 
+  maxSocialProfilesPerWorkspace Int @default(3)
 
   // "1 user" (Creator) vs "Unlimited" (Rocket - set to -1 or 9999)
   maxTeamMembers Int @default(1)
@@ -636,19 +614,19 @@ model Plan {
   // AI Usage Limits (Credits per month)
   monthlyAiCredits Int @default(100)
 
-// --- FEATURES (Flags) ---
+  // --- FEATURES (Flags) ---
   // JSON stores boolean flags: 
   // { "canRemoveBranding": true, "hasAdvancedAnalytics": true, "hasApprovalWorkflow": true }
-  features      Json @default("{}") 
+  features Json @default("{}")
 
-  isActive      Boolean @default(true)
+  isActive      Boolean        @default(true)
   subscriptions Subscription[]
 
   // list allowed platforms
   allowedPlatforms Platform[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // The Active Subscription
@@ -661,9 +639,9 @@ model Subscription {
   planId String
   plan   Plan   @relation(fields: [planId], references: [id])
 
-// STATUS & PERIOD
+  // STATUS & PERIOD
   status             String   @default("active") // "active", "past_due", "canceled", "incomplete"
-  isActive  Boolean 
+  isActive           Boolean
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
   cancelAtPeriodEnd  Boolean  @default(false)
@@ -673,16 +651,16 @@ model Subscription {
   paystackEmailToken       String? // "otk_54321" (For one-click actions)
   paystackAuthCode         String? // "AUTH_8dfhgpkv" (CRITICAL: Used to charge card for renewal)
 
-  
   // --- ENTERPRISE MAGIC: CUSTOM LIMITS ---
   // If this is set, these numbers OVERRIDE the Plan defaults.
   // Example: { "maxWorkspaces": 10, "maxTeamMembers": 50 }
   // Logic: const limit = sub.customLimits?.maxWorkspaces || plan.maxWorkspaces
-  customLimits             Json?   
+  customLimits Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 // Transaction History (Invoices)
 model Transaction {
   id String @id @default(cuid())
@@ -690,57 +668,55 @@ model Transaction {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  amount      Decimal @db.Decimal(10, 2)
-  currency    String
-  status      String // successful, failed, abandoned
+  amount   Decimal @db.Decimal(10, 2)
+  currency String
+  status   String // successful, failed, abandoned
 
-  txRef    String   @unique
+  txRef String @unique
 
   // PROVIDER DETAILS
-  provider     String   // "PAYSTACK"
-  providerTxId String   // Paystack "reference"
+  provider     String // "PAYSTACK"
+  providerTxId String // Paystack "reference"
 
-
-  
   // Detailed breakdown
-  metadata     Json?    // Store extra JSON from webhook (e.g. IP address, card type)
+  metadata Json? // Store extra JSON from webhook (e.g. IP address, card type)
 
-  paymentDate  DateTime @default(now())
-  
+  paymentDate DateTime @default(now())
+
   // Link to a specific subscription period if needed for auditing
   subscriptionId String?
   invoiceUrl     String?
 
-   createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model AIUsage {
-  id             String   @id @default(cuid())
+  id             String     @id @default(cuid())
   organizationId String
-  workspaceId String
+  workspaceId    String
   userId         String
- type           AiType     
+  type           AiType
   provider       AiProvider
-  model          String   // "gpt-4o", "dall-e-3"
+  model          String // "gpt-4o", "dall-e-3"
   tokensUsed     Int
   cost           Float
   metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @default(now())
 
-organization Organization @relation(fields: [organizationId], references: [id])
-workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id])
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
 }
 
 model BrandKit {
-  id             String @id @default(cuid())
-  workspaceId    String  
-  name           String @default("Our Brand")
-  handle         String?
+  id          String  @id @default(cuid())
+  workspaceId String
+  name        String  @default("Our Brand")
+  handle      String?
 
   // Visual identity - flexible JSON structure
   logoUrl String?
@@ -758,7 +734,7 @@ model BrandKit {
   updatedAt DateTime @updatedAt
 
   // Relations
-    workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   //ContentTemplate      ContentTemplate[]
 
   @@index([isActive])
@@ -847,10 +823,11 @@ model PlatformRateLimitLog {
 // ========================
 
 model PostAnalyticsSnapshot {
-  id     String @id @default(cuid())
-  postId String
+  id                String @id @default(cuid())
+  postDestinationId String
 
-  recordedAt DateTime @default(now())
+  day       DateTime @db.Date // normalized day (e.g. 2026-01-28)
+  fetchedAt DateTime @default(now())
 
   likes       Int @default(0)
   comments    Int @default(0)
@@ -859,21 +836,25 @@ model PostAnalyticsSnapshot {
   reach       Int @default(0)
   clicks      Int @default(0)
 
-  //post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  saves      Int @default(0) // Bookmarks (X), Saves (IG)
+  videoViews Int @default(0) // 3-second views (FB/IG)
 
-  @@index([postId, recordedAt])
+  postDestination PostDestination @relation(fields: [postDestinationId], references: [id], onDelete: Cascade)
+
+  metadata Json?
+
+  @@unique([postDestinationId, day]) // Only one snapshot per post per day
+  @@index([postDestinationId, day])
 }
 
 // Store daily aggregate data for the Account/Page itself
 model AccountAnalytics {
   id String @id @default(cuid())
 
-  // Link to either SocialAccount (X/LinkedIn Profile) or PageAccount (FB/IG Page)
-  socialAccountId String?
-  pageAccountId   String?
+  socialProfileId String
+  socialProfile   SocialProfile @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
 
-  date     DateTime @db.Date // The specific day this data represents
-  platform Platform
+  date DateTime @db.Date // The specific day this data represents
 
   // Growth
   followersTotal  Int @default(0)
@@ -896,9 +877,11 @@ model AccountAnalytics {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  @@unique([socialAccountId, platform, date])
-  @@unique([pageAccountId, platform, date])
-  @@index([date])
+   metadata Json?
+
+  @@unique([socialProfileId, date])
+  @@index([socialProfileId, date])
+   @@index([date])
 }
 
 // ========================
@@ -1042,14 +1025,14 @@ model Role {
   updatedAt      DateTime  @updatedAt
   scope          RoleScope
 
-  invitations             Invitation[]
+  invitations Invitation[]
 
   // Relations
-  organization            Organization?            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  systemUsers             User[]                   @relation("UserSystemRole")
-  permissions             RolePermission[]
-  organizationMembers     OrganizationMember[]
-  workspaceMembers        WorkspaceMember[]
+  organization        Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  systemUsers         User[]               @relation("UserSystemRole")
+  permissions         RolePermission[]
+  organizationMembers OrganizationMember[]
+  workspaceMembers    WorkspaceMember[]
 
   @@unique([scope, organizationId, name])
   @@index([isSystem, isDefault])
@@ -1078,7 +1061,7 @@ enum SocialProfileType {
 
 enum UserType {
   INDIVIDUAL
-  AGENCY 
+  AGENCY
 }
 
 enum ContentType {
@@ -1092,7 +1075,7 @@ enum PostStatus {
   DRAFT
   PENDING_APPROVAL
   SCHEDULED
-  PUBLISHING  // Currently uploading
+  PUBLISHING // Currently uploading
   PUBLISHED
   FAILED
   PARTIAL
@@ -1137,7 +1120,6 @@ enum TemplateCategory {
   // ... others
 }
 
-
 enum RoleScope {
   SYSTEM
   ORGANIZATION
@@ -1152,7 +1134,6 @@ enum QueueStatus {
   FAILED
   RETRYING
 }
-
 
 enum ScheduleSource {
   MANUAL
@@ -1242,7 +1223,6 @@ enum ScheduleJobStatus {
   PUBLISHED
   RETRYING
 }
-
 
 enum ToneType {
   PROFESSIONAL
