@@ -29,6 +29,10 @@ COPY --link . .
 # Generate prisma schema (Now uses the local prisma package, so imports work!)
 RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate
 
+# Build BOTH the main application and the worker
+RUN npm run build
+RUN npm run build:worker
+
 # Build application
 RUN npm run build
 
@@ -48,4 +52,6 @@ COPY --from=build /app/generated ./generated
 COPY --from=build /app/prisma ./prisma 
 
 EXPOSE 3000
-CMD [ "npm", "run", "start:prod" ]
+#CMD [ "npm", "run", "start:prod" ]
+# Start both processes using the new script
+CMD [ "npm", "run", "start:all" ]
