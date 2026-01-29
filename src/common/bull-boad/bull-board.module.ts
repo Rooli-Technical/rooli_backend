@@ -24,6 +24,10 @@ import { ExpressAdapter } from '@bull-board/express';
     BullBoardModule.forFeature({
       name: 'publishing-queue',
       adapter: BullMQAdapter,
+    }),
+  BullBoardModule.forFeature({
+      name: 'analytics-queue',
+      adapter: BullMQAdapter,
     })
   ],
 })

@@ -5,13 +5,13 @@ import { AnalyticsService } from '@/analytics/services/analytics.service';
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Platform } from '@generated/enums';
-import { Process, Processor } from '@nestjs/bull';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 
 
-@Processor('analytics')
-export class AnalyticsProcessor {
+@Processor('analytics-queue')
+export class AnalyticsProcessor extends WorkerHost  {
   private readonly logger = new Logger(AnalyticsProcessor.name);
 
   constructor(
@@ -20,15 +20,26 @@ export class AnalyticsProcessor {
     private readonly fetcher: AnalyticsService,
     private readonly normalizer: AnalyticsNormalizerService,
     private readonly repo: AnalyticsRepository,
-  ) {}
+  ) {
+    super();
+  }
 
-  @Process('fetch-stats')
-  async handleDailyFetch(job: Job<{ socialProfileId: string }>) {
+ async process(job: Job<{ socialProfileId: string }>): Promise<void> {
+    // BullMQ uses job.name to distinguish between different task types
+    switch (job.name) {
+      case 'fetch-stats':
+        await this.handleDailyFetch(job);
+        break;
+      default:
+        this.logger.warn(`Unknown job name: ${job.name}`);
+    }
+  }
+
+  private async handleDailyFetch(job: Job<{ socialProfileId: string }>) {
     const { socialProfileId } = job.data;
     this.logger.log(`Starting analytics fetch for profile: ${socialProfileId}`);
 
     try {
-      // 1. GET PROFILE & TOKENS
       const profile = await this.prisma.socialProfile.findUnique({
         where: { id: socialProfileId },
         include: { connection: true },
@@ -38,10 +49,9 @@ export class AnalyticsProcessor {
         throw new Error(`Profile ${socialProfileId} not found or disconnected.`);
       }
 
-      // 2. DECRYPT CREDENTIALS
       const credentials = await this.getCredentials(profile);
 
-      // 3. FETCH ACCOUNT STATS (Followers, Views)
+      // FIX: Ensure method name matches your AnalyticsService (getAccountStats)
       this.logger.debug(`Fetching account stats for ${profile.platform}...`);
       const rawAccount = await this.fetcher.fetchAccountStats(
         profile.platform,
@@ -49,20 +59,18 @@ export class AnalyticsProcessor {
         credentials,
       );
 
-      // 4. NORMALIZE & SAVE ACCOUNT STATS
       const accountPayload = await this.normalizer.normalizeAccountStats(
         profile.id,
         rawAccount,
       );
       await this.repo.saveAccountAnalytics(accountPayload);
 
-      // 5. PROCESS POST STATS (The "Active Window")
       await this.processPosts(profile.id, profile.platform, credentials, profile.platformId);
 
       this.logger.log(`Analytics fetch completed for ${socialProfileId}`);
     } catch (error) {
-      this.logger.error(`Analytics job failed for ${socialProfileId}: ${error.message}`, error.stack);
-      throw error; // Let BullMQ handle retries
+      this.logger.error(`Analytics job failed: ${error.message}`);
+      throw error; 
     }
   }
 
