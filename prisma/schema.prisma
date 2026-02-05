@@ -54,7 +54,6 @@ model User {
   approvalsRequested PostApproval[]         @relation("ApprovalRequester")
   approvalsGiven     PostApproval[]         @relation("ApprovalApprover")
   auditLogs          AuditLog[]
-  aiUsages           AIUsage[]
   favoriteTemplates  UserFavoriteTemplate[]
   //conversationParticipants ConversationParticipant[]
 
@@ -95,7 +94,7 @@ model Organization {
   ContentTemplate ContentTemplate[]
   auditLogs       AuditLog[]
 
-  aiUsage AIUsage[]
+ aigeneration   AiGeneration[]
 
   roles Role[]
 
@@ -141,8 +140,8 @@ model Workspace {
   campaigns  Campaign[]
   labels     Label[]
 
-  aiUsage   AIUsage[]
-  brandKits BrandKit[]
+aigeneration   AiGeneration[]
+ brandKit BrandKit?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -693,30 +692,10 @@ model Transaction {
   updatedAt DateTime @updatedAt
 }
 
-model AIUsage {
-  id             String     @id @default(cuid())
-  organizationId String
-  workspaceId    String
-  userId         String
-  type           AiType
-  provider       AiProvider
-  model          String // "gpt-4o", "dall-e-3"
-  tokensUsed     Int
-  cost           Float
-  metadata       Json?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id])
-  workspace    Workspace    @relation(fields: [workspaceId], references: [id])
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, createdAt])
-}
 
 model BrandKit {
   id          String  @id @default(cuid())
-  workspaceId String
+ workspaceId String @unique 
   name        String  @default("Our Brand")
   handle      String?
 
@@ -731,7 +710,6 @@ model BrandKit {
 
   // Status
   isActive  Boolean  @default(true)
-  isDefault Boolean  @default(false) // Mark as default brand kit
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -741,6 +719,50 @@ model BrandKit {
 
   @@index([isActive])
 }
+
+model AiGeneration {
+  id             String   @id @default(cuid())
+
+  organizationId String
+  workspaceId    String
+  userId         String
+
+  // Use enums (cleaner than strings)
+  type           AiType       // TEXT | IMAGE
+  feature        AiFeature
+
+  provider       AiProvider
+  model          String
+
+  // Inputs/outputs (optional but extremely useful)
+  prompt         String?  @db.Text
+  input          Json?
+  output         Json?
+
+  // Usage/cost
+  inputTokens    Int?
+  outputTokens   Int?
+  costUsd        Float?
+
+  // Link to other domain objects
+  brandKitId     String?
+  postId         String?
+
+  metadata       Json?
+
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+
+  @@index([organizationId, createdAt])
+  @@index([workspaceId, createdAt])
+  @@index([postId])
+  @@index([brandKitId])
+}
+
+
 
 // Conversation = a thread of messages with a user on a platform
 // model Conversation {
@@ -1397,3 +1419,13 @@ enum AiProvider {
   GEMINI
   HUGGINGFACE
 }
+
+enum AiFeature {
+  CAPTION
+  VARIANTS
+  THREAD
+  HASHTAGS
+  CALENDAR
+  IMAGE
+}
+

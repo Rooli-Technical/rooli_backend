@@ -52,6 +52,7 @@ import { LabelsModule } from './labels/labels.module';
 import { AiModule } from './ai/ai.module';
 import { RooliBullBoardModule } from './common/bull-boad/bull-board.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { BrandkitModule } from './brandkit/brandkit.module';
 
 @Module({
   imports: [
@@ -168,6 +169,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
     AiModule,
 
     AnalyticsModule,
+
+    BrandkitModule,
   ],
   controllers: [AppController],
   providers: [
