@@ -74,27 +74,35 @@ export class AnalyticsScheduler {
         break;
       }
 
-      if (profiles.length === 0) {
-        hasMore = false;
-        break;
-      }
-
       // 2. Process Batch
       const jobs = [];
       for (const profile of profiles) {
-        const planTier = profile.workspace.organization.subscription.plan.tier; // Adjust path as needed
+        try {
+          const planTier =
+            profile.workspace.organization.subscription.plan.tier;
 
-        if (!this.shouldSkipPlatform(profile.platform, planTier)) {
-          jobs.push({
-            name: 'fetch-stats',
-            data: { socialProfileId: profile.id },
-            opts: {
-              jobId: `analytics-${profile.id}-${new Date().toISOString().split('T')[0]}`,
-              attempts: 3,
-              backoff: { type: 'exponential', delay: 5000 },
-              removeOnComplete: true, // Keep Redis clean
-            },
-          });
+          if (!this.shouldSkipPlatform(profile.platform, planTier)) {
+            // Spread jobs over 60 minutes (3,600,000 milliseconds)
+            const ONE_HOUR_MS = 60 * 60 * 1000;
+            const delay = Math.floor(Math.random() * ONE_HOUR_MS);
+            jobs.push({
+              name: 'fetch-stats',
+              data: { socialProfileId: profile.id },
+              opts: {
+                jobId: `analytics-${profile.id}-${new Date().toISOString().split('T')[0]}`,
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 5000 },
+                removeOnComplete: true,
+                delay: delay,
+              },
+            });
+          }
+        } catch (error) {
+          this.logger.error(
+            `Failed to schedule job for profile ${profile.id}: ${error.message}`,
+            error.stack,
+          );
+          // Continue to next profile
         }
       }
 

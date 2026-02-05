@@ -37,7 +37,7 @@ export class AuthService {
     private readonly emailService: MailService,
     private readonly billingService: BillingService,
   ) {}
-
+  
   async register(registerDto: Register, ip: string) {
     const { email, password, firstName, lastName } = registerDto;
     const lowerEmail = email.toLowerCase();

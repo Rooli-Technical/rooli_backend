@@ -14,7 +14,7 @@ export class AnalyticsRepository {
 
   async getLastAccountSnapshot(socialProfileId: string) {
     return this.prisma.accountAnalytics.findFirst({
-      where: { socialProfileId },
+      where: { socialProfileId, date: { lt: startOfDay(new Date()) } },
       orderBy: { date: 'desc' },
     });
   }
@@ -27,15 +27,16 @@ export class AnalyticsRepository {
     return this.prisma.postDestination.findMany({
       where: {
         socialProfileId,
+        platformPostId: { not: null },
         // Optional: Only fetch posts younger than 30 days to save API calls
-        createdAt: { gte: subDays(new Date(), 30) }, 
-        status: 'SUCCESS', 
+        createdAt: { gte: subDays(new Date(), 30) },
+        status: 'SUCCESS',
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
       select: {
         id: true,
-         platformPostId: true, // The ID needed for the API (e.g., LinkedIn URN)
+        platformPostId: true, // The ID needed for the API (e.g., LinkedIn URN)
       },
     });
   }
@@ -44,7 +45,9 @@ export class AnalyticsRepository {
   // 2. SAVING DATA (Upsert Logic)
   // ==========================================
 
-  async saveAccountAnalytics(data: Prisma.AccountAnalyticsUncheckedCreateInput) {
+  async saveAccountAnalytics(
+    data: Prisma.AccountAnalyticsUncheckedCreateInput,
+  ) {
     const dateKey = startOfDay(new Date(data.date));
 
     return this.prisma.accountAnalytics.upsert({
@@ -66,7 +69,9 @@ export class AnalyticsRepository {
     });
   }
 
-  async savePostSnapshot(data: Prisma.PostAnalyticsSnapshotUncheckedCreateInput) {
+  async savePostSnapshot(
+    data: Prisma.PostAnalyticsSnapshotUncheckedCreateInput,
+  ) {
     const dateKey = startOfDay(new Date(data.day));
 
     return this.prisma.postAnalyticsSnapshot.upsert({
@@ -92,7 +97,11 @@ export class AnalyticsRepository {
   // 3. DASHBOARD QUERIES (Read-Time)
   // ==========================================
 
-  async getAggregateAccountStats(socialProfileId: string, startDate: Date, endDate: Date) {
+  async getAggregateAccountStats(
+    socialProfileId: string,
+    startDate: Date,
+    endDate: Date,
+  ) {
     return this.prisma.accountAnalytics.aggregate({
       _sum: {
         impressions: true,
@@ -116,7 +125,11 @@ export class AnalyticsRepository {
     });
   }
 
-  async getDailyHistory(socialProfileId: string, startDate: Date, endDate: Date) {
+  async getDailyHistory(
+    socialProfileId: string,
+    startDate: Date,
+    endDate: Date,
+  ) {
     return this.prisma.accountAnalytics.findMany({
       where: {
         socialProfileId,
@@ -128,4 +141,5 @@ export class AnalyticsRepository {
       orderBy: { date: 'asc' },
     });
   }
+
 }

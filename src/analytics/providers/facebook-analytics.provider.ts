@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
@@ -9,17 +9,25 @@ import {
   PostMetrics,
 } from '../interfaces/analytics-provider.interface';
 import { DateTime } from 'luxon';
+import * as https from 'https';
 
 @Injectable()
 export class FacebookAnalyticsProvider implements IAnalyticsProvider {
   private readonly logger = new Logger(FacebookAnalyticsProvider.name);
   private readonly baseUrl = 'https://graph.facebook.com/v23.0';
   private readonly BATCH_LIMIT = 50;
+  
 
   constructor(
     private readonly config: ConfigService,
     private readonly httpService: HttpService,
   ) {}
+
+    private httpsAgent = new https.Agent({
+      family: 4, // Force IPv4 (Disable IPv6)
+      keepAlive: true,
+      timeout: 30000,
+    });
 
   /**
    * PAGE STATS
@@ -55,6 +63,7 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
               fbSince,
               fbUntil,
             },
+            httpsAgent: this.httpsAgent,
           }),
         ),
         // C. Demographics (Helper function)
@@ -64,19 +73,25 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
       // Process Daily Insights
       const insights = insightsRes.data?.data ?? [];
 
-      const getVal = (name: string) =>
-        insights.find((m: any) => m.name === name)?.values?.[0]?.value ?? 0;
+      const getVal = (name: string) => {
+        const insight = insights.find((m: any) => m.name === name);
+        const values = insight?.values ?? [];
+        if (values.length === 0) return 0;
+
+        // Get the most recent value (last in the array)
+        return values[values.length - 1]?.value ?? 0;
+      };
 
       return {
         platformId: pageId,
         fetchedAt: new Date(),
         followersCount:
           pageRes.data.followers_count ?? pageRes.data.fan_count ?? 0,
-        impressionsCount: getVal('page_impressions'),
+        impressionsCount: getVal('page_media_view'),
         reach: getVal('page_impressions_unique'),
         engagementCount: getVal('page_post_engagements'),
         clicks: getVal('page_total_actions'),
-        demographics: demographicsData,
+        demographics: demographicsData ?? {},
       };
     } catch (error: any) {
       const msg = error.response?.data?.error?.message || error.message;
@@ -113,6 +128,7 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
                 ids: chunk.join(','),
                 fields: `${publicFields},insights.metric(${insightMetrics})`,
               },
+              httpsAgent: this.httpsAgent,
             }),
           );
 
@@ -134,27 +150,31 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
    * Helper to fetch Demographics safely.
    * Returns null if page has <100 followers (API Restriction).
    */
-  private async getDemographics(pageId: string, token: string) {
-    try {
-      const res = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/${pageId}/insights`, {
-          params: {
-            access_token: token,
-            metric:
-              'page_fans,page_fans_city,page_fans_gender_age,page_fans_country',
-            period: 'lifetime', // Demographics are always "Lifetime" current state
-          },
-        }),
-      );
-      // Return the 'data' array directly, or clean it up if you want
-      return res.data?.data || null;
-    } catch (e) {
-      // ⚠️ Silence this specific error.
-      // If a page is too small, Facebook returns a 400 error for demographics.
-      // We don't want to fail the whole job just because they are small.
-      return null;
-    }
+ private async getDemographics(pageId: string, token: string) {
+  try {
+    const res = await firstValueFrom(
+      this.httpService.get(`${this.baseUrl}/${pageId}/insights`, {
+        params: {
+          access_token: token,
+          metric: 'page_fans_city,page_fans_gender_age,page_fans_country',
+          period: 'lifetime',
+        },
+        httpsAgent: this.httpsAgent,
+      }),
+    );
+
+    const data = res.data?.data || [];
+    if (data.length === 0) return null;
+
+    return {
+      city: data.find((m: any) => m.name === 'page_fans_city')?.values?.[0]?.value || {},
+      country: data.find((m: any) => m.name === 'page_fans_country')?.values?.[0]?.value || {},
+      genderAge: data.find((m: any) => m.name === 'page_fans_gender_age')?.values?.[0]?.value || {},
+    };
+  } catch (e) {
+    return null; 
   }
+}
 
   private mapPostData(post: any): PostMetrics {
     const insights = post.insights?.data || [];
@@ -162,7 +182,7 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
       insights.find((i: any) => i.name === name)?.values?.[0]?.value || 0;
     return {
       postId: post.id,
-      impressions: getInsight('post_media_view'),
+      impressions: getInsight('post_media_view') || getInsight('post_impressions_unique'),
       reach: getInsight('post_impressions_unique'),
       clicks: getInsight('post_clicks'),
       likes: post.reactions?.summary?.total_count || 0,
@@ -188,24 +208,6 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
     const twoDaysAgo = today.minus({ days: 2 });
 
     return {
-      // ------------------------------------------
-      // FOR LINKEDIN (Needs Date Objects or Millis)
-      // ------------------------------------------
-      // Strict Window: 00:00 yesterday -> 00:00 today
-      period: {
-        from: yesterday.toJSDate(),
-        to: today.toJSDate(),
-      },
-
-      // Safety Window (48h): Useful if APIs lag
-      safetyPeriod: {
-        from: twoDaysAgo.toJSDate(),
-        to: today.toJSDate(),
-      },
-
-      // ------------------------------------------
-      // FOR FACEBOOK / INSTAGRAM (Needs Unix Seconds)
-      // ------------------------------------------
       // FB "Since": 2 days ago (Safety buffer)
       fbSince: twoDaysAgo.toUnixInteger(),
       // FB "Until": Midnight today

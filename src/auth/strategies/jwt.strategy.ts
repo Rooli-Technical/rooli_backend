@@ -107,6 +107,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       organizationId: payload.orgId,
       roles: [membership.role.name],
       features: (plan?.features as unknown as PlanFeatures) || {},
+      userPlan: plan.tier,
       subscriptionStatus: isSubscriptionValid ? 'active' : 'inactive',
       limits: {
         maxWorkspaces: plan?.maxWorkspaces || 1,

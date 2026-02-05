@@ -67,6 +67,8 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
             'organic_metrics',
           ],
         });
+        console.log(resp)
+        console.dir(resp, { depth: null });
         const mapped = (resp.data ?? []).map((tweet) =>
           this.mapToDomain(tweet),
         );
@@ -79,6 +81,8 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
 
     return results;
   }
+
+
   async getAccountStats(
     userId: string,
     credentials: any,
@@ -91,9 +95,12 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
       'user.fields': ['public_metrics'],
     });
 
+    console.log(user)
+
     return {
       platformId: user.id,
       followersCount: user.public_metrics?.followers_count ?? 0,
+      engagementCount: user.public_metrics?.like_count ?? 0,
       // Account-level impressions are not available via standard X API
       impressionsCount: undefined,
       profileViews: undefined,

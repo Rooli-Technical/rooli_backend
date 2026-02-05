@@ -42,8 +42,10 @@ export class AnalyticsNormalizerService {
       reach: rawData.reach,
       engagementCount: rawData.engagementCount || 0,
       clicks: rawData.clicks || 0,
-      demographics: rawData.demographics || Prisma.DbNull,
+      demographics: rawData.demographics || Prisma.JsonNull,
       impressions: rawData.impressionsCount || 0,
+      profileViews: rawData?.profileViews || 0
+
     };
   }
 
@@ -70,7 +72,7 @@ export class AnalyticsNormalizerService {
       // -- Advanced Metrics --
       reach: rawData.reach || 0,
       clicks: rawData.clicks || 0,
-      saves: rawData.saves || 0, // Mapped from IG 'saved' / X 'bookmarks'
+      saves: rawData.saves || 0, 
       videoViews: rawData.videoViews || 0,
 
       // -- Debugging --

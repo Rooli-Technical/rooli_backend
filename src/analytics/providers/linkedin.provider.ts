@@ -9,6 +9,7 @@ import {
   PostMetrics,
 } from '../interfaces/analytics-provider.interface';
 import { DateTime } from 'luxon';
+import * as https from 'https';
 
 @Injectable()
 export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
@@ -17,6 +18,12 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
   private readonly baseUrl = 'https://api.linkedin.com/rest';
 
   constructor(private readonly http: HttpService) {}
+
+  private httpsAgent = new https.Agent({
+    family: 4, // Force IPv4 (Disable IPv6)
+    keepAlive: true,
+    timeout: 30000,
+  });
 
   private headers(token: string) {
     return {
@@ -32,7 +39,6 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
   ): Promise<AccountMetrics> {
     const token = credentials.accessToken;
     const fullUrn = this.ensureUrn(id);
-
     if (fullUrn.includes('organization')) {
       return this.getOrganizationStats(fullUrn, token);
     }
@@ -46,85 +52,109 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
     try {
       const headers = this.headers(token);
       const { period } = this.getAnalyticsWindow();
-      const timeIntervals = `(timeRange:(start:${period.from},end:${period.to}),timeGranularityType:DAY)`;
 
-      // Fetch Followers (Lifetime)
+      const timeIntervalsParam = `(timeRange:(start:${period.from},end:${period.to}),timeGranularityType:DAY)`;
+
       const followerUrl = `${this.baseUrl}/organizationalEntityFollowerStatistics`;
-
-      // Fetch Profile Performance (Daily Views/Clicks)
       const pageUrl = `${this.baseUrl}/organizationPageStatistics`;
-
       const shareUrl = `${this.baseUrl}/organizationalEntityShareStatistics`;
-      const shareTimeIntervals = `(timeRange:(start:${period.from},end:${period.to}),timeGranularityType:DAY)`;
 
-      const [followerRes, pageRes, shareRes] = await Promise.all([
-        firstValueFrom(
-          this.http.get(followerUrl, {
-            headers,
-            params: { q: 'organizationalEntity', organizationalEntity: orgUrn },
-          }),
-        ),
-        firstValueFrom(
-          this.http.get(pageUrl, {
-            headers,
-            params: {
-              q: 'organization',
-              organization: orgUrn,
-              timeIntervals,
-            },
-          }),
-        ),
-        firstValueFrom(
-          this.http.get(shareUrl, {
-            headers,
-            params: {
-              q: 'organizationalEntity',
-              organizationalEntity: orgUrn,
-              timeIntervals: shareTimeIntervals,
-            },
-          }),
-        ),
-      ]);
+      const linkedinSerializer = (params: any) => {
+        const parts = Object.entries(params).map(([key, value]) => {
+          if (key === 'timeIntervals') {
+            // Do NOT encode the parentheses or colons for this specific field
+            return `${key}=${value}`;
+          }
+          return `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+        });
+        return parts.join('&');
+      };
+
+      const [followerSettled, pageSettled, shareSettled] =
+        await Promise.allSettled([
+          firstValueFrom(
+            this.http.get(followerUrl, {
+              headers,
+              httpsAgent: this.httpsAgent,
+              params: {
+                q: 'organizationalEntity',
+                organizationalEntity: orgUrn,
+              },
+              paramsSerializer: (params) =>
+                new URLSearchParams(params).toString(),
+            }),
+          ),
+          firstValueFrom(
+            this.http.get(pageUrl, {
+              headers,
+              httpsAgent: this.httpsAgent,
+              params: {
+                q: 'organization',
+                organization: orgUrn,
+                timeIntervals: timeIntervalsParam,
+              },
+              paramsSerializer: linkedinSerializer,
+            }),
+          ),
+          firstValueFrom(
+            this.http.get(shareUrl, {
+              headers,
+              httpsAgent: this.httpsAgent,
+              params: {
+                q: 'organizationalEntity',
+                organizationalEntity: orgUrn,
+                timeIntervals: timeIntervalsParam,
+              },
+              paramsSerializer: linkedinSerializer,
+            }),
+          ),
+        ]);
+
+      const getResult = (result) =>
+        result.status === 'fulfilled' ? result.value : null;
+
+      const followerRes = getResult(followerSettled);
+      const pageRes = getResult(pageSettled);
+      const shareRes = getResult(shareSettled);
 
       // --- Parse Followers ---
+      // If followerRes is null (rejected), this safely falls back to {}
       const followerData = followerRes?.data?.elements?.[0] ?? {};
-      const totalFollowers =
-        followerData?.followerCountsByAssociationType?.find(
-          (x: any) => x.associationType === 'ORGANIC',
-        )?.followerCounts?.organicFollowerCount ?? 0;
 
-      // --- Parse Profile Page Stats ---
+      // --- 1. Total Followers (Summed from Geo for accuracy) ---
+      const totalFollowers =
+        followerData?.followerCountsByGeoCountry?.reduce(
+          (acc: number, curr: any) =>
+            acc + (curr.followerCounts?.organicFollowerCount ?? 0),
+          0,
+        ) ?? 0;
+
+      // --- 2. Profile Page Stats ---
       const pageElements: any[] = pageRes?.data?.elements ?? [];
       let profileViews = 0;
       let profileClicks = 0;
 
       for (const el of pageElements) {
         const stats = el.totalPageStatistics;
-        // Sum daily stats if multiple days returned
         profileViews += stats?.views?.allPageViews?.uniquePageViews ?? 0;
 
-        // STRICT SEPARATION: Only count clicks on the Profile itself
-        profileClicks +=
-          (stats?.clicks?.careersPageClicks?.clicks ?? 0) +
-          (stats?.clicks?.websiteClicks?.clicks ?? 0) +
-          (stats?.clicks?.drivingDirectionsClicks?.clicks ?? 0);
+        // Sum "Custom Button" clicks (the primary CTA on a LinkedIn Page)
+        const buttonClicks = [
+          ...(stats?.clicks?.mobileCustomButtonClickCounts ?? []),
+          ...(stats?.clicks?.desktopCustomButtonClickCounts ?? []),
+        ].reduce((sum, item) => sum + (item.clicks ?? 0), 0);
+
+        profileClicks += buttonClicks;
       }
 
-      // --- Parse Demographics ---
-      const demographics = {
-        seniority: followerData?.followerCountsBySeniority ?? [],
-        industry: followerData?.followerCountsByIndustry ?? [],
-        function: followerData?.followerCountsByFunction ?? [],
-        region: followerData?.followerCountsByRegion ?? [],
-      };
-
-      // sum totals across elements (usually 1 element, but be safe)
+      // --- 3. Share/Engagement Stats ---
       const shareEls: any[] = shareRes?.data?.elements ?? [];
       let impressions = 0,
         postClicks = 0,
         reactions = 0,
         comments = 0,
-        shares = 0;
+        shares = 0,
+        reach = 0;
 
       for (const el of shareEls) {
         const s = el?.totalShareStatistics ?? {};
@@ -133,9 +163,51 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
         reactions += s?.likeCount ?? 0;
         comments += s?.commentCount ?? 0;
         shares += s?.shareCount ?? 0;
+        reach += s?.uniqueImpressionsCount ?? 0;
       }
 
       const engagementCount = postClicks + reactions + comments + shares;
+
+      // --- 4. Clean Demographics (with name resolution) ---
+      const demographics = {
+        seniority: (followerData?.followerCountsBySeniority ?? []).map(
+          (s: any) => ({
+            name: this.resolveUrn(s.seniority),
+            count: s.followerCounts.organicFollowerCount,
+          }),
+        ),
+        industry: (followerData?.followerCountsByIndustry ?? []).map(
+          (i: any) => ({
+            name: this.resolveUrn(i.industry),
+            count: i.followerCounts.organicFollowerCount,
+          }),
+        ),
+        function: (followerData?.followerCountsByFunction ?? []).map(
+          (f: any) => ({
+            name: this.resolveUrn(f.function),
+            count: f.followerCounts.organicFollowerCount,
+          }),
+        ),
+        region: (followerData?.followerCountsByGeo ?? []).map((g: any) => ({
+          name: g.geo, // Geo names usually require a separate /geo endpoint call
+          count: g.followerCounts.organicFollowerCount,
+        })),
+      };
+
+      const obj = {
+        platformId: orgUrn,
+        fetchedAt: new Date(),
+        followersCount: totalFollowers,
+
+        profileViews,
+        clicks: profileClicks,
+
+        impressionsCount: impressions,
+        engagementCount,
+        reach: reach,
+
+        demographics,
+      };
 
       return {
         platformId: orgUrn,
@@ -152,7 +224,12 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
         demographics,
       };
     } catch (error) {
+      console.log(error);
       this.logger.error(`LinkedIn Account Stats Failed: ${error.message}`);
+      this.logger.error(
+        'LinkedIn error body:',
+        JSON.stringify(error?.response?.data),
+      );
       throw error;
     }
   }
@@ -173,19 +250,19 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
 
       const followers =
         followersRes?.data?.elements?.[0]?.memberFollowersCount ?? 0;
+      const { impressions, reached, reactions, comments, reshares } = totals;
 
       return {
         platformId: personUrn,
         fetchedAt: new Date(),
         followersCount: followers,
+        impressionsCount: impressions || 0,
+        reach: reached || 0,
+        engagementCount: reactions + comments + reshares || 0,
 
-        impressionsCount: totals.impressions,
-        reach: totals.reached,
-        engagementCount: totals.reactions + totals.comments + totals.reshares,
-
-        profileViews: undefined, // not available
+        profileViews: undefined,
         clicks: undefined,
-        demographics: undefined,
+        demographics: null,
       };
     } catch (e: any) {
       console.log(e);
@@ -211,9 +288,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
     const token = credentials.accessToken;
     if (postIds.length === 0) return [];
     // Ensure all post IDs are URNs (shares or ugcPosts)
-    const postUrns = postIds.map((id) =>
-      id.startsWith('urn:li:') ? id : `urn:li:share:${id}`,
-    );
+   const postUrns = postIds.map((id) => id.trim());
 
     const isOrganizationContext =
       context?.pageId && context.pageId.includes('organization');
@@ -228,43 +303,66 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
     }
   }
 
-  async fetchCompanyPageStats(
-    orgUrn: string,
-    token: string,
-    postUrns: string[],
-  ): Promise<PostMetrics[]> {
-    if (!postUrns?.length) return [];
+async fetchCompanyPageStats(
+  orgUrn: string,
+  token: string,
+  postUrns: string[],
+): Promise<PostMetrics[]> {
+  if (!postUrns?.length) return [];
 
-    const url = `${this.baseUrl}/organizationalEntityShareStatistics`;
-    const headers = this.headers(token);
+  const url = `${this.baseUrl}/organizationalEntityShareStatistics`;
+  const headers = this.headers(token);
 
-    const chunks = this.chunkArray(postUrns, 20);
-    const out: PostMetrics[] = [];
-
-    for (const chunk of chunks) {
-      const params: Record<string, any> = {
-        q: 'organizationalEntity',
-        organizationalEntity: orgUrn,
-      };
-
-      chunk.forEach((urn, i) => {
-        params[`shares[${i}]`] = urn; // no encodeURIComponent
-      });
-
-      try {
-        const { data } = await firstValueFrom(
-          this.http.get(url, { headers, params }),
-        );
-        out.push(...this.mapShareStatsElements(data?.elements ?? []));
-      } catch (e: any) {
-        this.logger.error(`LinkedIn Batch Failed: ${e?.message ?? e}`);
-      }
-
-      await new Promise((r) => setTimeout(r, 120));
+  // It handles repeated keys (ugcPosts=...&ugcPosts=...)
+const linkedinBatchSerializer = (params: any) => {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(params)) {
+    if (Array.isArray(value)) {
+      // Corrected: Wraps in List() and joins with commas
+      const listString = `List(${value.map(v => encodeURIComponent(v)).join(',')})`;
+      parts.push(`${key}=${listString}`);
+    } else {
+      parts.push(`${key}=${encodeURIComponent(value as string)}`);
     }
-
-    return out;
   }
+  return parts.join('&');
+};
+
+  const chunks = this.chunkArray(postUrns, 20);
+  const out: PostMetrics[] = [];
+
+  for (const chunk of chunks) {
+    const ugcPosts = chunk.filter(urn => urn.includes('ugcPost'));
+    const shares = chunk.filter(urn => urn.includes('share'));
+
+    const params: Record<string, any> = {
+      q: 'organizationalEntity',
+      organizationalEntity: orgUrn,
+    };
+
+    // In 2026 version, we use the array directly (no [0] indices)
+    if (ugcPosts.length > 0) params.ugcPosts = ugcPosts;
+    if (shares.length > 0) params.shares = shares;
+
+    try {
+      const { data } = await firstValueFrom(
+        this.http.get(url, { 
+          headers, 
+          params, 
+          paramsSerializer: linkedinBatchSerializer 
+        }),
+      );
+      
+      out.push(...this.mapShareStatsElements(data?.elements ?? []));
+    } catch (e: any) {
+      console.log(e)
+      this.logger.error(`LinkedIn Batch Failed: ${e?.response?.data?.message || e.message}`);
+    }
+    await new Promise((r) => setTimeout(r, 120));
+  }
+  return out;
+}
+
 
   async getMemberAccountTotals(token: string): Promise<{
     impressions: number;
@@ -341,24 +439,31 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
     return `urn:li:person:${id}`;
   }
 
-  private mapShareStatsElements(elements: any[]): PostMetrics[] {
-    return (elements ?? []).map((el: any) => {
-      const stats = el?.totalShareStatistics ?? {};
+private mapShareStatsElements(elements: any[]): PostMetrics[] {
+  return elements.map((el) => {
+    const s = el.totalShareStatistics ?? {};
 
-      return {
-        postId: el?.share || el?.ugcPost || el?.entity,
-        impressions: stats?.impressionCount ?? 0,
-        clicks: stats?.clickCount ?? 0,
-        likes: stats?.likeCount ?? 0,
-        comments: stats?.commentCount ?? 0,
-        shares: stats?.shareCount ?? 0,
+    const postId = el.ugcPost || el.share || el.organizationalEntity;
 
-        reach: undefined,
-        videoViews: undefined,
-        saves: undefined,
-      };
-    });
-  }
+    const clicks = s.clickCount ?? 0;
+    const likes = s.likeCount ?? 0;
+    const comments = s.commentCount ?? 0;
+    const shares = s.shareCount ?? 0;
+    
+    return {
+      postId,
+      impressions: s.impressionCount ?? 0,
+      reach: s.uniqueImpressionsCount ?? 0,
+      clicks,
+      likes,
+      comments,
+      shares,
+      engagement: clicks + likes + comments + shares,
+      videoViews: s.videoViews ?? undefined, 
+      saves: undefined,
+    };
+  });
+}
 
   /**
    * Returns a clean time range for "Yesterday".
@@ -379,5 +484,38 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
         to: today.toMillis(),
       },
     };
+  }
+
+  private resolveUrn(urn: string): string {
+    const mappings: Record<string, string> = {
+      // Seniorities
+      'urn:li:seniority:1': 'Intern',
+      'urn:li:seniority:2': 'Entry Level',
+      'urn:li:seniority:3': 'Associate',
+      'urn:li:seniority:4': 'Mid-Senior Level',
+      'urn:li:seniority:5': 'Director',
+      'urn:li:seniority:6': 'Executive',
+      'urn:li:seniority:7': 'VP',
+      'urn:li:seniority:8': 'Owner',
+      'urn:li:seniority:9': 'Partner',
+
+      // Common Functions
+      'urn:li:function:1': 'Accounting',
+      'urn:li:function:4': 'Business Development',
+      'urn:li:function:8': 'Engineering',
+      'urn:li:function:13': 'Information Technology',
+      'urn:li:function:17': 'Marketing',
+      'urn:li:function:20': 'Sales',
+      'urn:li:function:25': 'Human Resources',
+
+      // Industries (These vary widely, but here are common ones)
+      'urn:li:industry:4': 'Software Development',
+      'urn:li:industry:6': 'Technology, Information and Internet',
+      'urn:li:industry:96': 'IT Services and IT Consulting',
+      'urn:li:industry:137': 'Staffing and Recruiting',
+    };
+
+    if (!urn) return 'Unknown';
+    return mappings[urn] ?? urn.split(':').pop() ?? urn;
   }
 }
