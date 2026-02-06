@@ -106,7 +106,7 @@ async findAll(orgId: string, userId: string) {
         socialProfiles: {
            select: { id: true, platform: true, name: true, picture: true, isActive: true, followerCount: true } 
         },
-        brandKits: true,
+        brandKit: true,
         _count: { select: { members: true, posts: true } },
       },
     });
