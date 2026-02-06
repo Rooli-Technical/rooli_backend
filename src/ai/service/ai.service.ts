@@ -1,349 +1,603 @@
-import { 
-  Injectable, 
-  Logger, 
-  BadRequestException, 
-  InternalServerErrorException 
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+  ServiceUnavailableException,
+  HttpException,
 } from '@nestjs/common';
-import { AiFactory } from './ai.factory';
-import { v2 as cloudinary } from 'cloudinary'; // ☁️ Direct Cloudinary Import
-import * as cheerio from 'cheerio';            // 🕷️ Scraper
-import axios from 'axios';
 import { PrismaService } from '@/prisma/prisma.service';
-import { AiProvider } from '@generated/enums';
-import { QuotaService } from './quota.service';
-
-// DTOs (Simple inputs for the service)
-interface GenerateTextOptions {
-  prompt: string;
-  brandKitId?: string; // Optional: specific brand voice
-  tone?: string;       // Optional: override tone
-}
-
+import { AiFeature, AiProvider, AiType } from '@generated/enums';
+import { Prisma } from '@generated/client';
+import { GenerateCaptionDto } from '../dto/generate-caption.dto';
+import { GenerateVariantsDto } from '../dto/generate-variant.dto';
+import { PromptBuilder } from './prompt.service';
+import { AiProviderFactory } from './ai.factory';
+import { AiQuotaService } from './quota.service';
+import { AI_TIER_LIMITS } from '../constants/ai.constant';
+import { ScraperService } from './scraper.service';
+import { BulkGenerateDto } from '../dto/bulk-generate.dto';
+import { RepurposeContentDto } from '../dto/repurpose-content.dto';
+import { TextGenResult } from '../interfaces/ai-provider.interface';
 
 @Injectable()
 export class AiService {
-  private readonly logger = new Logger(AiService.name);
-
   constructor(
-    private prisma: PrismaService,
-    private quotaService: QuotaService,
-    private aiFactory: AiFactory,
+    private readonly prisma: PrismaService,
+    private readonly quota: AiQuotaService,
+    private readonly promptBuilder: PromptBuilder,
+    private readonly providerFactory: AiProviderFactory,
+    private readonly scraper: ScraperService,
   ) {}
 
-  // ===========================================================================
-  // 📝 1. TEXT GENERATION (Captions, Ideas, Scripts)
-  // ===========================================================================
+  // -----------------------------
+  // Public API
+  // -----------------------------
+
   async generateCaption(
-    user: any,
     workspaceId: string,
-    options: GenerateTextOptions,
+    userId: string,
+    dto: GenerateCaptionDto,
   ) {
-    const { prompt, brandKitId, tone } = options;
-
-    // 🛑 A. Optimistic Quota Check
-    // We deduct 1 credit NOW. If it fails later, we give it back.
-    await this.quotaService.checkAndIncrement(user, workspaceId, 'TEXT');
-
     try {
-      // B. Determine Strategy (Model Selection)
-      // "Rocket" users get the smart model (Claude/GPT-4)
-      // Free/Business users get the fast model (Gemini Flash)
-      const planTier = this.getUserPlan(user);
-      
-      let providerEnum: AiProvider = 'GEMINI';
-      let model = 'gemini-2.5-flash'; // ⚡ Free & Fast (2026 Standard)
+      const ctx = await this.getWorkspaceContext(workspaceId);
+      const plan = ctx.tier;
+      const limits = AI_TIER_LIMITS[plan];
+      const model = limits.allowedModels[0];
 
+      const provider = this.pickProviderForWorkspace(workspaceId);
+      const textProvider = this.providerFactory.getTextProvider(provider);
 
-      // C. Build Context (Brand Voice)
-      const systemPrompt = await this.buildSystemPrompt(
+      await this.quota.assertCanUse(workspaceId, AiFeature.CAPTION);
+
+      const { brandKit, brandKitId } = await this.resolveBrandKit(
         workspaceId,
-        brandKitId,
-        tone,
+        dto.brandKitId,
       );
 
-      // D. Execute
-      const provider = this.aiFactory.getProvider(providerEnum);
-      const result = await provider.generateText(prompt, systemPrompt, model);
-
-      // E. Log Usage (Async - Fire & Forget)
-      this.logUsage(user, workspaceId, 'TEXT', providerEnum, model, result.usage);
-
-      return {
-        content: result.content,
-        provider: providerEnum,
-        model: model,
-      };
-    } catch (error) {
-      this.logger.error(`Text Generation Failed: ${error.message}`, error.stack);
-      
-      // ↩️ REFUND: AI failed, so give the user their credit back
-      await this.quotaService.refundQuota(workspaceId, 'TEXT');
-      
-      throw new InternalServerErrorException(
-        'AI service is currently unavailable. Your credits have been refunded.',
-      );
-    }
-  }
-
-  // ===========================================================================
-  // 🖼️ 2. IMAGE GENERATION (Universal Handler)
-  // ===========================================================================
-  async generateImage(user: any, workspaceId: string, prompt: string) {
-    // A. Check Quota
-    await this.quotaService.checkAndIncrement(user, workspaceId, 'IMAGE');
-
-    try {
-      // B. Select Provider
-      // Dev -> HuggingFace (Free)
-      // Prod -> Replicate/Imagen (Paid)
-      const provider = this.aiFactory.getImageProvider();
-      const result = await provider.generateImage(prompt);
-
-      // C. Handle Source (URL or Base64)
-      // Cloudinary's upload() handles both automatically! 🤯
-      const imageSource = result.urls[0];
-
-      // D. Upload to Cloudinary (Persist the image)
-      const uploadResult = await cloudinary.uploader.upload(imageSource, {
-        folder: `workspaces/${workspaceId}`,
-        resource_type: 'image',
+      const platform = dto.platform ?? 'LINKEDIN';
+      const system = this.promptBuilder.buildSystemPrompt({
+        brandKit,
+        platform,
+        depth: limits.brandKitDepth,
       });
 
-      // E. Save to DB
-      const mediaFile = await this.prisma.mediaFile.create({
-        data: {
-          workspaceId,
-          userId: user.userId,
-          
-          url: uploadResult.secure_url,
-          publicId: uploadResult.public_id,
-          
-          filename: `ai_gen_${Date.now()}.png`,
-          originalName: prompt.slice(0, 50),
-          mimeType: 'image/png',
-          size: BigInt(uploadResult.bytes || 1024),
-          width: uploadResult.width,
-          height: uploadResult.height,
-          
-          isAiGenerated: true,
-          aiProvider: 'GEMINI', // Generic label, or dynamic if you prefer
-          aiPrompt: prompt,
-        },
+      const user = this.promptBuilder.buildUserPrompt(dto.prompt);
+
+      const result = await textProvider.generateText({
+        system,
+        user,
+        model,
+        temperature: 0.7,
+        maxTokens: 400,
+        responseFormat: 'text',
       });
 
-      // F. Log Usage
-      this.logUsage(user, workspaceId, 'IMAGE', 'GEMINI', 'imagen-3', {
-        inputTokens: 0,
-        outputTokens: 1,
-      });
-
-      // Return friendly object (Convert BigInt for JSON)
-      return {
-        ...mediaFile,
-        size: mediaFile.size.toString() 
-      };
-
-    } catch (error) {
-      this.logger.error(`Image Generation Failed: ${error.message}`);
-      // ↩️ REFUND
-      await this.quotaService.refundQuota(workspaceId, 'IMAGE');
-      throw new InternalServerErrorException('Image generation failed.');
-    }
-  }
-
-  // ===========================================================================
-  // 📢 3. PLATFORM VARIATIONS (One-Click Magic)
-  // ===========================================================================
-  async generateVariations(user: any, workspaceId: string, content: string) {
-    const prompt = `
-      Take this social media content: "${content}"
-      Generate 4 distinct versions. Return RAW JSON only. No markdown.
-      Schema:
-      {
-        "linkedin": "Professional, bullet points",
-        "twitter": "Punchy, under 280 chars",
-        "instagram": "Friendly, emojis, link in bio",
-        "facebook": "Community focused"
+      // Optionally create a DRAFT post
+      let postId: string | null = null;
+      if (dto.saveAsDraftPost) {
+        postId = await this.createDraftPost(workspaceId, userId, {
+          content: result.text,
+          // you can store platform target later as destinations
+        });
       }
-    `;
 
-    // Reuse generateCaption (Handles quotas & logging automatically)
-    const result = await this.generateCaption(user, workspaceId, { prompt });
+    await this.logGeneration({
+  workspaceId,
+  organizationId: ctx.organizationId,
+  type: AiType.TEXT,
+  feature: AiFeature.CAPTION,
+  provider,
+  model: result.model ?? model,
+  prompt: system + '\n\nUSER:\n' + user,
+  input: { platform, maxChars: dto.maxChars, tone: dto.tone, brandKitId },
+  output: { text: result.text },
+  usage: result.usage,
+  brandKitId,
+  postId,
+});
+      return {
+        text: result.text,
+        provider: result.provider ?? provider,
+        model: result.model,
+        usage: result.usage ?? null,
+        postId,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+    throw error;
+  }
+      console.log(error);
+      throw new ServiceUnavailableException(
+        'AI service is temporarily unavailable. Please try again.',
+      );
+    }
+  }
 
-    return this.safeJsonParse(result.content, {
-      linkedin: result.content, // Fallback
-      twitter: '',
-      instagram: '',
-      facebook: '',
+  async generatePlatformVariants(
+    workspaceId: string,
+    userId: string,
+    dto: GenerateVariantsDto,
+  ) {
+    try{
+    const ctx = await this.getWorkspaceContext(workspaceId);
+    const plan = ctx.tier;
+    const limits = AI_TIER_LIMITS[plan];
+    const model = limits.allowedModels[0];
+
+    // ⛔️ GATES
+    if (dto.platforms.length > limits.maxPlatforms) {
+      throw new ForbiddenException(
+        `Your ${plan} plan allows max ${limits.maxPlatforms} platforms at once.`,
+      );
+    }
+
+    const variantsPerPlatform = Math.min(
+      dto.variantsPerPlatform ?? 3,
+      limits.maxVariants,
+    );
+
+    await this.quota.assertCanUse(workspaceId, AiFeature.VARIANTS);
+
+    const { brandKit, brandKitId } = await this.resolveBrandKit(
+      workspaceId,
+      dto.brandKitId,
+    );
+
+    const provider = this.pickProviderForWorkspace(workspaceId);
+    const textProvider = this.providerFactory.getTextProvider(provider);
+
+    const outputs = await Promise.all(
+      dto.platforms.map(async (platform) => {
+        const system = this.promptBuilder.buildSystemPrompt({
+          brandKit,
+          platform,
+          depth: limits.brandKitDepth,
+        });
+
+        const user = this.promptBuilder.buildUserPrompt(
+          `
+${dto.prompt}
+
+Return JSON ONLY in this format:
+{"variants": ["v1", "v2", "v3"]}
+      `.trim(),
+        );
+
+        const res = await textProvider.generateText({
+          system,
+          user,
+          model,
+          temperature: 0.8,
+          maxTokens: 700,
+          responseFormat: 'json',
+        });
+
+        const parsed = this.safeJson(res.text);
+        const variants = Array.isArray(parsed?.variants)
+          ? parsed.variants.slice(0, variantsPerPlatform)
+          : [];
+
+        // fallback if model ignored JSON
+        if (variants.length === 0) {
+          const fallback = res.text
+            .split('\n---\n')
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .slice(0, variantsPerPlatform);
+          return { platform, variants: fallback, raw: res };
+        }
+
+        return { platform, variants, raw: res };
+      }),
+    );
+
+    // Optional: create a single draft + overrides
+    let postId: string | null = null;
+    if (dto.saveAsDraftPost) {
+      const basePlatform = dto.platforms[0] ?? 'LINKEDIN';
+      const base =
+        outputs.find((o) => o.platform === basePlatform)?.variants?.[0] ??
+        outputs[0]?.variants?.[0] ??
+        '';
+
+      postId = await this.createDraftPost(workspaceId, userId, {
+        content: base,
+        overrides: outputs.reduce(
+          (acc, o) => {
+            acc[o.platform] = o.variants[0] ?? '';
+            return acc;
+          },
+          {} as Record<string, string>,
+        ),
+      });
+    }
+
+    const usage = this.mergeUsage(outputs.map((o) => o.raw));
+
+    await this.logGeneration({
+      workspaceId,
+      organizationId: ctx.organizationId,
+      type: AiType.TEXT,
+      feature: AiFeature.VARIANTS,
+      provider,
+      model: outputs[0]?.raw.model ?? model,
+      prompt: null,
+      input: {
+        platforms: dto.platforms,
+        variantsPerPlatform,
+        brandKitId,
+        plan,
+      },
+      output: {
+        variants: outputs.map((o) => ({
+          platform: o.platform,
+          variants: o.variants,
+        })),
+      },
+      usage,
+      brandKitId,
+      postId,
+    });
+
+    return {
+      variants: outputs.map((o) => ({
+        platform: o.platform,
+        variants: o.variants,
+      })),
+      usage,
+      postId,
+    };
+  } catch (error) {
+    if (error instanceof HttpException) {
+    throw error;
+  }
+    console.log(error);
+    throw new ServiceUnavailableException(
+      'AI service is temporarily unavailable. Please try again.',
+    );
+  }
+  }
+
+  /**
+   * REPURPOSE CONTENT (Business & Rocket Only)
+   * Turns a URL or Text into a specific format (Thread, Carousel)
+   */
+  async repurposeContent(
+  workspaceId: string,
+  userId: string,
+  dto: RepurposeContentDto, // Should contain { sourceUrl, sourceText, targetPlatform }
+) {
+  const ctx = await this.getWorkspaceContext(workspaceId);
+  const plan = ctx.tier;
+  const limits = AI_TIER_LIMITS[plan];
+
+  // 1. Plan Gate
+  if (!limits.canRepurpose) {
+    throw new ForbiddenException('Content Repurposing is available on Business and Rocket plans.');
+  }
+
+  if (!dto.sourceUrl && !dto.sourceText) {
+  throw new BadRequestException('Either a source URL or source text must be provided.');
+}
+
+  // 2. Quota Check
+  await this.quota.assertCanUse(workspaceId, AiFeature.REPURPOSE);
+
+  // 2. SCRAPE THE CONTENT
+  let sourceText = dto.sourceText;
+  if (dto.sourceUrl) {
+    // Convert the URL into clean text
+    sourceText = await this.scraper.scrapeUrl(dto.sourceUrl);
+  }
+
+  const { brandKit, brandKitId } = await this.resolveBrandKit(workspaceId, dto.brandKitId);
+  const provider = this.pickProviderForWorkspace(workspaceId);
+  const textProvider = this.providerFactory.getTextProvider(provider);
+
+  // 3. Prompt Construction
+  const system = this.promptBuilder.buildSystemPrompt({
+    brandKit,
+    platform: dto.targetPlatform,
+    depth: limits.brandKitDepth,
+  });
+
+  // Specifically instruct the AI to "Summarize and Transform"
+  const user = this.promptBuilder.buildUserPrompt(`
+    SOURCE CONTENT: ${sourceText}
+    
+    TASK: Transform the source content above into a high-quality ${dto.targetPlatform} post. 
+    Maintain the core message but adapt the hook and structure for maximum engagement.
+  `);
+
+  try {
+    const result = await textProvider.generateText({
+      system,
+      user,
+      model: limits.allowedModels[0],
+      temperature: 0.6, // Lower temperature for better factual consistency
+    });
+
+    // 4. Log Success
+    await this.logGeneration({
+      workspaceId,
+      organizationId: ctx.organizationId,
+      type: AiType.TEXT,
+      feature: AiFeature.REPURPOSE,
+      provider,
+      model: result.model || limits.allowedModels[0],
+      prompt: system,
+      input: { source: dto.sourceUrl ? 'URL' : 'TEXT', platform: dto.targetPlatform },
+      output: { text: result.text },
+      usage: result.usage,
+      brandKitId,
+      postId: null,
+    });
+
+    return result;
+  } catch (error) {
+    console.error(error);
+    throw new ServiceUnavailableException('Failed to repurpose content.');
+  }
+}
+
+  /**
+   * BULK GENERATION (Rocket Only)
+   * "Generate 30 posts for next month"
+   */
+  async generateBulk(
+  workspaceId: string,
+  userId: string,
+  dto: BulkGenerateDto, // { topic, count: 10, platforms: ['LINKEDIN'], brandKitId }
+) {
+  const ctx = await this.getWorkspaceContext(workspaceId);
+  const plan = ctx.tier;
+  const limits = AI_TIER_LIMITS[plan];
+
+  // 1. GATE: Only Rocket can use Bulk
+  if (!limits.canBulk) {
+    throw new ForbiddenException('Bulk Generation is exclusive to the Rocket Plan.');
+  }
+
+  // 2. QUOTA: Check if they have enough credits for the WHOLE batch
+  // Note: We count the batch as '1 request' or 'N requests' based on your business rule.
+  // Here we check once to see if they are generally allowed.
+  await this.quota.assertCanUse(workspaceId, AiFeature.BULK);
+
+  const { brandKit, brandKitId } = await this.resolveBrandKit(workspaceId, dto.brandKitId);
+  const provider = this.pickProviderForWorkspace(workspaceId);
+  const textProvider = this.providerFactory.getTextProvider(provider);
+
+  // 3. PROMPT: Instruct AI to return a specific JSON array
+  const system = this.promptBuilder.buildSystemPrompt({
+    brandKit,
+    platform: dto.platforms[0], // Use primary platform for style
+    depth: limits.brandKitDepth,
+  });
+
+  const user = this.promptBuilder.buildUserPrompt(`
+    TOPIC: ${dto.topic}
+    QUANTITY: Generate ${dto.count} distinct social media posts.
+    
+    Return ONLY a JSON object with this structure:
+    {
+      "posts": [
+        { "content": "Post 1 text here...", "suggestedDay": 1 },
+        { "content": "Post 2 text here...", "suggestedDay": 2 }
+      ]
+    }
+  `);
+
+  try {
+    const result = await textProvider.generateText({
+      system,
+      user,
+      model: limits.allowedModels[0],
+      temperature: 0.8, // Slightly higher for variety in bulk
+      responseFormat: 'json',
+    });
+
+    const parsed = this.safeJson(result.text);
+    const posts = parsed?.posts || [];
+
+    // 4. LOGGING: Record the bulk success
+    await this.logGeneration({
+      workspaceId,
+      organizationId: ctx.organizationId,
+      type: AiType.TEXT,
+      feature: AiFeature.BULK,
+      provider,
+      model: result.model || limits.allowedModels[0],
+      prompt: system,
+      input: { topic: dto.topic, requestedCount: dto.count },
+      output: { countGenerated: posts.length },
+      usage: result.usage,
+      brandKitId,
+      postId: null,
+    });
+
+    return {
+      posts,
+      count: posts.length,
+      usage: result.usage,
+    };
+  } catch (error) {
+    console.error('Bulk Generation Error:', error);
+    throw new ServiceUnavailableException('Failed to generate bulk content.');
+  }
+}
+  // -----------------------------
+  // Internals
+  // -----------------------------
+
+  private async getPlanContext(
+    workspaceId: string,
+  ): Promise<'CREATOR' | 'BUSINESS' | 'ROCKET'> {
+    const ctx = await this.getWorkspaceContext(workspaceId);
+    return ctx.tier;
+  }
+
+  private async resolveBrandKit(workspaceId: string, brandKitId?: string) {
+    // 1) If brandKitId provided, verify it belongs to the workspace
+    if (brandKitId) {
+      const kit = await this.prisma.brandKit.findUnique({
+        where: { id: brandKitId },
+      });
+      if (!kit || kit.workspaceId !== workspaceId) {
+        throw new BadRequestException('Invalid brandKitId for this workspace');
+      }
+      return { brandKit: kit, brandKitId: kit.id };
+    }
+
+    // 2) Else fetch the workspace’s kit (1:1 by workspaceId)
+    const kit = await this.prisma.brandKit.findUnique({
+      where: { workspaceId },
+    });
+    // If you require it to exist, throw. Or auto-create a default in onboarding.
+    if (!kit) return { brandKit: null, brandKitId: null };
+    return { brandKit: kit, brandKitId: kit.id };
+  }
+
+  private pickProviderForWorkspace(_workspaceId: string): AiProvider {
+    return AiProvider.GEMINI;
+  }
+  private async getOrgId(workspaceId: string): Promise<string> {
+    const ws = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { organizationId: true },
+    });
+    if (!ws) throw new NotFoundException('Workspace not found');
+    return ws.organizationId;
+  }
+
+  private async createDraftPost(
+    workspaceId: string,
+    userId: string,
+    args: { content: string; overrides?: Record<string, string> },
+  ): Promise<string> {
+    const post = await this.prisma.post.create({
+      data: {
+        workspaceId,
+        // you likely have authorId/createdById – adjust to your schema:
+        createdById: userId as any,
+        status: 'DRAFT' as any,
+        content: args.content,
+        // store overrides in a JSON column if you have one, otherwise skip
+        metadata: args.overrides
+          ? ({ aiOverrides: args.overrides } as any)
+          : undefined,
+      } as any,
+      select: { id: true },
+    });
+
+    return post.id;
+  }
+
+  private mergeUsage(results: Array<TextGenResult | undefined | null>) {
+    const input = results.reduce((s, r) => s + (r?.usage?.inputTokens ?? 0), 0);
+    const output = results.reduce(
+      (s, r) => s + (r?.usage?.outputTokens ?? 0),
+      0,
+    );
+    const total = results.reduce((s, r) => s + (r?.usage?.totalTokens ?? 0), 0);
+    const costUsd = results.reduce((s, r) => s + (r?.usage?.costUsd ?? 0), 0);
+
+    return {
+      inputTokens: input || undefined,
+      outputTokens: output || undefined,
+      totalTokens: total || input + output || undefined,
+      costUsd: costUsd || undefined,
+    };
+  }
+
+  private async logGeneration(args: {
+    organizationId: string;
+    workspaceId: string;
+    type: AiType;
+    feature: AiFeature;
+    provider: AiProvider;
+    model: string;
+    prompt: string | null;
+    input: any;
+    output: any;
+    usage?: {
+      inputTokens?: number;
+      outputTokens?: number;
+      totalTokens?: number;
+      costUsd?: number;
+    };
+    brandKitId: string | null;
+    postId: string | null;
+  }) {
+    const inputTokens = args.usage?.inputTokens;
+    const outputTokens = args.usage?.outputTokens;
+    const totalTokens =
+      args.usage?.totalTokens ?? (inputTokens ?? 0) + (outputTokens ?? 0);
+    const costUsd = args.usage?.costUsd;
+
+    await this.prisma.aiGeneration.create({
+      data: {
+        organizationId: args.organizationId,
+        workspaceId: args.workspaceId,
+
+        type: args.type as any,
+        feature: args.feature as any,
+
+        provider: args.provider as any,
+        model: args.model,
+
+        prompt: args.prompt ?? undefined,
+        input: args.input as Prisma.JsonValue,
+        output: args.output as Prisma.JsonValue,
+
+        inputTokens,
+        outputTokens,
+        costUsd,
+
+        brandKitId: args.brandKitId ?? undefined,
+        postId: args.postId ?? undefined,
+
+        metadata: { totalTokens } as Prisma.JsonValue,
+      } as any,
     });
   }
 
-  // ===========================================================================
-  // ♻️ 4. THE REPURPOSER (URL -> Thread/Article)
-  // ===========================================================================
-  async repurposeContent(
-    user: any,
-    workspaceId: string,
-    url: string,
-    type: 'THREAD' | 'ARTICLE',
-  ) {
-    // 1. Quota Check (This is expensive, so we check carefully)
-    await this.quotaService.checkAndIncrement(user, workspaceId, 'TEXT');
-
-    try {
-      // A. Scrape
-      const scrapedText = await this.scrapeUrl(url);
-
-      if (!scrapedText || scrapedText.length < 50) {
-        throw new BadRequestException('Could not read text from this URL.');
-      }
-
-      // B. Build Prompt
-      const truncatedText = scrapedText.slice(0, 15000); // Gemini 2.5 has huge context, so 15k is safe
-      
-      let prompt = '';
-      if (type === 'THREAD') {
-        prompt = `
-          Task: Repurpose this text into a viral Twitter Thread (5-7 tweets).
-          Format: JSON Array of strings. ["Tweet 1", "Tweet 2"...]
-          Rules: Tweet 1 is a hook. Last Tweet is a CTA.
-          Source: "${truncatedText}"
-        `;
-      } else {
-        prompt = `
-          Task: Repurpose this text into a LinkedIn Article.
-          Format: HTML string with <h2> and <ul> tags.
-          Source: "${truncatedText}"
-        `;
-      }
-
-      // C. Generate (Use the configured provider strategy)
-      // Since 'repurpose' is logic heavy, your 'generateCaption' logic 
-      // will automatically pick 'Anthropic' if they are a Pro user.
-      const result = await this.aiFactory.getProvider('GEMINI').generateText(prompt);
-
-      // D. Parse Result
-      if (type === 'THREAD') {
-        const threadArray = this.safeJsonParse(result.content, [result.content]);
-        return { thread: Array.isArray(threadArray) ? threadArray : [result.content] };
-      }
-
-      return { content: result.content };
-
-    } catch (error) {
-      await this.quotaService.refundQuota(workspaceId, 'TEXT');
-      
-      if (error instanceof BadRequestException) throw error;
-      this.logger.error(`Repurposing failed: ${error.message}`);
-      throw new InternalServerErrorException('Failed to process URL.');
-    }
-  }
-
-  // ===========================================================================
-  // #️⃣ 5. HASHTAG GENERATOR
-  // ===========================================================================
-  async generateHashtags(user: any, workspaceId: string, content: string) {
-    const prompt = `
-      Analyze this post: "${content}"
-      Generate 15 high-traffic, relevant hashtags.
-      Return ONLY the hashtags separated by spaces (e.g. #Marketing #Growth). 
-      No intro text.
-    `;
-    return this.generateCaption(user, workspaceId, { prompt });
-  }
-
-  // ===========================================================================
-  // 🛠️ PRIVATE HELPERS
-  // ===========================================================================
-
-  private safeJsonParse(rawString: string, fallback: any) {
-    try {
-      const clean = rawString.replace(/```json|```/g, '').trim();
-      return JSON.parse(clean);
-    } catch (e) {
-      return fallback;
-    }
-  }
-
-  private async scrapeUrl(url: string): Promise<string> {
-    try {
-      const { data } = await axios.get(url, {
-        timeout: 5000, 
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  private async getWorkspaceContext(workspaceId: string) {
+    const ws = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        organizationId: true,
+        organization: {
+          select: {
+            subscription: { select: { plan: { select: { tier: true } } } },
+          },
         },
-      });
+      },
+    });
 
-      const $ = cheerio.load(data);
-      $('script, style, nav, footer, header, iframe, .ads').remove();
-      const text = $('body').find('h1, h2, h3, p, li').map((i, el) => $(el).text()).get().join('\n');
-      return text.replace(/\s\s+/g, ' ').trim();
-    } catch (error) {
-      throw new Error('Network error or timeout accessing URL');
-    }
+    if (!ws) throw new NotFoundException('Workspace not found');
+
+    const tier = (ws.organization?.subscription?.plan?.tier ?? 'CREATOR') as
+      | 'CREATOR'
+      | 'BUSINESS'
+      | 'ROCKET';
+
+    return { workspaceId: ws.id, organizationId: ws.organizationId, tier };
   }
 
-  private async buildSystemPrompt(workspaceId: string, brandKitId?: string, overrideTone?: string): Promise<string> {
-    const basePrompt = 'You are an expert social media manager used by professionals.';
-    
-    let brandKit;
-    if (brandKitId) {
-      brandKit = await this.prisma.brandKit.findUnique({ where: { id: brandKitId } });
-    } else {
-      brandKit = await this.prisma.brandKit.findFirst({
-        where: { workspaceId, isDefault: true }
-      });
-    }
-
-    if (!brandKit) {
-      return overrideTone 
-        ? `${basePrompt} Write in a ${overrideTone} tone.` 
-        : basePrompt;
-    }
-
-    let instructions = `${basePrompt}\n\nBRAND CONTEXT:\n`;
-    if (brandKit.name) instructions += `Brand Name: ${brandKit.name}\n`;
-    if (brandKit.brandVoice) instructions += `Voice Description: ${brandKit.brandVoice}\n`;
-    
-    const finalTone = overrideTone || brandKit.tone;
-    if (finalTone) instructions += `Tone: ${finalTone}\n`;
-
-    if (brandKit.guidelines && Array.isArray(brandKit.guidelines)) {
-       instructions += `Do's and Don'ts: ${brandKit.guidelines.join(', ')}\n`;
-    }
-
-    return instructions;
-  }
-
-  private getUserPlan(user: any): string {
-    return user.organization?.subscription?.plan?.name || 'FREE';
-  }
-
-  private async logUsage(
-    user: any,
-    workspaceId: string,
-    type: string,
-    provider: string,
-    model: string,
-    usage: { inputTokens: number; outputTokens: number, cost?: number },
-  ) {
+  private safeJson(text: string) {
     try {
-      await this.prisma.aIUsage.create({
-        data: {
-          cost: usage.cost || 0,
-          organizationId: user.organizationId,
-          workspaceId,
-          userId: user.userId,
-          type: type as any,
-          provider: provider as any,
-          model,
-          tokensUsed: (usage.inputTokens || 0) + (usage.outputTokens || 0),
-          metadata: { input: usage.inputTokens, output: usage.outputTokens },
-        },
-      });
-    } catch (e) {
-      this.logger.error('Failed to log AI usage', e.stack);
+      return JSON.parse(text);
+    } catch {
+      // try to salvage JSON from messy output
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) return null;
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
     }
   }
 }

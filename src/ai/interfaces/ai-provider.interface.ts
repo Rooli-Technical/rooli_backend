@@ -1,18 +1,29 @@
-export interface AiResponse {
-  content: string;
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-    cost?: number;
-  };
-}
+import { AiProvider } from "@generated/enums";
 
-export interface AiImageResponse {
-  urls: string[];
-  cost?: number;
-}
 
 export interface IAiProvider {
-  generateText(prompt: string, systemPrompt?: string, model?: string): Promise<AiResponse>;
-  generateImage(prompt: string, options?: { width?: number; height?: number }): Promise<AiImageResponse>;
+  generateText(options: TextGenOptions): Promise<TextGenResult>;
+}
+
+export interface TextGenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  costUsd?: number;
+}
+
+export interface TextGenResult {
+  text: string;
+  model: string;
+  provider: AiProvider;
+  usage: TextGenUsage;
+}
+
+export interface TextGenOptions {
+  system?: string;
+  user: string;
+  model: string;
+  temperature?: number;
+  maxTokens?: number;
+  responseFormat?: 'text' | 'json';
 }

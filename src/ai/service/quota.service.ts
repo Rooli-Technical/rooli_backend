@@ -1,100 +1,84 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { BillingService } from '@/billing/billing.service';
-import { RedisService } from '@/redis/redis.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { startOfMonth } from 'date-fns';
+import { AI_TIER_LIMITS } from '../constants/ai.constant';
+
 
 @Injectable()
-export class QuotaService {
-  constructor(
-    private redisService: RedisService,
-  ) {}
+export class AiQuotaService {
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
-   *  The Gatekeeper
-   * Returns true if allowed, throws Exception if limit reached.
+   * 🛡️ THE GATEKEEPER
+   * Checks if an organization has remaining credits for the current month.
    */
-  async checkAndIncrement(
-    user: any, 
-    workspaceId: string, 
-    type: 'TEXT' | 'IMAGE'
-  ): Promise<void> {
-    
-    // 1. Get Plan Limits
-    const limit = this.getPlanLimit(user, type);
+  async assertCanUse(workspaceId: string, feature: string): Promise<boolean> {
+    const { organizationId, tier } = await this.getWorkspaceContext(workspaceId);
 
-    // -1 means Unlimited
-    if (limit === -1) return; 
+    // 1. Get the hard limit from your constants
+    const monthlyLimit = AI_TIER_LIMITS[tier].monthlyLimit;
 
-    // 2. Generate Key (Reset monthly)
-    const date = new Date();
-    const key = `quota:${workspaceId}:${type}:${date.getFullYear()}-${date.getMonth() + 1}`;
+    // 2. Count usage across the WHOLE organization
+    const usedCount = await this.getMonthlyUsageCount(organizationId);
 
-  // 3. Check CURRENT usage (Read-only check first to prevent incrementing if blocked)
-    const currentUsageStr = await this.redisService.get(key);
-    const currentUsage = currentUsageStr ? parseInt(currentUsageStr) : 0;
-    
-   if (currentUsage >= limit) {
-      throw new BadRequestException(
-        `Monthly ${type.toLowerCase()} limit reached (${currentUsage}/${limit}). Upgrade your plan.`
+    // 3. Throw if over limit
+    if (usedCount >= monthlyLimit) {
+      throw new ForbiddenException(
+        `AI limit reached for your ${tier} plan (${usedCount}/${monthlyLimit}). ` +
+        `Please upgrade to the next tier for more credits.`
       );
     }
-    // 4. Increment (Atomic)
-    const newValue = await this.redisService.incr(key);
 
-    // 5. Set Expiry (Only if it's a new key)
-    // If usage is 1, it means we just created this key. Set it to expire in 40 days.
-    if (newValue === 1) {
-      const secondsIn40Days = 60 * 60 * 24 * 40;
-      await this.redisService.expire(key, secondsIn40Days);
-    }
-
-    // 6. Double Check (Race Condition Safety)
-    // If two requests hit exact same time, both might pass step 3.
-    // This atomic check catches the one that went over.
-    if (newValue > limit) {
-      // Refund the one we just took
-      await this.redisService.decr(key); 
-      throw new BadRequestException(
-        `Monthly ${type.toLowerCase()} limit reached (${limit}/${limit}).`
-      );
-    }
+    return true;
   }
 
   /**
-   * ↩️ Refund Logic
-   * Call this if the AI Provider fails (e.g., OpenAI 500 Error)
+   * 📊 USAGE DATA FOR UI
+   * Returns a breakdown to show in the user's dashboard.
    */
- async refundQuota(workspaceId: string, type: 'TEXT' | 'IMAGE') {
-    const date = new Date();
-    const key = `quota:${workspaceId}:${type}:${date.getFullYear()}-${date.getMonth() + 1}`;
-    
-    // Only decrement if the key exists (value > 0) to avoid negative numbers
-    const currentStr = await this.redisService.get(key);
-    if (currentStr && parseInt(currentStr) > 0) {
-       await this.redisService.decr(key);
-    }
-  }
+  async getQuotaStatus(workspaceId: string) {
+    const { organizationId, tier } = await this.getWorkspaceContext(workspaceId);
+    const used = await this.getMonthlyUsageCount(organizationId);
+    const limit = AI_TIER_LIMITS[tier].monthlyLimit;
 
-  /**
-   * 📊 Helper: Define your Plan Logic here
-   * (Ideally move this to SubscriptionService later)
-   */
-  private getPlanLimit(user: any, type: 'TEXT' | 'IMAGE'): number {
-    // 1. Check for Custom Overrides (Enterprise)
-    // const customLimit = user.organization?.subscription?.customLimits?.[type];
-    // if (customLimit) return customLimit;
-
-    // 2. Standard Plan Logic
-    const planName = user.organization?.subscription?.plan?.name || 'FREE';
-
-    // Simple Map
-    const limits = {
-      'CREATOR': { TEXT: 100, IMAGE: 10 },
-      'BUSINESS': { TEXT: -1, IMAGE: 50 },  // -1 = Unlimited
-      'ROCKET':   { TEXT: -1, IMAGE: 200 },
-      'FREE':     { TEXT: 10, IMAGE: 0 }
+    return {
+      used,
+      limit,
+      remaining: Math.max(0, limit - used),
+      percentage: Math.min(100, Math.round((used / limit) * 100)),
+      tier,
+      resetsAt: startOfMonth(new Date(new Date().setMonth(new Date().getMonth() + 1)))
     };
+  }
 
-    const planLimits = limits[planName] || limits['FREE'];
-    return planLimits[type];
+  // --- PRIVATE HELPERS ---
+
+  private async getMonthlyUsageCount(organizationId: string): Promise<number> {
+    return this.prisma.aiGeneration.count({
+  where: { organizationId, createdAt: { gte: startOfMonth(new Date()) } },
+});
+  }
+
+  private async getWorkspaceContext(workspaceId: string) {
+    const ws = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        organizationId: true,
+        organization: {
+          select: {
+            subscription: {
+              select: { plan: { select: { tier: true } } }
+            }
+          }
+        }
+      }
+    });
+
+    if (!ws) throw new NotFoundException('Workspace not found');
+
+    const tier = (ws.organization?.subscription?.plan?.tier ?? 'CREATOR') as 
+      'CREATOR' | 'BUSINESS' | 'ROCKET';
+
+    return { organizationId: ws.organizationId, tier };
   }
 }
