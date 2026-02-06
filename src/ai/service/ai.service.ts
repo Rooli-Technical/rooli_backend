@@ -430,13 +430,6 @@ Return JSON ONLY in this format:
   // Internals
   // -----------------------------
 
-  private async getPlanContext(
-    workspaceId: string,
-  ): Promise<'CREATOR' | 'BUSINESS' | 'ROCKET'> {
-    const ctx = await this.getWorkspaceContext(workspaceId);
-    return ctx.tier;
-  }
-
   private async resolveBrandKit(workspaceId: string, brandKitId?: string) {
     // 1) If brandKitId provided, verify it belongs to the workspace
     if (brandKitId) {
@@ -600,4 +593,12 @@ Return JSON ONLY in this format:
       }
     }
   }
+
+  /**
+ * Helper to calculate the 1st of next month (billing reset date)
+ */
+private getNextResetDate(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 1);
+}
 }

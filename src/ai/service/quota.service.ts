@@ -53,7 +53,7 @@ export class AiQuotaService {
 
   // --- PRIVATE HELPERS ---
 
-  private async getMonthlyUsageCount(organizationId: string): Promise<number> {
+ async getMonthlyUsageCount(organizationId: string): Promise<number> {
     return this.prisma.aiGeneration.count({
   where: { organizationId, createdAt: { gte: startOfMonth(new Date()) } },
 });
