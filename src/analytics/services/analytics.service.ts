@@ -23,6 +23,7 @@ import { startOfDay } from 'date-fns/startOfDay';
 import { subDays } from 'date-fns/subDays';
 import { Prisma } from '@generated/client';
 import { differenceInDays } from 'date-fns/differenceInDays';
+import { AnalyticsNormalizerService } from './analytics-normalizer.service';
 
 @Injectable()
 export class AnalyticsService {
@@ -37,6 +38,8 @@ export class AnalyticsService {
     private readonly prisma: PrismaService,
     private readonly encryptionService: EncryptionService,
     private readonly repo: AnalyticsRepository,
+    private readonly normalizer: AnalyticsNormalizerService,
+    
   ) {
     // Strategy Pattern: Map Enum to Service Instance
     this.providers = new Map<Platform, IAnalyticsProvider>([
@@ -113,94 +116,110 @@ export class AnalyticsService {
     return provider;
   }
 
-  async testFetch(body: { profileId?: string; postDestinationId?: string }) {
-    const { profileId, postDestinationId } = body;
-    const results: any = {};
+ async testFetch(body: { profileId?: string; postDestinationId?: string }) {
+  const { profileId, postDestinationId } = body;
+  const results: any = {};
 
-    let profile = null;
-    let credentials: AuthCredentials | null = null;
+  let profile = null;
+  let credentials: AuthCredentials | null = null;
 
-    // --- STEP 1: RESOLVE CREDENTIALS
-    if (profileId) {
-      profile = await this.prisma.socialProfile.findUnique({
-        where: { id: profileId },
-        include: { connection: true },
-      });
+  // --- STEP 1: RESOLVE CREDENTIALS ---
+  if (profileId) {
+    profile = await this.prisma.socialProfile.findUnique({
+      where: { id: profileId },
+      include: { connection: true },
+    });
 
-      if (!profile) throw new BadRequestException('Profile not found');
+    if (!profile) throw new BadRequestException('Profile not found');
 
-      const accessToken = await this.encryptionService.decrypt(
-        profile.accessToken,
-      );
-      let accessSecret: string | undefined;
 
-      if (profile.platform === 'TWITTER' && profile.connection?.refreshToken) {
-        accessSecret = await this.encryptionService.decrypt(
-          profile.connection.refreshToken,
-        );
-      }
-      credentials = { accessToken, accessSecret };
+    const accessToken = await this.encryptionService.decrypt(profile.accessToken);
+    let accessSecret: string | undefined;
+
+    if (profile.platform === 'TWITTER' && profile.connection?.refreshToken) {
+      accessSecret = await this.encryptionService.decrypt(profile.connection.refreshToken);
     }
-
-    // --- STEP 2: ACCOUNT STATS (Only if profileId is provided AND postDestinationId is NOT) ---
-    // Or you can add an explicit 'fetchAccount: boolean' flag to the body
-    if (profileId && !postDestinationId) {
-      try {
-        this.logger.debug(
-          `🔍 Testing Account Fetch for ${profile.platform}...`,
-        );
-        results.account = await this.fetchAccountStats(
-          profile.platform,
-          profile.platformId,
-          credentials,
-        );
-      } catch (e: any) {
-        results.accountError = e.response?.data || e.message;
-      }
-    }
-
-    // --- STEP 3: POST STATS (Only if postDestinationId is provided) ---
-    if (postDestinationId) {
-      if (!credentials || !profile) {
-        throw new BadRequestException(
-          'Post testing requires profileId for credentials',
-        );
-      }
-
-      const post = await this.prisma.postDestination.findUnique({
-        where: {
-          socialProfileId: profileId,
-          id: postDestinationId,
-          status: 'SUCCESS',
-        },
-        select: { id: true, platformPostId: true },
-      });
-
-      if (!post)
-        throw new BadRequestException(
-          'Post destination not found or not successful',
-        );
-
-      try {
-        this.logger.debug(`🔍 Testing Post Fetch for ${postDestinationId}...`);
-        const context =
-          profile.platform === 'LINKEDIN'
-            ? { pageId: profile.platformId }
-            : undefined;
-        results.posts = await this.fetchPostStats(
-          profile.platform,
-          [post.platformPostId],
-          credentials,
-          context,
-        );
-      } catch (e: any) {
-        this.logger.error(e);
-        results.postError = e?.response?.data || e.message;
-      }
-    }
-
-    return results;
+    credentials = { accessToken, accessSecret };
   }
+
+  // --- STEP 2: ACCOUNT STATS ---
+  if (profileId && !postDestinationId) {
+    try {
+      this.logger.debug(`🔍 Testing Account Fetch & Save for ${profile.platform}...`);
+      
+      const rawAccount = await this.fetchAccountStats(
+        profile.platform,
+        profile.platformId,
+        credentials,
+      );
+
+      const accountPayload = await this.normalizer.normalizeAccountStats(
+        profile.id,
+        rawAccount,
+      );
+
+      await this.repo.saveAccountAnalytics(accountPayload);
+
+      results.account = accountPayload;
+      results.accountSaved = true;
+    } catch (e: any) {
+      this.logger.error(`Account save failed: ${e.message}`);
+      results.accountError = e.response?.data || e.message;
+    }
+  }
+
+  // --- STEP 3: POST STATS ---
+  if (postDestinationId) {
+    if (!credentials || !profile) {
+      throw new BadRequestException('Post testing requires profileId for credentials');
+    }
+
+    const post = await this.prisma.postDestination.findUnique({
+      where: {
+        socialProfileId: profileId,
+        id: postDestinationId,
+        status: 'SUCCESS',
+      },
+    });
+
+    if (!post) throw new BadRequestException('Post destination not found or not successful');
+
+    try {
+      this.logger.debug(`🔍 Testing Post Fetch & Save for ${postDestinationId}...`);
+      
+      const context = profile.platform === 'LINKEDIN' ? { pageId: profile.platformId } : undefined;
+
+      // Fetch (Returns array)
+      const rawPosts = await this.fetchPostStats(
+        profile.platform,
+        [post.platformPostId],
+        credentials,
+        context,
+      );
+
+      if (rawPosts && rawPosts.length > 0) {
+        // Normalize
+        const postPayload = await this.normalizer.normalizePostStats(
+          post.id, 
+          rawPosts[0]
+        );
+
+        // Save
+        await this.repo.savePostSnapshot(postPayload);
+
+        results.post = postPayload;
+        results.postSaved = true;
+      } else {
+        results.postError = "No data returned from platform for this post ID";
+      }
+    } catch (e: any) {
+      this.logger.error(`Post save failed: ${e.message}`);
+      results.postError = e?.response?.data || e.message;
+    }
+  }
+
+  return results;
+}
 
   /**
    * Fetch daily account rows for a specific range.
@@ -235,7 +254,6 @@ export class AnalyticsService {
   }
 
   async getWorkspaceDashboard(workspaceId: string, tier: PlanTier, days = 30) {
-    console.log('Getting dashboard for workspace', workspaceId, 'with tier', tier);
     const { start, end, prevStart, prevEnd } = this.computePeriods(
       Math.min(days, 365),
     );

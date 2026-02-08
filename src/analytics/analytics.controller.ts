@@ -4,7 +4,6 @@ import { AnalyticsScheduler } from './scheduler/analytics.scheduler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiOkResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '@/common/decorators/public.decorator';
 import { subDays } from 'date-fns/subDays';
-import { PlanTier } from '@generated/enums';
 
 @Controller('analytics')
 @ApiBearerAuth()
@@ -138,9 +137,7 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     @Req() req?: any,
   ) {
     if (days < 1) throw new BadRequestException('days must be >= 1');
-
-    // TODO: enforce workspace membership + subscription tier inside service
-    return this.service.getWorkspaceDashboard(workspaceId, req.user.userPlan, days);
+    return this.service.getWorkspaceDashboard(workspaceId, req?.user?.userPlan, days);
   }
 
 }
