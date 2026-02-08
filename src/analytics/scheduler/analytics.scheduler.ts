@@ -81,7 +81,6 @@ export class AnalyticsScheduler {
           const planTier =
             profile.workspace.organization.subscription.plan.tier;
 
-          if (!this.shouldSkipPlatform(profile.platform, planTier)) {
             // Spread jobs over 60 minutes (3,600,000 milliseconds)
             const ONE_HOUR_MS = 60 * 60 * 1000;
             const delay = Math.floor(Math.random() * ONE_HOUR_MS);
@@ -96,8 +95,7 @@ export class AnalyticsScheduler {
                 delay: delay,
               },
             });
-          }
-        } catch (error) {
+        } catch (error: any) {
           this.logger.error(
             `Failed to schedule job for profile ${profile.id}: ${error.message}`,
             error.stack,
@@ -126,11 +124,11 @@ export class AnalyticsScheduler {
   /**
    * Helper: Check if this plan allows this platform
    */
-  private shouldSkipPlatform(platform: Platform, plan: PlanTier): boolean {
-    // Creator Plan does NOT include Twitter (X)
-    if (plan === 'CREATOR' && platform === 'TWITTER') {
-      return true; // Skip
-    }
-    return false;
-  }
+  // private shouldSkipPlatform(platform: Platform, plan: PlanTier): boolean {
+  //   // Creator Plan does NOT include Twitter (X)
+  //   if (plan === 'CREATOR' && platform === 'TWITTER') {
+  //     return true; // Skip
+  //   }
+  //   return false;
+  // }
 }

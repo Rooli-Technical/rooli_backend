@@ -235,7 +235,6 @@ export class AnalyticsService {
   }
 
   async getWorkspaceDashboard(workspaceId: string, tier: PlanTier, days = 30) {
-    console.log(tier)
     const { start, end, prevStart, prevEnd } = this.computePeriods(
       Math.min(days, 365),
     );
@@ -414,6 +413,7 @@ export class AnalyticsService {
         id: true,
         createdAt: true,
         platformPostId: true,
+        contentOverride: true,
         profile: { select: { platform: true } },
         postAnalyticsSnapshots: {
           take: 1,
@@ -426,6 +426,7 @@ export class AnalyticsService {
     return posts.map((p) => ({
       postId: p.id,
       platform: p.profile?.platform,
+      content: p.contentOverride,
       platformPostId: p.platformPostId!,
       publishedAt: p.createdAt,
       likes: p.postAnalyticsSnapshots[0]?.likes ?? 0,
