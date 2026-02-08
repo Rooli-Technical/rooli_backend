@@ -1,10 +1,11 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UsePipes, ValidationPipe } from '@nestjs/common';
 import { BrandKitService } from './brandkit.service';
-import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateBrandKitDto } from './dto/create-brandkit.dto';
 import { UpdateBrandKitDto } from './dto/update-brandkit.dto';
 
   @ApiTags('Brand Kit')
+  @ApiBearerAuth()
 @Controller('workspaces/:workspaceId/brand-kit')
 export class BrandkitController {
   constructor(private readonly service: BrandKitService) {}
