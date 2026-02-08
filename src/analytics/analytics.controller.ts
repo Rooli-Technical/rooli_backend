@@ -122,7 +122,7 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
       'Returns analytics dashboard aggregated across all active social profiles in a workspace. Response shape varies by plan tier.',
   })
   @ApiParam({
-    name: 'workspaceId',
+    name: 'id',
     description: 'Workspace ID',
     example: 'cmkdz...workspace_id',
   })
@@ -133,7 +133,7 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     example: 30,
   })
   async getWorkspaceDashboard(
-    @Param('workspaceId') workspaceId: string,
+    @Param('id') workspaceId: string,
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
     @Req() req?: any,
   ) {

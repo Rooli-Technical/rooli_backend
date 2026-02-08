@@ -235,6 +235,7 @@ export class AnalyticsService {
   }
 
   async getWorkspaceDashboard(workspaceId: string, tier: PlanTier, days = 30) {
+    console.log('Getting dashboard for workspace', workspaceId, 'with tier', tier);
     const { start, end, prevStart, prevEnd } = this.computePeriods(
       Math.min(days, 365),
     );
