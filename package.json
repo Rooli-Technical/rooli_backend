@@ -29,7 +29,7 @@
     "@bull-board/express": "^6.16.4",
     "@bull-board/nestjs": "^6.16.4",
     "@google/generative-ai": "^0.24.1",
-    "@huggingface/inference": "^4.13.9",
+    "@huggingface/inference": "^4.13.11",
     "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs-modules/mailer": "^1.6.1",
     "@nestjs/axios": "^4.0.1",
