@@ -8,5 +8,6 @@ import { CloudinaryProvider } from './cloudinary.provider';
   imports: [ConfigModule], 
   controllers: [PostMediaController],
   providers: [PostMediaService, CloudinaryProvider],
+  exports: [PostMediaService],
 })
 export class PostMediaModule {}

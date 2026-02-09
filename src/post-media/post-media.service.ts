@@ -1,7 +1,7 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import * as streamifier from 'streamifier';
-import { v2 as cloudinary } from 'cloudinary';
+import { v2 as cloudinary, UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class PostMediaService {
@@ -120,6 +120,55 @@ export class PostMediaService {
    await this.prisma.mediaFile.delete({ where: { id: fileId } });
    return;
   }
+
+
+async uploadAiGeneratedBuffer(
+  userId: string, 
+  workspaceId: string, 
+  buffer: Buffer, 
+  prompt: string 
+) {
+  // 1. Upload the raw buffer to Cloudinary
+  const uploadResult = await new Promise<any>((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: `rooli/${workspaceId}`,
+        resource_type: 'image',
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      },
+    );
+    uploadStream.end(buffer); // Pushes the AI buffer to the cloud
+  });
+
+  // 2. Save to Database
+  const mediaFile = await this.prisma.mediaFile.create({
+    data: {
+      workspaceId,
+      userId,
+      filename: `ai-${Date.now()}.png`,
+      originalName: prompt.substring(0, 50), 
+      mimeType: 'image/png',
+      size: BigInt(buffer.length),
+      
+      url: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
+      thumbnailUrl: uploadResult.secure_url, 
+      
+      width: uploadResult.width,
+      height: uploadResult.height,
+      
+      isAiGenerated: true,
+    }
+  });
+
+  return {
+    ...mediaFile,
+    size: mediaFile.size.toString()
+  };
+}
 
   // ------------------------------------------
   // HELPER: Stream Upload

@@ -29,8 +29,4 @@ export class GenerateCaptionDto {
   @Min(40)
   @Max(500)
   maxChars?: number;
-
-  @ApiPropertyOptional({ example: true })
-  @IsOptional()
-  saveAsDraftPost?: boolean;
 }

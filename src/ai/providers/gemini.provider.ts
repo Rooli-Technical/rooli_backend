@@ -20,7 +20,7 @@ export class GeminiProvider implements IAiProvider {
   async generateText(options: TextGenOptions): Promise<TextGenResult> {
     try {
       const model: GenerativeModel = this.genAI.getGenerativeModel({
-        model: options.model || 'gemini-1.5-flash',
+        model: options.model || 'gemini-2.0-flash-001',
         systemInstruction: options.system,
       });
 

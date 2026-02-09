@@ -22,8 +22,4 @@ export class GenerateVariantsDto {
   @IsOptional()
   @IsString()
   brandKitId?: string;
-
-  @ApiPropertyOptional({ example: true })
-  @IsOptional()
-  saveAsDraftPost?: boolean;
 }

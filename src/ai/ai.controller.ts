@@ -24,8 +24,8 @@ export class AiController {
     example: 'cuid-123-456' 
   })
   @ApiOkResponse({ description: 'Caption generated successfully.' })
-  async generateCaption(@Req() req, @Body() dto: GenerateCaptionDto, @Param('workspaceId') workspaceId: string) {
-    return this.aiService.generateCaption(workspaceId, req.user.userId, dto);
+  async generateCaption(@Body() dto: GenerateCaptionDto, @Param('workspaceId') workspaceId: string) {
+    return this.aiService.generateCaption(workspaceId, dto);
   }
 
   @Post('variants')
@@ -35,7 +35,7 @@ export class AiController {
   })
   @ApiForbiddenResponse({ description: 'Platform limit exceeded for your plan.' })
   async generateVariants(@Req() req, @Body() dto: GenerateVariantsDto, @Param('workspaceId') workspaceId: string) {
-    return this.aiService.generatePlatformVariants(workspaceId, req.user.userId, dto);
+    return this.aiService.generatePlatformVariants(workspaceId, dto);
   }
 
   @Post('repurpose')
@@ -44,7 +44,7 @@ export class AiController {
     description: 'Scrapes a URL or takes text and transforms it into a new post format.' 
   })
   async repurpose(@Req() req, @Body() dto: RepurposeContentDto, @Param('workspaceId') workspaceId: string) {
-    return this.aiService.repurposeContent(workspaceId, req.user.userId, dto);
+    return this.aiService.repurposeContent(workspaceId, dto);
   }
 
   @Post('bulk')
@@ -53,7 +53,7 @@ export class AiController {
     description: 'Generates a batch of posts for a specific topic and date range.' 
   })
   async generateBulk(@Req() req, @Body() dto: BulkGenerateDto, @Param('workspaceId') workspaceId: string) {
-    return this.aiService.generateBulk(workspaceId, req.user.userId, dto);
+    return this.aiService.generateBulk(workspaceId, dto);
   }
 
   @Get('quota/:organizationId')

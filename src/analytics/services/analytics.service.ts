@@ -44,7 +44,7 @@ export class AnalyticsService {
     // Strategy Pattern: Map Enum to Service Instance
     this.providers = new Map<Platform, IAnalyticsProvider>([
       ['LINKEDIN', linkedInProvider],
-      ['TWITTER', twitterProvider], // Or 'X' depending on your Enum
+      ['TWITTER', twitterProvider],
       ['FACEBOOK', facebookProvider],
       ['INSTAGRAM', instagramProvider],
     ]);

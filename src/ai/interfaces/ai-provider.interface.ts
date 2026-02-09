@@ -3,7 +3,11 @@ import { AiProvider } from "@generated/enums";
 
 export interface IAiProvider {
   generateText(options: TextGenOptions): Promise<TextGenResult>;
+
+  // 🎨 Optional method: Not every provider has an "artist" inside
+  generateImage?(prompt: string, model?: string): Promise<Buffer>;
 }
+
 
 export interface TextGenUsage {
   inputTokens: number;

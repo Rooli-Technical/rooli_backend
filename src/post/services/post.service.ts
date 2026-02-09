@@ -58,6 +58,15 @@ export class PostService {
         await this.createApproval(tx, post.id, user.id);
       }
 
+      if (dto.aiGenerationId) {
+        this.prisma.aiGeneration
+          .update({
+            where: { id: dto.aiGenerationId },
+            data: { postId: post.id },
+          })
+          .catch((err) => console.error('Failed to link post to AI log', err));
+      }
+
       return post;
     });
 
@@ -412,83 +421,83 @@ export class PostService {
     });
   }
 
-async getOne(workspaceId: string, postId: string) {
-  const post = await this.prisma.post.findFirst({
-    where: { id: postId, workspaceId },
-    select: {
-      id: true,
-      workspaceId: true,
-      authorId: true,
-      content: true,
-      contentType: true,
-      status: true,
-      scheduledAt: true,
-      publishedAt: true,
-      destinations: {
-        select: {
-          id: true,
-          postId: true,
-          contentOverride: true,
-          metadata: true, // IMPORTANT: This contains your thread
-          profile: {
-            select: {
-              id: true,
-              platform: true,
-              name: true,
-              username: true,
-              picture: true,
-              type: true,
+  async getOne(workspaceId: string, postId: string) {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, workspaceId },
+      select: {
+        id: true,
+        workspaceId: true,
+        authorId: true,
+        content: true,
+        contentType: true,
+        status: true,
+        scheduledAt: true,
+        publishedAt: true,
+        destinations: {
+          select: {
+            id: true,
+            postId: true,
+            contentOverride: true,
+            metadata: true, // IMPORTANT: This contains your thread
+            profile: {
+              select: {
+                id: true,
+                platform: true,
+                name: true,
+                username: true,
+                picture: true,
+                type: true,
+              },
             },
           },
         },
-      },
-      media: {
-        orderBy: { order: 'asc' },
-        select: {
-          id: true,
-          order: true,
-          mediaFile: {
-            select: {
-              id: true,
-              url: true,
-              mimeType: true,
-              size: true,
+        media: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            order: true,
+            mediaFile: {
+              select: {
+                id: true,
+                url: true,
+                mimeType: true,
+                size: true,
+              },
             },
           },
         },
-      },
-      author: {
-        select: {
-          email: true,
-          firstName: true,
+        author: {
+          select: {
+            email: true,
+            firstName: true,
+          },
         },
+        parentPost: true,
       },
-      parentPost: true,
-    },
-  });
+    });
 
-  if (!post) throw new NotFoundException('Post not found');
+    if (!post) throw new NotFoundException('Post not found');
 
-  // Map the data to handle BigInt (size) and expose threads clearly
-  return {
-    ...post,
-    media: post.media.map((m) => ({
-      ...m,
-      mediaFile: m.mediaFile
-        ? {
-            ...m.mediaFile,
-            size: m.mediaFile.size.toString(),
-          }
-        : null,
-    })),
-    // Helper: Extract threads from destinations to make them easier to find
-    destinations: post.destinations.map((dest: any) => ({
-      ...dest,
-      // Explicitly extract the thread from metadata for the frontend
-      thread: dest.metadata?.thread || [], 
-    })),
-  };
-}
+    // Map the data to handle BigInt (size) and expose threads clearly
+    return {
+      ...post,
+      media: post.media.map((m) => ({
+        ...m,
+        mediaFile: m.mediaFile
+          ? {
+              ...m.mediaFile,
+              size: m.mediaFile.size.toString(),
+            }
+          : null,
+      })),
+      // Helper: Extract threads from destinations to make them easier to find
+      destinations: post.destinations.map((dest: any) => ({
+        ...dest,
+        // Explicitly extract the thread from metadata for the frontend
+        thread: dest.metadata?.thread || [],
+      })),
+    };
+  }
 
   // Get all pending approvals for a workspace
   async getPendingApprovals(
@@ -655,7 +664,7 @@ async getOne(workspaceId: string, postId: string) {
       data: { postId, requesterId: userId, status: 'PENDING' },
     });
   }
-
+  
   private async schedulePostJob(postId: string, scheduledAt: Date) {
     const delay = Math.max(0, scheduledAt.getTime() - Date.now());
 

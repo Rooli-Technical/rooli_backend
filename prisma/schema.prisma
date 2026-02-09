@@ -725,7 +725,6 @@ model AiGeneration {
 
   organizationId String
   workspaceId    String
-  userId         String
 
   // Use enums (cleaner than strings)
   type           AiType       // TEXT | IMAGE

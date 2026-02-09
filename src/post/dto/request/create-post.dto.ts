@@ -146,4 +146,13 @@ export class CreatePostDto {
   @Type(() => ThreadItemDto)
   @IsOptional()
   threads?: ThreadItemDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'ID of the AI generation that created this post (if applicable)',
+    example: 'gen_1234567890',
+  })
+  @IsOptional()
+  @IsString()
+  aiGenerationId?: string;
 }
