@@ -27,10 +27,10 @@ export class WorkspaceService {
     // 3. Prepare Feature-Gated Data
     const clientData = features['clientLabels']
       ? {
-          clientName: dto.clientName,
-          clientStatus: dto.clientStatus || 'Active',
-          clientColor: dto.clientColor || '#3b82f6',
-          clientContact: dto.clientContact,
+          agencyClientName: dto.clientName,
+          agencyClientStatus: dto.clientStatus || 'Active',
+          agencyClientColor: dto.clientColor || '#3b82f6',
+          agencyClientContact: dto.clientContact,
         }
       : {};
 
@@ -123,19 +123,29 @@ async findAll(orgId: string, userId: string) {
     });
   }
 
-  async update(workspaceId: string, dto: UpdateWorkspaceDto) {
-    // Optional: Add logic to check 'clientLabels' feature here too
-    // if you want to be strict about updates.
+async update(workspaceId: string, dto: UpdateWorkspaceDto) {
+  const workspace = await this.prisma.workspace.findUnique({
+    where: { id: workspaceId },
+  });
+  if (!workspace) throw new NotFoundException('Workspace not found');
 
-    return this.prisma.workspace.update({
-      where: { id: workspaceId },
-      data: {
-        ...dto,
-        // Slug updates are risky for SEO/Bookmarking.
-        // If you allow it, you must re-run generateUniqueSlug logic.
-      },
-    });
-  }
+  const data: any = {
+    ...(dto.name !== undefined && { name: dto.name }),
+
+
+    // map agency client fields correctly
+    ...(dto.clientName !== undefined && { agencyClientName: dto.clientName }),
+    ...(dto.clientStatus !== undefined && { agencyClientStatus: dto.clientStatus }),
+    ...(dto.clientContact !== undefined && { agencyClientContact: dto.clientContact }),
+    ...(dto.clientColor !== undefined && { agencyClientColor: dto.clientColor }),
+  };
+
+  return this.prisma.workspace.update({
+    where: { id: workspaceId },
+    data,
+  });
+}
+
 
   async delete(workspaceId: string) {
     return this.prisma.workspace.delete({
@@ -165,7 +175,7 @@ async addMember(workspaceId: string, dto: AddWorkspaceMemberDto) {
       return await this.prisma.workspaceMember.create({
         data: { workspaceId, userId: user.id, roleId: dto.roleId },
       });
-    } catch (e) {
+    } catch (e: any) {
       if (e.code === 'P2002') throw new ConflictException('User already in workspace');
       throw e;
     }
