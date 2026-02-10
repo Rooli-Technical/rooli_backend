@@ -129,10 +129,10 @@ model Workspace {
 
   // --- THE "CLIENT LABEL" FEATURES ---
   // These fields are only used if the Plan allows "clientLabels"
-  clientName    String?
-  clientStatus  String? // "Active", "Onboarding", "Churned"
-  clientContact String? // "Jane Doe (jane@coke.com)"
-  clientColor   String? // "#FF0000" (To color-code the dashboard card)
+  agencyClientName    String?
+  agencyClientStatus  String? // "Active", "Onboarding", "Churned"
+  agencyClientContact String? // "Jane Doe (jane@coke.com)"
+  agencyClientColor   String? // "#FF0000" (To color-code the dashboard card)
 
   members WorkspaceMember[]
 
@@ -490,6 +490,9 @@ model QueueSlot {
   id          String @id @default(cuid())
   workspaceId String
 
+  platform Platform
+  capacity Int
+
   // "Every Monday"
   dayOfWeek DayOfWeek // Enum: MONDAY, TUESDAY...
   time      String // "09:00" (24h format)
@@ -742,6 +745,7 @@ model AiGeneration {
   inputTokens    Int?
   outputTokens   Int?
   costUsd        Float?
+  creditCost       Int? 
 
   // Link to other domain objects
   brandKitId     String?
@@ -1430,5 +1434,6 @@ enum AiFeature {
   AUDIT    
   REPLY
   BULK
+  HOLIDAY_POST
 }
 

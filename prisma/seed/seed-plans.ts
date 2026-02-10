@@ -25,7 +25,7 @@ export async function seedPlans() {
       maxWorkspaces: 1,
       maxSocialProfilesPerWorkspace: 3,
       maxTeamMembers: 1,
-      monthlyAiCredits: 50,
+      monthlyAiCredits: 100,
 
       features: {
         canRemoveBranding: false,
@@ -57,12 +57,13 @@ export async function seedPlans() {
       maxWorkspaces: 1,
       maxSocialProfilesPerWorkspace: 3,
       maxTeamMembers: 1,
-      monthlyAiCredits: 50,
+      monthlyAiCredits:  100,
 
       features: {
         canRemoveBranding: false,
         advancedAnalytics: false,
         mediaLibrary: true,
+        aiAdvanced: true
       },
 
       isActive: true,
@@ -95,7 +96,9 @@ export async function seedPlans() {
         advancedAnalytics: true,
         approvalWorkflow: true,
         bulkScheduling: true,
-        mediaLibrary: true
+        mediaLibrary: true,
+        aiAdvanced: true,
+        visualCalendar: true
       },
 
       isActive: true,
@@ -126,6 +129,8 @@ export async function seedPlans() {
         approvalWorkflow: true,
         bulkScheduling: true,
         mediaLibrary: true,
+        aiAdvanced: true,
+        visualCalendar: true
       },
 
       isActive: true,
@@ -164,6 +169,9 @@ export async function seedPlans() {
         mediaLibrary: true,
         bulkScheduling: true,
         queueScheduling: true,
+        aiAdvanced: true,
+        aiBulkGenerate: true,
+        visualCalendar: true
       },
 
       isActive: true,
@@ -199,6 +207,9 @@ export async function seedPlans() {
        mediaLibrary: true,
         bulkScheduling: true,
         queueScheduling: true,
+        aiAdvanced: true,
+        aiBulkGenerate: true,
+        visualCalendar: true
       },
 
       isActive: true,
@@ -246,6 +257,9 @@ export async function seedPlans() {
         mediaLibrary: true,
         bulkScheduling: true,
         queueScheduling: true,
+        aiAdvanced: true,
+        aiBulkGenerate: true,
+        visualCalendar: true
       },
       
       // HIDDEN FROM PUBLIC UI
@@ -266,7 +280,11 @@ export async function seedPlans() {
         create: plan,
       });
     }
-  });
+  },
+{
+  maxWait: 10000, // Time to wait for a connection
+  timeout: 30000  // Time to execute the whole thing (30 seconds)
+});
 
   console.log('Plans seeded successfully');
 }
