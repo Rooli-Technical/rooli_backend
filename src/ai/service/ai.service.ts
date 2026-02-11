@@ -14,7 +14,7 @@ import { GenerateVariantsDto } from '../dto/generate-variant.dto';
 import { PromptBuilder } from './prompt.service';
 import { AiProviderFactory } from './ai.factory';
 import { AiQuotaService } from './quota.service';
-import { AI_TIER_LIMITS } from '../constants/ai.constant';
+import { AI_COSTS, AI_TIER_LIMITS } from '../constants/ai.constant';
 import { ScraperService } from './scraper.service';
 import { BulkGenerateDto } from '../dto/bulk-generate.dto';
 import { RepurposeContentDto } from '../dto/repurpose-content.dto';
@@ -74,6 +74,7 @@ export class AiService {
         type: AiType.TEXT,
         feature: AiFeature.CAPTION,
         provider,
+        creditCost: this.getFeatureCost(AiFeature.CAPTION, 1),
         model: result.model ?? model,
         prompt: system + '\n\nUSER:\n' + user,
         input: { platform, maxChars: dto.maxChars, tone: dto.tone, brandKitId },
@@ -109,6 +110,7 @@ export class AiService {
       const plan = ctx.tier;
       const limits = AI_TIER_LIMITS[plan];
       const model = limits.allowedModels[0];
+      const platformCount = dto.platforms.length;
 
       // GATES
       if (dto.platforms.length > limits.maxPlatforms) {
@@ -122,7 +124,7 @@ export class AiService {
         limits.maxVariants,
       );
 
-      await this.quota.assertCanUse(workspaceId, AiFeature.VARIANTS);
+      await this.quota.assertCanUse(workspaceId, AiFeature.VARIANTS, platformCount);
 
       const { brandKit, brandKitId } = await this.resolveBrandKit(
         workspaceId,
@@ -157,7 +159,6 @@ export class AiService {
             maxTokens: 1000,
             responseFormat: 'json',
           });
-          console.log(res.text);
 
           const parsed = this.safeJson(res.text);
           const variants = Array.isArray(parsed?.variants)
@@ -185,6 +186,7 @@ export class AiService {
         type: AiType.TEXT,
         feature: AiFeature.VARIANTS,
         provider,
+        creditCost: this.getFeatureCost(AiFeature.VARIANTS, platformCount),
         model: outputs[0]?.raw.model ?? model,
         prompt: null,
         input: {
@@ -295,6 +297,7 @@ export class AiService {
         type: AiType.TEXT,
         feature: AiFeature.REPURPOSE,
         provider,
+        creditCost: this.getFeatureCost(AiFeature.REPURPOSE, 1),
         model: result.model || limits.allowedModels[0],
         prompt: system,
         input: {
@@ -384,6 +387,7 @@ export class AiService {
         type: AiType.TEXT,
         feature: AiFeature.BULK,
         provider,
+        creditCost: this.getFeatureCost(AiFeature.BULK, dto.count),
         model: result.model || limits.allowedModels[0],
         prompt: system,
         input: { topic: dto.topic, requestedCount: dto.count },
@@ -447,6 +451,7 @@ export class AiService {
         type: AiType.IMAGE,
         feature: AiFeature.IMAGE,
         provider: AiProvider.HUGGINGFACE,
+        creditCost: this.getFeatureCost(AiFeature.IMAGE, 1),
         model: 'black-forest-labs/FLUX.1-schnell', // Your default image model
         prompt: enhancedPrompt,
         input: { originalPrompt: dto.prompt, style: dto.style },
@@ -580,6 +585,7 @@ export class AiService {
       type: AiType.TEXT,
       feature: AiFeature.HOLIDAY_POST,
       provider: providerKey,
+      creditCost: this.getFeatureCost(AiFeature.HOLIDAY_POST, 1),
       model: result.model ?? model,
       prompt: system + '\n\nUSER:\n' + user,
       input: { holidayName, platform: dto.platform, brandKitId },
@@ -688,6 +694,7 @@ export class AiService {
     type: AiType;
     feature: AiFeature;
     provider: AiProvider;
+    creditCost: number;
     model: string;
     prompt: string | null;
     input: any;
@@ -706,7 +713,6 @@ export class AiService {
     const totalTokens =
       args.usage?.totalTokens ?? (inputTokens ?? 0) + (outputTokens ?? 0);
     const costUsd = args.usage?.costUsd;
-
     return await this.prisma.aiGeneration.create({
       data: {
         organizationId: args.organizationId,
@@ -716,6 +722,7 @@ export class AiService {
         feature: args.feature as any,
 
         provider: args.provider as any,
+        creditCost: args.creditCost,
         model: args.model,
 
         prompt: args.prompt ?? undefined,
@@ -725,6 +732,7 @@ export class AiService {
         inputTokens,
         outputTokens,
         costUsd,
+        
 
         brandKitId: args.brandKitId ?? undefined,
         postId: args.postId ?? undefined,
@@ -773,11 +781,16 @@ export class AiService {
     }
   }
 
-  /**
-   * Helper to calculate the 1st of next month (billing reset date)
-   */
-  private getNextResetDate(): Date {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  private getFeatureCost(feature: AiFeature | string, count: number = 1): number {
+    const baseCost = AI_COSTS[feature] ?? 1; 
+
+    // For features like 'BULK', you might want to multiply cost by count
+    // For single actions, count defaults to 1.
+    if (feature === 'BULK' || feature === 'VARIANTS') {
+       // Example logic: Base cost + small fee per additional item
+       return baseCost + (count > 1 ? (count - 1) * 0.5 : 0);
+    }
+
+    return baseCost * count;
   }
 }

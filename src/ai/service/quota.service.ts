@@ -1,7 +1,8 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { startOfMonth } from 'date-fns';
-import { AI_TIER_LIMITS } from '../constants/ai.constant';
+import { addMonths, startOfMonth } from 'date-fns';
+import { AI_COSTS, AI_TIER_LIMITS } from '../constants/ai.constant';
+import { AiFeature } from '@generated/enums';
 
 
 @Injectable()
@@ -12,20 +13,20 @@ export class AiQuotaService {
    * 🛡️ THE GATEKEEPER
    * Checks if an organization has remaining credits for the current month.
    */
-  async assertCanUse(workspaceId: string, feature: string): Promise<boolean> {
+  async assertCanUse(workspaceId: string, feature: AiFeature, count: number = 1): Promise<boolean> {
     const { organizationId, tier } = await this.getWorkspaceContext(workspaceId);
+    const limit = AI_TIER_LIMITS[tier].monthlyCredits;
 
-    // 1. Get the hard limit from your constants
-    const monthlyLimit = AI_TIER_LIMITS[tier].monthlyLimit;
+
+    const cost = this.getFeatureCost(feature, count);
 
     // 2. Count usage across the WHOLE organization
-    const usedCount = await this.getMonthlyUsageCount(organizationId);
+    const usage = await await this.getCurrentMonthUsage(organizationId);
 
     // 3. Throw if over limit
-    if (usedCount >= monthlyLimit) {
+   if (usage + cost > limit) {
       throw new ForbiddenException(
-        `AI limit reached for your ${tier} plan (${usedCount}/${monthlyLimit}). ` +
-        `Please upgrade to the next tier for more credits.`
+        `Insufficient AI Credits. This action costs ${cost} credits, but you only have ${limit - usage} left.`
       );
     }
 
@@ -36,20 +37,22 @@ export class AiQuotaService {
    * 📊 USAGE DATA FOR UI
    * Returns a breakdown to show in the user's dashboard.
    */
-  async getQuotaStatus(workspaceId: string) {
-    const { organizationId, tier } = await this.getWorkspaceContext(workspaceId);
-    const used = await this.getMonthlyUsageCount(organizationId);
-    const limit = AI_TIER_LIMITS[tier].monthlyLimit;
+async getQuotaStatus(workspaceId: string) {
+  const { organizationId, tier } = await this.getWorkspaceContext(workspaceId);
+  
+  const used = await this.getCurrentMonthUsage(organizationId); 
+  
+  const limit = AI_TIER_LIMITS[tier].monthlyCredits; 
 
-    return {
-      used,
-      limit,
-      remaining: Math.max(0, limit - used),
-      percentage: Math.min(100, Math.round((used / limit) * 100)),
-      tier,
-      resetsAt: startOfMonth(new Date(new Date().setMonth(new Date().getMonth() + 1)))
-    };
-  }
+  return {
+    used,
+    limit,
+    remaining: Math.max(0, limit - used),
+    percentage: Math.min(100, Math.round((used / limit) * 100)),
+    tier,
+    resetsAt: startOfMonth(addMonths(new Date(), 1))
+  };
+}
 
   // --- PRIVATE HELPERS ---
 
@@ -80,5 +83,37 @@ export class AiQuotaService {
       'CREATOR' | 'BUSINESS' | 'ROCKET';
 
     return { organizationId: ws.organizationId, tier };
+  }
+
+  /**
+   * Calculate total credits used this month
+   */
+private async getCurrentMonthUsage(organizationId: string): Promise<number> {
+  const start = startOfMonth(new Date());
+
+  const result = await this.prisma.aiGeneration.aggregate({
+    where: {
+      organizationId, // 👈 Check the whole org, not just one workspace
+      createdAt: { gte: start },
+    },
+    _sum: {
+      creditCost: true, 
+    },
+  });
+
+  return result._sum.creditCost || 0;
+}
+
+  private getFeatureCost(feature: AiFeature | string, count: number = 1): number {
+    const baseCost = AI_COSTS[feature] ?? 1; 
+
+    // For features like 'BULK', you might want to multiply cost by count
+    // For single actions, count defaults to 1.
+    if (feature === 'BULK' || feature === 'VARIANTS') {
+       // Example logic: Base cost + small fee per additional item
+       return baseCost + (count > 1 ? (count - 1) * 0.5 : 0);
+    }
+
+    return baseCost * count;
   }
 }
