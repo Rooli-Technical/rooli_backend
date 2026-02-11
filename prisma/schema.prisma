@@ -490,11 +490,10 @@ model QueueSlot {
   id          String @id @default(cuid())
   workspaceId String
 
-  platform Platform
+  platform Platform?
   capacity Int
 
-  // "Every Monday"
-  dayOfWeek DayOfWeek // Enum: MONDAY, TUESDAY...
+  dayOfWeek Int
   time      String // "09:00" (24h format)
 
   isActive Boolean @default(true)
@@ -1132,15 +1131,6 @@ enum CampaignStatus {
   ARCHIVED
 }
 
-enum DayOfWeek {
-  MONDAY
-  TUESDAY
-  WEDNESDAY
-  THURSDAY
-  FRIDAY
-  SATURDAY
-  SUNDAY
-}
 
 enum TemplateCategory {
   SALES
