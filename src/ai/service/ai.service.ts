@@ -33,10 +33,7 @@ export class AiService {
     private readonly postMedia: PostMediaService,
   ) {}
 
-  async generateCaption(
-    workspaceId: string,
-    dto: GenerateCaptionDto,
-  ) {
+  async generateCaption(workspaceId: string, dto: GenerateCaptionDto) {
     try {
       const ctx = await this.getWorkspaceContext(workspaceId);
       const plan = ctx.tier;
@@ -71,7 +68,7 @@ export class AiService {
         responseFormat: 'text',
       });
 
-     const log = await this.logGeneration({
+      const log = await this.logGeneration({
         workspaceId,
         organizationId: ctx.organizationId,
         type: AiType.TEXT,
@@ -113,7 +110,7 @@ export class AiService {
       const limits = AI_TIER_LIMITS[plan];
       const model = limits.allowedModels[0];
 
-      // ⛔️ GATES
+      // GATES
       if (dto.platforms.length > limits.maxPlatforms) {
         throw new ForbiddenException(
           `Your ${plan} plan allows max ${limits.maxPlatforms} platforms at once.`,
@@ -134,7 +131,6 @@ export class AiService {
 
       const provider = this.pickProviderForWorkspace(workspaceId);
       const textProvider = this.providerFactory.getProvider(provider);
-
       const outputs = await Promise.all(
         dto.platforms.map(async (platform) => {
           const system = this.promptBuilder.buildSystemPrompt({
@@ -143,23 +139,25 @@ export class AiService {
             depth: limits.brandKitDepth,
           });
 
-          const user = this.promptBuilder.buildUserPrompt(
-            `
-${dto.prompt}
-
-Return JSON ONLY in this format:
-{"variants": ["v1", "v2", "v3"]}
-      `.trim(),
-          );
+          const user = `
+      Write ${variantsPerPlatform} engaging posts about: "${dto.prompt}"
+      Target Platform: ${platform}
+      
+      Return JSON ONLY:
+      {
+        "variants": ["First post text...", "Second post text..."]
+      }
+    `.trim();
 
           const res = await textProvider.generateText({
             system,
             user,
             model,
             temperature: 0.8,
-            maxTokens: 700,
+            maxTokens: 1000,
             responseFormat: 'json',
           });
+          console.log(res.text);
 
           const parsed = this.safeJson(res.text);
           const variants = Array.isArray(parsed?.variants)
@@ -409,12 +407,14 @@ Return JSON ONLY in this format:
   async generatePostImage(
     workspaceId: string,
     userId: string,
-    dto: { prompt: string; style?: string }
+    dto: { prompt: string; style?: string },
   ) {
     const ctx = await this.getWorkspaceContext(workspaceId);
-    
+
     if (ctx.tier === 'CREATOR') {
-      throw new ForbiddenException('AI Image generation is available on Business and Rocket plans.');
+      throw new ForbiddenException(
+        'AI Image generation is available on Business and Rocket plans.',
+      );
     }
 
     // 1. Quota Check
@@ -422,21 +422,22 @@ Return JSON ONLY in this format:
 
     // 2. Get Hugging Face Provider
     const provider = this.pickProviderForWorkspace(workspaceId);
-    const hfProvider = this.providerFactory.getProvider(provider) as HuggingFaceProvider;
+    const hfProvider = this.providerFactory.getProvider(
+      provider,
+    ) as HuggingFaceProvider;
 
     try {
       // 3. Generate the Image Buffer
       // We enhance the prompt slightly for social media quality
       const enhancedPrompt = `${dto.prompt}, ${dto.style || 'digital art, high resolution, social media style, trending on artstation'}`;
-      
+
       const imageBuffer = await hfProvider.generateImage(enhancedPrompt);
 
-    
       const mediaFile = await this.postMedia.uploadAiGeneratedBuffer(
         userId,
         workspaceId,
         imageBuffer,
-        dto.prompt
+        dto.prompt,
       );
 
       // 5. Log the AI Generation for Quota Tracking
@@ -458,9 +459,183 @@ Return JSON ONLY in this format:
       return mediaFile;
     } catch (error) {
       console.error('AI Image Flow Error:', error);
-      throw new ServiceUnavailableException('Failed to generate or save AI image.');
+      throw new ServiceUnavailableException(
+        'Failed to generate or save AI image.',
+      );
     }
   }
+  /**
+   * 1. HASHTAG GENERATOR
+   * Generates relevant hashtags based on a caption or topic
+   */
+  async generateHashtags(workspaceId: string, prompt: string) {
+    // Quota check (Light usage)
+    await this.quota.assertCanUse(workspaceId, AiFeature.CAPTION);
+
+    const provider = this.pickProviderForWorkspace(workspaceId);
+    const textProvider = this.providerFactory.getProvider(provider);
+
+    const system = `You are a social media SEO expert. Return a JSON object with a list of 30 relevant hashtags. Format: {"hashtags": ["#tag1", "#tag2"]}`;
+    const user = `Generate hashtags for this post content: "${prompt}"`;
+
+    const result = await textProvider.generateText({
+      system,
+      user,
+      model: 'mistralai/Mistral-7B-Instruct-v0.3', // Good for lists
+      responseFormat: 'json',
+    });
+
+    const parsed = this.safeJson(result.text);
+    return parsed?.hashtags || [];
+  }
+
+  /**
+   * 2. CONTENT OPTIMIZER (Tone/Grammar/Hook)
+   * "Make this funnier" or "Fix grammar"
+   */
+  async optimizeContent(
+    workspaceId: string,
+    content: string,
+    instruction: string,
+  ) {
+    await this.quota.assertCanUse(workspaceId, AiFeature.CAPTION);
+
+    const provider = this.pickProviderForWorkspace(workspaceId);
+    const textProvider = this.providerFactory.getProvider(provider);
+
+    const system = `You are a professional copyeditor. Rewrite the user's text based strictly on their instruction.`;
+    const user = `ORIGINAL TEXT: "${content}"\n\nINSTRUCTION: ${instruction} (e.g., make it punchy, fix grammar, make it viral)`;
+
+    const result = await textProvider.generateText({
+      system,
+      user,
+      model: 'mistralai/Mistral-7B-Instruct-v0.3',
+      temperature: 0.7,
+    });
+
+    return { rewritten: result.text };
+  }
+
+  async generateHolidayPost(
+    workspaceId: string,
+    dto: {
+      holidayName: string;
+      platform: 'TWITTER' | 'X' | 'LINKEDIN' | 'INSTAGRAM' | 'FACEBOOK';
+      brandKitId?: string;
+      maxChars?: number;
+    },
+  ) {
+    const ctx = await this.getWorkspaceContext(workspaceId);
+    const plan = ctx.tier;
+    const limits = AI_TIER_LIMITS[plan];
+
+    // 1) Quota (choose ONE feature name consistently)
+    await this.quota.assertCanUse(workspaceId, AiFeature.HOLIDAY_POST);
+
+    // 2) Brand kit
+    const { brandKit, brandKitId } = await this.resolveBrandKit(
+      workspaceId,
+      dto.brandKitId,
+    );
+
+    // 3) Sanitize holiday name (treat as data)
+    const holidayName = (dto.holidayName ?? '').trim().slice(0, 80);
+    if (!holidayName) throw new BadRequestException('holidayName is required');
+
+    // 4) Build prompts (layer holiday instructions ON TOP of normal system)
+    const baseSystem = this.promptBuilder.buildSystemPrompt({
+      brandKit,
+      platform: dto.platform,
+      maxChars: dto.maxChars,
+      depth: limits.brandKitDepth,
+    });
+
+    const holidaySystem =
+      this.promptBuilder.buildHolidayAddonPrompt(holidayName);
+
+    const system = `${baseSystem}\n\n---\n${holidaySystem}`;
+    const user = this.promptBuilder.buildUserPrompt(
+      `Write a ${dto.platform} post for ${holidayName}.`,
+    );
+
+    // 5) Provider
+    const providerKey = this.pickProviderForWorkspace(workspaceId); // e.g. HUGGINGFACE
+    const textProvider = this.providerFactory.getProvider(providerKey);
+
+    const model = limits.allowedModels[0];
+
+    const result = await textProvider.generateText({
+      system,
+      user,
+      model,
+      temperature: 0.8,
+      maxTokens: 600,
+      responseFormat: 'text',
+    });
+
+    // 6) Log
+    const log = await this.logGeneration({
+      workspaceId,
+      organizationId: ctx.organizationId,
+      type: AiType.TEXT,
+      feature: AiFeature.HOLIDAY_POST,
+      provider: providerKey,
+      model: result.model ?? model,
+      prompt: system + '\n\nUSER:\n' + user,
+      input: { holidayName, platform: dto.platform, brandKitId },
+      output: { text: result.text },
+      usage: result.usage,
+      brandKitId,
+      postId: null,
+    });
+
+    return {
+      text: result.text,
+      provider: result.provider ?? providerKey,
+      model: result.model ?? model,
+      usage: result.usage ?? null,
+      generationId: log.id,
+    };
+  }
+
+  /**
+   * 3. AI INSIGHTS (Best Time to Post)
+   * Analyzes past posts (if any) or gives general best practices
+   */
+  // async getPostingRecommendations(workspaceId: string, platform: string) {
+  //   // 1. Fetch last 20 posts with analytics from DB
+  //   const history = await this.prisma.post.findMany({
+  //     where: { workspaceId, platform: platform as any, status: 'PUBLISHED' },
+  //     select: { publishedAt: true, metrics: true },
+  //     take: 20,
+  //   });
+
+  //   // 2. If no history, return "Cold Start" general data
+  //   if (history.length < 5) {
+  //     return {
+  //       recommendation: "General Best Times",
+  //       times: ["09:00 AM", "12:00 PM", "06:00 PM"],
+  //       reason: "Not enough data yet. These are global peak times."
+  //     };
+  //   }
+
+  //   // 3. If history exists, ask AI to analyze patterns
+  //   const provider = this.pickProviderForWorkspace(workspaceId);
+  //   const textProvider = this.providerFactory.getProvider(provider);
+
+  //   // Simplistic serialization of history for the prompt
+  //   const dataSummary = history.map(h =>
+  //     `Time: ${h.publishedAt}, Likes: ${(h.metrics as any)?.likes || 0}`
+  //   ).join('\n');
+
+  //   const result = await textProvider.generateText({
+  //     system: "You are a data analyst.",
+  //     user: `Analyze this post performance data and recommend the best 3 times to post next. Data:\n${dataSummary}`,
+  //     model: 'mistralai/Mistral-7B-Instruct-v0.3',
+  //   });
+
+  //   return { analysis: result.text };
+  // }
   // -----------------------------
   // Internals
   // -----------------------------
@@ -487,9 +662,8 @@ Return JSON ONLY in this format:
   }
 
   private pickProviderForWorkspace(_workspaceId: string): AiProvider {
-     return AiProvider.HUGGINGFACE;
+    return AiProvider.HUGGINGFACE;
   }
-
 
   private mergeUsage(results: Array<TextGenResult | undefined | null>) {
     const input = results.reduce((s, r) => s + (r?.usage?.inputTokens ?? 0), 0);

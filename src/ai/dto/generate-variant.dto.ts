@@ -7,14 +7,20 @@ export class GenerateVariantsDto {
   @IsString()
   prompt: string;
 
-  @ApiProperty({ isArray: true, example: ['LINKEDIN','X'] })
+@ApiProperty({ 
+    description: 'Target platforms for the variants',
+    type: [String],
+    enum: Platform,   
+    enumName: 'Platform', 
+    example: ['LINKEDIN', 'FACEBOOK'] 
+  })
   @IsArray()
   platforms: Platform[];
 
   @ApiPropertyOptional({ example: 3 })
   @IsOptional()
   @IsInt()
-  @Min(2)
+  @Min(1)
   @Max(6)
   variantsPerPlatform?: number;
 
