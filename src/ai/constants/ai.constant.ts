@@ -42,15 +42,16 @@ export const AI_TIER_LIMITS = {
   },
 } as const;
 
-export const AI_COSTS = {
-  CAPTION: 1,
-  HASHTAGS: 1,
-  REWRITE: 1,
-  REPURPOSE: 3,
-  INSIGHTS: 5,
-  IMAGE: 10,
-  VIDEO: 50,
-} as const;
+export const AI_COSTS: Record<string, number> = {
+  CAPTION: 1,        // Standard text generation
+  VARIANTS: 2,       // Multiple platform versions (slightly higher)
+  REPURPOSE: 3,      // Scraping + heavy transformation
+  BULK: 15,          // Generating 10-30 posts at once
+  IMAGE: 10,         // GPU-intensive image generation
+  HASHTAGS: 1,       // Lightweight list generation
+  OPTIMIZE: 1,       // Quick rewrite/edit
+  HOLIDAY_POST: 1,   // Specific holiday generation
+};
 
 // Helper Types derived from the constant
 export type PlanTier = keyof typeof AI_TIER_LIMITS;
