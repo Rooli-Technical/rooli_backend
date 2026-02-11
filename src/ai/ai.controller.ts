@@ -158,6 +158,6 @@ export class AiController {
     description: 'Quota status retrieved successfully.',
   })
   async getQuota(@Param('organizationId') organizationId: string) {
-    return this.quotaService.getMonthlyUsageCount(organizationId);
+    return this.quotaService.getCurrentMonthUsage(organizationId);
   }
 }

@@ -47,6 +47,20 @@ export class PromptBuilder {
       .join('\n');
   }
 
+buildHolidayAddonPrompt(holidayName: string): string {
+  const safeHoliday = holidayName.replace(/\s+/g, ' ').trim();
+
+  return [
+    `CONTEXT: The post is for ${safeHoliday}.`,
+    'GOAL: Celebrate/acknowledge it in a way that matches the brand and sparks comments.',
+    'RULES:',
+    `- Avoid generic lines like "Happy ${safeHoliday} to everyone!"`,
+    '- Tie the holiday to the brand mission/value (concrete connection).',
+    '- Add a clear engagement CTA (a question works best).',
+    '- If hashtags are appropriate for the platform, include up to 3 relevant hashtags.',
+  ].join('\n');
+}
+
   buildUserPrompt(raw: string): string {
     return `TOPIC/INSTRUCTION: ${raw.trim()}`;
   }
@@ -55,7 +69,7 @@ export class PromptBuilder {
     const limit = maxChars ?? this.defaultCharLimit(platform);
     const base = `STRICT CONSTRAINT: Max ${limit} characters.`;
 
-    switch (platform?.toUpperCase()) {
+    switch (platform) {
       case 'X':
       case 'TWITTER':
         return `${base} Style: Punchy, short lines. Separate thread tweets with "\\n---\\n" if needed.`;
@@ -71,7 +85,7 @@ export class PromptBuilder {
   }
 
   private defaultCharLimit(platform?: string): number {
-    switch (platform?.toUpperCase()) {
+    switch (platform) {
       case 'X':
       case 'TWITTER': return 280;
       case 'LINKEDIN': return 3000; 

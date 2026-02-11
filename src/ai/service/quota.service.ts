@@ -56,12 +56,6 @@ async getQuotaStatus(workspaceId: string) {
 
   // --- PRIVATE HELPERS ---
 
- async getMonthlyUsageCount(organizationId: string): Promise<number> {
-    return this.prisma.aiGeneration.count({
-  where: { organizationId, createdAt: { gte: startOfMonth(new Date()) } },
-});
-  }
-
   private async getWorkspaceContext(workspaceId: string) {
     const ws = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
@@ -76,7 +70,6 @@ async getQuotaStatus(workspaceId: string) {
         }
       }
     });
-
     if (!ws) throw new NotFoundException('Workspace not found');
 
     const tier = (ws.organization?.subscription?.plan?.tier ?? 'CREATOR') as 
@@ -88,12 +81,12 @@ async getQuotaStatus(workspaceId: string) {
   /**
    * Calculate total credits used this month
    */
-private async getCurrentMonthUsage(organizationId: string): Promise<number> {
+ async getCurrentMonthUsage(organizationId: string): Promise<number> {
   const start = startOfMonth(new Date());
 
   const result = await this.prisma.aiGeneration.aggregate({
     where: {
-      organizationId, // 👈 Check the whole org, not just one workspace
+      organizationId,
       createdAt: { gte: start },
     },
     _sum: {

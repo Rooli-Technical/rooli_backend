@@ -480,7 +480,7 @@ export class AiService {
     const provider = this.pickProviderForWorkspace(workspaceId);
     const textProvider = this.providerFactory.getProvider(provider);
 
-    const system = `You are a social media SEO expert. Return a JSON object with a list of 30 relevant hashtags. Format: {"hashtags": ["#tag1", "#tag2"]}`;
+    const system = `You are a social media SEO expert. Return a JSON object with a list of 10 relevant hashtags. Format: {"hashtags": ["#tag1", "#tag2"]}`;
     const user = `Generate hashtags for this post content: "${prompt}"`;
 
     const result = await textProvider.generateText({
