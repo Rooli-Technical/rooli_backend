@@ -53,6 +53,7 @@ import { AiModule } from './ai/ai.module';
 import { RooliBullBoardModule } from './common/bull-boad/bull-board.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BrandkitModule } from './brandkit/brandkit.module';
+import { CalendarModule } from './calendar/calendar.module';
 
 @Module({
   imports: [
@@ -171,6 +172,8 @@ import { BrandkitModule } from './brandkit/brandkit.module';
     AnalyticsModule,
 
     BrandkitModule,
+
+    CalendarModule,
   ],
   controllers: [AppController],
   providers: [

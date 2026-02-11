@@ -13,6 +13,9 @@ export interface PlanFeatures {
   bulkScheduling?: boolean;
   queueScheduling?: boolean;
   aiContentGeneration?: boolean;
+  aiAdvanced?: boolean,
+  aiBulkGenerate?: boolean;
+  visualCalendar?: true
 
   // --- Enterprise Extras ---
   dedicatedAccountManager?: boolean;

@@ -2,6 +2,7 @@ import { CampaignStatus } from '@generated/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsHexColor, IsDateString, IsEnum, IsNotEmpty, MaxLength } from 'class-validator';
 
+
 export class CreateCampaignDto {
   @ApiProperty({ example: 'Black Friday 2025', description: 'The internal name of the campaign' })
   @IsString()
