@@ -48,7 +48,6 @@ import { QueueModule } from './queue/queue.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SocialModule } from './social/social.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
-import { LabelsModule } from './labels/labels.module';
 import { AiModule } from './ai/ai.module';
 import { RooliBullBoardModule } from './common/bull-boad/bull-board.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -164,8 +163,6 @@ import { CalendarModule } from './calendar/calendar.module';
     SocialModule,
 
     CampaignsModule,
-
-    LabelsModule,
 
     AiModule,
 

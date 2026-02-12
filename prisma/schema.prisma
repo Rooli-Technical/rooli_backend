@@ -138,7 +138,6 @@ model Workspace {
 
   queueSlots QueueSlot[]
   campaigns  Campaign[]
-  labels     Label[]
 
 aigeneration   AiGeneration[]
  brandKit BrandKit?
@@ -307,19 +306,6 @@ model Campaign {
   @@index([workspaceId, status])
 }
 
-model Label {
-  id          String @id @default(cuid())
-  workspaceId String
-  name        String
-  color       String @default("#000000")
-
-  posts Post[] // Many-to-Many (Implicit is fine here)
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([workspaceId, name])
-}
-
 // ==========================================
 // 2. THE POSTING ENGINE
 // ==========================================
@@ -361,7 +347,6 @@ model Post {
   destinations PostDestination[]
   campaignId   String?
   campaign     Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  labels       Label[]
   approvals    PostApproval[]
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

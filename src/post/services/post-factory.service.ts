@@ -24,9 +24,6 @@ export class PostFactory {
         isAutoSchedule: dto.isAutoSchedule ?? false,
         timezone: dto.timezone,
         campaignId: dto.campaignId,
-        labels: dto.labelIds?.length
-          ? { connect: dto.labelIds.map((id) => ({ id })) }
-          : undefined,
       },
     });
 

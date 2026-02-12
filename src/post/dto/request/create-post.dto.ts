@@ -90,16 +90,6 @@ export class CreatePostDto {
   campaignId?: string;
 
   @ApiPropertyOptional({
-    description: 'Label IDs used for categorizing the post',
-    example: ['lbl_marketing', 'lbl_launch'],
-    type: [String],
-  })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  labelIds?: string[];
-
-  @ApiPropertyOptional({
     description: 'Whether the post requires approval before publishing',
     example: false,
   })
