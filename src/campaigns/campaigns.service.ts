@@ -8,9 +8,7 @@ import { PublishStatus } from '@generated/enums';
 export class CampaignService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // CREATE
   async create(workspaceId: string, dto: CreateCampaignDto) {
-    // Basic check is fine for create since both are usually required or null
     if (dto.startDate && dto.endDate) {
        if (new Date(dto.endDate) < new Date(dto.startDate)) {
          throw new BadRequestException('End date cannot be before start date');
@@ -36,11 +34,9 @@ export class CampaignService {
     });
   }
 
-  // 2. UPDATE (Fixed Logic)
 async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
-    const campaign = await this.get(workspaceId, campaignId); // Fetch existing
+    const campaign = await this.get(workspaceId, campaignId);
 
-    // ✅ FIX: Compare New vs Old values to ensure integrity
     const newStart = dto.startDate ? new Date(dto.startDate) : campaign.startDate;
     const newEnd = dto.endDate !== undefined 
       ? (dto.endDate ? new Date(dto.endDate) : null) 
@@ -50,7 +46,6 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
       throw new BadRequestException('End date cannot be before start date');
     }
 
-    // Uniqueness Check (Only if name changed)
     if (dto.name && dto.name !== campaign.name) {
       const existing = await this.prisma.campaign.findFirst({
         where: { workspaceId, name: dto.name, NOT: { id: campaignId } },
@@ -63,7 +58,7 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
       where: { id: campaignId },
       data: {
         name: dto.name?.trim(),
-        description: dto.description, // allows null
+        description: dto.description,
         color: dto.color,
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         endDate: dto.endDate ? new Date(dto.endDate) : (dto.endDate === null ? null : undefined),
@@ -73,7 +68,6 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
   }
 
  async getCampaignAnalytics(workspaceId: string, campaignId: string) {
-    // 1. Validate Campaign Existence
     await this.get(workspaceId, campaignId);
 
     // 2. Fetch Hierarchy
@@ -82,16 +76,14 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
       where: { 
         workspaceId, 
         campaignId,
-        // We only care about posts that actually went out
         destinations: { some: { status: PublishStatus.SUCCESS } } 
       },
       include: {
         destinations: {
           where: { status: PublishStatus.SUCCESS },
           include: {
-            // Get the MOST RECENT snapshot for this destination
             postAnalyticsSnapshots: {
-              orderBy: { fetchedAt: 'desc' }, // or createdAt
+              orderBy: { fetchedAt: 'desc' },
               take: 1,
             },
           },
@@ -104,7 +96,7 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
       totalPosts: posts.length,
       totalImpressions: 0,
       totalReach: 0,
-      totalEngagements: 0, // Likes + Comments + Shares + Clicks
+      totalEngagements: 0,
       totalLikes: 0,
       totalComments: 0,
       totalShares: 0,
@@ -118,7 +110,6 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
         const snapshot = dest.postAnalyticsSnapshots[0];
         
         if (snapshot) {
-          // Assuming your Snapshot model has these standard integer fields:
           stats.totalImpressions += snapshot.impressions || 0;
           stats.totalReach += snapshot.reach || 0;
           stats.totalLikes += snapshot.likes || 0;
@@ -126,7 +117,6 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
           stats.totalShares += snapshot.shares || 0;
           stats.totalClicks += snapshot.clicks || 0;
           
-          // Calculate total engagement just in case the snapshot doesn't store it pre-calculated
           stats.totalEngagements += (snapshot.likes || 0) + (snapshot.comments || 0) + (snapshot.shares || 0) + (snapshot.clicks || 0);
         }
       }
@@ -148,7 +138,7 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
       where: { workspaceId, ...(status ? { status: status as any } : {}) } as any,
       orderBy: { createdAt: 'desc' },
       include: {
-          _count: { select: { posts: true } } // Helpful for UI
+          _count: { select: { posts: true } } 
       }
     });
   }

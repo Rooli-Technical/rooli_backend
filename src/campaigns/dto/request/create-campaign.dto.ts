@@ -21,18 +21,14 @@ export class CreateCampaignDto {
   @IsHexColor()
   color?: string;
 
-  @ApiProperty({ example: '2025-11-01T00:00:00Z', description: 'ISO 8601 Start Date' })
+  @ApiProperty({ example: '2025-11-01T00:00:00', description: 'ISO 8601 Start Date' })
   @IsDateString()
   @IsNotEmpty()
   startDate: string;
 
-  @ApiPropertyOptional({ example: '2025-11-30T23:59:59Z', description: 'ISO 8601 End Date' })
+  @ApiPropertyOptional({ example: '2025-11-30T23:59:59', description: 'ISO 8601 End Date' })
   @IsOptional()
   @IsDateString()
   endDate?: string;
 
-  @ApiPropertyOptional({ enum: CampaignStatus, default: 'ACTIVE' })
-  @IsOptional()
-  @IsEnum(CampaignStatus)
-  status?: CampaignStatus;
 }
