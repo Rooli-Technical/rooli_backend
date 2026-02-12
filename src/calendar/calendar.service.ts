@@ -118,7 +118,8 @@ export class CalendarService {
     platform?: string,
   ): Promise<CalendarEventDto[]> {
     const nowInZone = DateTime.now().setZone(zone);
-    const fallbackDate = (nowInZone >= start && nowInZone < end) ? nowInZone : start;
+    const fallbackDate =
+      nowInZone >= start && nowInZone < end ? nowInZone : start;
 
     // 2. Build the query
     const where: any = {
@@ -139,17 +140,23 @@ export class CalendarService {
         status: true,
         scheduledAt: true,
         timezone: true,
-        platform: true,
         campaignId: true,
+        destinations: {
+          select: {
+            profile: {
+              select: { platform: true },
+            },
+          },
+        },
       } as any,
       orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'asc' }],
     });
 
-   // 3. Map to Calendar Events
+    // 3. Map to Calendar Events
     return posts.map((p: any) => {
       // Convert DB Date to UTC ISO for the frontend
-      const scheduledIso = p.scheduledAt 
-        ? DateTime.fromJSDate(p.scheduledAt).toUTC().toISO() 
+      const scheduledIso = p.scheduledAt
+        ? DateTime.fromJSDate(p.scheduledAt).toUTC().toISO()
         : null;
 
       // If it's a draft, use the fallback date (Today or Start of Month)
