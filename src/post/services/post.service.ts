@@ -242,29 +242,11 @@ export class PostService {
     let slotIndex = 0;
 
     for (const postDto of dto.posts) {
-      let finalScheduledAt: Date | null = null;
-
-      if (postDto.isAutoSchedule) {
-        finalScheduledAt = availableSlots[slotIndex++];
-      } else if (postDto.scheduledAt) {
-        finalScheduledAt =
-          postDto.timezone && !postDto.scheduledAt.endsWith('Z')
-            ? fromZonedTime(postDto.scheduledAt, postDto.timezone)
-            : new Date(postDto.scheduledAt);
-
-        if (finalScheduledAt.getTime() < Date.now() - 5 * 60 * 1000) {
-          throw new BadRequestException(
-            `Post scheduled time is in the past: ${postDto.scheduledAt}`,
-          );
-        }
-      }
-
-      // Status logic must match single createPost:
-      const status = postDto.needsApproval
-        ? 'PENDING_APPROVAL'
-        : finalScheduledAt
-          ? 'SCHEDULED'
-          : 'DRAFT';
+     const { finalScheduledAt, status } = await this.resolvePostSchedule(
+    workspaceId, 
+    postDto, 
+    postDto.isAutoSchedule ? availableSlots[slotIndex++] : undefined
+  );
 
       const payloads = await this.destinationBuilder.preparePayloads(
         workspaceId,
@@ -327,8 +309,8 @@ export class PostService {
               workspaceId,
               previousPostId,
               threadItem,
-              status, // ✅ use same status as master
-              post.scheduledAt, // ✅ same scheduled time as master (or null)
+              status,
+              post.scheduledAt,
               post.timezone,
               currentDto.campaignId,
             );
@@ -376,99 +358,83 @@ export class PostService {
     return masterPosts;
   }
 
-async updatePost(workspaceId: string, postId: string, dto: UpdatePostDto) {
-  const existing = await this.prisma.post.findFirst({
-    where: { id: postId, workspaceId },
-    select: { id: true, status: true, scheduledAt: true, parentPostId: true },
-  });
-
-  if (!existing) throw new NotFoundException('Post not found');
-  if (['PUBLISHING', 'PUBLISHED'].includes(existing.status)) {
-    throw new BadRequestException('Cannot edit a post in progress.');
-  }
-
-  // Determine the new schedule
-  let finalScheduledAt = dto.scheduledAt
-    ? new Date(dto.scheduledAt)
-    : existing.scheduledAt;
-
-  if (dto.isAutoSchedule) {
-    const slots = await this.queueService.getNextAvailableSlots(workspaceId, 1);
-    if (!slots.length) throw new BadRequestException('No available queue slots.');
-    finalScheduledAt = slots[0];
-  }
-
-  // Prevent bypass: if pending approval, never move to SCHEDULED here
-  const isPendingApproval = existing.status === 'PENDING_APPROVAL';
-
-  const updated = await this.prisma.$transaction(async (tx) => {
-    const post = await tx.post.update({
-      where: { id: postId },
-      data: {
-        content: dto.content ?? undefined,
-        scheduledAt: finalScheduledAt,
-
-        // status logic
-        status: isPendingApproval
-          ? 'PENDING_APPROVAL'
-          : (dto.scheduledAt || dto.isAutoSchedule)
-            ? 'SCHEDULED'
-            : undefined,
-      } as any,
+  async updatePost(workspaceId: string, postId: string, dto: UpdatePostDto) {
+    const existing = await this.prisma.post.findFirst({
+      where: { id: postId, workspaceId },
+      select: { id: true, status: true, scheduledAt: true, parentPostId: true },
     });
 
-    // Media updates...
-    if (dto.mediaIds) {
-      await tx.postMedia.deleteMany({ where: { postId } as any });
-      await tx.postMedia.createMany({
-        data: dto.mediaIds.map((mid, idx) => ({
-          postId,
-          mediaFileId: mid,
-          order: idx,
-        })),
-      });
+    if (!existing) throw new NotFoundException('Post not found');
+    if (['PUBLISHING', 'PUBLISHED'].includes(existing.status)) {
+      throw new BadRequestException('Cannot edit a post in progress.');
     }
 
-    // Sync children schedule
-    if (finalScheduledAt && existing.parentPostId === null) {
-      await tx.post.updateMany({
-        where: { parentPostId: postId } as any,
-        data: { scheduledAt: finalScheduledAt } as any,
-      });
-    }
-
-    return post;
+const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId, {
+    ...dto,
+    needsApproval: existing.status === 'PENDING_APPROVAL'
   });
+  
 
-  // ✅ Queue sync only if not pending approval
-  if (updated.status === 'SCHEDULED' && updated.scheduledAt) {
-    await this.schedulePostJob(updated.id, updated.scheduledAt);
-  } else {
-    await this.removePostJob(updated.id);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const post = await tx.post.update({
+        where: { id: postId },
+        data: {
+          content: dto.content ?? undefined,
+          scheduledAt: finalScheduledAt,
+          status,
+        } as any,
+      });
+
+      // Media updates...
+      if (dto.mediaIds) {
+        await tx.postMedia.deleteMany({ where: { postId } as any });
+        await tx.postMedia.createMany({
+          data: dto.mediaIds.map((mid, idx) => ({
+            postId,
+            mediaFileId: mid,
+            order: idx,
+          })),
+        });
+      }
+
+      // Sync children schedule
+      if (finalScheduledAt && existing.parentPostId === null) {
+        await tx.post.updateMany({
+          where: { parentPostId: postId } as any,
+          data: { scheduledAt: finalScheduledAt } as any,
+        });
+      }
+
+      return post;
+    });
+
+    // Queue sync only if not pending approval
+    if (updated.status === 'SCHEDULED' && updated.scheduledAt) {
+      await this.schedulePostJob(updated.id, updated.scheduledAt);
+    } else {
+      await this.removePostJob(updated.id);
+    }
+
+    return updated;
   }
 
-  return updated;
-}
+  async deletePost(workspaceId: string, postId: string) {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, workspaceId },
+      select: { id: true, parentPostId: true },
+    });
+    if (!post) throw new NotFoundException('Post not found');
 
+    const rootId = post.parentPostId ? post.parentPostId : post.id;
 
-async deletePost(workspaceId: string, postId: string) {
-  const post = await this.prisma.post.findFirst({
-    where: { id: postId, workspaceId },
-    select: { id: true, parentPostId: true },
-  });
-  if (!post) throw new NotFoundException('Post not found');
+    await this.removePostJob(rootId);
 
-  const rootId = post.parentPostId ? post.parentPostId : post.id;
+    const deleteIds = await this.collectDescendantPostIds(workspaceId, rootId);
 
-  await this.removePostJob(rootId);
-
-  const deleteIds = await this.collectDescendantPostIds(workspaceId, rootId);
-
-  return this.prisma.post.deleteMany({
-    where: { workspaceId, id: { in: deleteIds } } as any,
-  });
-}
-
+    return this.prisma.post.deleteMany({
+      where: { workspaceId, id: { in: deleteIds } } as any,
+    });
+  }
 
   async getOne(workspaceId: string, postId: string) {
     const post = await this.prisma.post.findFirst({
@@ -777,29 +743,69 @@ async deletePost(workspaceId: string, postId: string) {
   }
 
   private async collectDescendantPostIds(
-  workspaceId: string,
-  rootId: string,
-): Promise<string[]> {
-  const ids: string[] = [];
-  let frontier: string[] = [rootId];
+    workspaceId: string,
+    rootId: string,
+  ): Promise<string[]> {
+    const ids: string[] = [];
+    let frontier: string[] = [rootId];
 
-  while (frontier.length) {
-    // grab children of everything in the current frontier
-    const children = await this.prisma.post.findMany({
-      where: {
-        workspaceId,
-        parentPostId: { in: frontier },
-      } as any,
-      select: { id: true },
-    });
+    while (frontier.length) {
+      // grab children of everything in the current frontier
+      const children = await this.prisma.post.findMany({
+        where: {
+          workspaceId,
+          parentPostId: { in: frontier },
+        } as any,
+        select: { id: true },
+      });
 
-    const childIds = children.map((c) => c.id);
-    ids.push(...childIds);
+      const childIds = children.map((c) => c.id);
+      ids.push(...childIds);
 
-    frontier = childIds;
+      frontier = childIds;
+    }
+
+    return [rootId, ...ids];
   }
 
-  return [rootId, ...ids];
-}
+  private async resolvePostSchedule(
+  workspaceId: string,
+  dto: { isAutoSchedule?: boolean; scheduledAt?: string | Date | null; timezone?: string | null; needsApproval?: boolean },
+  providedAutoSlot?: Date // Used by bulk to pass in pre-fetched slots
+) {
+  let finalScheduledAt: Date | null = null;
 
+  // 1. Determine the Date
+  if (dto.isAutoSchedule) {
+    if (providedAutoSlot) {
+      finalScheduledAt = providedAutoSlot;
+    } else {
+      const slots = await this.queueService.getNextAvailableSlots(workspaceId, 1);
+      if (!slots?.length) throw new BadRequestException('No available queue slots.');
+      finalScheduledAt = slots[0];
+    }
+  } else if (dto.scheduledAt) {
+    finalScheduledAt = typeof dto.scheduledAt === 'string'
+      ? (dto.timezone && !dto.scheduledAt.endsWith('Z') 
+          ? fromZonedTime(dto.scheduledAt, dto.timezone) 
+          : new Date(dto.scheduledAt))
+      : dto.scheduledAt;
+
+    if (isNaN(finalScheduledAt.getTime())) {
+      throw new BadRequestException('Invalid scheduledAt datetime.');
+    }
+
+    // Centralized Past Date Check
+    if (isBefore(finalScheduledAt, subMinutes(new Date(), 5))) {
+      throw new BadRequestException('Scheduled time is in the past.');
+    }
+  }
+
+  // 2. Determine the Status
+  const status: PostStatus = dto.needsApproval
+    ? 'PENDING_APPROVAL'
+    : finalScheduledAt ? 'SCHEDULED' : 'DRAFT';
+
+  return { finalScheduledAt, status };
+}
 }
