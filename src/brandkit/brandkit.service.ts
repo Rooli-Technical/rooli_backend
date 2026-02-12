@@ -38,8 +38,7 @@ export class BrandKitService {
       create: {
         workspaceId,
         name: dto.name ?? 'Our Brand',
-        handle: dto.handle,
-        logoUrl: dto.logoUrl,
+        logoId: dto.logoId,
         colors,
         brandVoice: dto.brandVoice,
         tone: dto.tone,
@@ -48,14 +47,16 @@ export class BrandKitService {
       },
       update: {
         name: dto.name,
-        handle: dto.handle,
-        logoUrl: dto.logoUrl,
+        logoId: dto.logoId,
         colors,
         brandVoice: dto.brandVoice,
         tone: dto.tone,
         guidelines,
         isActive: dto.isActive,
       },
+      include: {
+      logo: true 
+    }
     });
   }
 

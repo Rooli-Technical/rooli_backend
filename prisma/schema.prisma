@@ -472,6 +472,8 @@ model MediaFile {
 
   postUsage PostMedia[] // Relation to posts
 
+  brandKit    BrandKit? @relation("BrandKitLogo")
+
   folder    MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -702,7 +704,9 @@ model BrandKit {
   handle      String?
 
   // Visual identity - flexible JSON structure
-  logoUrl String?
+  // Changed: logoUrl becomes logoId
+  logoId      String? @unique // Unique if one media file is only one logo
+  logo        MediaFile? @relation("BrandKitLogo", fields: [logoId], references: [id], onDelete: SetNull)
   colors  Json? // { primary: "#1E40AF", secondary: "#F59E0B", ... }
 
   // Brand voice

@@ -8,7 +8,7 @@ import { PublishStatus } from '@generated/enums';
 export class CampaignService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // 1. CREATE
+  // CREATE
   async create(workspaceId: string, dto: CreateCampaignDto) {
     // Basic check is fine for create since both are usually required or null
     if (dto.startDate && dto.endDate) {

@@ -71,16 +71,10 @@ export class CreateBrandKitDto {
   @MaxLength(80)
   name?: string;
 
-  @ApiPropertyOptional({ example: '@ourbrand' })
+  @ApiPropertyOptional({ example: 'cm1abc123...' })
   @IsOptional()
   @IsString()
-  @MaxLength(80)
-  handle?: string;
-
-  @ApiPropertyOptional({ example: 'https://cdn.example.com/logo.png' })
-  @IsOptional()
-  @IsUrl()
-  logoUrl?: string;
+  logoId?: string;
 
   @ApiPropertyOptional({ type: ColorsDto })
   @IsOptional()
