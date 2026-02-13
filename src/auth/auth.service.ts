@@ -66,9 +66,7 @@ export class AuthService {
         timezone,
         userType: 'INDIVIDUAL',
         isEmailVerified: false,
-        systemRoleId: (await this.fetchSystemRole('USER')).id,
-      },
-      include: { systemRole: true },
+      }
     });
 
     // 4. Generate Verification JWT
@@ -148,7 +146,12 @@ export class AuthService {
             create: { userId: user.id, roleId: ownerRole.id },
           },
         },
+        include: {
+          members: true,
+        }
       });
+
+      const orgMember = org.members[0];
 
       // 2. Create Default Workspace
       const workspace = await tx.workspace.create({
@@ -157,9 +160,12 @@ export class AuthService {
           slug: slugify(workspaceName, { lower: true }),
           timezone: org.timezone,
           organizationId: org.id,
-          members: {
-            create: { userId: user.id, roleId: adminRole.id },
-          },
+         members: {
+        create: { 
+          memberId: orgMember.id,
+          roleId: adminRole.id 
+        },
+      },
         },
       });
 
@@ -187,7 +193,6 @@ export class AuthService {
           lastActiveWorkspaceId: workspace.id,
           isOnboardingComplete: true,
         },
-        include: { systemRole: true },
       });
 
       return { org, workspace, user: updatedUser };
@@ -237,7 +242,6 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({
       where: { email, deletedAt: null },
       include: {
-        systemRole: true,
         workspaceMemberships: {
           take: 1,
           orderBy: { createdAt: 'desc' },
@@ -299,7 +303,6 @@ export class AuthService {
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub, deletedAt: null },
         include: {
-          systemRole: true,
           workspaceMemberships: {
             take: 1,
             orderBy: { createdAt: 'desc' },
@@ -354,7 +357,7 @@ export class AuthService {
         requiresEmailVerification: !user.isEmailVerified,
         lastActiveWorkspaceId: context.workspaceId,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Refresh failed: ${error.message}`);
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -370,7 +373,6 @@ export class AuthService {
     let user = await this.prisma.user.findUnique({
       where: { email: lowerEmail },
       include: {
-        systemRole: true,
         workspaceMemberships: {
           take: 1,
           orderBy: { createdAt: 'desc' },
@@ -427,7 +429,6 @@ export class AuthService {
         userType: 'INDIVIDUAL',
         //systemRoleId: (await this.fetchSystemRole('user')).id,
       },
-      include: { systemRole: true },
     });
 
     const tokens = await this.generateTokens(
@@ -458,43 +459,60 @@ export class AuthService {
    * 2. Fallback to Most Recent Workspace
    * 3. Fallback to Organization (if Billing Admin)
    */
-  private async resolveLoginContext(user: any) {
-    let activeWorkspaceId = user.lastActiveWorkspaceId;
-    let activeOrgId: string | null = null;
+private async resolveLoginContext(user: any) {
+  let activeWorkspaceId = user.lastActiveWorkspaceId;
+  let activeOrgId: string | null = null;
 
-    // A. Verify Sticky Session
-    if (activeWorkspaceId) {
-      const stickyMember = await this.prisma.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: {
-            workspaceId: activeWorkspaceId,
-            userId: user.id,
-          },
-        },
-        select: { workspace: { select: { organizationId: true } } },
-      });
+  // A. Verify Sticky Session (Refactored for Member-based logic)
+  if (activeWorkspaceId) {
+    // We look for a WorkspaceMember that belongs to an OrganizationMember owned by this User
+    const stickyMember = await this.prisma.workspaceMember.findFirst({
+      where: {
+        workspaceId: activeWorkspaceId,
+        member: {
+          userId: user.id // Path: WorkspaceMember -> OrganizationMember -> User
+        }
+      },
+      select: { 
+        workspace: { select: { organizationId: true } } 
+      },
+    });
 
-      if (stickyMember) {
-        activeOrgId = stickyMember.workspace.organizationId;
-      } else {
-        activeWorkspaceId = null; // Stale
-      }
+    if (stickyMember) {
+      activeOrgId = stickyMember.workspace.organizationId;
+    } else {
+      activeWorkspaceId = null; // Stale or no longer has access
     }
-
-    // B. Fallback: Any Workspace
-    if (!activeWorkspaceId && user.workspaceMemberships?.length > 0) {
-      const fallback = user.workspaceMemberships[0];
-      activeWorkspaceId = fallback.workspaceId;
-      activeOrgId = fallback.workspace.organizationId;
-    }
-
-    // C. Fallback: Any Org (Billing Admin)
-    if (!activeOrgId && user.organizationMemberships?.length > 0) {
-      activeOrgId = user.organizationMemberships[0].organizationId;
-    }
-
-    return { orgId: activeOrgId, workspaceId: activeWorkspaceId };
   }
+
+  // B. Fallback: Any Workspace (Finding first available via Org Memberships)
+  if (!activeWorkspaceId) {
+    const firstWorkspace = await this.prisma.workspaceMember.findFirst({
+      where: {
+        member: { userId: user.id }
+      },
+      include: {
+        workspace: { select: { organizationId: true } }
+      }
+    });
+
+    if (firstWorkspace) {
+      activeWorkspaceId = firstWorkspace.workspaceId;
+      activeOrgId = firstWorkspace.workspace.organizationId;
+    }
+  }
+
+  // C. Fallback: Any Org (If they have an Org but aren't in any Workspace yet)
+  if (!activeOrgId) {
+    const firstOrg = await this.prisma.organizationMember.findFirst({
+      where: { userId: user.id },
+      select: { organizationId: true }
+    });
+    activeOrgId = firstOrg?.organizationId ?? null;
+  }
+
+  return { orgId: activeOrgId, workspaceId: activeWorkspaceId };
+}
 
   private async generateTokens(
     userId: string,
@@ -570,7 +588,7 @@ export class AuthService {
         data: { isEmailVerified: true },
       });
 
-    } catch (error) {
+    } catch (error: any) {
       if (
         error?.name === 'JsonWebTokenError' ||
         error?.name === 'TokenExpiredError'
@@ -632,7 +650,7 @@ export class AuthService {
         },
       });
 
-    } catch (error) {
+    } catch (error: any) {
       if (
         error?.name === 'JsonWebTokenError' ||
         error?.name === 'TokenExpiredError'

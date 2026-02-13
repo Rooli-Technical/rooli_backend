@@ -17,8 +17,7 @@ model User {
   userType             UserType @default(INDIVIDUAL)
   timezone             String?  @default("Africa/Lagos")
   isOnboardingComplete Boolean  @default(false)
-  systemRoleId         String?
-  systemRole           Role?    @relation("UserSystemRole", fields: [systemRoleId], references: [id])
+
 
   lastVerificationEmailSentAt DateTime?
 
@@ -43,7 +42,6 @@ model User {
 
   mediaFiles              MediaFile[]
   organizationMemberships OrganizationMember[] @relation("UserOrganizationMemberships")
-  workspaceMemberships    WorkspaceMember[]
 
   sentInvitations Invitation[] @relation("UserSentInvitations")
 
@@ -81,8 +79,10 @@ model Organization {
   status           OrganizationStatus @default(PENDING_PAYMENT)
   totalCreditsUsed Int                @default(0)
 
-  members     OrganizationMember[]
-  invitations Invitation[]
+ members   OrganizationMember[]
+  roles     Role[]
+  invites   Invitation[]
+  auditLogs AuditLog[]
 
   workspaces        Workspace[]
   socialConnections SocialConnection[]
@@ -92,11 +92,8 @@ model Organization {
   webhookLogs     WebhookLog[]
   PostingSchedule PostingSchedule[]
   ContentTemplate ContentTemplate[]
-  auditLogs       AuditLog[]
 
  aigeneration   AiGeneration[]
-
-  roles Role[]
 
   subscriptionGateway SubscriptionGateway @default(PAYSTACK)
 
@@ -117,7 +114,6 @@ model Workspace {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  invitations    Invitation[]
   socialProfiles SocialProfile[]
 
   // Posts belong to a Workspace
@@ -134,7 +130,6 @@ model Workspace {
   agencyClientContact String? // "Jane Doe (jane@coke.com)"
   agencyClientColor   String? // "#FF0000" (To color-code the dashboard card)
 
-  members WorkspaceMember[]
 
   queueSlots QueueSlot[]
   campaigns  Campaign[]
@@ -142,77 +137,90 @@ model Workspace {
 aigeneration   AiGeneration[]
  brandKit BrandKit?
 
+members        WorkspaceMember[]
+invitations     Invitation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, slug]) // Slugs must be unique within an organization
 }
-
-model WorkspaceMember {
-  id          String @id @default(cuid())
-  workspaceId String
-  userId      String
-  roleId      String
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
-  role      Role      @relation(fields: [roleId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([workspaceId, userId])
-}
-
 model OrganizationMember {
   id             String   @id @default(cuid())
   organizationId String
   userId         String
   roleId         String
-  invitedBy      String?
-  joinedAt       DateTime @default(now())
-  isActive       Boolean  @default(true) // Soft delete flag
 
-  permissions  Json?
+  // Invitation / lifecycle metadata
+  invitedByUserId String?
+  joinedAt        DateTime @default(now())
+
+
   lastActiveAt DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation("UserOrganizationMemberships", fields: [userId], references: [id], onDelete: Cascade)
   role         Role         @relation(fields: [roleId], references: [id])
 
+  workspaceMemberships WorkspaceMember[]
+  auditLogsAsActor AuditLog[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, userId])
-  @@index([userId, isActive])
   @@index([lastActiveAt])
+}
+
+model WorkspaceMember {
+  id          String @id @default(cuid())
+  workspaceId String
+  
+  memberId    String? 
+  
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  member      OrganizationMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  roleId      String?
+  role        Role?    @relation("WorkspaceRole", fields: [roleId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@unique([workspaceId, memberId])
+  @@index([memberId])
+  @@index([workspaceId])
 }
 
 model Invitation {
   id    String @id @default(cuid())
   email String
-  token String @unique // The secret key sent in email
-
-  inviterId String
-  inviter   User   @relation("UserSentInvitations", fields: [inviterId], references: [id])
-
-  // 2. Which Organization is paying? (Required)
+  token String @unique 
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  // 3. Which Workspace? (Optional - null means Org-wide invite)
-  workspaceId String?
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   roleId String
-  role   Role   @relation(fields: [roleId], references: [id])
 
-  expiresAt DateTime
+
+  workspaceId         String? // null = org-wide invite
+
+  inviterId      String
+  inviter        User             @relation("UserSentInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           Role             @relation(fields: [roleId], references: [id])
+  workspace           Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  status         InvitationStatus @default(PENDING)
+
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  declinedAt     DateTime?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 
-  // Prevents sending the exact same invite twice, but allows inviting 
-  // the same email to different workspaces within the same Org.
   @@unique([email, organizationId, workspaceId])
+  @@index([organizationId, status])
+  @@index([email])
 }
 
 model SocialConnection {
@@ -315,25 +323,18 @@ model Post {
   workspaceId String
   authorId    String?
 
-  // 📝 CONTENT
-  // The "Master" content. Platform-specific versions live in PostDestination.
   content String? @db.Text
 
-  // 🖼️ MEDIA
-  // We use a join table to ensure ORDER (Critical for Carousels)
   media PostMedia[]
 
-  // ⚙️ TYPE & STATE
   contentType ContentType @default(POST) // REEL, STORY, THREAD, POST
   status      PostStatus  @default(DRAFT)
 
-  // 🗓️ SCHEDULING
   scheduledAt    DateTime? // The intended publish time
   publishedAt    DateTime? // When it actually went out
   timezone       String    @default("UTC")
   isAutoSchedule Boolean   @default(false) // If true, uses QueueSlot
 
-  // 🚨 ERROR HANDLING
   errorMessage String? // General error (if all failed)
   maxRetries   Int     @default(3)
   retryCount   Int     @default(0)
@@ -343,7 +344,7 @@ model Post {
   parentPost   Post?   @relation("PostThread", fields: [parentPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   childPosts   Post[]  @relation("PostThread")
 
-  // 🔗 RELATIONS
+
   destinations PostDestination[]
   campaignId   String?
   campaign     Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
@@ -352,10 +353,9 @@ model Post {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   author    User?     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  // 🤖 AI METADATA
-  // If this post was written by AI, we just flag it.
   isAiGenerated Boolean @default(false)
   aiPrompt      String? @db.Text
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -488,30 +488,6 @@ model QueueSlot {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
-}
-
-// ==========================================
-// 5. APPROVALS (Updated)
-// ==========================================
-
-model PostApproval {
-  id          String  @id @default(cuid())
-  postId      String
-  requesterId String
-  approverId  String?
-
-  status ApprovalStatus @default(PENDING) // PENDING, APPROVED, REJECTED
-
-  notes String? @db.Text // "Please change the image"
-
-  requestedAt DateTime  @default(now())
-  reviewedAt  DateTime?
-
-  post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
-  requester User  @relation("ApprovalRequester", fields: [requesterId], references: [id])
-  approver  User? @relation("ApprovalApprover", fields: [approverId], references: [id])
-
-  @@unique([postId]) // One active approval process per post
 }
 
 // ==========================================
@@ -928,6 +904,139 @@ model WebhookLog {
   @@index([createdAt])
 }
 
+model Role {
+  id             String   @id @default(cuid())
+  scope          RoleScope
+
+  // System roles: organizationId = null
+  // Org roles: organizationId = some org id
+  organizationId String?
+
+  name        String
+  slug        String?
+  description String?
+
+  isSystem    Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  permissions         RolePermission[]
+  organizationMembers OrganizationMember[]
+  invitations         Invitation[]
+
+
+  workspaceMembersWithRole WorkspaceMember[] @relation("WorkspaceRole")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([scope, organizationId, slug])
+  @@index([isSystem, isDefault])
+  @@index([organizationId])
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+}
+
+/// Optional: if you REALLY need exceptions later, do it explicitly (not JSON).
+/// Keep this model commented until you actually need it.
+// model MemberPermissionGrant {
+//   id           String @id @default(cuid())
+//   memberId     String
+//   permissionId String
+//   effect       PermissionEffect // ALLOW / DENY
+//
+//   member     OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+//   permission Permission         @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+//
+//   createdAt DateTime @default(now())
+//
+//   @@unique([memberId, permissionId])
+// }
+
+/// ===============================
+/// AUDIT LOGS (use enums, keep org context)
+/// ===============================
+
+model AuditLog {
+  id             String @id @default(cuid())
+  organizationId String
+
+  actorUserId    String?
+  actorMemberId  String? // better than userId-only for org context
+
+  action         AuditAction
+  resourceType   AuditResourceType
+  resourceId     String?
+  details        Json?
+
+  ipAddress      String?
+  userAgent      String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser      User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorMember  OrganizationMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([action, resourceType])
+}
+
+/// ===============================
+/// APPROVALS (store history; don't lock to one row per post)
+/// ===============================
+
+model PostApproval {
+  id          String @id @default(cuid())
+  postId      String
+
+  requesterId String
+  approverId  String?
+
+  status      ApprovalStatus @default(PENDING)
+  notes       String? @db.Text
+
+  requestedAt DateTime @default(now())
+  reviewedAt  DateTime?
+
+  post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  requester User  @relation("ApprovalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  approver  User? @relation("ApprovalApprover", fields: [approverId], references: [id], onDelete: SetNull)
+
+  @@index([postId, status])
+  @@index([requesterId])
+  @@index([approverId])
+}
+
+/// ===============================
+/// ENUMS (keep yours; add audit resource type)
+/// ===============================
+
+enum PermissionScope {
+  SYSTEM
+  ORGANIZATION
+  WORKSPACE
+}
+
+enum RoleScope {
+  SYSTEM
+  ORGANIZATION
+  WORKSPACE
+}
+
+
+
 model PostingSchedule {
   id             String         @id @default(cuid())
   organizationId String
@@ -993,25 +1102,6 @@ enum NotificationPriority {
   URGENT
 }
 
-model AuditLog {
-  id             String   @id @default(cuid())
-  organizationId String
-  userId         String // Who performed the action
-  action         String // "member_invited", "member_removed", "plan_changed"
-  resourceType   String // "organization", "member", "invitation"
-  resourceId     String? // ID of the affected resource
-  details        Json? // { oldRole: "MEMBER", newRole: "ADMIN" }
-  ipAddress      String?
-  userAgent      String?
-  createdAt      DateTime @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, createdAt])
-  @@index([action, resourceType])
-}
-
 model Permission {
   id          String             @id @default(cuid())
   name        String
@@ -1023,50 +1113,10 @@ model Permission {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   rolePermissions RolePermission[]
 
   @@unique([scope, resource, action])
   @@index([scope])
-}
-
-model Role {
-  id             String    @id @default(cuid())
-  name           String
-  slug           String?
-  description    String?
-  isSystem       Boolean   @default(false) // System roles cannot be deleted
-  isDefault      Boolean   @default(false) // Default role for new members
-  organizationId String?
-  displayName    String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  scope          RoleScope
-
-  invitations Invitation[]
-
-  // Relations
-  organization        Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  systemUsers         User[]               @relation("UserSystemRole")
-  permissions         RolePermission[]
-  organizationMembers OrganizationMember[]
-  workspaceMembers    WorkspaceMember[]
-
-  @@unique([scope, organizationId, name])
-  @@index([isSystem, isDefault])
-}
-
-model RolePermission {
-  id           String @id @default(cuid())
-  roleId       String
-  permissionId String
-
-  // Relations
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([roleId, permissionId])
-  @@index([roleId])
 }
 
 enum SocialProfileType {
@@ -1107,12 +1157,6 @@ enum PublishStatus {
   PUBLISHING
 }
 
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 enum CampaignStatus {
   ACTIVE
   PAUSED
@@ -1127,12 +1171,6 @@ enum TemplateCategory {
   HOLIDAY
   INSPIRATIONAL
   // ... others
-}
-
-enum RoleScope {
-  SYSTEM
-  ORGANIZATION
-  WORKSPACE
 }
 
 enum QueueStatus {
@@ -1189,23 +1227,6 @@ enum OrganizationStatus {
   PENDING_PAYMENT // Created but not paid yet
   ACTIVE // Paid and running
   SUSPENDED // Ban or failed payments
-}
-
-enum InvitationStatus {
-  PENDING
-  ACCEPTED
-  EXPIRED
-  REVOKED
-  DECLINED
-}
-
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  INVITE
-  LOGIN
-  EXECUTE
 }
 
 enum MessageStatus {
@@ -1320,57 +1341,6 @@ enum GenerationStatus {
   APPROVED
   REJECTED
 }
-
-enum PermissionScope {
-  SYSTEM
-  ORGANIZATION // Organization-wide permissions
-  WORKSPACE
-}
-
-enum PermissionResource {
-  ALL
-  SYSTEM
-  // Organization resources
-  ORGANIZATION
-  MEMBERS
-  BILLING
-  SETTINGS
-  SUBSCRIPTION
-  INTEGRATION
-
-  // Social media resources
-  POSTS
-  DRAFT
-  CONTENT
-  SCHEDULING
-  ANALYTICS
-  MESSAGE
-  COMMENT
-
-  // Team resources
-  INVITATIONS
-  AUDIT_LOGS
-
-  AI_CONTENT
-  AI_USAGE
-  TEMPLATE
-  SCHEDULE
-  CALENDAR
-  INBOX
-}
-
-enum PermissionAction {
-  ALL
-  CREATE
-  READ
-  UPDATE
-  DELETE
-  MANAGE
-  APPROVE
-  PUBLISH
-  EXPORT
-}
-
 enum TemplateStatus {
   DRAFT
   ACTIVE
@@ -1415,4 +1385,77 @@ enum AiFeature {
   BULK
   HOLIDAY_POST
 }
+
+enum PermissionResource {
+  ORGANIZATION
+  MEMBERS
+  BILLING
+  SETTINGS
+  SUBSCRIPTION
+  INTEGRATION
+
+  POSTS
+  CONTENT
+  SCHEDULING
+  ANALYTICS
+  MESSAGE
+  COMMENT
+
+  INVITATIONS
+  AUDIT_LOGS
+
+  AI_CONTENT
+  AI_USAGE
+  TEMPLATE
+  CALENDAR
+  INBOX
+}
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  MANAGE
+  APPROVE
+  PUBLISH
+  EXPORT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+  DECLINED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  INVITE
+  LOGIN
+  EXECUTE
+}
+
+enum AuditResourceType {
+  ORGANIZATION
+  WORKSPACE
+  MEMBER
+  INVITATION
+  ROLE
+  PERMISSION
+  POST
+  SOCIAL_ACCOUNT
+  BILLING
+  SETTINGS
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 
