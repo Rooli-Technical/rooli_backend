@@ -25,18 +25,23 @@ export class ContextGuard implements CanActivate {
     // SCENARIO A: User is accessing a WORKSPACE
     // ====================================================
    if (workspaceId) {
-      // 1. Try to find Direct Workspace Membership
-      const wsMember = await this.prisma.workspaceMember.findUnique({
+      // 1. Path: User -> OrganizationMember -> WorkspaceMember
+      const wsMember = await this.prisma.workspaceMember.findFirst({
         where: {
-          workspaceId_userId: { workspaceId, userId: user.userId },
+          workspaceId,
+          member: { userId: user.userId }, // Nested filter via the join table
         },
-        include: { role: { include: { permissions: { include: { permission: true } } } } },
+        include: { 
+          role: { include: { permissions: { include: { permission: true } } } },
+          member: { include: { organization: true } }
+        },
       });
 
       if (wsMember) {
         request.currentContext = 'WORKSPACE';
         request.currentRole = wsMember.role;
         request.currentMember = wsMember;
+        request.organization = wsMember.member.organization;
         return true;
       }
 
@@ -62,9 +67,8 @@ export class ContextGuard implements CanActivate {
           }
         });
 
-        // Grant access if they are OWNER or ADMIN of the parent Org
+        // Implicit access: Owners/Admins get into all workspaces in their Org
         if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role.name)) {
-             
              request.currentContext = 'WORKSPACE';
              request.currentRole = orgMember.role; 
              request.currentMember = orgMember; 

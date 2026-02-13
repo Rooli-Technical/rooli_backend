@@ -17,87 +17,97 @@ import * as crypto from 'crypto';
 export class WorkspaceService {
   constructor(private prisma: PrismaService) {}
 
- async create(userId: string, orgId: string, dto: CreateWorkspaceDto) {
-    // 1. Validate Billing Limits
-    const { features } = await this.checkWorkspaceLimitAndGetFeatures(orgId);
+async create(userId: string, orgId: string, dto: CreateWorkspaceDto) {
+  // 1. Validate Billing Limits
+  const { features } = await this.checkWorkspaceLimitAndGetFeatures(orgId);
 
-    // 2. Generate Slug
-    const slug = await this.generateUniqueSlug(orgId, dto.name);
+  // 2. Fetch the user's Organization Member record
+  const orgMember = await this.prisma.organizationMember.findUnique({
+    where: { organizationId_userId: { organizationId: orgId, userId } },
+  });
+  if (!orgMember) throw new ForbiddenException('User is not a member of this organization');
 
-    // 3. Prepare Feature-Gated Data
-    const clientData = features['clientLabels']
-      ? {
-          agencyClientName: dto.clientName,
-          agencyClientStatus: dto.clientStatus || 'Active',
-          agencyClientColor: dto.clientColor || '#3b82f6',
-          agencyClientContact: dto.clientContact,
-        }
-      : {};
+  // 3. Generate Slug
+  const slug = await this.generateUniqueSlug(orgId, dto.name);
 
-    const defaultRole = await this.fetchDefaultWorkspaceRole();
+  // 4. Prepare Feature-Gated Data
+  const clientData = features['clientLabels']
+    ? {
+        agencyClientName: dto.clientName,
+        agencyClientStatus: dto.clientStatus || 'Active',
+        agencyClientColor: dto.clientColor || '#3b82f6',
+        agencyClientContact: dto.clientContact,
+      }
+    : {};
 
-    // 4. Transaction: Create & Link
-    return this.prisma.workspace.create({
-      data: {
-        name: dto.name,
-        slug: slug,
-        organizationId: orgId,
-        ...clientData,
-        members: {
-          create: { userId, roleId: defaultRole.id },
+  const defaultRole = await this.fetchDefaultWorkspaceRole();
+
+  // 5. Transaction: Create & Link
+  return this.prisma.workspace.create({
+    data: {
+      name: dto.name,
+      slug: slug,
+      organizationId: orgId,
+      ...clientData,
+      members: {
+        create: { 
+          memberId: orgMember.id, 
+          roleId: defaultRole.id 
         },
       },
-    });
-  }
+    },
+  });
+}
 
 async findAll(orgId: string, userId: string) {
-    // Optimization: Check Org Admin status once
-    const orgMember = await this.prisma.organizationMember.findUnique({
-      where: { organizationId_userId: { organizationId: orgId, userId } },
-      select: { role: { select: { name: true } } },
-    });
+  const orgMember = await this.prisma.organizationMember.findUnique({
+    where: { organizationId_userId: { organizationId: orgId, userId } },
+    select: { id: true, role: { select: { name: true } } },
+  });
 
-    const isOrgAdmin = ['OWNER', 'ADMIN'].includes(orgMember?.role?.name || '');
+  const isOrgAdmin = ['OWNER', 'ADMIN'].includes(orgMember?.role?.name || '');
 
-    // Common Select object to ensure frontend gets consistent data
-    // We explicitly select SocialProfile (Not Connection)
-    const selectArgs = {
-      id: true,
-      name: true,
-      slug: true,
-      createdAt: true,
-      _count: { select: { members: true, posts: true } }, // Quick Stats
-      
-      socialProfiles: {
-        select: {
-          id: true,
-          platform: true,
-          username: true,
-          picture: true,
-          isActive: true
-        },
-        take: 5 // Don't fetch 100 profiles if they have them, just show previews
-      }
-    };
-
-    if (isOrgAdmin) {
-      return this.prisma.workspace.findMany({
-        where: { organizationId: orgId },
-        orderBy: { createdAt: 'desc' },
-        select: selectArgs,
-      });
-    }
-
-    return this.prisma.workspace.findMany({
-      where: {
-        organizationId: orgId,
-        members: { some: { userId } },
+  const selectArgs = {
+    id: true,
+    name: true,
+    slug: true,
+    createdAt: true,
+    _count: { select: { members: true, posts: true } },
+    socialProfiles: {
+      select: {
+        id: true,
+        platform: true,
+        username: true,
+        picture: true,
+        isActive: true
       },
+      take: 5 
+    }
+  };
+
+  // Scenario A: Admins see everything in the Org
+  if (isOrgAdmin) {
+    return this.prisma.workspace.findMany({
+      where: { organizationId: orgId },
       orderBy: { createdAt: 'desc' },
       select: selectArgs,
     });
   }
 
+  // Scenario B: Non-admins only see Workspaces where they are members
+  return this.prisma.workspace.findMany({
+    where: {
+      organizationId: orgId,
+      members: { 
+        some: { 
+          member: { userId: userId } // FIXED: Traversing the new relationship path
+        } 
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: selectArgs,
+  });
+}
   async findOne(orgId: string, id: string) {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id, organizationId: orgId },
@@ -156,39 +166,77 @@ async update(workspaceId: string, dto: UpdateWorkspaceDto) {
   // --------------------------------------------------------
   // 3. MEMBER MANAGEMENT (Agency Features)
   // --------------------------------------------------------
-
 async addMember(workspaceId: string, dto: AddWorkspaceMemberDto) {
-    // 1.CHECK LIMITS FIRST (Billing Fix)
-    await this.checkSeatLimit(workspaceId, dto.email);
+  // 1. Check Seat Limit (Logic remains valid as it likely checks the Org level)
+  await this.checkSeatLimit(workspaceId, dto.email);
 
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (!user) throw new NotFoundException('User not found');
+  // 2. Find the Organization Member record instead of just the User
+  // A user must be in the Org before they can be added to a Workspace
+  const workspace = await this.prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { organizationId: true }
+  });
 
-    // 2. Check Role Scope
-    const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
-    if (!role || role.scope !== 'WORKSPACE') {
-      throw new BadRequestException('Role must be Workspace-scoped');
-    }
+  const orgMember = await this.prisma.organizationMember.findFirst({
+    where: { 
+      organizationId: workspace.organizationId,
+      user: { email: dto.email } 
+    },
+  });
 
-    // 3. Add Member (Use upsert or handle error for cleaner logs)
-    try {
-      return await this.prisma.workspaceMember.create({
-        data: { workspaceId, userId: user.id, roleId: dto.roleId },
-      });
-    } catch (e: any) {
-      if (e.code === 'P2002') throw new ConflictException('User already in workspace');
-      throw e;
-    }
+  if (!orgMember) {
+    throw new NotFoundException('User is not a member of this organization. Invite them to the organization first.');
   }
 
+  // 3. Check Role Scope
+  const role = await this.prisma.role.findUnique({ where: { id: dto.roleId } });
+  if (!role || role.scope !== 'WORKSPACE') {
+    throw new BadRequestException('Role must be Workspace-scoped');
+  }
 
-  async removeMember(workspaceId: string, userIdToRemove: string) {
-    return this.prisma.workspaceMember.delete({
-      where: {
-        workspaceId_userId: { workspaceId, userId: userIdToRemove },
+  // 4. Add Member using memberId
+  try {
+    return await this.prisma.workspaceMember.create({
+      data: { 
+        workspaceId, 
+        memberId: orgMember.id, // FIXED: Using memberId
+        roleId: dto.roleId 
       },
     });
+  } catch (e: any) {
+    if (e.code === 'P2002') throw new ConflictException('User already in workspace');
+    throw e;
   }
+}
+
+
+async removeMember(workspaceId: string, userIdToRemove: string) {
+  // We need to find the memberId for this userId within the workspace's organization
+  const workspace = await this.prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { organizationId: true }
+  });
+
+  const orgMember = await this.prisma.organizationMember.findUnique({
+    where: {
+      organizationId_userId: {
+        organizationId: workspace.organizationId,
+        userId: userIdToRemove,
+      },
+    },
+  });
+
+  if (!orgMember) throw new NotFoundException('Member record not found');
+
+  return this.prisma.workspaceMember.delete({
+    where: {
+      workspaceId_memberId: { 
+        workspaceId, 
+        memberId: orgMember.id 
+      },
+    },
+  });
+}
 
   // --------------------------------------------------------
   // 4. HELPERS

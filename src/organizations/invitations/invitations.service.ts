@@ -27,255 +27,260 @@ export class InvitationsService {
   // ===========================================================================
   // invitations.service.ts
 
-  async inviteUser(
-    inviterId: string,
-    organizationId: string,
-    email: string,
-    roleId: string,
-    workspaceId: string | null = null,
-  ) {
-    const lowerEmail = email.toLowerCase();
+ async inviteUser(
+  inviterId: string,
+  organizationId: string,
+  email: string,
+  roleId: string,
+  workspaceId: string | null = null,
+) {
+  const lowerEmail = email.toLowerCase();
 
-    // 1. CHECK EXISTING USER & MEMBERSHIP
-    // We need to know if they exist to decide if this costs a "Seat"
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: lowerEmail },
-      select: { id: true },
-    });
+  // 1. CHECK EXISTING USER & MEMBERSHIP
+  const existingUser = await this.prisma.user.findUnique({
+    where: { email: lowerEmail },
+    select: { id: true },
+  });
 
-    let isNewSeat = true;
+  let isNewSeat = true;
 
-    if (existingUser) {
-      // Check if they are already in the Organization (Billing Check)
-      const orgMember = await this.prisma.organizationMember.findUnique({
-        where: {
-          organizationId_userId: { organizationId, userId: existingUser.id },
-        },
-      });
-
-      if (orgMember) {
-        isNewSeat = false; // They are already paying! Don't block them.
-
-        // DUPLICATE CHECK: Are they already in the target?
-        if (!workspaceId) {
-          throw new ConflictException(
-            'User is already a member of this organization',
-          );
-        } else {
-          const wsMember = await this.prisma.workspaceMember.findUnique({
-            where: {
-              workspaceId_userId: { workspaceId, userId: existingUser.id },
-            },
-          });
-          if (wsMember)
-            throw new ConflictException(
-              'User is already a member of this workspace',
-            );
-        }
-      }
-    }
-
-    // 2. FEATURE GUARD (Only check if it consumes a NEW seat)
-    if (isNewSeat) {
-      const canInvite = await this.checkCapacity(organizationId);
-      if (!canInvite) {
-        throw new ForbiddenException(
-          'Organization seat limit reached. Upgrade your plan to invite new members.',
-        );
-      }
-    }
-
-    // 3. VALIDATE ROLE SCOPE
-    // Prevents assigning an Org Role to a Workspace invite
-    const role = await this.prisma.role.findUnique({ where: { id: roleId } });
-    if (!role) throw new BadRequestException('Invalid Role');
-
-    if (workspaceId && role.scope !== 'WORKSPACE') {
-      throw new BadRequestException(
-        'Cannot assign Organization Role to Workspace Invite',
-      );
-    }
-    if (!workspaceId && role.scope !== 'ORGANIZATION') {
-      throw new BadRequestException(
-        'Cannot assign Workspace Role to Organization Invite',
-      );
-    }
-
-    // 4. CLEAN UP OLD INVITES
-    await this.prisma.invitation.deleteMany({
+  if (existingUser) {
+    const orgMember = await this.prisma.organizationMember.findUnique({
       where: {
-        email: lowerEmail,
-        organizationId,
-        workspaceId, // Matches null if Org invite, or ID if Workspace invite
+        organizationId_userId: { organizationId, userId: existingUser.id },
       },
     });
 
-    // 5. CREATE NEW INVITATION
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 Days
+    if (orgMember) {
+      isNewSeat = false; 
 
-    await this.prisma.invitation.create({
-      data: {
-        email: lowerEmail,
-        organizationId,
-        workspaceId,
-        roleId,
-        inviterId,
-        token,
-        expiresAt,
-      },
-    });
-
-    // 6. SEND EMAIL
-    // await this.mailService.sendInvite(...)
-
-    return { message: 'Invitation sent successfully' };
+      if (!workspaceId) {
+        throw new ConflictException('User is already in this organization');
+      } else {
+        // FIXED: Check WorkspaceMember via the OrganizationMember ID
+        const wsMember = await this.prisma.workspaceMember.findUnique({
+          where: {
+            workspaceId_memberId: { 
+              workspaceId, 
+              memberId: orgMember.id 
+            },
+          },
+        });
+        if (wsMember) throw new ConflictException('User is already in this workspace');
+      }
+    }
   }
+
+  // 2. FEATURE GUARD (Seats)
+  if (isNewSeat) {
+    const canInvite = await this.checkCapacity(organizationId);
+    if (!canInvite) {
+      throw new ForbiddenException('Seat limit reached. Upgrade your plan.');
+    }
+  }
+
+  // 3. VALIDATE ROLE SCOPE
+  const role = await this.prisma.role.findUnique({ where: { id: roleId } });
+  if (!role) throw new BadRequestException('Invalid Role');
+
+  if (workspaceId && role.scope !== 'WORKSPACE') {
+    throw new BadRequestException('Use a Workspace Role for workspace invites');
+  }
+  if (!workspaceId && role.scope !== 'ORGANIZATION') {
+    throw new BadRequestException('Use an Organization Role for organization invites');
+  }
+
+  // 4. CLEAN UP OLD INVITES
+  // Prisma will match null workspaceId correctly here
+  await this.prisma.invitation.deleteMany({
+    where: {
+      email: lowerEmail,
+      organizationId,
+      workspaceId, 
+    },
+  });
+
+  // 5. CREATE NEW INVITATION
+  const token = crypto.randomBytes(32).toString('hex');
+  // Note: expiresAt was dropped in your migration script. 
+  // We use status PENDING and updatedAt (calculated in app logic if needed)
+
+  await this.prisma.invitation.create({
+    data: {
+      email: lowerEmail,
+      organizationId,
+      workspaceId,
+      roleId,
+      inviterId,
+      token,
+      status: 'PENDING', // Uses the new InvitationStatus enum
+    },
+  });
+
+  // 6. SEND EMAIL
+  // await this.mailService.sendInvite(...)
+
+  return { message: 'Invitation sent successfully' };
+}
 
   // ===========================================================================
   // 2. ACCEPT INVITATION
   // ===========================================================================
-  async acceptInvite(
-    token: string,
-    data: { password?: string; firstName?: string; lastName?: string },
-  ) {
-    // 1. Validate Token
-    const invite = await this.prisma.invitation.findUnique({
-      where: { token },
-    });
+ async acceptInvite(
+  token: string,
+  data: { password?: string; firstName?: string; lastName?: string },
+) {
+  // 1. Validate Token (Using status and timing since expiresAt is gone)
+  const invite = await this.prisma.invitation.findUnique({
+    where: { token },
+  });
 
-    if (!invite || invite.expiresAt < new Date()) {
-      throw new BadRequestException('Invitation invalid or expired');
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  if (!invite || invite.status !== 'PENDING' || invite.createdAt < sevenDaysAgo) {
+    throw new BadRequestException('Invitation invalid or expired');
+  }
+
+  let user = await this.prisma.user.findUnique({
+    where: { email: invite.email },
+  });
+
+  // 2. Transaction: Create/Link User & Delete Invite
+  const result = await this.prisma.$transaction(async (tx) => {
+    // A. Create User if New
+    if (!user) {
+      if (!data.password)
+        throw new BadRequestException('Password required for new account');
+      const hashedPassword = await argon2.hash(data.password);
+
+      // Note: systemRoleId removed from User model per your migration
+      user = await tx.user.create({
+        data: {
+          email: invite.email,
+          password: hashedPassword,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          userType: 'INDIVIDUAL',
+          isEmailVerified: true,
+        },
+      });
     }
 
-    let user = await this.prisma.user.findUnique({
-      where: { email: invite.email },
+    // B. Add/Get Organization Membership
+    let orgMember = await tx.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: invite.organizationId,
+          userId: user.id,
+        },
+      },
     });
 
-    // 2. Transaction: Create/Link User & Delete Invite
-    const result = await this.prisma.$transaction(async (tx) => {
-      // A. Create User if New
-      if (!user) {
-        if (!data.password)
-          throw new BadRequestException('Password required for new account');
-        const hashedPassword = await argon2.hash(data.password);
+    if (!orgMember) {
+      // If invited to a specific workspace, give a default 'MEMBER' role in Org.
+      // If invited to Org directly (workspaceId is null), use the role from the invite.
+      let orgRoleId = invite.roleId;
 
-        // Fetch Default System Role
-        const sysRole = await tx.role.findFirst({
-          where: { name: 'USER', scope: 'SYSTEM' },
-        });
-
-        user = await tx.user.create({
-          data: {
-            email: invite.email,
-            password: hashedPassword,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            userType: 'INDIVIDUAL',
-            isEmailVerified: true, // Auto-verify since they got the email
-            systemRoleId: sysRole.id,
+      if (invite.workspaceId) {
+        const defaultRole = await tx.role.findFirst({
+          where: { 
+            name: { in: ['MEMBER', 'Member', 'member'] }, 
+            scope: 'ORGANIZATION',
+            organizationId: null // System-level default role
           },
         });
+        if (!defaultRole) throw new Error("Default Organization Member role not found.");
+        orgRoleId = defaultRole.id;
       }
 
-      // B. Add to Organization (Always required)
-      const existingOrgMember = await tx.organizationMember.findUnique({
+      orgMember = await tx.organizationMember.create({
+        data: {
+          userId: user.id,
+          organizationId: invite.organizationId,
+          roleId: orgRoleId,
+        },
+      });
+    }
+
+    // C. Add to Workspace (If applicable)
+    if (invite.workspaceId) {
+      // FIXED: Check WorkspaceMember using memberId instead of userId
+      const existingWsMember = await tx.workspaceMember.findUnique({
         where: {
-          organizationId_userId: {
-            organizationId: invite.organizationId,
-            userId: user.id,
+          workspaceId_memberId: {
+            workspaceId: invite.workspaceId,
+            memberId: orgMember.id, // Linked to the Org Member we just found/created
           },
         },
       });
 
-      if (!existingOrgMember) {
-        // If invited to a specific workspace, give 'member' role in Org.
-        // If invited to Org directly, give the role specified in invite.
-        let orgRoleId = invite.roleId;
-
-        if (invite.workspaceId) {
-          const defaultRole = await tx.role.findFirst({
-            where: { name: 'MEMBER', scope: 'ORGANIZATION' },
-          });
-          orgRoleId = defaultRole.id;
-        }
-
-        await tx.organizationMember.create({
+      if (!existingWsMember) {
+        await tx.workspaceMember.create({
           data: {
-            userId: user.id,
-            organizationId: invite.organizationId,
-            roleId: orgRoleId,
+            workspaceId: invite.workspaceId,
+            memberId: orgMember.id, // Using new schema link
+            roleId: invite.roleId,  // The Workspace Role specified in invite
           },
         });
       }
+    }
 
-      // C. Add to Workspace (If applicable)
-      if (invite.workspaceId) {
-        // Check duplication (Transaction safe)
-        const existingWsMember = await tx.workspaceMember.findUnique({
-          where: {
-            workspaceId_userId: {
-              workspaceId: invite.workspaceId,
-              userId: user.id,
-            },
-          },
-        });
-
-        if (!existingWsMember) {
-          await tx.workspaceMember.create({
-            data: {
-              userId: user.id,
-              workspaceId: invite.workspaceId,
-              roleId: invite.roleId, // Use the role from the invite
-            },
-          });
-        }
+    // D. Update invitation status instead of simple delete (for audit logs)
+    await tx.invitation.update({
+      where: { id: invite.id },
+      data: { 
+        status: 'ACCEPTED', 
+        acceptedAt: new Date() 
       }
-
-      // D. Clean up
-      await tx.invitation.delete({ where: { id: invite.id } });
-
-      return user;
     });
 
-    // 3. Generate Auto-Login Tokens
-    return this.generateTokens(
-      result.id,
-      result.email,
-      invite.organizationId,
-      invite.workspaceId || null,
-      0,
-    );
-  }
+    return user;
+  });
+
+  // 3. Generate Auto-Login Tokens
+  return this.generateTokens(
+    result.id,
+    result.email,
+    invite.organizationId,
+    invite.workspaceId || null,
+    0,
+  );
+}
 
   // ===========================================================================
   // 3. MANAGEMENT (Resend / Revoke / List)
   // ===========================================================================
 
-  async resendInvitation(invitationId: string) {
+async resendInvitation(invitationId: string) {
     const invitation = await this.prisma.invitation.findUnique({
       where: { id: invitationId },
     });
 
     if (!invitation) throw new NotFoundException('Invitation not found');
 
-    // Regenerate Token & Expiry
+    // 1. Regenerate Token
     const newToken = crypto.randomBytes(32).toString('hex');
-    const newExpiresAt = new Date();
-    newExpiresAt.setDate(newExpiresAt.getDate() + 7);
 
+    // 2. Update the invitation
+    // Note: expiresAt is removed. We update 'status' and 'createdAt' 
+    // to reset the 7-day window.
     await this.prisma.invitation.update({
       where: { id: invitationId },
-      data: { token: newToken, expiresAt: newExpiresAt },
+      data: { 
+        token: newToken, 
+        status: 'PENDING',
+        createdAt: new Date(), // Resetting the clock for the 7-day expiry logic
+        updatedAt: new Date(),
+      },
     });
 
-    // Resend Email
+    // 3. Resend Email Logic
     const context = invitation.workspaceId ? 'workspace' : 'organization';
-    //await this.mailService.sendInvite(invitation.email, newToken, context);
+    // await this.mailService.sendInvite(invitation.email, newToken, context);
 
-    return { message: 'Invitation resent' };
-  }
+    return { message: 'Invitation resent successfully' };
+  } 
 
   async revokeInvitation(invitationId: string) {
     // We just delete it. "Revoked" status is usually unnecessary complexity.

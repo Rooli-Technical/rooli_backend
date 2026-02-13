@@ -83,7 +83,7 @@ export class OrganizationsService {
             organizationId: org.id,
             userId,
             roleId: ownerRole.id,
-            invitedBy: userId,
+            invitedByUserId: userId,
           },
         });
 
@@ -172,11 +172,13 @@ export class OrganizationsService {
       });
 
       // Deactivate all members
-      await tx.organizationMember.updateMany({
-        where: { organizationId: orgId },
-        data: { isActive: false },
+     await tx.organization.update({
+        where: { id: orgId },
+        data: { 
+          isActive: false, 
+          status: 'SUSPENDED' 
+        },
       });
-
       // Cancel any active subscriptions
       //await this.cancelSubscription(orgId);
 
@@ -184,242 +186,6 @@ export class OrganizationsService {
     });
   }
 
-
-  /**
-   * Main Dashboard Analytics with Trend Comparisons (Current vs Previous Period)
-   */
-  // async getAnalyticsOverview(orgId: string, days = 30) {
-  //   const endDate = dayjs().endOf('day').toDate();
-  //   const startDate = dayjs().subtract(days, 'days').startOf('day').toDate();
-
-  //   const prevEndDate = dayjs(startDate).subtract(1, 'second').toDate();
-  //   const prevStartDate = dayjs(startDate)
-  //     .subtract(days, 'days')
-  //     .startOf('day')
-  //     .toDate();
-
-  //   // 1. Run Aggregations in Parallel
-  //   const [currentStats, prevStats, currentPosts, prevPosts] =
-  //     await Promise.all([
-  //       // A. Current Period Stats
-  //       this.prisma.accountAnalytics.aggregate({
-  //         where: {
-  //           date: { gte: startDate, lte: endDate },
-  //           socialAccount: { organizationId: orgId }, // Filter by Org via Relation
-  //         },
-  //         _sum: {
-  //           reach: true,
-  //           impressions: true,
-  //           engagementCount: true,
-  //           followersGained: true,
-  //         },
-  //         _max: { followersTotal: true },
-  //       }),
-
-  //       // B. Previous Period Stats (For Trend Calculation)
-  //       this.prisma.accountAnalytics.aggregate({
-  //         where: {
-  //           date: { gte: prevStartDate, lte: prevEndDate },
-  //           socialAccount: { organizationId: orgId },
-  //         },
-  //         _sum: {
-  //           reach: true,
-  //           impressions: true,
-  //           engagementCount: true,
-  //           followersGained: true,
-  //         },
-  //         _max: { followersTotal: true },
-  //       }),
-
-  //       // C. Post Counts
-  //       this.prisma.post.count({
-  //         where: {
-  //           organizationId: orgId,
-  //           status: 'PUBLISHED',
-  //           publishedAt: { gte: startDate, lte: endDate },
-  //         },
-  //       }),
-  //       this.prisma.post.count({
-  //         where: {
-  //           organizationId: orgId,
-  //           status: 'PUBLISHED',
-  //           publishedAt: { gte: prevStartDate, lte: prevEndDate },
-  //         },
-  //       }),
-  //     ]);
-
-  //   // 2. Calculate Trends
-  //   const calcTrend = (curr: number, prev: number) => {
-  //     if (prev === 0) return curr > 0 ? 100 : 0;
-  //     return parseFloat((((curr - prev) / prev) * 100).toFixed(1));
-  //   };
-
-  //   const currentReach = currentStats._sum.reach || 0;
-  //   const prevReach = prevStats._sum.reach || 0;
-
-  //   const currentEng = currentStats._sum.engagementCount || 0;
-  //   const prevEng = prevStats._sum.engagementCount || 0;
-
-  //   const currentImp = currentStats._sum.impressions || 0;
-  //   // Engagement Rate = (Engagement / Impressions) * 100
-  //   const engagementRate = currentImp > 0 ? (currentEng / currentImp) * 100 : 0;
-
-  //   return {
-  //     overview: {
-  //       posts: {
-  //         value: currentPosts,
-  //         trend: calcTrend(currentPosts, prevPosts),
-  //       },
-  //       reach: {
-  //         value: currentReach,
-  //         trend: calcTrend(currentReach, prevReach),
-  //       },
-  //       engagement: {
-  //         value: currentEng,
-  //         trend: calcTrend(currentEng, prevEng),
-  //         rate: parseFloat(engagementRate.toFixed(2)), // e.g. 4.5%
-  //       },
-  //       followers: {
-  //         // Approximate total by taking max from current period (requires more complex logic for exacts across multiple accounts)
-  //         total: currentStats._max.followersTotal || 0,
-  //         gained: currentStats._sum.followersGained || 0,
-  //       },
-  //     },
-  //   };
-  // }
-
-  // async getDashboardAggregates(organizationId: string) {
-  //   const now = dayjs();
-  //   const startOfWeek = now.startOf('week').toDate();
-  //   const endOfWeek = now.endOf('week').toDate();
-  //   const startOfMonth = now.startOf('month').toDate();
-  //   const endOfMonth = now.endOf('month').toDate();
-
-  //   const [draftsWeek, scheduledWeek, publishedMonth, socialCount, pageCount] =
-  //     await Promise.all([
-  //       this.prisma.post.count({
-  //         where: {
-  //           organizationId,
-  //           status: 'DRAFT',
-  //           updatedAt: { gte: startOfWeek, lte: endOfWeek },
-  //         },
-  //       }),
-  //       this.prisma.post.count({
-  //         where: {
-  //           organizationId,
-  //           status: 'SCHEDULED',
-  //           scheduledAt: { gte: startOfWeek, lte: endOfWeek },
-  //         },
-  //       }),
-  //       this.prisma.post.count({
-  //         where: {
-  //           organizationId,
-  //           status: 'PUBLISHED',
-  //           publishedAt: { gte: startOfMonth, lte: endOfMonth },
-  //         },
-  //       }),
-  //       this.prisma.socialAccount.count({
-  //         where: { organizationId, isActive: true },
-  //       }),
-  //       this.prisma.pageAccount.count({
-  //         where: { socialAccount: { organizationId }, isActive: true },
-  //       }),
-  //     ]);
-
-  //   return {
-  //     metrics: {
-  //       draftsThisWeek: draftsWeek,
-  //       scheduledThisWeek: scheduledWeek,
-  //       publishedThisMonth: publishedMonth,
-  //       connectedChannels: socialCount + pageCount,
-  //     },
-  //   };
-  // }
-
-  // async getOrganizationMediaUsage(organizationId: string) {
-  //   const [fileStats, folderCount, templateCount] = await Promise.all([
-  //     this.prisma.mediaFile.aggregate({
-  //       where: { organizationId },
-  //       _sum: { size: true },
-  //       _count: { _all: true },
-  //     }),
-  //     this.prisma.mediaFolder.count({ where: { organizationId } }),
-  //     this.prisma.contentTemplate.count({ where: { organizationId } }),
-  //   ]);
-
-  //   const totalBytes = Number(fileStats._sum.size || 0);
-
-  //   return {
-  //     fileCount: fileStats._count._all,
-  //     folderCount,
-  //     templateCount,
-  //     usedStorage: this.formatBytes(totalBytes),
-  //     rawBytes: totalBytes,
-  //   };
-  // }
-
-  // async getTopPerformingPosts(organizationId: string, limit = 5) {
-  //   // Optimization: Only fetch last 90 days to avoid sorting thousands of records in memory
-  //   const posts = await this.prisma.post.findMany({
-  //     where: {
-  //       organizationId,
-  //       status: 'PUBLISHED',
-  //       publishedAt: { gte: dayjs().subtract(90, 'days').toDate() },
-  //     },
-  //     select: {
-  //       id: true,
-  //       content: true,
-  //       publishedAt: true,
-  //       socialAccount: { select: { platform: true, username: true } },
-  //       snapShots: {
-  //         take: 1,
-  //         orderBy: { recordedAt: 'desc' }, // Get latest stats
-  //         select: {
-  //           likes: true,
-  //           comments: true,
-  //           shares: true,
-  //           impressions: true,
-  //         },
-  //       },
-  //     },
-  //   });
-
-  //   // Calculate Engagement Score in Memory
-  //   // Score = Likes + Comments + (Shares * 2)
-  //   const scoredPosts = posts.map((post) => {
-  //     const stats = post.snapShots[0] || {
-  //       likes: 0,
-  //       comments: 0,
-  //       shares: 0,
-  //       impressions: 0,
-  //     };
-  //     const score = stats.likes + stats.comments + stats.shares * 2;
-  //     return { ...post, stats, engagementScore: score };
-  //   });
-
-  //   // Sort descending and slice
-  //   return scoredPosts
-  //     .sort((a, b) => b.engagementScore - a.engagementScore)
-  //     .slice(0, limit);
-  // }
-
-  // async getRecentActivity(organizationId: string) {
-  //   const [files, posts] = await Promise.all([
-  //     this.prisma.mediaFile.findMany({
-  //       where: { organizationId },
-  //       orderBy: { createdAt: 'desc' },
-  //       take: 5,
-  //     }),
-  //     this.prisma.post.findMany({
-  //       where: { organizationId, status: { not: 'DRAFT' } },
-  //       orderBy: { updatedAt: 'desc' },
-  //       take: 5,
-  //       include: { author: { select: { firstName: true, lastName: true } } },
-  //     }),
-  //   ]);
-
-  //   return { recentFiles: files, recentPosts: posts };
-  // }
 
   //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Run once a day
   async cleanupAbandonedOrganizations() {

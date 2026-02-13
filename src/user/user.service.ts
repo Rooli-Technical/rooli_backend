@@ -45,7 +45,7 @@ export class UserService {
     return safeUser;
   }
 
-  async getUsersByOrganization(
+async getUsersByOrganization(
     organizationId: string,
     filters: UserFiltersDto,
   ) {
@@ -55,20 +55,18 @@ export class UserService {
 
     const where: Prisma.OrganizationMemberWhereInput = {
       organizationId,
-      isActive: true,
       user: { deletedAt: null },
     };
 
+    // 2. Search Logic
     if (filters.search) {
       where.user = {
-        is: {
-          deletedAt: null,
-          OR: [
-            { firstName: { contains: filters.search, mode: 'insensitive' } },
-            { lastName: { contains: filters.search, mode: 'insensitive' } },
-            { email: { contains: filters.search, mode: 'insensitive' } },
-          ],
-        },
+        deletedAt: null,
+        OR: [
+          { firstName: { contains: filters.search, mode: 'insensitive' } },
+          { lastName: { contains: filters.search, mode: 'insensitive' } },
+          { email: { contains: filters.search, mode: 'insensitive' } },
+        ],
       };
     }
 
@@ -76,6 +74,7 @@ export class UserService {
       where.roleId = filters.role;
     }
 
+    // 4. Execution
     const [members, total] = await Promise.all([
       this.prisma.organizationMember.findMany({
         where,
@@ -84,12 +83,14 @@ export class UserService {
         include: {
           user: true,
           role: true,
+          workspaceMemberships: { include: { workspace: true } }
         },
         orderBy: { joinedAt: 'desc' },
       }),
       this.prisma.organizationMember.count({ where }),
     ]);
 
+    // 5. Mapping to safe response
     return {
       data: members.map((member) => ({
         ...this.toSafeUser(member.user),
