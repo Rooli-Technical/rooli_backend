@@ -44,6 +44,6 @@ ThrottlerModule.forRoot({
     JwtService,
     GoogleStrategy
   ],
-  exports:[JwtService]
+  exports:[JwtService, AuthService]
 })
 export class AuthModule {}

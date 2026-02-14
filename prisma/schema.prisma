@@ -143,7 +143,7 @@ invitations     Invitation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([organizationId, slug]) // Slugs must be unique within an organization
+  @@unique([organizationId, slug]) 
 }
 model OrganizationMember {
   id             String   @id @default(cuid())
@@ -176,10 +176,10 @@ model WorkspaceMember {
   id          String @id @default(cuid())
   workspaceId String
   
-  memberId    String? 
+  memberId    String
   
   workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  member      OrganizationMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member      OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   roleId      String?
   role        Role?    @relation("WorkspaceRole", fields: [roleId], references: [id])
@@ -913,7 +913,7 @@ model Role {
   organizationId String?
 
   name        String
-  slug        String?
+  slug        String
   description String?
 
   isSystem    Boolean  @default(false)

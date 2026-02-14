@@ -1,49 +1,63 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsString, IsNotEmpty, Length, IsOptional, IsEmail, IsHexColor } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateWorkspaceDto {
-  @ApiProperty({ 
-    description: 'The display name of the workspace', 
-    example: 'Coca Cola Account',
-    minLength: 2,
-    maxLength: 50
+  @ApiProperty({
+    description: 'Name of the workspace',
+    example: 'Marketing Team',
   })
   @IsString()
-  @IsNotEmpty()
-  @Length(2, 50, { message: 'Workspace name must be between 2 and 50 characters' })
   name: string;
 
-
-  @ApiPropertyOptional({ 
-    description: 'Official client name for reporting (Agency Plan only)', 
-    example: 'The Coca-Cola Company' 
+  @ApiPropertyOptional({
+    description: 'Unique slug for the workspace Optional',
+    example: 'marketing-team',
   })
+  @IsOptional()
   @IsString()
-  @IsOptional()
-  clientName?: string;
+  slug?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Current status of the client relationship', 
-    example: 'Active',
-    default: 'Active'
+  @ApiPropertyOptional({
+    description: 'Timezone of the workspace',
+    example: 'Africa/Lagos',
   })
+  @IsOptional()
   @IsString()
-  @IsOptional()
-  clientStatus?: string;
+  timezone?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Primary contact point for this workspace (e.g., the client email)', 
-    example: 'marketing@coke.com' 
+  @ApiPropertyOptional({
+    description: 'Name of the agency client (if workspace is for a client)',
+    example: 'Coca-Cola Nigeria',
+    nullable: true,
   })
-  @IsEmail({}, { message: 'Client contact must be a valid email address' })
   @IsOptional()
-  clientContact?: string;
+  @IsString()
+  agencyClientName?: string | null;
 
-  @ApiPropertyOptional({ 
-    description: 'Brand color code for dashboard categorization', 
-    example: '#FF0000' 
+  @ApiPropertyOptional({
+    description: 'Status of the agency client',
+    example: 'ACTIVE',
+    nullable: true,
   })
-  @IsHexColor({ message: 'Client color must be a valid hex code (e.g., #FF0000)' })
   @IsOptional()
-  clientColor?: string;
+  @IsString()
+  agencyClientStatus?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Contact information for the agency client',
+    example: 'client@example.com',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  agencyClientContact?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Hex color associated with the agency client',
+    example: '#FF5733',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  agencyClientColor?: string | null;
 }

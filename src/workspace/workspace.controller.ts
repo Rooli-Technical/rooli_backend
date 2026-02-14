@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AddWorkspaceMemberDto } from './dtos/add-member.dto';
 import { CreateWorkspaceDto } from './dtos/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dtos/update-workspace.dto';
+import { ListWorkspacesQueryDto } from './dtos/list-workspaces.dto';
 
 @ApiTags('Workspace')
 @ApiBearerAuth()
@@ -23,7 +24,7 @@ export class WorkspaceController {
     @Param('orgId') orgId: string,
     @Body() dto: CreateWorkspaceDto,
   ) {
-    return this.workspaceService.create(user.userId, orgId, dto);
+    return this.workspaceService.createWorkspace(user.userId, orgId, dto);
   }
 
 
@@ -33,11 +34,13 @@ export class WorkspaceController {
       'Get all workspaces (Admins see all, members see assigned only)',
   })
   @ApiParam({ name: 'orgId', description: 'Organization ID' })
+
   async findAll(
     @CurrentUser() user: { userId: string },
     @Param('orgId') orgId: string,
+    @Query() query: ListWorkspacesQueryDto,
   ) {
-    return this.workspaceService.findAll(orgId, user.userId);
+    return this.workspaceService.listOrganizationWorkspaces(user.userId, orgId, query);
   }
 
 
@@ -46,7 +49,7 @@ export class WorkspaceController {
   @ApiParam({ name: 'id', description: 'Workspace ID' })
   @ApiResponse({ status: 404, description: 'Workspace not found' })
   async findOne(@Param('orgId') orgId: string,@Param('id') id: string) {
-    return this.workspaceService.findOne(orgId, id);
+    return this.workspaceService.getWorkspace(orgId, id);
   }
 
 
@@ -57,7 +60,7 @@ export class WorkspaceController {
     @Param('id') id: string,
     @Body() dto: UpdateWorkspaceDto,
   ) {
-    return this.workspaceService.update(id, dto);
+    return this.workspaceService.updateWorkspace(id, dto);
   }
 
 
@@ -65,7 +68,7 @@ export class WorkspaceController {
   @ApiOperation({ summary: 'Delete a workspace' })
   @ApiParam({ name: 'id', description: 'Workspace ID' })
   async delete(@Param('id') id: string) {
-    return this.workspaceService.delete(id);
+    return this.workspaceService.deleteWorkspace(id);
   }
 
 
@@ -82,25 +85,25 @@ export class WorkspaceController {
   }
 
 
-  @Post(':id/members')
-  @ApiOperation({ summary: 'Add member to workspace' })
-  @ApiParam({ name: 'id', description: 'Workspace ID' })
-  @ApiResponse({ status: 409, description: 'User already a member' })
-  async addMember(
-    @Param('id') workspaceId: string,
-    @Body() dto: AddWorkspaceMemberDto,
-  ) {
-    return this.workspaceService.addMember(workspaceId, dto);
-  }
+  // @Post(':id/members')
+  // @ApiOperation({ summary: 'Add member to workspace' })
+  // @ApiParam({ name: 'id', description: 'Workspace ID' })
+  // @ApiResponse({ status: 409, description: 'User already a member' })
+  // async addMember(
+  //   @Param('id') workspaceId: string,
+  //   @Body() dto: AddWorkspaceMemberDto,
+  // ) {
+  //   return this.workspaceService.addMember(workspaceId, dto);
+  // }
 
-  @Delete(':id/members/:userId')
-  @ApiOperation({ summary: 'Remove member from workspace' })
-  @ApiParam({ name: 'id', description: 'Workspace ID' })
-  @ApiParam({ name: 'userId', description: 'User ID to remove' })
-  async removeMember(
-    @Param('id') workspaceId: string,
-    @Param('userId') userId: string,
-  ) {
-    return this.workspaceService.removeMember(workspaceId, userId);
-  }
+  // @Delete(':id/members/:userId')
+  // @ApiOperation({ summary: 'Remove member from workspace' })
+  // @ApiParam({ name: 'id', description: 'Workspace ID' })
+  // @ApiParam({ name: 'userId', description: 'User ID to remove' })
+  // async removeMember(
+  //   @Param('id') workspaceId: string,
+  //   @Param('userId') userId: string,
+  // ) {
+  //   return this.workspaceService.removeMember(workspaceId, userId);
+  // }
 }

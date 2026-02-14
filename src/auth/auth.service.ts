@@ -522,11 +522,11 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
     return { orgId: activeOrgId, workspaceId: activeWorkspaceId };
   }
 
-  private async generateTokens(
+ async generateTokens(
     userId: string,
     email: string,
     orgId: string | null,
-    workspaceId: string | null, // Added this!
+    workspaceId: string | null, 
     version: number,
   ) {
     const payload: JwtPayload = {

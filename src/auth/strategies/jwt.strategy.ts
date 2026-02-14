@@ -105,6 +105,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId: user.id,
       email: user.email,
       organizationId: payload.orgId,
+      workspaceId: payload.workspaceId,
+      orgRoleId: membership.roleId,
       roles: [membership.role.name],
       features: (plan?.features as unknown as PlanFeatures) || {},
       userPlan: plan.tier,
