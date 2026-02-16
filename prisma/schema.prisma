@@ -176,10 +176,10 @@ model WorkspaceMember {
   id          String @id @default(cuid())
   workspaceId String
   
-  memberId    String
+  memberId    String?  //this should be mandatory remove optional as soon as you can, it's needed for permission checks and frontend logic
   
   workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  member      OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member      OrganizationMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   roleId      String?
   role        Role?    @relation("WorkspaceRole", fields: [roleId], references: [id])
@@ -913,7 +913,7 @@ model Role {
   organizationId String?
 
   name        String
-  slug        String
+  slug        String?  //this should be mandatory remove optional as soon as you can, it's needed for permission checks and frontend logic
   description String?
 
   isSystem    Boolean  @default(false)
@@ -1387,6 +1387,8 @@ enum AiFeature {
 }
 
 enum PermissionResource {
+  ALL
+  SYSTEM
   ORGANIZATION
   MEMBERS
   BILLING
@@ -1412,6 +1414,7 @@ enum PermissionResource {
 }
 
 enum PermissionAction {
+  ALL
   CREATE
   READ
   UPDATE

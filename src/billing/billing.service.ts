@@ -204,7 +204,7 @@ export class BillingService {
         data: { status: 'ACTIVE', isActive: true },
         include: {
           members: {
-            where: { role: { name: 'OWNER' } },
+            where: { role: { slug: 'owner' } },
             include: { user: true },
             take: 1,
           },

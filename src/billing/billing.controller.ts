@@ -7,7 +7,6 @@ import { Public } from '@/common/decorators/public.decorator';
 import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
 import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionResource, PermissionAction } from '@generated/enums';
-import { OrgAuth } from '@/common/decorators/auth.decorator';
 
 @ApiTags('Billing')
 @Controller('billing')
@@ -89,8 +88,8 @@ export class BillingController {
   @Delete('subscription')
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @UseGuards(ContextGuard)
-  @OrgAuth({ resource: PermissionResource.BILLING, action: PermissionAction.MANAGE })
+  // @UseGuards(ContextGuard)
+  // @OrgAuth({ resource: PermissionResource.BILLING, action: PermissionAction.MANAGE })
   @ApiOperation({
     summary: 'Cancel auto-renewal',
     description: 'Downgrades to free tier at the end of the current period.',

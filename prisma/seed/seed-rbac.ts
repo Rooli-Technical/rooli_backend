@@ -1,368 +1,280 @@
+import { PrismaClient } from '../../generated/prisma/client';
 import {
   RoleScope,
   PermissionScope,
   PermissionResource,
   PermissionAction,
 } from '../../generated/prisma/enums';
-import { prisma } from './utils';
+import { prisma, hasColumn } from './utils';
+
+// --- CONFIGURATION ---
+const SCOPE_RESOURCES: Record<PermissionScope, PermissionResource[]> = {
+  [PermissionScope.SYSTEM]: [PermissionResource.SYSTEM],
+  [PermissionScope.ORGANIZATION]: [
+    PermissionResource.ORGANIZATION,
+    PermissionResource.MEMBERS,
+    PermissionResource.BILLING,
+    PermissionResource.SETTINGS,
+    PermissionResource.SUBSCRIPTION,
+    PermissionResource.INTEGRATION,
+    PermissionResource.INVITATIONS,
+    PermissionResource.AUDIT_LOGS,
+  ],
+  [PermissionScope.WORKSPACE]: [
+    PermissionResource.POSTS,
+    PermissionResource.CONTENT,
+    PermissionResource.SCHEDULING,
+    PermissionResource.ANALYTICS,
+    PermissionResource.MESSAGE,
+    PermissionResource.COMMENT,
+    PermissionResource.AI_CONTENT,
+    PermissionResource.AI_USAGE,
+    PermissionResource.TEMPLATE,
+    PermissionResource.CALENDAR,
+    PermissionResource.INBOX,
+  ],
+};
+
+const ALL_ACTIONS = Object.values(PermissionAction);
 
 export async function seedRBAC() {
-  // -------------------------
-  // 1. Seed Roles
-  // -------------------------
-  const rolesData = [
-    // SYSTEM
-    {
-      name: 'SUPER_ADMIN',
-      displayName: 'Super Admin',
-      scope: RoleScope.SYSTEM,
-      isSystem: true,
-      isDefault: false,
-    },
-     {
-      name: 'USER',
-      displayName: 'USER',
-      scope: RoleScope.SYSTEM,
-      isSystem: true,
-      isDefault: true,
-    },
-    {
-      name: 'SUPPORT',
-      displayName: 'Support',
-      scope: RoleScope.SYSTEM,
-      isSystem: true,
-      isDefault: false,
-    },
-    {
-      name: 'FINANCE',
-      displayName: 'Finance',
-      scope: RoleScope.SYSTEM,
-      isSystem: true,
-      isDefault: false,
-    },
+  console.log('🌱 Starting RBAC Seed...');
 
-    // ORGANIZATION
-    {
-      name: 'OWNER',
-      displayName: 'Owner',
-      scope: RoleScope.ORGANIZATION,
-      isSystem: true,
-      isDefault: true,
-    },
-    {
-      name: 'ADMIN',
-      displayName: 'Admin',
-      scope: RoleScope.ORGANIZATION,
-      isSystem: true,
-      isDefault: false,
-    },
-    {
-      name: 'MEMBER',
-      displayName: 'Member',
-      scope: RoleScope.ORGANIZATION,
-      isSystem: true,
-      isDefault: false,
-    },
-    {
-      name: 'VIEWER',
-      displayName: 'Viewer',
-      scope: RoleScope.ORGANIZATION,
-      isSystem: true,
-      isDefault: false,
-    },
+  const slugExists = await hasColumn('Role', 'slug');
+  if (!slugExists) {
+    console.error(
+      "❌ Aborting: 'slug' column missing in 'Role' table. Run migrations first.",
+    );
+    return;
+  }
 
-    // WORKSPACE
-    {
-      name: 'WORKSPACE_ADMIN',
-      displayName: 'Workspace Admin',
-      scope: RoleScope.WORKSPACE,
-      isSystem: true,
-      isDefault: true,
-    },
-    {
-      name: 'EDITOR',
-      displayName: 'Editor',
-      scope: RoleScope.WORKSPACE,
-      isSystem: true,
-      isDefault: false,
-    },
-    {
-      name: 'CONTRIBUTOR',
-      displayName: 'Contributor',
-      scope: RoleScope.WORKSPACE,
-      isSystem: true,
-      isDefault: false,
-    },
-    {
-      name: 'VIEWER',
-      displayName: 'Viewer',
-      scope: RoleScope.WORKSPACE,
-      isSystem: true,
-      isDefault: false,
-    },
-  ];
+  // -----------------------------------------------------
+  // 1) SEED PERMISSIONS IN BULK (FAST)
+  // -----------------------------------------------------
+  console.log('... Seeding Permissions (bulk createMany)');
 
-  const roles = [];
-  for (const r of rolesData) {
-    // 1. Try to find the role using a standard where clause
-    // This works because standard 'where' converts null to "IS NULL" SQL
-    const existingRole = await prisma.role.findFirst({
+  const permissionRows = Object.values(PermissionScope).flatMap((scope) => {
+    const resources = SCOPE_RESOURCES[scope] ?? [];
+    return resources.flatMap((resource) =>
+      ALL_ACTIONS.map((action) => ({
+        scope,
+        resource,
+        action,
+        name: `${scope}.${resource}.${action}`,
+        description: `Allow ${action} on ${resource} in ${scope}`,
+      })),
+    );
+  });
+
+  await prisma.permission.createMany({
+    data: permissionRows,
+    skipDuplicates: true, // relies on @@unique([scope, resource, action])
+  });
+
+  console.log(`✅ Permissions ensured: ${permissionRows.length} combinations`);
+
+  // -----------------------------------------------------
+  // 2) HELPERS
+  // -----------------------------------------------------
+  async function permIds(params: {
+    scope: PermissionScope;
+    resources?: PermissionResource[];
+    actions?: PermissionAction[];
+  }) {
+    const perms = await prisma.permission.findMany({
       where: {
-        name: r.name,
-        scope: r.scope,
-        organizationId: null,
+        scope: params.scope,
+        ...(params.resources ? { resource: { in: params.resources } } : {}),
+        ...(params.actions ? { action: { in: params.actions } } : {}),
       },
+      select: { id: true },
     });
-
-    if (existingRole) {
-      // 2. Update if exists
-      const role = await prisma.role.update({
-        where: { id: existingRole.id }, // Use the concrete ID found above
-        data: r,
-      });
-      roles.push(role);
-    } else {
-      // 3. Create if it doesn't exist
-      const role = await prisma.role.create({
-        data: {
-          ...r,
-          organizationId: null,
-        },
-      });
-      roles.push(role);
-    }
+    return perms.map((p) => p.id);
   }
 
-  // -------------------------
-  // 2. Seed Permissions
-  // -------------------------
-  const permissionsData = [
-    // SYSTEM
-    {
-      name: 'ALL_SYSTEM',
-      scope: PermissionScope.SYSTEM,
-      resource: 'ALL',
-      action: 'ALL',
-      description: 'Full system access',
-    },
+  async function assign(roleId: string, permissionIds: string[]) {
+    if (!permissionIds.length) return;
 
-    // ORGANIZATION
-    {
-      name: 'MANAGE_ORG',
-      scope: PermissionScope.ORGANIZATION,
-      resource: 'ORGANIZATION',
-      action: 'MANAGE',
-      description: 'Manage organization',
-    },
-    {
-      name: 'MANAGE_MEMBERS',
-      scope: PermissionScope.ORGANIZATION,
-      resource: 'MEMBERS',
-      action: 'MANAGE',
-      description: 'Manage org members',
-    },
-    {
-      name: 'MANAGE_BILLING',
-      scope: PermissionScope.ORGANIZATION,
-      resource: 'BILLING',
-      action: 'MANAGE',
-      description: 'Billing access',
-    },
-    {
-      name: 'MANAGE_SUBSCRIPTION',
-      scope: PermissionScope.ORGANIZATION,
-      resource: 'SUBSCRIPTION',
-      action: 'MANAGE',
-      description: 'Subscription access',
-    },
-    {
-      name: 'MANAGE_SETTINGS',
-      scope: PermissionScope.ORGANIZATION,
-      resource: 'SETTINGS',
-      action: 'MANAGE',
-      description: 'Org settings',
-    },
-    {
-      name: 'MANAGE_INTEGRATIONS',
-      scope: PermissionScope.ORGANIZATION,
-      resource: 'INTEGRATION',
-      action: 'MANAGE',
-      description: 'Manage integrations',
-    },
-    {
-      name: 'MANAGE_INVITATIONS',
-      scope: PermissionScope.ORGANIZATION,
-      resource: 'INVITATIONS',
-      action: 'MANAGE',
-      description: 'Invite members',
-    },
-    {
-      name: 'VIEW_AUDIT_LOGS',
-      scope: PermissionScope.ORGANIZATION,
-      resource: 'AUDIT_LOGS',
-      action: 'READ',
-      description: 'View logs',
-    },
-    //add @WorkspaceAuth({ resource: 'SOCIAL_ACCOUNT', action: 'READ' })
-
-    // WORKSPACE
-    {
-      name: 'MANAGE_POSTS',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'POSTS',
-      action: 'MANAGE',
-      description: 'Manage posts',
-    },
-    {
-      name: 'READ_DRAFTS',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'DRAFT',
-      action: 'READ',
-      description: 'Read drafts',
-    },
-    {
-      name: 'MANAGE_CONTENT',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'CONTENT',
-      action: 'MANAGE',
-      description: 'Manage content',
-    },
-    {
-      name: 'MANAGE_SCHEDULING',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'SCHEDULING',
-      action: 'MANAGE',
-      description: 'Schedule posts',
-    },
-    {
-      name: 'VIEW_ANALYTICS',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'ANALYTICS',
-      action: 'READ',
-      description: 'View analytics',
-    },
-    {
-      name: 'MANAGE_MESSAGES',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'MESSAGE',
-      action: 'MANAGE',
-      description: 'Inbox messages',
-    },
-    {
-      name: 'MANAGE_COMMENTS',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'COMMENT',
-      action: 'MANAGE',
-      description: 'Moderate comments',
-    },
-    {
-      name: 'MANAGE_AI_CONTENT',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'AI_CONTENT',
-      action: 'MANAGE',
-      description: 'AI content',
-    },
-    {
-      name: 'VIEW_AI_USAGE',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'AI_USAGE',
-      action: 'READ',
-      description: 'AI usage',
-    },
-    {
-      name: 'MANAGE_TEMPLATES',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'TEMPLATE',
-      action: 'MANAGE',
-      description: 'Templates',
-    },
-    {
-      name: 'MANAGE_SCHEDULE',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'SCHEDULE',
-      action: 'MANAGE',
-      description: 'Schedule management',
-    },
-    {
-      name: 'MANAGE_CALENDAR',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'CALENDAR',
-      action: 'MANAGE',
-      description: 'Calendar management',
-    },
-    {
-      name: 'MANAGE_INBOX',
-      scope: PermissionScope.WORKSPACE,
-      resource: 'INBOX',
-      action: 'MANAGE',
-      description: 'Inbox',
-    },
-  ];
-
-  const permissions = [];
-  for (const p of permissionsData) {
-    // FIX: Cast string values to Enum types here
-    const resource = p.resource as PermissionResource;
-    const action = p.action as PermissionAction;
-
-    const perm = await prisma.permission.upsert({
-      where: {
-        scope_resource_action: {
-          scope: p.scope,
-          resource: resource,
-          action: action,
-        },
-      },
-      // Spread 'p' but overwrite resource/action with typed versions
-      update: {
-        ...p,
-        resource: resource,
-        action: action,
-      },
-      create: {
-        ...p,
-        resource: resource,
-        action: action,
-      },
+    await prisma.rolePermission.createMany({
+      data: permissionIds.map((permissionId) => ({ roleId, permissionId })),
+      skipDuplicates: true, // relies on @@unique([roleId, permissionId])
     });
-    permissions.push(perm);
   }
 
-  // -------------------------
-  // 3. Assign default RolePermissions
-  // -------------------------
-  const rolePermMap: Record<string, PermissionScope[]> = {
-    SUPER_ADMIN: [
-      PermissionScope.SYSTEM,
-      PermissionScope.ORGANIZATION,
-      PermissionScope.WORKSPACE,
-    ],
-    SUPPORT: [PermissionScope.SYSTEM],
-    FINANCE: [PermissionScope.ORGANIZATION],
-    OWNER: [PermissionScope.ORGANIZATION],
-    ADMIN: [PermissionScope.ORGANIZATION],
-    MEMBER: [PermissionScope.ORGANIZATION],
-    WORKSPACE_ADMIN: [PermissionScope.WORKSPACE],
-    EDITOR: [PermissionScope.WORKSPACE],
-    CONTRIBUTOR: [PermissionScope.WORKSPACE],
-    VIEWER: [PermissionScope.WORKSPACE],
-  };
+  // -----------------------------------------------------
+  // 3) SEED ROLES (upsert is fine here, small volume)
+  // -----------------------------------------------------
+  console.log('... Seeding Roles');
 
-  for (const role of roles) {
-    // Check if role exists in map
-    if (!rolePermMap[role.name]) continue;
+  const sysOwner = await upsertSystemRole({
+  scope: RoleScope.SYSTEM,
+  slug: 'system-owner',
+  name: 'System Owner',
+  description: 'Super Admin',
+});
 
-    const scopes = rolePermMap[role.name];
-    const permsToAssign = permissions.filter((p) => scopes.includes(p.scope));
+const orgOwner = await upsertSystemRole({
+  scope: RoleScope.ORGANIZATION,
+  slug: 'owner',
+  name: 'Owner',
+  description: 'Full access to organization billing and settings',
+});
 
-    for (const perm of permsToAssign) {
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: { roleId: role.id, permissionId: perm.id },
-        },
-        create: { roleId: role.id, permissionId: perm.id },
-        update: {},
-      });
-    }
-  }
+const orgAdmin = await upsertSystemRole({
+  scope: RoleScope.ORGANIZATION,
+  slug: 'admin',
+  name: 'Admin',
+  description: 'Can manage billing, members, and integrations',
+});
+
+const orgMember = await upsertSystemRole({
+  scope: RoleScope.ORGANIZATION,
+  slug: 'member',
+  name: 'Member',
+  description: 'Basic membership. Needs workspace access to see content.',
+  isDefault: true,
+});
+
+const wsOwner = await upsertSystemRole({
+  scope: RoleScope.WORKSPACE,
+  slug: 'owner',
+  name: 'Workspace Owner',
+  description: 'Full control over workspace content and settings',
+});
+
+const wsEditor = await upsertSystemRole({
+  scope: RoleScope.WORKSPACE,
+  slug: 'editor',
+  name: 'Editor',
+  description: 'Can create, edit, delete, and schedule content',
+  isDefault: true,
+});
+
+const wsViewer = await upsertSystemRole({
+  scope: RoleScope.WORKSPACE,
+  slug: 'viewer',
+  name: 'Viewer',
+  description: 'Read-only access to content and analytics',
+});
+  // -----------------------------------------------------
+  // 4) ASSIGN PERMISSIONS (bulk createMany)
+  // -----------------------------------------------------
+  console.log('... Assigning permissions');
+
+  // System Owner: all SYSTEM permissions
+  await assign(sysOwner.id, await permIds({ scope: PermissionScope.SYSTEM }));
+
+  // Org Owner: all ORG permissions
+  await assign(orgOwner.id, await permIds({ scope: PermissionScope.ORGANIZATION }));
+
+  // Org Admin: manage core org resources
+  await assign(
+    orgAdmin.id,
+    await permIds({
+      scope: PermissionScope.ORGANIZATION,
+      resources: [
+        PermissionResource.BILLING,
+        PermissionResource.MEMBERS,
+        PermissionResource.INVITATIONS,
+        PermissionResource.INTEGRATION,
+        PermissionResource.SETTINGS,
+        PermissionResource.AUDIT_LOGS,
+      ],
+      actions: [
+        PermissionAction.MANAGE,
+        PermissionAction.READ,
+        PermissionAction.CREATE,
+        PermissionAction.UPDATE,
+        PermissionAction.DELETE,
+      ],
+    }),
+  );
+
+  // Org Member: minimal org read
+  await assign(
+    orgMember.id,
+    await permIds({
+      scope: PermissionScope.ORGANIZATION,
+      resources: [PermissionResource.ORGANIZATION, PermissionResource.MEMBERS],
+      actions: [PermissionAction.READ],
+    }),
+  );
+
+  // Workspace Owner: all WORKSPACE permissions
+  await assign(wsOwner.id, await permIds({ scope: PermissionScope.WORKSPACE }));
+
+  // Workspace Editor: CRUD content + schedule + publish
+  await assign(
+    wsEditor.id,
+    await permIds({
+      scope: PermissionScope.WORKSPACE,
+      resources: [
+        PermissionResource.POSTS,
+        PermissionResource.CONTENT,
+        PermissionResource.SCHEDULING,
+        PermissionResource.CALENDAR,
+        PermissionResource.TEMPLATE,
+        PermissionResource.MESSAGE,
+        PermissionResource.COMMENT,
+        PermissionResource.AI_CONTENT,
+      ],
+      actions: [
+        PermissionAction.CREATE,
+        PermissionAction.READ,
+        PermissionAction.UPDATE,
+        PermissionAction.DELETE,
+        PermissionAction.PUBLISH,
+      ],
+    }),
+  );
+
+  // Workspace Viewer: read-only
+  await assign(
+    wsViewer.id,
+    await permIds({
+      scope: PermissionScope.WORKSPACE,
+      resources: [
+        PermissionResource.POSTS,
+        PermissionResource.CONTENT,
+        PermissionResource.ANALYTICS,
+        PermissionResource.CALENDAR,
+        PermissionResource.SCHEDULING,
+      ],
+      actions: [PermissionAction.READ],
+    }),
+  );
+
+  console.log('✅ RBAC Seeding Complete!');
+}
+
+async function upsertSystemRole(params: {
+  scope: RoleScope;
+  slug: string;
+  name: string;
+  description?: string;
+  isDefault?: boolean;
+}) {
+  const existing = await prisma.role.findFirst({
+    where: {
+      scope: params.scope,
+      slug: params.slug,
+      organizationId: null,
+    },
+    select: { id: true },
+  });
+
+  if (existing) return existing;
+
+  return prisma.role.create({
+    data: {
+      scope: params.scope,
+      slug: params.slug,
+      name: params.name,
+      description: params.description,
+      isSystem: true,
+      isDefault: params.isDefault ?? false,
+      organizationId: null,
+    },
+    select: { id: true },
+  });
 }

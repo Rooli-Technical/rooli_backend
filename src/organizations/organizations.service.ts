@@ -37,7 +37,7 @@ export class OrganizationsService {
       where: { id: userId },
       include: {
         organizationMemberships: {
-          where: { role: { name: 'OWNER' } },
+          where: { role: { slug: 'owner' } },
         },
       },
     });
@@ -75,7 +75,7 @@ export class OrganizationsService {
           },
         });
 
-        const ownerRole = await tx.role.findFirst({ where: { name: 'OWNER' } });
+        const ownerRole = await tx.role.findFirst({ where: { slug: 'owner' } });
         if (!ownerRole) throw new InternalServerErrorException("Role 'owner' missing");
 
         await tx.organizationMember.create({

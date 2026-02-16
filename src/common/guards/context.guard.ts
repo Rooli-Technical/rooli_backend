@@ -1,9 +1,10 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { 
-  Injectable, 
-  CanActivate, 
-  ExecutionContext, 
-  ForbiddenException 
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 
 @Injectable()
@@ -13,114 +14,112 @@ export class ContextGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    
-    // 1. Safety Check: AuthGuard must run first
-    if (!user || !user.userId) return true;
+
+    if (!user || !user.userId) return false;
 
     const params = request.params;
     const workspaceId = params.workspaceId || params.wsId;
     const organizationId = params.organizationId || params.orgId;
 
     // ====================================================
-    // SCENARIO A: User is accessing a WORKSPACE
+    // 1. WORKSPACE CONTEXT
     // ====================================================
-   if (workspaceId) {
-      // 1. Path: User -> OrganizationMember -> WorkspaceMember
+    if (workspaceId) {
       const wsMember = await this.prisma.workspaceMember.findFirst({
         where: {
-          workspaceId,
-          member: { userId: user.userId }, // Nested filter via the join table
-        },
-        include: { 
-          role: { include: { permissions: { include: { permission: true } } } },
-          member: { include: { organization: true } }
-        },
-      });
-
-      if (wsMember) {
-        request.currentContext = 'WORKSPACE';
-        request.currentRole = wsMember.role;
-        request.currentMember = wsMember;
-        request.organization = wsMember.member.organization;
-        return true;
-      }
-
-      // 2. FALLBACK: Check if they are Organization Owner/Admin (Implicit Access)
-      // We need to fetch the workspace first to know which Org it belongs to
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { organizationId: true }
-      });
-
-      if (workspace) {
-        const orgMember = await this.prisma.organizationMember.findUnique({
-          where: {
-            organizationId_userId: { 
-              organizationId: workspace.organizationId, 
-              userId: user.userId 
-            }
-          },
-          include: { 
-            role: { 
-              include: { permissions: { include: { permission: true } } } 
-            }
-          }
-        });
-
-        // Implicit access: Owners/Admins get into all workspaces in their Org
-        if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role.name)) {
-             request.currentContext = 'WORKSPACE';
-             request.currentRole = orgMember.role; 
-             request.currentMember = orgMember; 
-             return true;
-        }
-      }
-
-      throw new ForbiddenException('You are not a member of this workspace.');
-    }
-
-    // ====================================================
-    // SCENARIO B: User is accessing an ORGANIZATION (Billing/Settings)
-    // ====================================================
-
-
-    if (organizationId) {
-      const member = await this.prisma.organizationMember.findUnique({
-        where: {
-          organizationId_userId: {
-            organizationId: organizationId,
-            userId: user.userId,
-          },
+          workspaceId: workspaceId,
+          member: { userId: user.userId },
         },
         include: {
           role: {
-            include: { permissions: { include: { permission: true } } },
+            include: {
+              permissions: {
+                include: { permission: true },
+              },
+            },
           },
-          organization: { select: { status: true } }
+          member: {
+            include: { organization: { select: { status: true, id: true } } },
+          },
         },
       });
 
-      if (!member) {
-        throw new ForbiddenException('You are not a member of this organization.');
+      if (!wsMember) {
+        throw new ForbiddenException(
+          'You do not have access to this workspace',
+        );
       }
 
-      if (member.organization.status === 'SUSPENDED') {
-      throw new ForbiddenException('This organization has been suspended.');
-  }
+      // Step 2: Check Suspension
+      if (wsMember.member.organization.status === 'SUSPENDED') {
+        throw new ForbiddenException('Organization is suspended');
+      }
 
-      // ATTACH CONTEXT
-      request.currentContext = 'ORGANIZATION';
-      request.currentRole = member.role;
-      request.currentMember = member;
+      // Step 3: Fire-and-forget update (Don't await!)
+      this.updateLastActive(user.userId, workspaceId);
+
+      //Step 4: Attach Context
+      request.currentContext = 'WORKSPACE';
+      request.orgId = wsMember.member.organization.id;
+      request.workspaceId = workspaceId;
+      request.orgMember = wsMember.member;
+
+      // CRITICAL FIX: Always use the Workspace Role
+      request.currentRole = wsMember.role;
+
+      // Optimization: Extract permissions names for easier checking
+      request.permissions = wsMember.role.permissions.map(
+        (p) => p.permission.name,
+      );
 
       return true;
     }
 
     // ====================================================
-    // SCENARIO C: No Context (e.g. /users/me)
+    // 2. ORGANIZATION CONTEXT (Settings/Billing)
     // ====================================================
-    // We don't attach a role, so PermissionsGuard will rely on System Roles 
-    // or throw an error if a role was strictly required.
+    if (organizationId) {
+      const orgMember = await this.prisma.organizationMember.findUnique({
+        where: {
+          organizationId_userId: { organizationId, userId: user.userId },
+        },
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: { permission: true },
+              },
+            },
+          },
+          organization: { select: { status: true } },
+        },
+      });
+
+      if (!orgMember)
+        throw new ForbiddenException('Not a member of this organization');
+
+      if (orgMember.organization.status === 'SUSPENDED') {
+        throw new ForbiddenException('Organization is suspended');
+      }
+
+      request.currentContext = 'ORGANIZATION';
+      request.orgId = organizationId;
+      request.orgMember = orgMember;
+      request.currentRole = orgMember.role;
+      request.permissions = orgMember.role.permissions.map(
+        (p) => p.permission.name,
+      );
+
+      return true;
+    }
+
     return true;
+  }
+
+  private async updateLastActive(userId: string, workspaceId: string) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { lastActiveWorkspaceId: workspaceId },
+      });
   }
 }

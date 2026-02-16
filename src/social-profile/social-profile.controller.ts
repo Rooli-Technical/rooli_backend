@@ -8,7 +8,6 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SocialProfileService } from './social-profile.service';
-import { WorkspaceAuth } from '@/common/decorators/auth.decorator';
 import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
 import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
 import { BulkAddProfilesResponseDto } from './dto/response/add-profile-response.dto';

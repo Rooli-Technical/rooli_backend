@@ -98,7 +98,7 @@ export class WorkspaceService {
     const member = await this.getOrgMemberOrThrow({ organizationId, userId });
 
     // Check if Admin/Owner
-    const isOrgAdmin = ['OWNER', 'ADMIN'].includes(member.role?.name);
+    const isOrgAdmin = ['owner', 'admin'].includes(member.role?.slug);
 
     const limit = Math.min(query?.limit ?? 20, 100);
     const page = Math.max(query?.page ?? 1, 1);
@@ -361,6 +361,7 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
 
     if (!org) throw new NotFoundException('Organization not found');
 
+    console.log(org.subscription?.plan);
     // 1. Check Subscription Status
     const sub = org.subscription;
     const isActive = sub && ['ACTIVE'].includes(sub.status);
@@ -371,12 +372,12 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
     // 3. Set Limits (Default to 1 if no active plan)
     // This ensures even free users (who might not have a sub row) are limited to 1.
     const maxWorkspaces = plan?.maxWorkspaces ?? 1;
-
+console.log(maxWorkspaces)
     // 4. Count & Enforce
     const currentCount = await this.prisma.workspace.count({
       where: { organizationId: orgId },
     });
-
+console.log(currentCount)
     if (currentCount >= maxWorkspaces) {
       throw new ForbiddenException(
         `Workspace limit reached. Your plan allows ${maxWorkspaces} workspaces.`,

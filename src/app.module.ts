@@ -53,6 +53,7 @@ import { RooliBullBoardModule } from './common/bull-boad/bull-board.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BrandkitModule } from './brandkit/brandkit.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { RbacModule } from './rbac/rbac.module';
 
 @Module({
   imports: [
@@ -171,6 +172,8 @@ import { CalendarModule } from './calendar/calendar.module';
     BrandkitModule,
 
     CalendarModule,
+
+    RbacModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,4 +1,3 @@
-import { PermissionResource, PermissionAction } from '@generated/enums';
 import {
   Injectable,
   CanActivate,
@@ -6,65 +5,63 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { PERMISSION_KEY } from '../decorators/require-permission.decorator';
+import { PermissionResource, PermissionAction } from '@generated/enums';
 
-
-export const PERMISSION_KEY = 'permissions';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // 1. Get Required Permissions from Decorator
-    const requiredPermissions = this.reflector.getAllAndOverride<
-      { resource: PermissionResource; action: PermissionAction }[]
-    >(PERMISSION_KEY, [context.getHandler(), context.getClass()]);
+    // 1. Get the Required Permission from the Decorator
+    const requiredRule = this.reflector.getAllAndOverride<{
+      resource: PermissionResource;
+      action: PermissionAction;
+    }>(PERMISSION_KEY, [context.getHandler(), context.getClass()]);
 
-    if (!requiredPermissions || requiredPermissions.length === 0) {
-      return true; 
+    // If no permission is required, allow access (Public within the workspace)
+    if (!requiredRule) {
+      return true;
     }
 
+    // 2. Get the User Context (Loaded by ContextGuard)
     const request = context.switchToHttp().getRequest();
-    const user = request.user;
+    const userRole = request.currentRole;
+    const userPermissions = request.permissions; // e.g. ["POSTS.CREATE", "POSTS.READ"]
+
+    if (!userRole || !userPermissions) {
+      throw new ForbiddenException('No permission context found');
+    }
+
+    if (userRole.slug === 'owner') return true;
+
+    // ---------------------------------------------------------
+    // 2. PERMISSION WILDCARDS (The "Cascading Check")
+    // ---------------------------------------------------------
     
-    
-    if (user?.systemRole?.name === 'SUPER_ADMIN') {
-       return true; 
-    }
+    // A. GLOBAL ADMIN: "ALL.MANAGE"
+    // Can do absolutely anything in this scope.
+    if (userPermissions.includes(`ALL.MANAGE`)) return true;
 
-    // -------------------------------------------------------------
-    // 3. CONTEXT RESOLUTION (The "Current Role" Check)
-    // -------------------------------------------------------------
-    const role = request.currentRole;
+    // B. GLOBAL ACTION: "ALL.READ" or "ALL.DELETE"
+    if (userPermissions.includes(`ALL.${requiredRule.action}`)) return true;
 
-    if (!role) {
-      throw new ForbiddenException(
-        'Security Context Missing: No active role found for this context.'
-      );
-    }
+    // C. RESOURCE ADMIN: "POSTS.ALL" or "POSTS.MANAGE"
+    if (userPermissions.includes(`${requiredRule.resource}.ALL`)) return true;
+    if (userPermissions.includes(`${requiredRule.resource}.MANAGE`)) return true;
 
-    // 4. CHECK 2: Context Owner (e.g., Org Owner or Workspace Owner)
-    // Note: Ensure this explicitly checks for the 'OWNER' role specifically
-    if (role.name === 'OWNER') { 
-       return true;
-    }
+    // D. EXACT MATCH: "POSTS.CREATE"
+    // The standard check for granular permissions.
+    if (userPermissions.includes(`${requiredRule.resource}.${requiredRule.action}`)) return true;
 
-
-    // Optimization: Create a Set of permission strings like "POST:CREATE" for O(1) lookup
-    // instead of nested loops.
-    const userPermissionSet = new Set(
-      role.permissions.map((p) => `${p.permission.resource}:${p.permission.action}`)
+    // ---------------------------------------------------------
+    // 3. FAILURE
+    // ---------------------------------------------------------
+    throw new ForbiddenException(
+      `Permission denied. Required: ${requiredRule.resource}.${requiredRule.action}`
     );
-
-    const hasAccess = requiredPermissions.every((required) => {
-      const key = `${required.resource}:${required.action}`;
-      return userPermissionSet.has(key);
-    });
-
-    if (!hasAccess) {
-      throw new ForbiddenException(`Missing required permissions: ${requiredPermissions.map(p => p.action).join(', ')}`);
-    }
-
-    return true;
   }
 }
+
+

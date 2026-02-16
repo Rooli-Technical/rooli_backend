@@ -117,6 +117,7 @@ export class AuthService {
     const orgName = dto.name;
     const workspaceName = dto.initialWorkspaceName || 'General';
     const orgSlug = await this.generateUniqueOrgSlug(orgName);
+    const workspaceSlug = slugify(workspaceName, { lower: true, strict: true });
 
     // 1. Update User Type
     if (dto.userType) {
@@ -126,13 +127,14 @@ export class AuthService {
       });
     }
 
-    const ownerRole = await this.prisma.role.findFirstOrThrow({
-      where: { name: 'OWNER', scope: 'ORGANIZATION' },
-    });
-    const adminRole = await this.prisma.role.findFirstOrThrow({
-      where: { name: 'WORKSPACE_ADMIN', scope: 'WORKSPACE' },
-    });
-
+   const [orgOwnerRole, wsAdminRole] = await Promise.all([
+      this.prisma.role.findFirstOrThrow({
+        where: { slug: 'owner', scope: 'ORGANIZATION' }, 
+      }),
+      this.prisma.role.findFirstOrThrow({
+        where: { slug: 'owner', scope: 'WORKSPACE' },
+      }),
+    ]);
     const txResult = await this.prisma.$transaction(async (tx) => {
       // 1. Create Org
       const org = await tx.organization.create({
@@ -143,7 +145,7 @@ export class AuthService {
           timezone: dto.timezone,
           status: 'PENDING_PAYMENT',
           members: {
-            create: { userId: user.id, roleId: ownerRole.id },
+            create: { userId: user.id, roleId: orgOwnerRole.id },
           },
         },
         include: {
@@ -157,13 +159,13 @@ export class AuthService {
       const workspace = await tx.workspace.create({
         data: {
           name: workspaceName,
-          slug: slugify(workspaceName, { lower: true }),
+          slug: workspaceSlug,
           timezone: org.timezone,
           organizationId: org.id,
           members: {
             create: {
               memberId: orgMember.id,
-              roleId: adminRole.id,
+              roleId: wsAdminRole.id,
             },
           },
         },
@@ -198,7 +200,7 @@ export class AuthService {
       return { org, workspace, user: updatedUser };
     });
 
-    // 1. Generate Tokens (CPU Work)
+    // 1. Generate Tokens 
     const newTokens = await this.generateTokens(
       txResult.user.id,
       txResult.user.email,

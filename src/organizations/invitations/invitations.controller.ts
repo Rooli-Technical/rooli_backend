@@ -16,7 +16,6 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-import { OrgAuth, WorkspaceAuth } from '@/common/decorators/auth.decorator';
 import { AcceptInviteDto } from './dtos/accept-invite.dto';
 import { Public } from '@/common/decorators/public.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
@@ -42,7 +41,7 @@ export class InvitationsController {
 
 
   @Post('organizations/:organizationId/invitations')
-  @OrgAuth({ resource: 'MEMBERS', action: 'CREATE' })
+  //@OrgAuth({ resource: 'MEMBERS', action: 'CREATE' })
   @ApiOperation({ summary: 'Invite a member to the Organization (No Workspace)' })
   async inviteToOrg(
     @Param('organizationId') orgId: string,
@@ -59,7 +58,7 @@ export class InvitationsController {
   }
 
   @Get('organizations/:organizationId/invitations')
-  @OrgAuth({ resource: 'MEMBERS', action: 'READ' })
+  //@OrgAuth({ resource: 'MEMBERS', action: 'READ' })
   @ApiOperation({ summary: 'List pending organization invites' })
   async listOrgInvites(@Param('organizationId') orgId: string) {
     return this.invitationsService.getPendingInvitations(orgId);
@@ -70,7 +69,7 @@ export class InvitationsController {
   // ===========================================================================
 
   @Post('workspaces/:workspaceId/invitations')
-  @WorkspaceAuth({ resource: 'MEMBERS', action: 'CREATE' })
+  //@WorkspaceAuth({ resource: 'MEMBERS', action: 'CREATE' })
   @ApiOperation({ summary: 'Invite a member to a specific Workspace' })
   async inviteToWorkspace(
     @Param('workspaceId') workspaceId: string,
