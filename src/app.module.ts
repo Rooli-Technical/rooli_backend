@@ -54,6 +54,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { BrandkitModule } from './brandkit/brandkit.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { RbacModule } from './rbac/rbac.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -174,6 +175,8 @@ import { RbacModule } from './rbac/rbac.module';
     CalendarModule,
 
     RbacModule,
+    
+    UserModule
   ],
   controllers: [AppController],
   providers: [

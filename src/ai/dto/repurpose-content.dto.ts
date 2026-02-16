@@ -17,7 +17,6 @@ export class RepurposeContentDto {
   })
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   sourceText?: string;
 
   @ApiProperty({ 
