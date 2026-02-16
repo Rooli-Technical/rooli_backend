@@ -361,10 +361,9 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
 
     if (!org) throw new NotFoundException('Organization not found');
 
-    console.log(org.subscription?.plan);
     // 1. Check Subscription Status
     const sub = org.subscription;
-    const isActive = sub && ['ACTIVE'].includes(sub.status);
+    const isActive = sub && ['active'].includes(sub.status);
 
     // 2. Determine Effective Plan (Fallback to Free/Default limits if inactive)
     const plan = isActive ? sub.plan : null;
@@ -372,12 +371,10 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
     // 3. Set Limits (Default to 1 if no active plan)
     // This ensures even free users (who might not have a sub row) are limited to 1.
     const maxWorkspaces = plan?.maxWorkspaces ?? 1;
-console.log(maxWorkspaces)
     // 4. Count & Enforce
     const currentCount = await this.prisma.workspace.count({
       where: { organizationId: orgId },
     });
-console.log(currentCount)
     if (currentCount >= maxWorkspaces) {
       throw new ForbiddenException(
         `Workspace limit reached. Your plan allows ${maxWorkspaces} workspaces.`,
