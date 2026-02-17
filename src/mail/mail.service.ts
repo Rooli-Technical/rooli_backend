@@ -82,30 +82,34 @@ export class MailService {
     await this.sendZeptoMail(email, 'Reset your Rooli password', html);
   }
 
-  async sendInvitationEmail(payload: {
-    to: string;
-    organizationName: string;
-    inviterName: string;
-    role: string;
-    token: string;
-    message: string;
-  }) {
-    const invitationUrl = `${this.configService.get('FRONTEND_URL')}/accept-invitation?token=${payload.token}`;
-    
-    const context = {
-      invitationUrl,
-      organizationName: payload.organizationName,
-      inviterName: payload.inviterName,
-      role: payload.role,
-      year: new Date().getFullYear(),
-      message: payload.message,
-      frontendUrl: this.configService.get('FRONTEND_URL'),
-    };
+ async sendInvitationEmail(payload: {
+  to: string;
+  contextName: string; // Dynamic: "Acme Corp" OR "Marketing Workspace"
+  inviterName: string;
+  roleName: string;
+  token: string;
+  isWorkspaceInvite: boolean; // Helps toggle text in the template
+}) {
+  const invitationUrl = `${this.configService.get('FRONTEND_URL')}/accept-invitation?token=${payload.token}`;
+  
+  const context = {
+    invitationUrl,
+    contextName: payload.contextName,
+    inviterName: payload.inviterName,
+    roleName: payload.roleName,
+    isWorkspaceInvite: payload.isWorkspaceInvite,
+    year: new Date().getFullYear(),
+    frontendUrl: this.configService.get('FRONTEND_URL'),
+  };
 
-    const html = await this.compileTemplate('invitation', context);
-    
-    await this.sendZeptoMail(payload.to, `You're invited to join ${payload.organizationName} on Rooli`, html);
-  }
+  const html = await this.compileTemplate('invitation', context);
+  
+  const subject = payload.isWorkspaceInvite 
+    ? `You've been added to the ${payload.contextName} workspace`
+    : `You're invited to join ${payload.contextName} on Rooli`;
+
+  await this.sendZeptoMail(payload.to, subject, html);
+}
 
   async sendWelcomeEmail(email: string, userName: string, workspaceName: string) {
     const appDashboardUrl = `${this.configService.get('FRONTEND_URL')}/dashboard`;

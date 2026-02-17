@@ -38,6 +38,12 @@ async inviteUser(params: {
   const { inviterId, organizationId, roleId, workspaceId } = params;
   const lowerEmail = params.email.toLowerCase();
 
+  // Fetch inviter details first so we can use them in the email
+  const inviter = await this.prisma.user.findUniqueOrThrow({
+    where: { id: inviterId },
+    select: { firstName: true, lastName: true }
+  });
+
   // 1. Validation: Is user already a member of the Org?
   const existingMember = await this.prisma.organizationMember.findFirst({
     where: {
@@ -106,14 +112,22 @@ async inviteUser(params: {
       },
       include: {
         organization: { select: { name: true } },
+        workspace: { select: { name: true } },
         role: { select: { name: true } }
       }
     });
   });
 
-  // 5. Fire-and-forget Email
-  // this.mailService.sendInvite(invitation.email, invitation.token, invitation.organization.name);
+ const isWorkspace = !!invitation.workspaceId;
 
+  await this.mailService.sendInvitationEmail({
+    to: invitation.email,
+    contextName: isWorkspace ? invitation.workspace!.name : invitation.organization.name,
+    inviterName: `${inviter.firstName} ${inviter.lastName}`,
+    roleName: invitation.role.name,
+    token: invitation.token,
+    isWorkspaceInvite: isWorkspace,
+  });
   return { 
     message: workspaceId ? 'Workspace invitation sent' : 'Organization invitation sent',
     invitationId: invitation.id 
@@ -280,17 +294,22 @@ async inviteUser(params: {
       createdAt: new Date(), 
     },
     include: {
+      inviter: { select: { firstName: true, lastName: true } },
+      role: { select: { name: true } },
       organization: { select: { name: true } },
       workspace: { select: { name: true } }
     }
   });
 
-  // 4. Send Email
-  const contextName = updatedInvite.workspace 
-    ? updatedInvite.workspace.name 
-    : updatedInvite.organization.name;
-    
-  // await this.mail.sendInvite(invite.email, newToken, contextName);
+  // 4. Send Email   
+await this.mailService.sendInvitationEmail({
+    to: updatedInvite.email,
+    contextName: updatedInvite.workspace ? updatedInvite.workspace.name : updatedInvite.organization.name,
+    inviterName: `${updatedInvite.inviter.firstName} ${updatedInvite.inviter.lastName}`,
+    roleName: updatedInvite.role.name,
+    token: updatedInvite.token,
+    isWorkspaceInvite: !!updatedInvite.workspaceId,
+  });
 
   return { success: true, message: 'Invitation resent' };
 }

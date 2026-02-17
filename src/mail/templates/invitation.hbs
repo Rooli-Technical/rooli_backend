@@ -44,39 +44,39 @@
   </head>
   <body>
     <div class="container">
-      <h2>You’re Invited to Join {{organizationName}}</h2>
+      <h2>
+        {{#if isWorkspaceInvite}}
+          You’re Invited to the {{contextName}} Workspace
+        {{else}}
+          You’re Invited to Join {{contextName}}
+        {{/if}}
+      </h2>
 
       <p>Hello,</p>
 
       <p>
-        {{inviterName}} has invited you to join the <strong>{{organizationName}}</strong>
-        organization as a <strong>{{role}}</strong>.
-      </p>
-      <p>
-        {{#if message}}
-          <em>"{{message}}"</em>
+        <strong>{{inviterName}}</strong> has invited you to join 
+        {{#if isWorkspaceInvite}}
+          the <strong>{{contextName}}</strong> workspace 
+        {{else}}
+          the <strong>{{contextName}}</strong> organization 
         {{/if}}
-      </p>
-          
-
-      <p>
-        To accept this invitation, click the button below. This invitation will
-        expire in 7 days.
+        as a <strong>{{roleName}}</strong>.
       </p>
 
-      <a
-        href="{{frontendUrl}}/invitations/accept?token={{token}}"
-        class="button"
-      >
-        Accept Invitation
-      </a>
+      {{#if message}}
+        <p style="padding: 12px; background: #f3f4f6; border-left: 4px solid #2563eb; font-style: italic;">
+          "{{message}}"
+        </p>
+      {{/if}}
 
-      <p>If the button above doesn’t work, copy and paste the link below into your browser:</p>
-      <p>{{frontendUrl}}/invitations/accept?token={{token}}</p>
+      <p>Click the button below to accept. This invitation expires in 7 days.</p>
+
+      <a href="{{invitationUrl}}" class="button">Accept Invitation</a>
 
       <div class="footer">
         <p>If you weren’t expecting this email, you can ignore it.</p>
-        <p>© {{year}} {{organizationName}}. All rights reserved.</p>
+        <p>© {{year}} Rooli. All rights reserved.</p>
       </div>
     </div>
   </body>
