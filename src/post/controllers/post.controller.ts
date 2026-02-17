@@ -23,14 +23,19 @@ import { PostDto } from '../dto/response/post.dto';
 import { ApiPaginatedResponse } from '@/common/decorators/api-paginated-response.decorator';
 import { GetWorkspacePostsDto } from '../dto/request/get-all-posts.dto';
 import { BulkCreatePostDto } from '../dto/request/bulk-schedule.dto';
+import { ContextGuard } from '@/common/guards/context.guard';
+import { PermissionsGuard } from '@/common/guards/permission.guard';
+import { RequirePermission } from '@/common/decorators/require-permission.decorator';
+import { PermissionResource, PermissionAction } from '@generated/enums';
 
 @Controller('workspaces/:workspaceId/posts')
 @ApiBearerAuth()
-@UseGuards(FeatureGuard)
+@UseGuards(ContextGuard, PermissionsGuard, FeatureGuard)
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.CREATE)
   @ApiOperation({ summary: 'Create a new post in the workspace' })
   @ApiStandardResponse(PostDto)
   async create(
