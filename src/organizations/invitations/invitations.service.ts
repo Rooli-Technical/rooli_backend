@@ -256,30 +256,43 @@ async inviteUser(params: {
     };
   }
 
-  // ===========================================================================
-  // 3. MANAGEMENT (Resend / Revoke / List)
-  // ===========================================================================
-
-async resendInvitation(invitationId: string) {
-  const invitation = await this.prisma.invitation.findUnique({
+  async resendInvitation(invitationId: string) {
+  // 1. Find the invite
+  const invite = await this.prisma.invitation.findUnique({
     where: { id: invitationId },
   });
-  if (!invitation) throw new NotFoundException('Invitation not found');
 
+  if (!invite) throw new NotFoundException('Invitation not found');
+  if (invite.status === 'ACCEPTED') throw new BadRequestException('User already accepted');
+
+  // 2. SAFETY CHECK: Re-verify organization capacity
+  // Pass the email to exclude it from the "pending count" since it's already in the DB
+  await this.checkSeatLimit(invite.organizationId, invite.email);
+
+  // 3. Refresh Token & Timestamp
   const newToken = crypto.randomBytes(32).toString('hex');
-
-  await this.prisma.invitation.update({
+  
+  const updatedInvite = await this.prisma.invitation.update({
     where: { id: invitationId },
     data: { 
       token: newToken, 
       status: 'PENDING',
       createdAt: new Date(), 
-      updatedAt: new Date(),
     },
+    include: {
+      organization: { select: { name: true } },
+      workspace: { select: { name: true } }
+    }
   });
 
-  // TODO: Trigger email service with newToken
-  return { success: true };
+  // 4. Send Email
+  const contextName = updatedInvite.workspace 
+    ? updatedInvite.workspace.name 
+    : updatedInvite.organization.name;
+    
+  // await this.mail.sendInvite(invite.email, newToken, contextName);
+
+  return { success: true, message: 'Invitation resent' };
 }
 
 async revokeInvitation(invitationId: string) {
@@ -335,7 +348,7 @@ async revokeInvitation(invitationId: string) {
       where: { 
         organizationId, 
         status: 'PENDING',
-        email: excludeEmail ? { not: excludeEmail } : undefined // 👈 The Fix
+        email: excludeEmail ? { not: excludeEmail } : undefined 
       },
     });
 

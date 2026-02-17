@@ -8,7 +8,7 @@ import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { PermissionResource, PermissionAction } from '@generated/enums';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { CreateInviteDto } from './dtos/create-invite.dto';
+import { CreateInviteDto } from './dtos/invite-member.dto';
 
 
 @ApiTags('Invitations')
