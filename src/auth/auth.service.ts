@@ -190,7 +190,7 @@ export class AuthService {
 
       // 5. Update User Context
       const updatedUser = await tx.user.update({
-        where: { id: user.id },
+        where: { id: userId },
         data: {
           lastActiveWorkspaceId: workspace.id,
           isOnboardingComplete: true,
