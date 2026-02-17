@@ -45,67 +45,62 @@ export class UserService {
     return safeUser;
   }
 
-async getUsersByOrganization(
-    organizationId: string,
-    filters: UserFiltersDto,
-  ) {
-    const page = filters.page ?? 1;
-    const limit = filters.limit ?? 20;
-    const skip = (page - 1) * limit;
+async getUserWorkspaces(userId: string) {
+  // 1. Verify user exists
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true }
+  });
+  if (!user) throw new NotFoundException('User not found');
 
-    const where: Prisma.OrganizationMemberWhereInput = {
-      organizationId,
-      user: { deletedAt: null },
-    };
-
-    // 2. Search Logic
-    if (filters.search) {
-      where.user = {
-        deletedAt: null,
-        OR: [
-          { firstName: { contains: filters.search, mode: 'insensitive' } },
-          { lastName: { contains: filters.search, mode: 'insensitive' } },
-          { email: { contains: filters.search, mode: 'insensitive' } },
-        ],
-      };
-    }
-
-    if (filters.role) {
-      where.roleId = filters.role;
-    }
-
-    // 4. Execution
-    const [members, total] = await Promise.all([
-      this.prisma.organizationMember.findMany({
-        where,
-        take: limit,
-        skip,
-        include: {
-          user: true,
-          role: true,
-          workspaceMemberships: { include: { workspace: true } }
+  // 2. Fetch Workspaces through the Membership chain
+  // We look for WorkspaceMembers where the "parent" OrganizationMember belongs to this User
+  const workspaces = await this.prisma.workspace.findMany({
+    where: {
+      members: {
+        some: {
+          member: {
+            userId: userId,
+          },
         },
-        orderBy: { joinedAt: 'desc' },
-      }),
-      this.prisma.organizationMember.count({ where }),
-    ]);
-
-    // 5. Mapping to safe response
-    return {
-      data: members.map((member) => ({
-        ...this.toSafeUser(member.user),
-        orgRole: member.role,
-        joinedAt: member.joinedAt,
-        memberId: member.id,
-      })),
-      meta: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
       },
-    };
-  }
+    },
+    include: {
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+      // Include the user's specific role in this workspace
+      members: {
+        where: {
+          member: {
+            userId: userId,
+          },
+        },
+        include: {
+          role: true,
+        },
+      },
+    },
+    orderBy: {
+      updatedAt: 'desc',
+    },
+  });
+
+  // 3. Transform to a cleaner structure
+  return workspaces.map((workspace) => ({
+    id: workspace.id,
+    name: workspace.name,
+    slug: workspace.slug,
+    timezone: workspace.timezone,
+    organization: workspace.organization,
+    // Extract the single role object for the current user
+    userRole: workspace.members[0]?.role || null,
+  }));
+}
 
   async updateProfile(
     userId: string,

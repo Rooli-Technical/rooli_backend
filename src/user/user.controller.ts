@@ -86,18 +86,16 @@ export class UserController {
     return this.usersService.deactivateMyAccount(req.user.userId);
   }
 
-  //there should be a guard to restrict organization access
-  @Get('organization/:organizationId')
-  @ApiOperation({
-    summary: 'List users by organization',
-    description:
-      'Returns paginated list of users for a given organization with optional search and role filters.',
+@Get('user/workspaces')
+  @ApiOperation({ 
+    summary: 'Get current user workspaces', 
+    description: 'Returns all workspaces the authenticated user belongs to across all organizations.' 
   })
-  async getUsersByOrganization(
-    @Param('organizationId') organizationId: string,
-    @Query() filters: UserFiltersDto,
+  @ApiResponse({ status: 200, description: 'Workspaces retrieved successfully.' })
+  async getMyWorkspaces(
+    @CurrentUser('userId') userId: string, 
   ) {
-    return this.usersService.getUsersByOrganization(organizationId, filters);
+    return this.usersService.getUserWorkspaces(userId);
   }
-
 }
+
