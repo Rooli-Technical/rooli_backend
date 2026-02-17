@@ -13,6 +13,8 @@ import { PrismaService } from '@/prisma/prisma.service';
 import slugify from 'slugify';
 import dayjs from 'dayjs';
 import { BillingService } from '@/billing/billing.service';
+import { ListMembersQueryDto } from './dtos/list-members.dto';
+import { Prisma } from '@generated/client';
 
 @Injectable()
 export class OrganizationsService {
@@ -185,6 +187,74 @@ export class OrganizationsService {
       return { success: true, message: 'Organization deleted successfully' };
     });
   }
+
+  async listOrganizationMembers(params: {
+  organizationId: string;
+  query?: ListMembersQueryDto; 
+}) {
+  const { organizationId, query } = params;
+
+  // 1. Verify Organization exists
+  const organization = await this.prisma.organization.findUnique({
+    where: { id: organizationId },
+  });
+  if (!organization) throw new NotFoundException('Organization not found');
+
+  // 2. Pagination Logic
+  const take = Math.min(query?.limit ?? 20, 100);
+  const skip = ((query?.page ?? 1) - 1) * take;
+
+  // 3. Search Filter (Email, First Name, Last Name)
+  const search = query?.search?.trim();
+  const where: Prisma.OrganizationMemberWhereInput = {
+    organizationId,
+    ...(search
+      ? {
+          user: {
+            OR: [
+              { email: { contains: search, mode: 'insensitive' } },
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        }
+      : {}),
+  };
+
+  // 4. Execute Fetch
+  const [items, total] = await this.prisma.$transaction([
+    this.prisma.organizationMember.findMany({
+      where,
+      take,
+      skip,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        role: true, // The Organization-level role (e.g., Owner, Admin, Member)
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            lastActiveAt: true,
+          },
+        },
+      },
+    }),
+    this.prisma.organizationMember.count({ where }),
+  ]);
+
+  return {
+    items,
+    meta: {
+      total,
+      page: query?.page ?? 1,
+      limit: take,
+      totalPages: Math.ceil(total / take),
+    },
+  };
+}
 
 
   //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Run once a day

@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dtos/create-organization.dto';
@@ -20,14 +21,21 @@ import {
   ApiOkResponse,
 } from '@nestjs/swagger';
 import { GetAllOrganizationsDto } from './dtos/get-organiations.dto';
+import { ContextGuard } from '@/common/guards/context.guard';
+import { PermissionsGuard } from '@/common/guards/permission.guard';
+import { RequirePermission } from '@/common/decorators/require-permission.decorator';
+import { PermissionResource, PermissionAction } from '@generated/enums';
+import { ListMembersQueryDto } from './dtos/list-members.dto';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
 @Controller('organizations')
+@UseGuards(ContextGuard, PermissionsGuard)
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
   @Post()
+   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.CREATE)
   @ApiOperation({
     summary: 'Create organization',
     description:
@@ -61,6 +69,23 @@ export class OrganizationsController {
     return this.organizationsService.getAllOrganizations(query);
   }
 
+  @Get(':organizationId/members')
+  @ApiOperation({ 
+    summary: 'List organization members', 
+    description: 'Returns a paginated list of all members within a specific organization.' 
+  })
+  @ApiResponse({ status: 200, description: 'Members retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Organization not found.' })
+  async getMembers(
+    @Param('organizationId') organizationId: string,
+    @Query() query: ListMembersQueryDto,
+  ) {
+    return this.organizationsService.listOrganizationMembers({
+      organizationId,
+      query,
+    });
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get organization',
@@ -86,6 +111,7 @@ export class OrganizationsController {
   }
 
   @Patch(':id')
+  @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.UPDATE)
   @ApiOperation({
     summary: 'Update organization',
     description:
