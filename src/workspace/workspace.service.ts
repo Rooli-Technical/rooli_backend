@@ -384,62 +384,6 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
     return { features: (plan?.features as any) ?? {} };
   }
 
-  private async checkSeatLimit(workspaceId: string, email: string) {
-    const lowerEmail = email.toLowerCase();
-
-    // 1. GET CONTEXT (Org & Plan)
-    // We fetch the Organization through the Workspace
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: {
-        organization: {
-          include: {
-            subscription: { include: { plan: true } },
-          },
-        },
-      },
-    });
-
-    if (!workspace) throw new NotFoundException('Workspace not found');
-    const org = workspace.organization;
-
-    // 2. CHECK "ALREADY PAID" STATUS (The Free Pass)
-    // If this user is ALREADY a member of the Organization (in any workspace),
-    // they have already consumed a seat. We do NOT block them.
-    const existingOrgMember = await this.prisma.organizationMember.findFirst({
-      where: {
-        organizationId: org.id,
-        user: { email: lowerEmail },
-      },
-    });
-
-    if (existingOrgMember) {
-      return; // ✅ PASS: They are an existing, paid seat.
-    }
-
-    // 3. CHECK "NEW SEAT" AVAILABILITY
-    // If we reach here, this is a BRAND NEW user for the Organization.
-    const seatLimit = org.subscription?.plan?.maxTeamMembers || 1; // Default to 1 (Solo)
-
-    // A. Count Active Members (Seats taken)
-    const currentSeats = await this.prisma.organizationMember.count({
-      where: { organizationId: org.id },
-    });
-
-    // B. Count Pending Invites (Seats reserved)
-    // We must count these, otherwise users could blast 100 invites on a 3-user plan
-    const pendingInvites = await this.prisma.invitation.count({
-      where: { organizationId: org.id, status: 'PENDING' },
-    });
-
-    // 4. THE VERDICT
-    if (currentSeats + pendingInvites >= seatLimit) {
-      throw new ForbiddenException(
-        `Organization seat limit reached (${seatLimit} users). Upgrade your plan to invite new team members.`,
-      );
-    }
-  }
-
   private async getRoleIdOrThrow(
     tx: Prisma.TransactionClient,
     params: {
