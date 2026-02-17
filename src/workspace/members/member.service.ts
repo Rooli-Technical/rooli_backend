@@ -32,13 +32,11 @@ export class WorkspaceMemberService {
     // 3) Target org member must be in same org
     const targetOrgMember = await this.prisma.organizationMember.findUnique({
       where: { id: dto.organizationMemberId },
-      select: { id: true, organizationId: true, userId: true, deletedAt: true },
+      select: { id: true, organizationId: true, userId: true },
     });
     if (!targetOrgMember)
       throw new NotFoundException('Organization member not found');
-    if (targetOrgMember.deletedAt) {
-      throw new BadRequestException('Target member is inactive');
-    }
+
     if (targetOrgMember.organizationId !== workspace.organizationId) {
       throw new ForbiddenException(
         'Member does not belong to this organization',
@@ -152,7 +150,7 @@ export class WorkspaceMemberService {
       data: { roleId: dto.roleId },
       include: {
         member: {
-          include: { user: { select: { id: true, email: true, name: true } } },
+          include: { user: { select: { id: true, email: true, firstName: true, lastName: true, avatar: true } } },
         },
         role: true,
       },
