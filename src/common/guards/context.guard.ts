@@ -68,9 +68,9 @@ export class ContextGuard implements CanActivate {
       request.currentRole = wsMember.role;
 
       // Optimization: Extract permissions names for easier checking
-      request.permissions = wsMember.role.permissions.map(
-        (p) => p.permission.name,
-      );
+     request.permissions = wsMember.role.permissions.map(
+  (p) => `${p.permission.resource}.${p.permission.action}`
+);
 
       return true;
     }
@@ -107,9 +107,8 @@ export class ContextGuard implements CanActivate {
       request.orgMember = orgMember;
       request.currentRole = orgMember.role;
       request.permissions = orgMember.role.permissions.map(
-        (p) => p.permission.name,
-      );
-
+  (p) => `${p.permission.resource}.${p.permission.action}`
+);
       return true;
     }
 
