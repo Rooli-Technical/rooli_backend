@@ -16,11 +16,10 @@ export class WorkspaceMemberService {
   constructor(private readonly prisma: PrismaService) {}
 
   async addMember(params: {
-    userId: string;
     workspaceId: string;
     dto: AddWorkspaceMemberDto;
   }) {
-    const { userId, workspaceId, dto } = params;
+    const {  workspaceId, dto } = params;
 
     // 1) Load workspace + orgId
     const workspace = await this.prisma.workspace.findUnique({
@@ -161,7 +160,6 @@ export class WorkspaceMemberService {
    * List members in a workspace with optional search.
    */
   async listMembers(params: {
-    userId: string;
     workspaceId: string;
     query?: ListMembersQueryDto;
   }) {

@@ -21,6 +21,7 @@ const SCOPE_RESOURCES: Record<PermissionScope, PermissionResource[]> = {
     PermissionResource.AUDIT_LOGS,
   ],
   [PermissionScope.WORKSPACE]: [
+    PermissionResource.MEMBERS,
     PermissionResource.POSTS,
     PermissionResource.CONTENT,
     PermissionResource.SCHEDULING,

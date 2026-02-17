@@ -26,6 +26,8 @@ import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 import { PermissionResource, PermissionAction } from '@generated/enums';
 import { ListMembersQueryDto } from './dtos/list-members.dto';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { UpdateOrgMemberRoleDto } from './dtos/update-member-role.dto';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
@@ -140,6 +142,46 @@ export class OrganizationsController {
       orgId,
       dto,
     );
+  }
+
+  @Patch(':memberId/role')
+  @RequirePermission(PermissionResource.MEMBERS, PermissionAction.UPDATE)
+  @ApiOperation({ summary: 'Update member role (Promotion/Demotion)' })
+  async updateRole(
+    @Param('organizationId') organizationId: string,
+    @Param('memberId') memberId: string,
+    @Body() dto: UpdateOrgMemberRoleDto,
+  ) {
+    return this.organizationsService.updateRole({
+      organizationId,
+      memberId,
+      roleId: dto.roleId,
+    });
+  }
+
+  @Delete(':memberId')
+  @RequirePermission(PermissionResource.MEMBERS, PermissionAction.DELETE)
+  @ApiOperation({ summary: 'Remove a member from the entire organization' })
+  async remove(
+    @Param('organizationId') organizationId: string,
+    @Param('memberId') memberId: string,
+    @CurrentUser('userId') actorUserId: string,
+  ) {
+
+    return this.organizationsService.remove({
+      actorId: actorUserId, 
+      organizationId,
+      memberId,
+    });
+  }
+
+  @Post('leave')
+  @ApiOperation({ summary: 'Voluntarily leave the organization' })
+  async leave(
+    @Param('organizationId') organizationId: string,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.organizationsService.leave(userId, organizationId);
   }
 
   @Delete(':id')

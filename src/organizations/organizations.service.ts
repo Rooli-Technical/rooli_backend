@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -14,7 +15,7 @@ import slugify from 'slugify';
 import dayjs from 'dayjs';
 import { BillingService } from '@/billing/billing.service';
 import { ListMembersQueryDto } from './dtos/list-members.dto';
-import { Prisma } from '@generated/client';
+import { Prisma, RoleScope } from '@generated/client';
 
 @Injectable()
 export class OrganizationsService {
@@ -255,6 +256,142 @@ export class OrganizationsService {
     },
   };
 }
+
+async updateRole(params: {
+    organizationId: string;
+    memberId: string; // Who is being promoted?
+    roleId: string; // The new role
+  }) {
+    const { organizationId, memberId, roleId } = params;
+
+    // 1. Validation: Ensure Role is valid for ORGANIZATION scope
+    const newRole = await this.prisma.role.findUnique({
+      where: { id: roleId },
+    });
+
+    if (!newRole || newRole.scope !== RoleScope.ORGANIZATION) {
+      throw new BadRequestException('Invalid role. Must be an Organization role.');
+    }
+
+    // 2. Validation: Prevent Demoting the Last Owner
+    // If we are changing an Owner to something else, check if they are the LAST one.
+    const memberToUpdate = await this.prisma.organizationMember.findUnique({
+      where: { id: memberId },
+      include: { role: true },
+    });
+
+    if (!memberToUpdate) throw new NotFoundException('Member not found');
+
+    if (memberToUpdate.role.slug === 'owner' && newRole.slug !== 'owner') {
+      await this.assertNotLastOrgOwner(organizationId, memberId);
+    }
+
+    // 3. Execute Update
+    return this.prisma.organizationMember.update({
+      where: { id: memberId },
+      data: { roleId },
+      include: { role: true },
+    });
+  }
+
+  /**
+   * Fire an employee.
+   * This removes them from the Organization AND all Workspaces (Cascading delete).
+   */
+  async remove(params: {
+    actorId: string;
+    organizationId: string;
+    memberId: string;
+  }) {
+    const { actorId, organizationId, memberId } = params;
+
+    // 1. Prevent Suicide (Optional, but good UX)
+    // Most apps force you to leave via a separate "Leave Org" button, 
+    // rather than "Removing yourself" from the list.
+    if (actorId === memberId) {
+      throw new BadRequestException('You cannot remove yourself. Use "Leave Organization" instead.');
+    }
+
+    // 2. Find Member
+    const memberToRemove = await this.prisma.organizationMember.findUnique({
+      where: { id: memberId },
+      include: { role: true },
+    });
+
+    if (!memberToRemove || memberToRemove.organizationId !== organizationId) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // 3. Prevent Removing Last Owner
+    if (memberToRemove.role.slug === 'owner') {
+      await this.assertNotLastOrgOwner(organizationId, memberId);
+    }
+
+    // 4. Execute (Cascade Delete)
+    await this.prisma.organizationMember.delete({
+      where: { id: memberId },
+    });
+
+    return { success: true };
+  }
+
+  /**
+ * Allows a user to voluntarily leave the organization.
+ */
+async leave(userId: string, organizationId: string) {
+  // 1. Find the Member Record for this User
+  const member = await this.prisma.organizationMember.findUnique({
+    where: {
+      organizationId_userId: {
+        organizationId,
+        userId,
+      },
+    },
+    include: { role: true },
+  });
+
+  if (!member) {
+    throw new NotFoundException('You are not a member of this organization');
+  }
+
+  // 2. Safety Check: Are they the last captain?
+  if (member.role.slug === 'owner') {
+    await this.assertNotLastOrgOwner(organizationId, member.id);
+  }
+
+  // 3. Execution (Cascading Delete)
+  // This removes them from the Org AND all Workspaces automatically
+  // (Assuming onDelete: Cascade in schema)
+  await this.prisma.organizationMember.delete({
+    where: { id: member.id },
+  });
+
+  return { success: true };
+}
+
+  // --- HELPERS ---
+
+  private async assertNotLastOrgOwner(organizationId: string, memberIdToRemove: string) {
+    const ownerRole = await this.prisma.role.findFirst({
+      where: { scope: RoleScope.ORGANIZATION, slug: 'owner' },
+    });
+
+    if (!ownerRole) return;
+
+    const remainingOwners = await this.prisma.organizationMember.count({
+      where: {
+        organizationId,
+        roleId: ownerRole.id,
+        NOT: { id: memberIdToRemove },
+      },
+    });
+
+    if (remainingOwners === 0) {
+      throw new BadRequestException(
+        'Cannot remove or demote the last Organization Owner. Transfer ownership first.'
+      );
+    }
+  }
 
 
   //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Run once a day
