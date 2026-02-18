@@ -13,7 +13,10 @@ import { AuthService } from '@/auth/auth.service';
 
 @Injectable()
 export class WorkspaceService {
-  constructor(private prisma: PrismaService, private authService: AuthService) {}
+  constructor(
+    private prisma: PrismaService,
+    private authService: AuthService,
+  ) {}
 
   async createWorkspace(
     creatorUserId: string,
@@ -41,7 +44,6 @@ export class WorkspaceService {
         if (!orgMember) {
           throw new ForbiddenException('Not a member of this organization.');
         }
-
 
         // 2) Create workspace
         const workspace = await tx.workspace.create({
@@ -141,6 +143,26 @@ export class WorkspaceService {
         take,
         skip,
         orderBy: { [orderBy]: orderDir },
+        include: {
+          members: {
+            include: {
+              role: true,
+              member: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                      avatar: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       }),
     ]);
 
@@ -160,14 +182,13 @@ export class WorkspaceService {
    * Requires org membership; optionally require workspace membership.
    */
   async getWorkspace(orgId: string, workspaceId: string) {
-
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId, organizationId: orgId },
       include: {
         organization: { select: { id: true, name: true, slug: true } },
         members: {
           include: {
-            role: true, 
+            role: true,
             member: {
               include: {
                 user: {
@@ -197,15 +218,13 @@ export class WorkspaceService {
    */
   async updateWorkspace(
     workspaceId: string,
-    dto: UpdateWorkspaceDto
+    dto: UpdateWorkspaceDto,
   ): Promise<Workspace> {
-
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { id: true, organizationId: true },
     });
     if (!workspace) throw new NotFoundException('Workspace not found.');
-
 
     const data: Prisma.WorkspaceUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name.trim();
@@ -241,14 +260,22 @@ export class WorkspaceService {
    * Delete workspace.
    * If you want soft-delete, add deletedAt and update instead.
    */
-  async deleteWorkspace(workspaceId: string ) {
-
+  async deleteWorkspace(workspaceId: string) {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { id: true, organizationId: true },
     });
     if (!workspace) throw new NotFoundException('Workspace not found.');
 
+    //if workspace has members throw error
+    const memberCount = await this.prisma.workspaceMember.count({
+      where: { workspaceId },
+    });
+    if (memberCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete workspace with active members. Please remove all members before deleting.',
+      );
+    }
 
     // If posts/media/etc have onDelete: Cascade, this is fine.
     // If not, you’ll get FK errors, so decide your delete strategy.
@@ -256,15 +283,15 @@ export class WorkspaceService {
     return { deleted: true };
   }
 
-async switchWorkspace(userId: string, targetWorkspaceId: string) {
+  async switchWorkspace(userId: string, targetWorkspaceId: string) {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: targetWorkspaceId },
-      select: { 
-        id: true, 
+      select: {
+        id: true,
         organizationId: true,
         organization: {
-          select: { status: true }
-        }
+          select: { status: true },
+        },
       },
     });
 
@@ -277,7 +304,7 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { lastActiveWorkspaceId: targetWorkspaceId },
-      select: { id: true, email: true, refreshTokenVersion: true }
+      select: { id: true, email: true, refreshTokenVersion: true },
     });
 
     // 4. Generate New Tokens with the updated context
@@ -300,8 +327,6 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
       ...tokens,
     };
   }
-
-
 
   private normalizeSlug(input: string) {
     const s = input
