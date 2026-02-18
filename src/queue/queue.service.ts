@@ -284,6 +284,28 @@ export class QueueSlotService {
     if (!dto.postIds?.length)
       throw new BadRequestException('postIds is required');
 
+    // 1. GET TIER LIMITS 🛡️
+    const { tier } = await this.getWorkspaceTierAndZone(workspaceId); // Returns 'CREATOR', 'BUSINESS', etc.
+    const limits = TIER_LIMITS[tier];
+
+    // 2. CHECK CURRENT QUEUE USAGE
+    // Count posts that are currently SCHEDULED (in the queue)
+    const currentQueueCount = await prisma.post.count({
+      where: {
+        workspaceId,
+        status: 'SCHEDULED', // Only count scheduled items
+      } as any,
+    });
+
+    // 3. CHECK NEW BATCH SIZE
+    const newPostsCount = dto.postIds.length;
+
+    if (currentQueueCount + newPostsCount > limits.maxPostsInQueue) {
+      throw new ForbiddenException(
+        `Queue limit reached. Your plan allows ${limits.maxPostsInQueue} queued posts. You currently have ${currentQueueCount}. Upgrade to add more.`
+      );
+    }
+
     const { zone } = await this.getWorkspaceTierAndZone(workspaceId);
     const platform = dto.platform ?? null;
 

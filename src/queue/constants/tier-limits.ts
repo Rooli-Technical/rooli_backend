@@ -6,6 +6,7 @@ export type PlanTier = 'CREATOR' | 'BUSINESS' | 'ROCKET' | 'ENTERPRISE';
 export type TierLimits = {
   // --- Queue / Scheduling
   maxQueueSlots: number;          // how many queue slots per workspace
+  maxPostsInQueue: number;       // total posts that can be scheduled at once
   maxAutoScheduleDays: number;    // how far ahead queue engine can look
   maxBulkPostsPerRequest: number; // safety + abuse prevention
 
@@ -25,6 +26,7 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
   CREATOR: {
     // Queue
     maxQueueSlots: 10,          // enough for a simple weekly schedule
+    maxPostsInQueue: 10,
     maxAutoScheduleDays: 30,
     maxBulkPostsPerRequest: 20,
 
@@ -42,6 +44,7 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
 
   BUSINESS: {
     maxQueueSlots: 50,
+    maxPostsInQueue: 100,
     maxAutoScheduleDays: 60,
     maxBulkPostsPerRequest: 100,
 
@@ -57,6 +60,7 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
 
   ROCKET: {
     maxQueueSlots: 200,
+    maxPostsInQueue: 2000,
     maxAutoScheduleDays: 90,
     maxBulkPostsPerRequest: 500,
 
@@ -73,6 +77,7 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
   ENTERPRISE: {
     // Enterprise is typically “custom” — set high defaults, override per org in DB
     maxQueueSlots: 1000,
+    maxPostsInQueue: 999,
     maxAutoScheduleDays: 180,
     maxBulkPostsPerRequest: 2000,
 
