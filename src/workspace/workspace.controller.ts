@@ -13,7 +13,7 @@ export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
 
 
-  @Post('orgId')
+  @Post()
   @ApiOperation({ summary: 'Create a new workspace' })
   @ApiParam({ name: 'orgId', description: 'Organization ID' })
   @ApiResponse({ status: 201, description: 'Workspace created successfully' })
@@ -27,7 +27,7 @@ export class WorkspaceController {
   }
 
 
-  @Get('orgId')
+  @Get()
   @ApiOperation({
     summary:
       'Get all workspaces (Admins see all, members see assigned only)',
