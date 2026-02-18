@@ -260,6 +260,7 @@ export class AuthController {
   }
 
   @Post('logout')
+   @ApiBearerAuth()
     @AuditContext({ action: AuditAction.LOGOUT, resource: AuditResourceType.AUTH })
   @ApiOperation({ summary: 'Logout the current user' })
   @ApiResponse({ status: 200, description: 'Logged out successfully.' })
