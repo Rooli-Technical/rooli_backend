@@ -7,11 +7,6 @@ import {
 
 
 export class AddWorkspaceMemberDto {
-  @ApiProperty({ description: 'Workspace ID' })
-  @IsString()
-  @IsNotEmpty()
-  workspaceId: string;
-
   @ApiProperty({ description: 'OrganizationMember ID' })
   @IsString()
   @IsNotEmpty()
