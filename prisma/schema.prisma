@@ -1439,10 +1439,15 @@ enum AuditAction {
   DELETE
   INVITE
   LOGIN
+  LOGOUT
   EXECUTE
+  APPROVE
+  REJECT
+  bulk_action
 }
 
 enum AuditResourceType {
+  AUTH
   ORGANIZATION
   WORKSPACE
   MEMBER
@@ -1450,8 +1455,9 @@ enum AuditResourceType {
   ROLE
   PERMISSION
   POST
-  SOCIAL_ACCOUNT
+  QUEUE_SLOT
   BILLING
+  SOCIAL_ACCOUNT
   SETTINGS
 }
 
