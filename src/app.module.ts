@@ -6,7 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { MailModule } from './mail/mail.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { BillingModule } from './billing/billing.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { OrganizationsModule } from './organizations/organizations.module';
@@ -56,6 +56,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { RbacModule } from './rbac/rbac.module';
 import { UserModule } from './user/user.module';
 import { AuditModule } from './audit/audit.module';
+import { AuditInterceptor } from './audit/interceptors/audit.intercetor';
 
 @Module({
   imports: [
@@ -191,6 +192,10 @@ import { AuditModule } from './audit/audit.module';
     {
       provide: APP_GUARD,
       useClass: SubscriptionGuard, // Applies to EVERYTHING by default
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
     },
   ],
 })

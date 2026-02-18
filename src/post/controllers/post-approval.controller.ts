@@ -8,6 +8,8 @@ import { PostApprovalDto } from "../dto/response/post-approval.dto";
 import { ReviewApprovalDto } from "../dto/response/review-approval.dto";
 import { ApiStandardResponse } from "@/common/decorators/api-standard-response.decorator";
 import { ApiBearerAuth } from "@nestjs/swagger";
+import { AuditContext } from "@/audit/decorators/audit.decorator";
+import { AuditAction, AuditResourceType } from "@generated/enums";
 
 @Controller('workspaces/:workspaceId/approvals')
 @ApiBearerAuth()
@@ -27,6 +29,7 @@ findAll(
 
 
 @ApiStandardResponse(PostApprovalDto)
+@AuditContext({ action: AuditAction.APPROVE, resource: AuditResourceType.POST })
   @Patch(':approvalId')
   review(
     @Req() req,
@@ -44,6 +47,7 @@ findAll(
   }
 
   @Delete(':approvalId')
+  @AuditContext({ action: AuditAction.DELETE, resource: AuditResourceType.POST })
   cancel(
     @Req() req,
     @Param('workspaceId') wsId: string,

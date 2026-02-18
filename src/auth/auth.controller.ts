@@ -32,6 +32,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { OnboardingDto } from './dtos/user-onboarding.dto';
 import { ConfigService } from '@nestjs/config';
 import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
+import { AuditContext } from '@/audit/decorators/audit.decorator';
+import { AuditAction, AuditResourceType } from '@generated/enums';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -58,6 +60,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @AuditContext({ action: AuditAction.LOGIN, resource: AuditResourceType.AUTH })
   @Public()
   @Throttle({ default: { limit: 3, ttl: 60 } })
   @ApiOperation({
@@ -257,6 +260,7 @@ export class AuthController {
   }
 
   @Post('logout')
+    @AuditContext({ action: AuditAction.LOGOUT, resource: AuditResourceType.AUTH })
   @ApiOperation({ summary: 'Logout the current user' })
   @ApiResponse({ status: 200, description: 'Logged out successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
