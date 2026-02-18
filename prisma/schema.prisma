@@ -13,7 +13,8 @@ model User {
   password             String? // Optional for OAuth users
   firstName            String?
   lastName             String?
-  avatar               String?
+  avatarId  String?    @unique
+  avatar    MediaFile? @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
   userType             UserType @default(INDIVIDUAL)
   timezone             String?  @default("Africa/Lagos")
   isOnboardingComplete Boolean  @default(false)
@@ -436,6 +437,8 @@ model MediaFile {
   workspaceId String
   userId      String
   folderId    String?
+  
+  userAvatar User? @relation("UserAvatar")
 
   filename     String
   originalName String

@@ -17,6 +17,7 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
   BadRequestException,
+  Patch,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { PostMediaService } from './post-media.service';
@@ -35,6 +36,7 @@ import { ApiStandardResponse } from '@/common/decorators/api-standard-response.d
 import { MediaFileDto } from './dto/response/media-file.dto';
 import { MediaFolderDto } from './dto/response/media-folder.dto';
 import { MediaLibraryResponseDto } from './dto/response/media-library.dto';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 @ApiTags('Media Library')
 @Controller('workspaces/:workspaceId/media')
@@ -165,6 +167,51 @@ export class PostMediaController {
       message: 'File deleted successfully',
     };
   }
+
+  @Patch('avatar')
+  @ApiOperation({ 
+    summary: 'Update user avatar', 
+    description: 'Uploads a new image, links it to the user profile, and deletes the previous avatar file.' 
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        workspaceId: { 
+          type: 'string', 
+          description: 'The workspace context for the media storage' 
+        },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file (png, jpg, webp)',
+        },
+      },
+      required: ['file', 'workspaceId'],
+    },
+  })
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+        return cb(new BadRequestException('Only image files are allowed'), false);
+      }
+      cb(null, true);
+    },
+  }))
+  async updateAvatar(
+    @CurrentUser('userId') userId: string,
+    @Body('workspaceId') workspaceId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    return this.mediaService.updateUserAvatar(userId, workspaceId, file);
+  }
+
 
   @Post('folders')
   @RequireFeature('mediaLibrary')

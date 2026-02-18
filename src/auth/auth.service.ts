@@ -410,13 +410,6 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
 
       await this.updateRefreshToken(user.id, tokens.refreshToken);
 
-      // Update Avatar if missing
-      if (!user.avatar) {
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: { avatar: googleUser.picture },
-        });
-      }
 
       return {
         user: this.toSafeUser(user),
@@ -434,7 +427,6 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
         password: await argon2.hash(crypto.randomBytes(32).toString('hex')),
         firstName: googleUser.firstName,
         lastName: googleUser.lastName,
-        avatar: googleUser.picture,
         isEmailVerified: true,
         timezone,
         userType: 'INDIVIDUAL',

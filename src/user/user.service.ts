@@ -1,19 +1,15 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
-import { UserFiltersDto } from './dtos/user-filters.dto';
 import * as argon2 from 'argon2';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma,UserType } from '@generated/client';
 import { BillingService } from '@/billing/billing.service';
 
 @Injectable()
@@ -111,7 +107,6 @@ async getUserWorkspaces(userId: string) {
       data: {
         firstName: updateData.firstName?.trim(),
         lastName: updateData.lastName?.trim(),
-        avatar: updateData.avatar,
       },
     });
 

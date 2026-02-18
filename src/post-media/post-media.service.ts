@@ -1,10 +1,11 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import * as streamifier from 'streamifier';
 import { v2 as cloudinary, UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class PostMediaService {
+private readonly logger = new Logger(PostMediaService.name);
   constructor(private prisma: PrismaService) {}
 
   // ==========================================
@@ -169,6 +170,42 @@ async uploadAiGeneratedBuffer(
     size: mediaFile.size.toString()
   };
 }
+
+  async updateUserAvatar(userId: string, workspaceId: string, file: Express.Multer.File) {
+  // 1. Find the user and their CURRENT avatar ID
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: { avatarId: true }
+  });
+
+  const oldAvatarId = user?.avatarId;
+
+  // 2. Upload the new file (this creates the MediaFile record and returns the object)
+  const newMedia = await this.uploadFile(userId, workspaceId, file);
+
+  // 3. Link the new MediaFile ID to the User
+  await this.prisma.user.update({
+    where: { id: userId },
+    data: { avatarId: newMedia.id }
+  });
+
+  // 4. Cleanup the old file (Cloudinary + DB)
+  if (oldAvatarId) {
+    try {
+      await this.deleteFile(workspaceId, oldAvatarId);
+    } catch (error: any) {
+      // We log it but don't stop the request; the new avatar is already set
+      this.logger.warn(`Failed to cleanup old avatar ${oldAvatarId}: ${error.message}`);
+    }
+  }
+
+  return {
+    message: 'Avatar updated successfully',
+    avatarId: newMedia.id,
+    url: newMedia.url
+  };
+}
+
 
   // ------------------------------------------
   // HELPER: Stream Upload
