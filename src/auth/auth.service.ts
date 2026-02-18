@@ -255,6 +255,7 @@ export class AuthService {
       },
     });
 
+
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const validPass = await argon2.verify(user.password, loginDto.password);
@@ -469,60 +470,62 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
    * 2. Fallback to Most Recent Workspace
    * 3. Fallback to Organization (if Billing Admin)
    */
-  private async resolveLoginContext(user: any) {
-    let activeWorkspaceId = user.lastActiveWorkspaceId;
-    let activeOrgId: string | null = null;
+private async resolveLoginContext(user: any) {
+  let activeWorkspaceId = user.lastActiveWorkspaceId;
+  let activeOrgId: string | null = null;
 
-    // A. Verify Sticky Session (Refactored for Member-based logic)
-    if (activeWorkspaceId) {
-      // We look for a WorkspaceMember that belongs to an OrganizationMember owned by this User
-      const stickyMember = await this.prisma.workspaceMember.findFirst({
-        where: {
-          workspaceId: activeWorkspaceId,
-          member: {
-            userId: user.id, // Path: WorkspaceMember -> OrganizationMember -> User
-          },
-        },
-        select: {
-          workspace: { select: { organizationId: true } },
-        },
-      });
+  // 1. Verify Sticky Session (Normal path)
+  if (activeWorkspaceId) {
+    const stickyMember = await this.prisma.workspaceMember.findFirst({
+      where: {
+        workspaceId: activeWorkspaceId,
+        member: { userId: user.id },
+      },
+      select: { workspace: { select: { organizationId: true } } },
+    });
 
-      if (stickyMember) {
-        activeOrgId = stickyMember.workspace.organizationId;
-      } else {
-        activeWorkspaceId = null; // Stale or no longer has access
-      }
+    if (stickyMember) {
+      activeOrgId = stickyMember.workspace.organizationId;
+    } else {
+      activeWorkspaceId = null; 
     }
-
-    // B. Fallback: Any Workspace (Finding first available via Org Memberships)
-    if (!activeWorkspaceId) {
-      const firstWorkspace = await this.prisma.workspaceMember.findFirst({
-        where: {
-          member: { userId: user.id },
-        },
-        include: {
-          workspace: { select: { organizationId: true } },
-        },
-      });
-
-      if (firstWorkspace) {
-        activeWorkspaceId = firstWorkspace.workspaceId;
-        activeOrgId = firstWorkspace.workspace.organizationId;
-      }
-    }
-
-    // C. Fallback: Any Org (If they have an Org but aren't in any Workspace yet)
-    if (!activeOrgId) {
-      const firstOrg = await this.prisma.organizationMember.findFirst({
-        where: { userId: user.id },
-        select: { organizationId: true },
-      });
-      activeOrgId = firstOrg?.organizationId ?? null;
-    }
-
-    return { orgId: activeOrgId, workspaceId: activeWorkspaceId };
   }
+
+  // 2. Direct Workspace Membership Fallback
+  if (!activeWorkspaceId) {
+    const directWs = await this.prisma.workspaceMember.findFirst({
+      where: { member: { userId: user.id } },
+      include: { workspace: { select: { organizationId: true } } },
+    });
+
+    if (directWs) {
+      activeWorkspaceId = directWs.workspaceId;
+      activeOrgId = directWs.workspace.organizationId;
+    }
+  }
+
+  // 3. YOUR NEW LOGIC: Reach through Organization to find ANY workspace
+  if (!activeWorkspaceId) {
+    const firstOrgWithWorkspaces = await this.prisma.organizationMember.findFirst({
+      where: { userId: user.id },
+      include: {
+        organization: {
+          include: {
+            workspaces: { take: 1, orderBy: { createdAt: 'asc' } }
+          }
+        }
+      }
+    });
+
+    if (firstOrgWithWorkspaces) {
+      activeOrgId = firstOrgWithWorkspaces.organizationId;
+      // If the org has workspaces, pick the first one
+      activeWorkspaceId = firstOrgWithWorkspaces.organization.workspaces[0]?.id || null;
+    }
+  }
+
+  return { orgId: activeOrgId, workspaceId: activeWorkspaceId };
+}
 
  async generateTokens(
     userId: string,
