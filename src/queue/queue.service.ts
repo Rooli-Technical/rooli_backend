@@ -64,6 +64,7 @@ export class QueueSlotService {
       } as any,
       select: { id: true },
     });
+
     if (exists)
       throw new BadRequestException(
         'A slot already exists for this day/time/platform',
@@ -302,7 +303,7 @@ export class QueueSlotService {
 
     if (currentQueueCount + newPostsCount > limits.maxPostsInQueue) {
       throw new ForbiddenException(
-        `Queue limit reached. Your plan allows ${limits.maxPostsInQueue} queued posts. You currently have ${currentQueueCount}. Upgrade to add more.`
+        `Queue limit reached. Your plan allows ${limits.maxPostsInQueue} queued posts. You currently have ${currentQueueCount}. Upgrade to add more.`,
       );
     }
 
@@ -799,12 +800,12 @@ export class QueueSlotService {
     return map;
   }
 
-    private async removePostJob(postId: string) {
+  private async removePostJob(postId: string) {
     const job = await this.publishingQueue.getJob(postId);
     if (job) await job.remove();
   }
 
-   private async schedulePostJob(postId: string, scheduledAt: Date) {
+  private async schedulePostJob(postId: string, scheduledAt: Date) {
     const delay = Math.max(0, scheduledAt.getTime() - Date.now());
 
     await this.publishingQueue.add(
@@ -827,5 +828,4 @@ export class QueueSlotService {
     // 2. Add the new job
     await this.schedulePostJob(postId, runAt);
   }
-
 }
