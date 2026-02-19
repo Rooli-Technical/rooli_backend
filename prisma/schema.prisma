@@ -481,7 +481,6 @@ model QueueSlot {
   workspaceId String
 
   platform Platform?
-  capacity Int
 
   dayOfWeek Int
   time      String // "09:00" (24h format)

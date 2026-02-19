@@ -76,8 +76,6 @@ export class QueueSlotService {
         dayOfWeek: dto.dayOfWeek,
         time: dto.time,
         platform: dto.platform ?? null,
-        capacity: Math.max(dto.capacity ?? 1, 1),
-        isActive: dto.isActive ?? true,
       } as any,
     });
   }
@@ -777,7 +775,6 @@ export class QueueSlotService {
         dayOfWeek: true,
         time: true,
         platform: true,
-        capacity: true,
         isActive: true,
       },
     })) as any;

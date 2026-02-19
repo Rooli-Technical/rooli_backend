@@ -32,26 +32,4 @@ export class CreateQueueSlotDto {
   @IsOptional()
   @IsEnum(Platform)
   platform?: Platform;
-
-  @ApiPropertyOptional({
-    description: 'How many posts can be scheduled at this exact slot time.',
-    example: 1,
-    minimum: 1,
-    maximum: 50,
-    default: 1,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(50)
-  capacity?: number;
-
-  @ApiPropertyOptional({
-    description: 'Whether the slot is active.',
-    example: true,
-    default: true,
-  })
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
 }
