@@ -24,6 +24,7 @@ export class UserService {
     const user = await this.prisma.user.findUnique({
       where: { id, deletedAt: null },
       include: {
+        avatar: true,
         organizationMemberships: {
           include: {
             organization: {
