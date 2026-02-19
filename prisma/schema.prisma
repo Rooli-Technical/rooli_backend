@@ -185,6 +185,9 @@ model WorkspaceMember {
   roleId      String?
   role        Role?    @relation("WorkspaceRole", fields: [roleId], references: [id])
 
+  assignedConversations InboxConversation[] @relation("ConversationAssignee")
+  readStates           ConversationReadState[]
+
   createdAt   DateTime @default(now())
 
   @@unique([workspaceId, memberId])
@@ -283,6 +286,8 @@ model SocialProfile {
   //dailyAnalytics     AccountAnalytics[]
 
   isActive Boolean @default(true)
+
+ inboxConversations InboxConversation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -730,6 +735,129 @@ model AiGeneration {
   @@index([postId])
   @@index([brandKitId])
 }
+
+
+model InboxConversation {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  
+  // Which social profile owns this conversation?
+  socialProfileId String
+  socialProfile   SocialProfile @relation(fields: [socialProfileId], references: [id])
+
+  
+  // The ID of the thread on the external platform
+  externalId      String 
+
+  // The person we are talking to
+  contactId       String
+  contact         SocialContact @relation(fields: [contactId], references: [id])
+
+  // Workflow States
+  status           ConversationStatus   @default(UNASSIGNED)
+  priority         ConversationPriority @default(NORMAL)
+  
+  // Assignment (Linked to your Org/Workspace Member)
+  assignedMemberId String?
+  assignedMember   WorkspaceMember? @relation("ConversationAssignee", fields: [assignedMemberId], references: [id])
+
+  // Optional but great for UI clutter
+  archivedAt       DateTime?
+  snoozedUntil     DateTime?
+  // Metadata for the UI list
+  lastMessageAt   DateTime
+  snippet         String?  // Preview of the last message
+  
+  messages        InboxMessage[]
+  readStates      ConversationReadState[]
+
+  // Thread IDs are only guaranteed unique per connected account/page
+  @@unique([socialProfileId, externalId])
+  @@index([workspaceId, lastMessageAt])
+  @@index([assignedMemberId])
+}
+
+model InboxMessage {
+  id              String   @id @default(cuid())
+  conversationId  String
+  conversation    InboxConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // The actual ID on the platform (to prevent duplicate webhook processing)
+  externalId      String  
+
+  content         String   @db.Text
+  direction       MessageDirection
+  
+  // Attachments (Images/Videos)
+  attachments     InboxMessageAttachment[]
+
+  deliveryStatus    DeliveryStatus? // Nullable, as inbound messages don't need this
+  
+  // Error Debugging
+  errorCode         String?         // e.g., "OAuthException", "RateLimit"
+  errorMessage      String?         @db.Text
+  
+  // When the platform actually processed it (differs from your DB createdAt)
+  providerTimestamp DateTime?
+
+  createdAt       DateTime @default(now())
+  senderName      String?  // Snapshot of name at time of sending
+
+  @@unique([conversationId, externalId])
+}
+
+model SocialContact {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  
+  platform        Platform
+  externalId      String   // Their User ID on Instagram/LinkedIn
+  
+  username        String
+  avatarUrl       String?
+  
+  conversations   InboxConversation[]
+
+ @@unique([workspaceId, platform, externalId])
+}
+
+model InboxMessageAttachment {
+  id              String   @id @default(cuid())
+  messageId       String
+  message         InboxMessage @relation(fields:[messageId], references:[id], onDelete: Cascade)
+
+  type            AttachmentType // Enum: IMAGE, VIDEO, AUDIO, DOCUMENT, STICKER
+  url             String   @db.Text // Original CDN URL
+  
+  // Storage for your own S3/Cloudfront mirror (when the original expires)
+  proxyUrl        String?  @db.Text 
+  thumbnailUrl    String?  @db.Text 
+  
+  mimeType        String?  // e.g., 'image/jpeg'
+  fileSizeBytes   Int?
+  
+  // For any platform-specific weirdness (like Instagram Story Reply contexts)
+  meta            Json?    
+
+  @@index([messageId])
+}
+
+model ConversationReadState {
+  id             String   @id @default(cuid())
+  
+  conversationId String
+  conversation   InboxConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  memberId       String
+  member         WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  // When did this specific agent last look at this thread?
+  lastReadAt     DateTime @default(now())
+
+  // One read state per agent per conversation
+  @@unique([conversationId, memberId])
+}
+
 
 
 
@@ -1470,3 +1598,38 @@ enum ApprovalStatus {
 }
 
 
+enum MessageDirection {
+  INBOUND  // They wrote to us
+  OUTBOUND // We replied
+}
+
+enum AttachmentType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  STICKER
+  OTHER
+}
+
+enum ConversationStatus {
+  UNASSIGNED
+  OPEN        // Actively being worked on
+  PENDING     // Waiting on the customer to reply
+  CLOSED      // Resolved
+}
+
+enum ConversationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum DeliveryStatus {
+  QUEUED     // Sitting in your Redis queue
+  SENT       // Passed to Meta/LinkedIn successfully
+  DELIVERED  // Platform confirmed receipt
+  READ       // Customer actually saw it
+  FAILED     // API threw an error
+}
