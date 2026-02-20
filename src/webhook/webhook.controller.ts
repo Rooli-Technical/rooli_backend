@@ -28,6 +28,7 @@ export class WebhookController {
 
   constructor(
     @InjectQueue('webhooks') private readonly webhooksQueue: Queue,
+    @InjectQueue('inbox-webhooks') private readonly inboxQueue: Queue,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService
   ) {}
@@ -79,23 +80,46 @@ async handlePaystack(@Body() payload: any) {
   @Post('meta')
   @UseGuards(MetaWebhookGuard)
   async handleMetaEvents(@Body() payload: any) {
-    // 1. Log Raw Data
-    const log = await this.prisma.webhookLog.create({
-      data: {
-        provider: 'META',
-        eventType: payload.object === 'page' ? 'page_update' : 'permissions_revoked',
-        // Meta sends a batch of entries, we just log the raw body
-        payload: payload, 
-        status: 'PENDING',
+   // Meta groups events in an "entry" array
+    const entries = payload.entry || [];
+
+    for (const entry of entries) {
+      // 1. Is this a Messaging Event (DM)?
+      if (entry.messaging) {
+        // Send to the fast, high-volume INBOX queue
+        await this.inboxQueue.add('meta-inbound-message', entry, {
+          removeOnComplete: true, // Don't bloat Redis
+        });
+        continue;
       }
-    });
 
-    // 2. Offload to Worker
-    await this.webhooksQueue.add('meta-event', {
-      logId: log.id,
-      data: payload
-    });
+      // 2. Is this a Feed Event (Comment)?
+      if (entry.changes && entry.changes[0]?.field === 'feed') {
+        await this.inboxQueue.add('meta-inbound-comment', entry, {
+          removeOnComplete: true,
+        });
+        continue;
+      }
 
+      // 3. Is it an Account/System Event? (De-auth, permission changes)
+      // We keep your existing logging logic for system events!
+      const log = await this.prisma.webhookLog.create({
+        data: {
+          provider: 'META',
+          eventType: 'system_update',
+          payload: entry,
+          status: 'PENDING',
+        }
+      });
+
+      // Send to the strict, system queue
+      await this.webhooksQueue.add('meta-system-event', {
+        logId: log.id,
+        data: entry
+      });
+    }
+
+    // Always return 200 immediately
     return { status: 'success' };
   }
 

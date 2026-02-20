@@ -65,10 +65,11 @@ export class QueueSlotService {
       select: { id: true },
     });
 
-    if (exists)
+    if (exists) {
       throw new BadRequestException(
         'A slot already exists for this day/time/platform',
       );
+    }
 
     return await this.prisma.queueSlot.create({
       data: {

@@ -57,6 +57,7 @@ import { RbacModule } from './rbac/rbac.module';
 import { UserModule } from './user/user.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditInterceptor } from './audit/interceptors/audit.intercetor';
+import { InboxModule } from './inbox/inbox.module';
 
 @Module({
   imports: [
@@ -180,7 +181,9 @@ import { AuditInterceptor } from './audit/interceptors/audit.intercetor';
     
     UserModule,
     
-    AuditModule
+    AuditModule,
+    
+    InboxModule
   ],
   controllers: [AppController],
   providers: [

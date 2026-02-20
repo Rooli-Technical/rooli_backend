@@ -18,6 +18,7 @@ import { AnalyticsModule } from '@/analytics/analytics.module';
    BullModule.registerQueue(
       { name: 'media-ingest' },
       { name: 'publishing-queue' },
+      { name: 'inbox-webhooks' },
     ),
     PostMediaModule,
     SocialModule,

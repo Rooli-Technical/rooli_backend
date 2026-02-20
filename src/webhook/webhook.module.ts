@@ -4,13 +4,15 @@ import { WebhookController } from './webhook.controller';
 import { BullModule } from '@nestjs/bullmq';
 import { WebhooksProcessor } from './webhook-processor.service';
 import { BillingModule } from '@/billing/billing.module';
+import { WorkerModule } from '@/worker/worker.module';
 
 @Module({
   imports: [
     BullModule.registerQueue({
       name: 'webhooks', 
     }),
-    BillingModule
+    BillingModule,
+    WorkerModule
   ],
   controllers: [WebhookController],
   providers: [
