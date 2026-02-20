@@ -61,8 +61,7 @@ export class QueueSlotService {
         dayOfWeek: dto.dayOfWeek,
         time: dto.time,
         platform: dto.platform ?? null,
-      } as any,
-      select: { id: true },
+      },
     });
 
     if (exists) {
@@ -77,7 +76,7 @@ export class QueueSlotService {
         dayOfWeek: dto.dayOfWeek,
         time: dto.time,
         platform: dto.platform ?? null,
-      } as any,
+      },
     });
   }
 
