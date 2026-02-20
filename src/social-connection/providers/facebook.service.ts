@@ -1,13 +1,16 @@
-import { HttpService } from "@nestjs/axios";
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { lastValueFrom } from "rxjs";
-import { OAuthResult, SocialPageOption } from "../interfaces/social-provider.interface";
+import { HttpService } from '@nestjs/axios';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { lastValueFrom } from 'rxjs';
+import {
+  OAuthResult,
+  SocialPageOption,
+} from '../interfaces/social-provider.interface';
 
 @Injectable()
 export class FacebookService {
   private readonly logger = new Logger(FacebookService.name);
-  private readonly GRAPH_URL = 'https://graph.facebook.com/v23.0'; 
+  private readonly GRAPH_URL = 'https://graph.facebook.com/v23.0';
 
   constructor(
     private readonly httpService: HttpService,
@@ -22,22 +25,25 @@ export class FacebookService {
     const redirectUri = this.config.get('META_CALLBACK_URL');
 
     const scopes = [
-  'email',
-  'public_profile',
-  'pages_show_list',
-  'business_management',
-  'pages_read_engagement', // For FB Analytics
-  'pages_manage_posts',    // For FB Posting
-  'pages_manage_engagement', // For FB Comments/DMs
-  'pages_read_user_content', // For FB Inbox (Incoming posts)
-  'publish_video', 
-  'read_insights',          // Keep only if posting Videos to FB  
-  // Instagram
-  'instagram_basic',
-  'instagram_content_publish', // For IG Posting
-  'instagram_manage_insights', // For IG Analytics
-  'instagram_manage_messages', // For IG DMs
-].join(',');
+      'email',
+      'public_profile',
+      'pages_show_list',
+      'business_management',
+      'pages_read_engagement', // For FB Analytics
+      'pages_manage_posts', // For FB Posting
+
+      'pages_read_user_content', // For FB Inbox (Incoming posts)
+      'publish_video',
+      'read_insights', // Keep only if posting Videos to FB
+
+      'pages_manage_metadata',
+      'pages_messaging',
+      // Instagram
+      'instagram_basic',
+      'instagram_content_publish', // For IG Posting
+      'instagram_manage_insights', // For IG Analytics
+      'instagram_manage_messages', // For IG DMs
+    ].join(',');
 
     return (
       `https://www.facebook.com/v23.0/dialog/oauth?` +
@@ -66,10 +72,11 @@ export class FacebookService {
         }),
       );
 
-
       const finalToken = tokenData.access_token;
       // Calculate expiry (usually 60 days from now)
-      const expiresAt = new Date(Date.now() + (tokenData.expires_in || 5184000) * 1000);
+      const expiresAt = new Date(
+        Date.now() + (tokenData.expires_in || 5184000) * 1000,
+      );
 
       // Step C: Fetch User Profile (ID & Name)
       const { data: userData } = await lastValueFrom(
@@ -83,7 +90,7 @@ export class FacebookService {
         providerUsername: userData.name,
         accessToken: finalToken,
         expiresAt,
-        scopes: tokenData.scopes
+        scopes: tokenData.scopes,
       };
     } catch (error) {
       this.logger.error(error.response?.data || error.message);
@@ -103,11 +110,11 @@ export class FacebookService {
           params: {
             access_token: userAccessToken,
             limit: 100, // Handle pagination if user has >100 pages (advanced)
-            fields: 'id,name,access_token,picture{url},instagram_business_account{id,username,profile_picture_url},tasks',
+            fields:
+              'id,name,access_token,picture{url},instagram_business_account{id,username,profile_picture_url},tasks',
           },
         }),
       );
-
 
       const options: SocialPageOption[] = [];
 
@@ -131,14 +138,14 @@ export class FacebookService {
           const ig = page.instagram_business_account;
           options.push({
             id: ig.id,
-            name: ig.username, 
+            name: ig.username,
             username: ig.username,
-            platform: 'INSTAGRAM', 
+            platform: 'INSTAGRAM',
             type: 'PAGE',
             picture: ig.profile_picture_url,
             //To post to IG, you use the *FB Page Token* of the parent page.
             // So we copy the same page.access_token here.
-            accessToken: page.access_token, 
+            accessToken: page.access_token,
           });
         }
       }
