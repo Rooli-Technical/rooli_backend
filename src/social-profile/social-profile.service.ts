@@ -41,9 +41,9 @@ export class SocialProfileService {
     }
 
     const importablePages = await this.connectionService.getImportablePages(
-      dto.connectionId,true
+      dto.connectionId,
+      true,
     );
-
 
     const results = {
       success: [],
@@ -87,6 +87,14 @@ export class SocialProfileService {
             type: this.mapAccountType(pageData.type, pageData.platform),
           },
         });
+
+        if (pageData.platform === 'FACEBOOK') {
+          await this.connectionService.subscribeFacebookPage(
+            dto.connectionId,
+            pageData.id,
+            pageData.accessToken,
+          );
+        }
 
         results.success.push(profile);
       } catch (error) {

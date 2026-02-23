@@ -158,4 +158,28 @@ export class FacebookService {
       throw new BadRequestException('Could not fetch Facebook Pages');
     }
   }
+
+  async subscribeAppToPage(pageId: string, pageAccessToken: string): Promise<void> {
+  const url = `${this.GRAPH_URL}/${pageId}/subscribed_apps`;
+
+  try {
+    const { data } = await lastValueFrom(
+      this.httpService.post(url, null, {
+        params: { access_token: pageAccessToken },
+      }),
+    );
+
+    if (!data?.success) {
+      throw new Error('Subscription not acknowledged');
+    }
+  } catch (err) {
+    this.logger.error(
+      `Failed to subscribe app to page ${pageId}`,
+      err.response?.data || err.message,
+    );
+    throw new BadRequestException(
+      'Could not install app on Facebook Page',
+    );
+  }
+}
 }

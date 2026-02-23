@@ -240,4 +240,20 @@ export class SocialConnectionService {
       );
     }
   }
+
+  async subscribeFacebookPage(
+  connectionId: string,
+  pageId: string,
+  pageAccessToken: string,
+) {
+  const connection = await this.prisma.socialConnection.findUnique({
+    where: { id: connectionId },
+  });
+
+  if (!connection || connection.platform !== 'FACEBOOK') {
+    throw new BadRequestException('Invalid Facebook connection');
+  }
+
+  await this.facebook.subscribeAppToPage(pageId, pageAccessToken);
+}
 }
