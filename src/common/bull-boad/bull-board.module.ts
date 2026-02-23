@@ -28,7 +28,15 @@ import { ExpressAdapter } from '@bull-board/express';
   BullBoardModule.forFeature({
       name: 'analytics-queue',
       adapter: BullMQAdapter,
-    })
+    }),
+  BullBoardModule.forFeature({
+      name: 'inbox-webhooks',
+      adapter: BullMQAdapter,
+    }),
+  BullBoardModule.forFeature({
+      name: 'outbound-messages',
+      adapter: BullMQAdapter,
+    }),
   ],
 })
 export class RooliBullBoardModule {}

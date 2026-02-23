@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { WorkerService } from './worker.service';
 import { WorkerController } from './worker.controller';
 import { BullModule } from '@nestjs/bullmq';
@@ -8,11 +8,11 @@ import { SocialModule } from '@/social/social.module';
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { PublishPostProcessor } from './processors/publish-post.processor';
 import { AnalyticsProcessor } from './processors/analytics.processor';
-import { AnalyticsNormalizerService } from '@/analytics/services/analytics-normalizer.service';
-import { AnalyticsRepository } from '@/analytics/services/analytics.repository';
-import { AnalyticsService } from '@/analytics/services/analytics.service';
 import { AnalyticsModule } from '@/analytics/analytics.module';
 import { EventsModule } from '@/events/events.module';
+import { InboundWebhooksProcessor } from './processors/inbound-webhooks.processor';
+import { OutboundMessagesProcessor } from './processors/outbound-messages.processor';
+import { InboxModule } from '@/inbox/inbox.module';
 
 @Module({
   imports: [
@@ -27,6 +27,7 @@ import { EventsModule } from '@/events/events.module';
     AnalyticsModule,
     AnalyticsModule,
     EventsModule,
+    forwardRef(() => InboxModule),
   ],
   controllers: [WorkerController],
   providers: [
@@ -34,7 +35,9 @@ import { EventsModule } from '@/events/events.module';
     MediaIngestProcessor,
     PublishPostProcessor,
     EncryptionService,
-    AnalyticsProcessor
+    AnalyticsProcessor,
+    InboundWebhooksProcessor,
+    OutboundMessagesProcessor
   ],
   exports: [
     BullModule, 

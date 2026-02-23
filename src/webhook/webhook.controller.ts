@@ -73,7 +73,7 @@ export class WebhookController {
     const token = query['hub.verify_token'];
     const challenge = query['hub.challenge'];
 
-    const expectedToken = this.config.get<string>('META_WEBHOOK_VERIFY_TOKEN');
+    const expectedToken = this.config.get<string>('META_VERIFY_TOKEN');
 
     if (
       mode === 'subscribe' &&
@@ -95,6 +95,7 @@ export class WebhookController {
   @Post('meta')
   @UseGuards(MetaWebhookGuard)
   async handle(@Body() payload: any) {
+    console.log(payload);
     const entries = payload?.entry ?? [];
 
     for (const entry of entries) {
@@ -102,8 +103,8 @@ export class WebhookController {
       if (Array.isArray(entry.messaging)) {
         for (const m of entry.messaging) {
           const mid = m?.message?.mid; // stable Meta message id for dedupe
-          const fallback = `${entry?.id ?? 'na'}:${m?.timestamp ?? Date.now()}:${m?.sender?.id ?? 'na'}`;
-          const jobId = `meta:dm:${mid ?? fallback}`;
+          const fallback = `${entry?.id ?? 'na'}-${m?.timestamp ?? Date.now()}-${m?.sender?.id ?? 'na'}`;
+          const jobId = `meta-dm-${mid ?? fallback}`.replace(/:/g, '-');
 
           await this.inboxQueue.add(
             'meta-inbound-message',
@@ -129,13 +130,13 @@ export class WebhookController {
           const changeId =
             change?.value?.comment_id ??
             change?.value?.post_id ??
-            `${entry?.id ?? 'na'}:${change?.value?.item ?? 'feed'}:${change?.value?.verb ?? 'unknown'}:${change?.value?.created_time ?? Date.now()}`;
+            `${entry?.id ?? 'na'}-${change?.value?.item ?? 'feed'}-${change?.value?.verb ?? 'unknown'}-${change?.value?.created_time ?? Date.now()}`;
 
           await this.inboxQueue.add(
             'meta-inbound-comment',
             { entryId: entry.id, change, rawEntry: entry },
             {
-              jobId: `meta:feed:${changeId}`,
+              jobId: `meta-feed-${changeId}`.replace(/:/g, '-'),
               attempts: 15,
               backoff: { type: 'exponential', delay: 1500 },
               removeOnComplete: true,
@@ -151,7 +152,7 @@ export class WebhookController {
         'meta-system-event',
         { entry },
         {
-          jobId: `meta:system:${entry?.id ?? cryptoRandomId()}:${Date.now()}`,
+          jobId: `meta-system-${entry?.id ?? cryptoRandomId()}-${Date.now()}`.replace(/:/g, '-'),
           attempts: 10,
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: true,

@@ -25,12 +25,13 @@ export class MetaWebhookGuard implements CanActivate {
   constructor(private readonly config: ConfigService) {}
 
   canActivate(context: ExecutionContext): boolean {
+    console.log('MetaWebhookGuard: Verifying signature...');
     const req = context.switchToHttp().getRequest<Request>();
 
-    const appSecret = this.config.get<string>('META_APP_SECRET');
+    const appSecret = this.config.get<string>('META_CLIENT_SECRET');
     if (!appSecret) {
       // Fail closed. No secret = no verification.
-      this.logger.error('META_APP_SECRET is not set');
+      this.logger.error('META_CLIENT_SECRET is not set');
       throw new UnauthorizedException('Webhook signature verification misconfigured');
     }
 

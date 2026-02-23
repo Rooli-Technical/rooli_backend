@@ -44,6 +44,7 @@ export class FacebookService {
       'instagram_content_publish', // For IG Posting
       'instagram_manage_insights', // For IG Analytics
       'instagram_manage_messages', // For IG DMs
+      'instagram_manage_comments'
     ].join(',');
 
     return (

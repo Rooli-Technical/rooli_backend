@@ -26,6 +26,7 @@ export class InstagramService {
       'instagram_business_manage_insights',
       'instagram_business_content_publish',
       'instagram_business_manage_messages',
+      'instagram_business_manage_comments',
     ].join(',');
 
     return (
