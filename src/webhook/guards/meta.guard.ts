@@ -1,41 +1,88 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
+  Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
 import * as crypto from 'crypto';
 
+/**
+ * Verifies Meta webhook signatures (x-hub-signature-256).
+ *
+ * REQUIREMENT:
+ * - Your Express/Nest app MUST preserve the raw request body as a Buffer,
+ *   otherwise signature verification is impossible.
+ *
+ * See `main.ts` snippet below.
+ */
 @Injectable()
 export class MetaWebhookGuard implements CanActivate {
+  private readonly logger = new Logger(MetaWebhookGuard.name);
+
   constructor(private readonly config: ConfigService) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+    const req = context.switchToHttp().getRequest<Request>();
 
-    // Meta verification challenge (GET request) - Always allow
-    if (request.method === 'GET' && request.query['hub.mode'] === 'subscribe') {
-      return true;
+    const appSecret = this.config.get<string>('META_APP_SECRET');
+    if (!appSecret) {
+      // Fail closed. No secret = no verification.
+      this.logger.error('META_APP_SECRET is not set');
+      throw new UnauthorizedException('Webhook signature verification misconfigured');
     }
 
-    //  Event notification (POST request) - Verify Signature
-    if (request.method === 'POST') {
-      const signature = request.headers['x-hub-signature-256']; // or x-hub-signature (sha1)
-      if (!signature) throw new UnauthorizedException('No signature found');
+    const signature = this.getSignature(req);
+    if (!signature) {
+      throw new UnauthorizedException('Missing Meta signature');
+    }
 
-      const appSecret = this.config.get('META_CLIENT_SECRET');
-      const hmac = crypto.createHmac('sha256', appSecret);
+    const raw = (req as any).rawBody as Buffer | undefined;
+    if (!raw || !Buffer.isBuffer(raw)) {
+      this.logger.error(
+        'rawBody not found on request. Ensure body parser captures rawBody.',
+      );
+      throw new UnauthorizedException('Webhook signature verification unavailable');
+    }
 
-      // Note: NestJS needs raw body for this.
-      // Ensure you configured 'rawBody: true' in main.ts or use a specific middleware
-      const digest = 'sha256=' + hmac.update(request.rawBody).digest('hex');
+    const expected = this.computeExpectedSignature(raw, appSecret);
 
-      if (signature !== digest) {
-        throw new UnauthorizedException('Invalid Meta Signature');
-      }
+    // Timing-safe compare
+    const ok = this.timingSafeEqualHex(signature, expected);
+
+    if (!ok) {
+      this.logger.warn(`Meta signature mismatch. got=${signature} expected=${expected}`);
+      throw new UnauthorizedException('Invalid Meta signature');
     }
 
     return true;
+  }
+
+  private getSignature(req: Request): string | null {
+    const header =
+      (req.headers['x-hub-signature-256'] as string | undefined) ??
+      (req.headers['X-Hub-Signature-256'] as string | undefined);
+
+    if (!header) return null;
+
+    // Meta format: "sha256=<hex>"
+    const [algo, hex] = header.split('=');
+    if (algo !== 'sha256' || !hex) return null;
+
+    return hex.trim();
+  }
+
+  private computeExpectedSignature(rawBody: Buffer, appSecret: string): string {
+    return crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
+  }
+
+  private timingSafeEqualHex(aHex: string, bHex: string): boolean {
+    // Normalize
+    const a = Buffer.from(aHex, 'hex');
+    const b = Buffer.from(bHex, 'hex');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
   }
 }

@@ -1,40 +1,8 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { MessageDirection } from '@generated/enums';
 import { Injectable } from '@nestjs/common';
+import { NormalizedInboundMessage } from '../types/adapter.types';
 
-
-export type NormalizedInboundMessage = {
-  workspaceId: string;
-  socialProfileId: string;
-
-  conversationExternalId: string; // thread id on platform
-  contact: {
-    platform: string; // Platform enum value as string
-    externalId: string;
-    username: string;
-    avatarUrl?: string | null;
-  };
-
-  message: {
-    externalId: string; // provider msg id (idempotency key)
-    content: string;
-    direction: 'INBOUND' | 'OUTBOUND'; // usually inbound
-    senderName?: string | null;
-    providerTimestamp?: Date | null;
-    attachments?: Array<{
-      type: string;
-      url: string;
-      mimeType?: string | null;
-      fileSizeBytes?: number | null;
-      thumbnailUrl?: string | null;
-      meta?: any;
-    }>;
-  };
-
-  // optional conversation UI metadata
-  snippet?: string | null;
-  occurredAt?: Date | null;
-};
 
 @Injectable()
 export class InboxIngestService {
@@ -99,9 +67,9 @@ export class InboxIngestService {
       // Prisma doesn't support upsert on compound unique unless it's a named @@unique; yours is.
       const message = await tx.inboxMessage.upsert({
         where: {
-          conversationId_externalId: {
+        conversationId_providerMessageId: {
             conversationId: conversation.id,
-            externalId: evt.message.externalId,
+            providerMessageId: evt.message.externalId, 
           },
         },
         update: {
@@ -112,7 +80,8 @@ export class InboxIngestService {
         },
         create: {
           conversationId: conversation.id,
-          externalId: evt.message.externalId,
+          clientMessageId: `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          providerMessageId: evt.message.externalId,
           content: evt.message.content ?? '',
           direction:
             evt.message.direction === 'INBOUND'

@@ -12,6 +12,7 @@ import { AnalyticsNormalizerService } from '@/analytics/services/analytics-norma
 import { AnalyticsRepository } from '@/analytics/services/analytics.repository';
 import { AnalyticsService } from '@/analytics/services/analytics.service';
 import { AnalyticsModule } from '@/analytics/analytics.module';
+import { EventsModule } from '@/events/events.module';
 
 @Module({
   imports: [
@@ -19,11 +20,13 @@ import { AnalyticsModule } from '@/analytics/analytics.module';
       { name: 'media-ingest' },
       { name: 'publishing-queue' },
       { name: 'inbox-webhooks' },
+      { name: 'outbound-messages' },
     ),
     PostMediaModule,
     SocialModule,
     AnalyticsModule,
     AnalyticsModule,
+    EventsModule,
   ],
   controllers: [WorkerController],
   providers: [

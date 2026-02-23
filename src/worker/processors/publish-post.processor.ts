@@ -1,4 +1,5 @@
 import { EncryptionService } from '@/common/utility/encryption.service';
+import { DomainEventsService } from '@/events/domain-events.service';
 import { ThreadNode } from '@/post/interfaces/post.interface';
 import { PrismaService } from '@/prisma/prisma.service';
 import { SocialFactory } from '@/social/social.factory';
@@ -15,6 +16,7 @@ export class PublishPostProcessor extends WorkerHost {
     private prisma: PrismaService,
         private socialFactory: SocialFactory,
         private encryptionService: EncryptionService,
+        private events: DomainEventsService,
   ) {
     super();
   }
@@ -318,34 +320,68 @@ export class PublishPostProcessor extends WorkerHost {
   // ===========================================================================
   // Master post status recompute
   // ===========================================================================
-  private async recomputeMasterPostStatus(postId: string) {
-    const counts = await this.prisma.postDestination.groupBy({
-      by: ['status'],
-      where: { postId },
-      _count: { status: true },
-    });
+// inside PublishPostProcessor
 
-    const map = new Map(counts.map((c) => [c.status, c._count.status]));
-    const success = map.get('SUCCESS') ?? 0;
-    const failed = map.get('FAILED') ?? 0;
-    const scheduled = map.get('SCHEDULED') ?? 0;
-    const publishing = map.get('PUBLISHING') ?? 0;
+private async recomputeMasterPostStatus(postId: string) {
+  const post = await this.prisma.post.findUnique({
+    where: { id: postId },
+    select: { id: true, workspaceId: true, status: true },
+  });
+  if (!post) return;
 
-    const remaining = scheduled + publishing;
+  const counts = await this.prisma.postDestination.groupBy({
+    by: ['status'],
+    where: { postId },
+    _count: { status: true },
+  });
 
-    let status: 'PUBLISHING' | 'PUBLISHED' | 'PARTIAL' | 'FAILED' = 'PUBLISHING';
+  const map = new Map(counts.map((c) => [c.status, c._count.status]));
+  const success = map.get('SUCCESS') ?? 0;
+  const failed = map.get('FAILED') ?? 0;
+  const scheduled = map.get('SCHEDULED') ?? 0;
+  const publishing = map.get('PUBLISHING') ?? 0;
 
-    if (remaining === 0) {
-      if (success > 0 && failed === 0) status = 'PUBLISHED';
-      else if (success > 0 && failed > 0) status = 'PARTIAL';
-      else status = 'FAILED';
-    }
+  const remaining = scheduled + publishing;
 
+  let nextStatus: 'PUBLISHING' | 'PUBLISHED' | 'PARTIAL' | 'FAILED' = 'PUBLISHING';
+
+  if (remaining === 0) {
+    if (success > 0 && failed === 0) nextStatus = 'PUBLISHED';
+    else if (success > 0 && failed > 0) nextStatus = 'PARTIAL';
+    else nextStatus = 'FAILED';
+  }
+
+  // Only update+emit on actual change
+  if (post.status !== nextStatus) {
     await this.prisma.post.update({
       where: { id: postId },
-      data: { status },
+      data: { status: nextStatus },
     });
+
+    // ✅ Emit domain events for notifications
+    if (nextStatus === 'PUBLISHED') {
+      this.events.emit('publishing.post.published', {
+        workspaceId: post.workspaceId,
+        postId: postId,
+      });
+    } else if (nextStatus === 'FAILED') {
+      this.events.emit('publishing.post.failed', {
+        workspaceId: post.workspaceId,
+        postId: postId,
+        reason: 'All destinations failed',
+      });
+    } else if (nextStatus === 'PARTIAL') {
+      // PARTIAL is not DECLINED. Don’t lie to yourself.
+      // Either create a new event type or treat as failed-with-success.
+      this.events.emit('publishing.post.failed', {
+        workspaceId: post.workspaceId,
+        postId: postId,
+        reason: 'Some destinations failed',
+      });
+    }
   }
+}
+
 
 }
 

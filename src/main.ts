@@ -6,6 +6,9 @@ import { swaggerConfig } from './common/config/swagger.config';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { AllExceptionsFilter } from './common/filters/all-exception-filter.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import * as express from 'express';
+import { EventsGateway } from './events/events.gateway';
+import { WsAuthMiddleware } from './events/ws-auth.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -24,6 +27,22 @@ app.enableCors({
     defaultVersion: '1',
   });
 
+  app.use(
+    express.json({
+      verify: (req: any, _res, buf: Buffer) => {
+        req.rawBody = buf;
+      },
+    }),
+  );
+
+  await app.init();
+
+   // Attach Socket.io auth middleware
+  const wsAuth = app.get(WsAuthMiddleware);
+  const gateway = app.get(EventsGateway);
+
+  // gateway.server is available after init for Nest gateways
+  gateway.server.use(wsAuth.use);
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document, {

@@ -23,7 +23,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  // src/auth/strategies/jwt.strategy.ts
 
   async validate(payload: JwtPayload) {
     // 1. Basic User Query (Always needed)

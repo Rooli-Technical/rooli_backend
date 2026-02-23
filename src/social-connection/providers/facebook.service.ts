@@ -38,6 +38,7 @@ export class FacebookService {
 
       'pages_manage_metadata',
       'pages_messaging',
+      'pages_manage_engagement', 
       // Instagram
       'instagram_basic',
       'instagram_content_publish', // For IG Posting

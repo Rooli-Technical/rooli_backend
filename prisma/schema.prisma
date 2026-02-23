@@ -140,6 +140,7 @@ aigeneration   AiGeneration[]
 
 members        WorkspaceMember[]
 invitations     Invitation[]
+notifications Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -187,6 +188,10 @@ model WorkspaceMember {
 
   assignedConversations InboxConversation[] @relation("ConversationAssignee")
   readStates           ConversationReadState[]
+
+  notifications Notification[]
+
+  
 
   createdAt   DateTime @default(now())
 
@@ -782,8 +787,11 @@ model InboxMessage {
   conversationId  String
   conversation    InboxConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  // The actual ID on the platform (to prevent duplicate webhook processing)
-  externalId      String  
+  // 1. The Internal ID (Always required)
+  clientMessageId   String   
+  
+  // 2. The External ID (Optional, filled in when Meta gives it to us)
+  providerMessageId String?
 
   content         String   @db.Text
   direction       MessageDirection
@@ -803,7 +811,7 @@ model InboxMessage {
   createdAt       DateTime @default(now())
   senderName      String?  // Snapshot of name at time of sending
 
-  @@unique([conversationId, externalId])
+  @@unique([conversationId, providerMessageId])
 }
 
 model SocialContact {
@@ -856,6 +864,40 @@ model ConversationReadState {
 
   // One read state per agent per conversation
   @@unique([conversationId, memberId])
+}
+
+model Notification {
+  id            String   @id @default(cuid())
+
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Who receives it (use User or WorkspaceMember depending on your design)
+  memberId      String
+  member        WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  type          NotificationType
+
+  // Display content
+  title         String
+  body          String?      @db.Text
+
+  // Structured payload (postId, conversationId, etc.)
+  data          Json?
+
+  // Optional deep-link target (frontend convenience)
+  link          String?
+
+  // Read tracking
+  readAt        DateTime?
+
+  createdAt     DateTime     @default(now())
+
+  dedupeKey String?
+
+  @@index([workspaceId, createdAt])
+  @@index([memberId, readAt])
+  @@unique([memberId, dedupeKey])
 }
 
 
@@ -1216,14 +1258,6 @@ model PostingSchedule {
 //   @@index([expiresAt])
 // }
 
-enum NotificationType {
-  MESSAGE_RECEIVED
-  MENTION
-  POST_APPROVAL
-  SCHEDULE_REMINDER
-  PERFORMANCE_ALERT
-  SYSTEM_ALERT
-}
 
 enum NotificationPriority {
   LOW
@@ -1632,4 +1666,15 @@ enum DeliveryStatus {
   DELIVERED  // Platform confirmed receipt
   READ       // Customer actually saw it
   FAILED     // API threw an error
+}
+
+enum NotificationType {
+  POST_PUBLISHED
+  POST_FAILED
+  POST_DECLINED
+  POST_SCHEDULED
+  INBOX_NEW_MESSAGE
+  INBOX_ASSIGNED
+  INBOX_MENTION
+  SYSTEM_ALERT
 }

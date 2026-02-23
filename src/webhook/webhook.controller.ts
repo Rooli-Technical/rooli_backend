@@ -30,97 +30,142 @@ export class WebhookController {
     @InjectQueue('webhooks') private readonly webhooksQueue: Queue,
     @InjectQueue('inbox-webhooks') private readonly inboxQueue: Queue,
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
   ) {}
 
-// ==========================================
+  // ==========================================
   // 1. Paystack(Billing)
   // ==========================================
   @Post('paystack')
-@UseGuards(PaystackWebhookGuard)
-async handlePaystack(@Body() payload: any) {
-  // 1. Log Raw Data
-  const log = await this.prisma.webhookLog.create({
-    data: {
-      provider: 'PAYSTACK',
-      eventType: payload.event || 'charge.success',
-      resourceId: payload.data?.reference,
-      payload: payload, // Store full JSON
-      status: 'PENDING',
-    },
-  });
+  @UseGuards(PaystackWebhookGuard)
+  async handlePaystack(@Body() payload: any) {
+    // 1. Log Raw Data
+    const log = await this.prisma.webhookLog.create({
+      data: {
+        provider: 'PAYSTACK',
+        eventType: payload.event || 'charge.success',
+        resourceId: payload.data?.reference,
+        payload: payload, // Store full JSON
+        status: 'PENDING',
+      },
+    });
 
-  // 2. Offload to Worker Queue
-  await this.webhooksQueue.add('paystack-event', {
-    logId: log.id,
-    data: payload,
-  });
+    // 2. Offload to Worker Queue
+    await this.webhooksQueue.add('paystack-event', {
+      logId: log.id,
+      data: payload,
+    });
 
-  return { status: 'success' };
-}
+    return { status: 'success' };
+  }
 
   // ==========================================
   // 2. META (Social - De-auth)
   // ==========================================
-  
-  // Verification (GET)
+
+  /**
+   * Meta webhook verification endpoint.
+   * Meta sends: hub.mode, hub.verify_token, hub.challenge
+   */
   @Get('meta')
-  verifyMeta(@Query() query: any, @Res() res: Response) {
+  verify(@Query() query: any, @Res() res: Response) {
     const mode = query['hub.mode'];
     const token = query['hub.verify_token'];
     const challenge = query['hub.challenge'];
 
-    if (mode === 'subscribe' && token === this.config.get('META_WEBHOOK_VERIFY_TOKEN')) {
+    const expectedToken = this.config.get<string>('META_WEBHOOK_VERIFY_TOKEN');
+
+    if (
+      mode === 'subscribe' &&
+      token &&
+      expectedToken &&
+      token === expectedToken
+    ) {
       return res.status(HttpStatus.OK).send(challenge);
     }
+
     return res.status(HttpStatus.FORBIDDEN).send();
   }
 
-  // Event (POST)
+  /**
+   * Meta webhook receiver.
+   * - Guard verifies x-hub-signature-256 using raw body + META_APP_SECRET.
+   * - We immediately enqueue each sub-event as its own job with a stable jobId.
+   */
   @Post('meta')
   @UseGuards(MetaWebhookGuard)
-  async handleMetaEvents(@Body() payload: any) {
-   // Meta groups events in an "entry" array
-    const entries = payload.entry || [];
+  async handle(@Body() payload: any) {
+    const entries = payload?.entry ?? [];
 
     for (const entry of entries) {
-      // 1. Is this a Messaging Event (DM)?
-      if (entry.messaging) {
-        // Send to the fast, high-volume INBOX queue
-        await this.inboxQueue.add('meta-inbound-message', entry, {
-          removeOnComplete: true, // Don't bloat Redis
-        });
-        continue;
-      }
+      // 1) Messaging events (DMs)
+      if (Array.isArray(entry.messaging)) {
+        for (const m of entry.messaging) {
+          const mid = m?.message?.mid; // stable Meta message id for dedupe
+          const fallback = `${entry?.id ?? 'na'}:${m?.timestamp ?? Date.now()}:${m?.sender?.id ?? 'na'}`;
+          const jobId = `meta:dm:${mid ?? fallback}`;
 
-      // 2. Is this a Feed Event (Comment)?
-      if (entry.changes && entry.changes[0]?.field === 'feed') {
-        await this.inboxQueue.add('meta-inbound-comment', entry, {
-          removeOnComplete: true,
-        });
-        continue;
-      }
-
-      // 3. Is it an Account/System Event? (De-auth, permission changes)
-      // We keep your existing logging logic for system events!
-      const log = await this.prisma.webhookLog.create({
-        data: {
-          provider: 'META',
-          eventType: 'system_update',
-          payload: entry,
-          status: 'PENDING',
+          await this.inboxQueue.add(
+            'meta-inbound-message',
+            { entryId: entry.id, messaging: m, rawEntry: entry },
+            {
+              jobId,
+              attempts: 15,
+              backoff: { type: 'exponential', delay: 1500 },
+              removeOnComplete: true,
+              removeOnFail: { age: 7 * 24 * 3600 }, // keep fails for a week
+            },
+          );
         }
-      });
+        continue;
+      }
 
-      // Send to the strict, system queue
-      await this.webhooksQueue.add('meta-system-event', {
-        logId: log.id,
-        data: entry
-      });
+      // 2) Feed events (comments, etc.)
+      if (Array.isArray(entry.changes)) {
+        for (const change of entry.changes) {
+          if (change?.field !== 'feed') continue;
+
+          // Try to build a stable id for job dedupe
+          const changeId =
+            change?.value?.comment_id ??
+            change?.value?.post_id ??
+            `${entry?.id ?? 'na'}:${change?.value?.item ?? 'feed'}:${change?.value?.verb ?? 'unknown'}:${change?.value?.created_time ?? Date.now()}`;
+
+          await this.inboxQueue.add(
+            'meta-inbound-comment',
+            { entryId: entry.id, change, rawEntry: entry },
+            {
+              jobId: `meta:feed:${changeId}`,
+              attempts: 15,
+              backoff: { type: 'exponential', delay: 1500 },
+              removeOnComplete: true,
+              removeOnFail: { age: 7 * 24 * 3600 },
+            },
+          );
+        }
+        continue;
+      }
+
+      // 3) Everything else (permission changes, deauth, etc.) -> system queue
+      await this.webhooksQueue.add(
+        'meta-system-event',
+        { entry },
+        {
+          jobId: `meta:system:${entry?.id ?? cryptoRandomId()}:${Date.now()}`,
+          attempts: 10,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: true,
+          removeOnFail: { age: 14 * 24 * 3600 },
+        },
+      );
     }
 
-    // Always return 200 immediately
+    // Always respond fast
     return { status: 'success' };
   }
+}
 
+function cryptoRandomId() {
+  // Lightweight unique suffix if entry.id is missing
+  return Math.random().toString(36).slice(2);
 }

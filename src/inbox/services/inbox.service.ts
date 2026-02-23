@@ -1,38 +1,46 @@
 import { PrismaService } from "@/prisma/prisma.service";
 import { Prisma } from "@generated/client";
 import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
-import { ListInboxConversationsDto, UpdateConversationDto } from "../dtos/send-message.dto";
 
+
+type ListConversationsQuery = {
+  search?: string;
+  status?: string; // ConversationStatus
+  assignedMemberId?: string | null;
+  isArchived?: boolean;
+  take?: number;
+  cursor?: string; // cursor by lastMessageAt+id via composite? We'll do id cursor fallback
+};
 
 @Injectable()
 export class InboxService {
   constructor(private readonly prisma: PrismaService) {}
 
-
+  /**
+   * Inbox list for UI.
+   * - fast: uses indexes on (workspaceId,lastMessageAt) and optional filters
+   * - cursor paging by lastMessageAt + id (stable ordering)
+   */
   async listConversations(params: {
     workspaceId: string;
-    memberId: string;
-    query: ListInboxConversationsDto;
+    memberId: string; // current agent (WorkspaceMember id) for read state join
+    query?: ListConversationsQuery;
   }) {
     const { workspaceId, memberId, query } = params;
-    await this.assertWorkspaceMember(workspaceId, memberId);
 
-    const take = Math.min(query.limit ?? 20, 100);
-    const skip = (Math.max(query.page ?? 1, 1) - 1) * take;
+    const take = Math.min(query?.take ?? 25, 100);
 
     const where: Prisma.InboxConversationWhereInput = {
       workspaceId,
-      ...(query.socialProfileId ? { socialProfileId: query.socialProfileId } : {}),
-      ...(query.status ? { status: query.status as any } : {}),
-      ...(query.priority ? { priority: query.priority as any } : {}),
-      ...(query.assignedMemberId
-        ? query.assignedMemberId === 'me'
-          ? { assignedMemberId: memberId }
-          : query.assignedMemberId === 'unassigned'
-            ? { assignedMemberId: null }
-            : { assignedMemberId: query.assignedMemberId }
-        : {}),
-      ...(query.search
+      ...(query?.status ? { status: query.status as any } : {}),
+      ...(query?.assignedMemberId === null
+        ? { assignedMemberId: null }
+        : query?.assignedMemberId
+          ? { assignedMemberId: query.assignedMemberId }
+          : {}),
+      ...(query?.isArchived === true ? { archivedAt: { not: null } } : {}),
+      ...(query?.isArchived === false ? { archivedAt: null } : {}),
+      ...(query?.search
         ? {
             OR: [
               { snippet: { contains: query.search, mode: 'insensitive' } },
@@ -42,138 +50,181 @@ export class InboxService {
         : {}),
     };
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.inboxConversation.findMany({
-        where,
-        orderBy: { lastMessageAt: 'desc' },
-        take,
-        skip,
-        include: {
-          contact: { select: { id: true, username: true, avatarUrl: true, platform: true } },
-          assignedMember: { select: { id: true } },
-        },
-      }),
-      this.prisma.inboxConversation.count({ where }),
-    ]);
+    // Stable ordering for inbox list
+    const orderBy: Prisma.InboxConversationOrderByWithRelationInput[] = [
+      { lastMessageAt: 'desc' },
+      { id: 'desc' },
+    ];
 
-    return {
-      items,
-      meta: {
-        total,
-        page: query.page,
-        limit: take,
-        pages: Math.ceil(total / take),
-      },
-    };
-  }
+    // Cursor (simple): use conversation id cursor (works, but not perfect for lastMessageAt ordering)
+    // If you want perfect cursor, store a composite cursor field. This is acceptable for MVP.
+    const cursor = query?.cursor ? { id: query.cursor } : undefined;
+    const skip = cursor ? 1 : 0;
 
-  async getConversation(params: { workspaceId: string; memberId: string; conversationId: string }) {
-    const { workspaceId, memberId, conversationId } = params;
-    await this.assertWorkspaceMember(workspaceId, memberId);
-
-    const convo = await this.prisma.inboxConversation.findFirst({
-      where: { id: conversationId, workspaceId },
+    const rows = await this.prisma.inboxConversation.findMany({
+      where,
+      take,
+      skip,
+      cursor,
+      orderBy,
       include: {
         contact: true,
-        socialProfile: { select: { id: true } },
+        assignedMember: { select: { id: true } },
+        readStates: {
+          where: { memberId },
+          select: { lastReadAt: true },
+        },
+        _count: { select: { messages: true } },
+      },
+    });
+
+    const items = rows.map((c) => {
+      const lastReadAt = c.readStates[0]?.lastReadAt ?? null;
+      const isUnreadForMe = lastReadAt ? c.lastMessageAt > lastReadAt : true;
+
+      return {
+        id: c.id,
+        workspaceId: c.workspaceId,
+        socialProfileId: c.socialProfileId,
+        externalId: c.externalId,
+        status: c.status,
+        priority: c.priority,
+        assignedMemberId: c.assignedMemberId,
+        archivedAt: c.archivedAt,
+        snoozedUntil: c.snoozedUntil,
+        lastMessageAt: c.lastMessageAt,
+        snippet: c.snippet,
+        contact: {
+          id: c.contact.id,
+          username: c.contact.username,
+          avatarUrl: c.contact.avatarUrl,
+          platform: c.contact.platform,
+          externalId: c.contact.externalId,
+        },
+        isUnreadForMe,
+        messageCount: c._count.messages,
+      };
+    });
+
+    const nextCursor = items.length === take ? items[items.length - 1].id : null;
+
+    return { items, nextCursor };
+  }
+
+  async getConversation(params: { workspaceId: string; conversationId: string }) {
+    const c = await this.prisma.inboxConversation.findFirst({
+      where: { id: params.conversationId, workspaceId: params.workspaceId },
+      include: {
+        contact: true,
         assignedMember: { select: { id: true } },
       },
     });
+    if (!c) throw new NotFoundException('Conversation not found');
+    return c;
+  }
+
+  async listMessages(params: {
+    workspaceId: string;
+    conversationId: string;
+    take?: number;
+    cursor?: string; // message id cursor
+  }) {
+    const take = Math.min(params.take ?? 50, 200);
+
+    // Ensure tenant safety
+    const convo = await this.prisma.inboxConversation.findFirst({
+      where: { id: params.conversationId, workspaceId: params.workspaceId },
+      select: { id: true },
+    });
     if (!convo) throw new NotFoundException('Conversation not found');
-    return convo;
+
+    const cursor = params.cursor ? { id: params.cursor } : undefined;
+    const skip = cursor ? 1 : 0;
+
+    const rows = await this.prisma.inboxMessage.findMany({
+      where: { conversationId: params.conversationId },
+      take,
+      skip,
+      cursor,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      include: { attachments: true },
+    });
+
+    const nextCursor = rows.length === take ? rows[rows.length - 1].id : null;
+    return { items: rows, nextCursor };
   }
 
   async updateConversation(params: {
     workspaceId: string;
-    memberId: string;
     conversationId: string;
-    dto: UpdateConversationDto;
+    patch: {
+      status?: string;
+      priority?: string;
+      assignedMemberId?: string | null;
+      archived?: boolean;
+      snoozedUntil?: string | null;
+    };
   }) {
-    const { workspaceId, memberId, conversationId, dto } = params;
-    await this.assertWorkspaceMember(workspaceId, memberId);
-
-    // Ensure conversation belongs to workspace
-    const exists = await this.prisma.inboxConversation.findFirst({
-      where: { id: conversationId, workspaceId },
+      const _snoozedUntil = params.patch.snoozedUntil ? new Date(params.patch.snoozedUntil) : null;
+    // tenant check
+    const existing = await this.prisma.inboxConversation.findFirst({
+      where: { id: params.conversationId, workspaceId: params.workspaceId },
       select: { id: true },
     });
-    if (!exists) throw new NotFoundException('Conversation not found');
+    if (!existing) throw new NotFoundException('Conversation not found');
 
+    const data: Prisma.InboxConversationUpdateInput = {};
 
-    if (dto.assignedMemberId) {
-      const assignee = await this.prisma.workspaceMember.findFirst({
-        where: { id: dto.assignedMemberId, workspaceId },
-        select: { id: true },
-      });
-      if (!assignee) throw new BadRequestException('Assignee not in workspace');
-    }
-
+    if (params.patch.status) data.status = params.patch.status as any;
+    if (params.patch.priority) data.priority = params.patch.priority as any;
+    if (params.patch.assignedMemberId !== undefined) {
+  data.assignedMember = params.patch.assignedMemberId
+    ? { connect: { id: params.patch.assignedMemberId } }
+    : { disconnect: true };}
+    if (params.patch.archived !== undefined)
+      data.archivedAt = params.patch.archived ? new Date() : null;
+    if (params.patch.snoozedUntil !== undefined)
+      data.snoozedUntil = _snoozedUntil;
     return this.prisma.inboxConversation.update({
-      where: { id: conversationId },
-      data: {
-        ...(dto.status ? { status: dto.status as any } : {}),
-        ...(dto.priority ? { priority: dto.priority as any } : {}),
-        ...(dto.assignedMemberId !== undefined ? { assignedMemberId: dto.assignedMemberId } : {}),
-        ...(dto.archivedAt !== undefined
-          ? { archivedAt: dto.archivedAt ? new Date(dto.archivedAt) : null }
-          : {}),
-        ...(dto.snoozedUntil !== undefined
-          ? { snoozedUntil: dto.snoozedUntil ? new Date(dto.snoozedUntil) : null }
-          : {}),
-      },
+      where: { id: params.conversationId },
+      data,
     });
   }
 
-  async markRead(params: { workspaceId: string; memberId: string; conversationId: string }) {
-    const { workspaceId, memberId, conversationId } = params;
-    await this.assertWorkspaceMember(workspaceId, memberId);
-
+  /**
+   * Per-agent read state.
+   * This is what powers "unread" for each agent.
+   */
+  async markRead(params: {
+    workspaceId: string;
+    conversationId: string;
+    memberId: string; // WorkspaceMember id
+    readAt?: Date;
+  }) {
     const convo = await this.prisma.inboxConversation.findFirst({
-      where: { id: conversationId, workspaceId },
-      select: { id: true },
+      where: { id: params.conversationId, workspaceId: params.workspaceId },
+      select: { id: true, lastMessageAt: true },
     });
     if (!convo) throw new NotFoundException('Conversation not found');
 
-    await this.prisma.conversationReadState.upsert({
-      where: { conversationId_memberId: { conversationId, memberId } },
-      update: { lastReadAt: new Date() },
-      create: { conversationId, memberId, lastReadAt: new Date() },
-    });
+    const readAt = params.readAt ?? new Date();
 
+    await this.prisma.conversationReadState.upsert({
+      where: {
+        conversationId_memberId: {
+          conversationId: params.conversationId,
+          memberId: params.memberId,
+        },
+      },
+      update: { lastReadAt: readAt },
+      create: {
+        conversationId: params.conversationId,
+        memberId: params.memberId,
+        lastReadAt: readAt,
+      },
+    });
 
     return { ok: true };
-  }
-
-  async computeUnreadCount(params: { workspaceId: string; memberId: string }) {
-    const { workspaceId, memberId } = params;
-    await this.assertWorkspaceMember(workspaceId, memberId);
-
-    // Unread = conversations where lastMessageAt > lastReadAt OR no readState exists
-    // Prisma can’t do this perfectly in one query across joins in all DBs.
-    // Efficient compromise: fetch lastReadAt map for recently active conversations or use raw SQL.
-    // Here’s a simple raw query for Postgres:
-    const rows = await this.prisma.$queryRaw<
-      Array<{ unread_count: bigint }>
-    >(Prisma.sql`
-      SELECT COUNT(*)::bigint AS unread_count
-      FROM "InboxConversation" c
-      LEFT JOIN "ConversationReadState" r
-        ON r."conversationId" = c.id AND r."memberId" = ${memberId}
-      WHERE c."workspaceId" = ${workspaceId}
-        AND (r."lastReadAt" IS NULL OR c."lastMessageAt" > r."lastReadAt")
-        AND c."archivedAt" IS NULL
-        AND (c."snoozedUntil" IS NULL OR c."snoozedUntil" <= NOW())
-    `);
-
-    return Number(rows?.[0]?.unread_count ?? 0);
-  }
-
-    private async assertWorkspaceMember(workspaceId: string, memberId: string) {
-    const m = await this.prisma.workspaceMember.findFirst({
-      where: { id: memberId, workspaceId },
-      select: { id: true },
-    });
-    if (!m) throw new ForbiddenException('Not a workspace member');
   }
 }
 
