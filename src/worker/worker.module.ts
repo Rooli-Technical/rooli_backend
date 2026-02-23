@@ -25,7 +25,6 @@ import { InboxModule } from '@/inbox/inbox.module';
     PostMediaModule,
     SocialModule,
     AnalyticsModule,
-    AnalyticsModule,
     EventsModule,
     forwardRef(() => InboxModule),
   ],
