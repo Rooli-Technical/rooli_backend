@@ -159,26 +159,47 @@ export class FacebookService {
     }
   }
 
-  async subscribeAppToPage(pageId: string, pageAccessToken: string): Promise<void> {
+async subscribeAppToPage(
+  pageId: string,
+  pageAccessToken: string,
+): Promise<void> {
   const url = `${this.GRAPH_URL}/${pageId}/subscribed_apps`;
+
+  const subscribedFields = [
+    'feed',
+    'messages',
+    'messaging_postbacks',
+    'messaging_handovers',
+    'mention',
+    'ratings',
+  ].join(',');
 
   try {
     const { data } = await lastValueFrom(
       this.httpService.post(url, null, {
-        params: { access_token: pageAccessToken },
+        params: {
+          access_token: pageAccessToken,
+          subscribed_fields: subscribedFields,
+        },
       }),
     );
 
-    if (!data?.success) {
-      throw new Error('Subscription not acknowledged');
+    if (data?.success !== true) {
+      this.logger.warn(
+        `Meta subscribe call returned non-success for page ${pageId}`,
+        data,
+      );
+    } else {
+      this.logger.log(`Subscribed app to Facebook Page ${pageId}`);
     }
   } catch (err) {
     this.logger.error(
       `Failed to subscribe app to page ${pageId}`,
       err.response?.data || err.message,
     );
+
     throw new BadRequestException(
-      'Could not install app on Facebook Page',
+      'Could not install app on Facebook Page. Ensure the Page token has pages_manage_metadata permission.',
     );
   }
 }
