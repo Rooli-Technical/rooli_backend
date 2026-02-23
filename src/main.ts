@@ -35,14 +35,7 @@ app.enableCors({
     }),
   );
 
-  await app.init();
-
-   // Attach Socket.io auth middleware
-  const wsAuth = app.get(WsAuthMiddleware);
-  const gateway = app.get(EventsGateway);
-
-  // gateway.server is available after init for Nest gateways
-  gateway.server.use(wsAuth.use);
+  
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document, {
@@ -51,6 +44,7 @@ app.enableCors({
     },
   });
 
+ 
 
   // Global validation
   app.useGlobalPipes(
@@ -72,6 +66,14 @@ app.useGlobalFilters(
 
 const server = app.getHttpAdapter().getInstance();
 server.set('trust proxy', true);
+
+ await app.init();
+   // Attach Socket.io auth middleware
+  const wsAuth = app.get(WsAuthMiddleware);
+  const gateway = app.get(EventsGateway);
+
+  // gateway.server is available after init for Nest gateways
+  gateway.server.use(wsAuth.use);
 
 await app.listen(process.env.PORT ?? 3000);
 }
