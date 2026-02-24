@@ -12,7 +12,7 @@ import { AnalyticsModule } from '@/analytics/analytics.module';
 import { EventsModule } from '@/events/events.module';
 import { InboundWebhooksProcessor } from './processors/inbound-webhooks.processor';
 import { OutboundMessagesProcessor } from './processors/outbound-messages.processor';
-import { InboxModule } from '@/inbox/inbox.module';
+import { InboxModule } from '@/messages/inbox.module';
 
 @Module({
   imports: [

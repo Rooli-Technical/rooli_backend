@@ -27,9 +27,9 @@ import { InboxMessagesService } from './services/inbox-messages.service';
 import { InboxService } from './services/inbox.service';
 
 
-@ApiTags('Inbox')
+@ApiTags('Messages')
 @ApiBearerAuth()
-@Controller('inbox/conversations/:workspaceId')
+@Controller('messages/conversations/:workspaceId')
 export class InboxController {
   constructor(
     private readonly inboxService: InboxService,

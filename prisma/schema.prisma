@@ -298,6 +298,7 @@ model SocialProfile {
   updatedAt DateTime @updatedAt
 
   @@unique([workspaceId, platform, platformId])
+  //@@unique([platform, platformId]) //this should be the correct one
   @@index([workspaceId])
 }
 

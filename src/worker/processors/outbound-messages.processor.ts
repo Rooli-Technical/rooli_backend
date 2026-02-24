@@ -1,11 +1,11 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { MetaClient } from '@/inbox/integrations/meta.client';
-import { MetaSendMode } from '@/inbox/types/meta.types';
+import { MetaClient } from '@/messages/integrations/meta.client';
+import { MetaSendMode } from '@/messages/types/meta.types';
 import { PrismaService } from '@/prisma/prisma.service';
 import { DomainEventsService } from '@/events/domain-events.service';
-import { TwitterClient } from '@/inbox/integrations/twitter.client';
+import { TwitterClient } from '@/messages/integrations/twitter.client';
 
 
 @Injectable()

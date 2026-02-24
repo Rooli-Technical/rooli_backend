@@ -1,12 +1,12 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { MetaAdapter } from '@/inbox/adapters/meta.adapter';
-import { TwitterAdapter } from '@/inbox/adapters/twitter.adapter';
+import { MetaAdapter } from '@/messages/adapters/meta.adapter';
+import { TwitterAdapter } from '@/messages/adapters/twitter.adapter';
 
 import { PrismaService } from '@/prisma/prisma.service';
-import { InboxIngestService } from '@/inbox/services/inbox-ingest.service';
-import { NormalizedInboundMessage } from '@/inbox/types/adapter.types';
+import { InboxIngestService } from '@/messages/services/inbox-ingest.service';
+import { NormalizedInboundMessage } from '@/messages/types/adapter.types';
 import { DomainEventsService } from '@/events/domain-events.service';
 
 
@@ -31,15 +31,13 @@ export class InboundWebhooksProcessor extends WorkerHost {
       switch (job.name) {
         case 'meta-inbound-message': {
           const normalized = this.metaAdapter.normalizeDirectMessage(job.data);
-          console.log('Normalized Meta message:', normalized);
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-          console.log('Resolved Meta message:', resolved);
-          return
+
           const { conversation, message, contact } = await this.ingest.ingestInboundMessage(resolved);
 
-          // ✅ domain events for UI / notifications / analytics
+          //  domain events for UI / notifications / analytics
           this.events.emit('inbox.message.created', {
             workspaceId: resolved.workspaceId,
             conversationId: conversation.id,

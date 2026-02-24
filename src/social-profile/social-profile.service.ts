@@ -110,6 +110,144 @@ export class SocialProfileService {
       failures: results.errors,
     };
   }
+
+// async addProfilesToWorkspace(
+//   workspaceId: string,
+//   dto: BulkAddProfilesDto,
+// ) {
+//   const { remaining, allowedPlatforms } =
+//     await this.getWorkspaceLimitInfo(workspaceId);
+
+//   // 1. Plan guard
+//   if (!allowedPlatforms.includes(dto.platform)) {
+//     throw new ForbiddenException(
+//       `The ${dto.platform} platform is not available on your current plan.`,
+//     );
+//   }
+
+//   // 2. Fetch importable pages once
+//   const importablePages =
+//     await this.connectionService.getImportablePages(
+//       dto.connectionId,
+//       true,
+//     );
+
+//   // 3. Slot calculation (count ONLY new profiles)
+//   const existingInWorkspace =
+//     await this.prisma.socialProfile.findMany({
+//       where: {
+//         workspaceId,
+//         platform: dto.platform as Platform,
+//         platformId: { in: dto.platformIds },
+//       },
+//       select: { platformId: true },
+//     });
+
+//   const existingIds = new Set(
+//     existingInWorkspace.map(p => p.platformId),
+//   );
+
+//   const newProfilesCount = dto.platformIds.filter(
+//     id => !existingIds.has(id),
+//   ).length;
+
+//   if (newProfilesCount > remaining) {
+//     throw new ForbiddenException(
+//       `You have ${remaining} slots left, but tried to add ${newProfilesCount} new profiles.`,
+//     );
+//   }
+
+//   const added: any[] = [];
+
+//   // 4. Deterministic, sequential processing
+//   for (const platformId of dto.platformIds) {
+//     const pageData = importablePages.find(p => p.id === platformId);
+
+//     if (!pageData) {
+//       throw new NotFoundException(
+//         `Page ${platformId} not found in connected account`,
+//       );
+//     }
+
+//     // 5. Global ownership check (authoritative)
+//     const existingGlobal =
+//       await this.prisma.socialProfile.findUnique({
+//         where: {
+//           platform_platformId: {
+//             platform: pageData.platform as Platform,
+//             platformId: pageData.id,
+//           },
+//         },
+//         select: { id: true, workspaceId: true },
+//       });
+
+//     if (
+//       existingGlobal &&
+//       existingGlobal.workspaceId !== workspaceId
+//     ) {
+//       throw new ConflictException(
+//         'This page is already connected to another workspace. ' +
+//         'Only one workspace can own a page inbox at a time.',
+//       );
+//     }
+
+//     // 6. Upsert using GLOBAL identity key
+//     const profile =
+//       await this.prisma.socialProfile.upsert({
+//         where: {
+//           platform_platformId: {
+//             platform: pageData.platform as Platform,
+//             platformId: pageData.id,
+//           },
+//         },
+//         update: {
+//           socialConnectionId: dto.connectionId,
+//           name: pageData.name,
+//           username: pageData.username,
+//           picture: pageData.picture,
+//           accessToken: await this.encryption.encrypt(
+//             pageData.accessToken,
+//           ),
+//         },
+//         create: {
+//           workspaceId,
+//           socialConnectionId: dto.connectionId,
+//           platform: pageData.platform as Platform,
+//           platformId: pageData.id,
+//           name: pageData.name,
+//           username: pageData.username,
+//           picture: pageData.picture,
+//           accessToken: await this.encryption.encrypt(
+//             pageData.accessToken,
+//           ),
+//           type: this.mapAccountType(
+//             pageData.type,
+//             pageData.platform,
+//           ),
+//         },
+//       });
+
+//     // 7. External side-effect AFTER DB identity exists
+//     if (pageData.platform === 'FACEBOOK') {
+//       try {
+//         await this.connectionService.subscribeFacebookPage(
+//           dto.connectionId,
+//           pageData.id,
+//           pageData.accessToken,
+//         );
+//       } catch (err) {
+//         throw err;
+//       }
+//     }
+
+//     added.push(profile);
+//   }
+
+//   return {
+//     message: `Added ${added.length} profile(s).`,
+//     added,
+//   };
+// }
   /**
    * 2. LIST WORKSPACE PROFILES
    * Used for the Sidebar or "Accounts" page.

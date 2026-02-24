@@ -9,6 +9,8 @@ export class InboxIngestService {
   constructor(private readonly prisma: PrismaService) {}
 
   async ingestInboundMessage(evt: NormalizedInboundMessage) {
+    console.log('Ingesting inbound message:', evt); // Debug log to trace incoming data
+    console.dir(evt, { depth: null });
     const occurredAt = evt.occurredAt ?? evt.message.providerTimestamp ?? new Date();
     const snippet = (evt.snippet ?? evt.message.content ?? '').slice(0, 140);
 

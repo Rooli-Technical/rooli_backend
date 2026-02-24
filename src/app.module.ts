@@ -57,7 +57,7 @@ import { RbacModule } from './rbac/rbac.module';
 import { UserModule } from './user/user.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditInterceptor } from './audit/interceptors/audit.intercetor';
-import { InboxModule } from './inbox/inbox.module';
+import { InboxModule } from './messages/inbox.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
