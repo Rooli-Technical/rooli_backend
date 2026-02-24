@@ -95,7 +95,7 @@ export class WebhookController {
   @Post('meta')
   @UseGuards(MetaWebhookGuard)
   async handle(@Body() payload: any) {
-    console.log(payload);
+    const objectType = payload?.object;
     const entries = payload?.entry ?? [];
 
     for (const entry of entries) {
@@ -108,7 +108,7 @@ export class WebhookController {
 
           await this.inboxQueue.add(
             'meta-inbound-message',
-            { entryId: entry.id, messaging: m, rawEntry: entry },
+            { entryId: entry.id, messaging: m, rawEntry: entry, objectType },
             {
               jobId,
               attempts: 15,

@@ -31,9 +31,12 @@ export class InboundWebhooksProcessor extends WorkerHost {
       switch (job.name) {
         case 'meta-inbound-message': {
           const normalized = this.metaAdapter.normalizeDirectMessage(job.data);
+          console.log('Normalized Meta message:', normalized);
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
+          console.log('Resolved Meta message:', resolved);
+          return
           const { conversation, message, contact } = await this.ingest.ingestInboundMessage(resolved);
 
           // ✅ domain events for UI / notifications / analytics

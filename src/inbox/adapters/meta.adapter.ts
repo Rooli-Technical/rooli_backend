@@ -18,6 +18,7 @@ export class MetaAdapter implements SocialAdapter {
   readonly platform: NormalizedPlatform = 'INSTAGRAM'; // We will detect per-event; default is fine.
 
   normalizeDirectMessage(input: any): NormalizedInboundMessage | null {
+    console.dir(input, { depth: null, colors: true });
     const messaging = input?.messaging ?? input; // support both shapes
     const rawEntry = input?.rawEntry;
 
@@ -63,8 +64,7 @@ export class MetaAdapter implements SocialAdapter {
     // Best-effort platform inference:
     // If you support both FB + IG, use something in rawEntry/object, or store it on SocialProfile mapping.
     // Here we mark as INSTAGRAM by default, but preserve raw info in meta for later.
-    const platform: NormalizedPlatform =
-      inferMetaPlatform(rawEntry) ?? 'INSTAGRAM';
+    const platform: NormalizedPlatform = inferMetaPlatform(input?.objectType) ?? 'FACEBOOK';
 
     // Conversation external id:
     // Meta does not always provide a "thread id" in messaging webhook.
@@ -146,8 +146,7 @@ export class MetaAdapter implements SocialAdapter {
 
     const ownerExternalId =
       rawEntry?.id ?? value?.page_id ?? value?.instagram_business_account_id;
-    const platform: NormalizedPlatform =
-      inferMetaPlatform(rawEntry) ?? 'FACEBOOK';
+    const platform: NormalizedPlatform = inferMetaPlatform(input?.objectType) ?? 'FACEBOOK';
 
     if (!commentId || !postId || !fromId) {
       // Some feed events aren't comment creates. Ignore.
@@ -257,13 +256,15 @@ function mapMetaAttachmentType(t: any) {
   return 'UNKNOWN';
 }
 
-function inferMetaPlatform(rawEntry: any): NormalizedPlatform | null {
-  // Meta webhooks differ depending on subscription object (page/instagram)
-  // If you subscribed to "instagram" object, rawEntry.object might help.
-  const obj = rawEntry?.object ?? rawEntry?.['object'];
-  const s = String(obj ?? '').toLowerCase();
-  if (s.includes('instagram')) return 'INSTAGRAM';
-  if (s.includes('page') || s.includes('facebook')) return 'FACEBOOK';
+function inferMetaPlatform(objectType: string | undefined): NormalizedPlatform | null {
+  const s = String(objectType ?? '').toLowerCase();
+  
+  // Instagram Graph API webhooks explicitly use "instagram"
+  if (s === 'instagram') return 'INSTAGRAM';
+  
+  // Facebook Messenger webhooks use "page"
+  if (s === 'page') return 'FACEBOOK';
+  
   return null;
 }
 
