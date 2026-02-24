@@ -78,15 +78,11 @@ export class AnalyticsProcessor extends WorkerHost {
         profile.platformId,
         credentials,
       );
-      console.log("raw Acount")
-      console.log(rawAccount)
 
       const accountPayload = await this.normalizer.normalizeAccountStats(
         profile.id,
         rawAccount,
       );
-      console.log("account payload")
-      console.log(accountPayload)
 
       await this.repo.saveAccountAnalytics(accountPayload);
 
@@ -136,8 +132,6 @@ export class AnalyticsProcessor extends WorkerHost {
         credentials,
         { pageId },
       );
-      console.log("raw posts")
-      console.log(rawPosts)
     } catch (error) {
       console.log(error)
       this.logger.error(
@@ -160,8 +154,6 @@ export class AnalyticsProcessor extends WorkerHost {
             internalPost.id,
             rawPost,
           );
-          console.log("snapshot")
-          console.log(snapshot)
           await this.repo.savePostSnapshot(snapshot);
         }
       } catch (error) {

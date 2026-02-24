@@ -23,8 +23,8 @@ export class WsAuthMiddleware {
   ) {}
 
   use = async (client: Socket, next: (err?: any) => void) => {
-    console.log('inside ws auth middleware');
     try {
+      console.log('WS Auth Middleware: New connection, authenticating...');
       const token = this.extractToken(client);
       if (!token) return next(new Error('Unauthorized'));
 

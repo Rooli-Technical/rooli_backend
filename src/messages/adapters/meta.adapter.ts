@@ -18,7 +18,6 @@ export class MetaAdapter implements SocialAdapter {
   readonly platform: NormalizedPlatform = 'INSTAGRAM'; // We will detect per-event; default is fine.
 
   normalizeDirectMessage(input: any): NormalizedInboundMessage | null {
-    console.dir(input, { depth: null, colors: true });
     const messaging = input?.messaging ?? input; // support both shapes
     const rawEntry = input?.rawEntry;
 

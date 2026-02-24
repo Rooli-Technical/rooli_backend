@@ -67,8 +67,6 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
             'organic_metrics',
           ],
         });
-        console.log(resp)
-        console.dir(resp, { depth: null });
         const mapped = (resp.data ?? []).map((tweet) =>
           this.mapToDomain(tweet),
         );
@@ -95,7 +93,6 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
       'user.fields': ['public_metrics'],
     });
 
-    console.log(user)
 
     return {
       platformId: user.id,
