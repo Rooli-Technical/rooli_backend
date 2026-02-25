@@ -39,16 +39,6 @@ export class InboxMessagesService {
     });
     if (!convo) throw new NotFoundException('Conversation not found');
 
-    const member = await this.prisma.workspaceMember.findFirst({
-      where: {
-        userId: params.memberId,
-        workspaceId: params.workspaceId,
-      },
-    });
-
-    if (!member) {
-      throw new ForbiddenException('You are not a member of this workspace');
-    }
 
     const now = new Date();
 
