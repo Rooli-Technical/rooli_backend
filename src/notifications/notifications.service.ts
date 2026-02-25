@@ -3,8 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DomainEventsService } from '../events/domain-events.service';
 import { Prisma } from '@generated/client';
 import { NotificationType } from '@generated/enums';
-import { CreateNotificationInput, CreateManyNotificationsInput } from './types/notification.types';
-
+import {
+  CreateNotificationInput,
+  CreateManyNotificationsInput,
+} from './types/notification.types';
 
 @Injectable()
 export class NotificationsService {
@@ -92,11 +94,12 @@ export class NotificationsService {
   async list(params: {
     workspaceId: string;
     memberId: string;
-    take?: number;
-    cursor?: string; // notification id
+    limit: number; // Using 'limit' from PaginationDto
+    cursor?: string;
     onlyUnread?: boolean;
   }) {
-    const take = Math.min(params.take ?? 20, 100);
+    const take = Math.min(params.limit ?? 20, 100);
+
     const cursor = params.cursor ? { id: params.cursor } : undefined;
 
     const where: Prisma.NotificationWhereInput = {
@@ -116,7 +119,14 @@ export class NotificationsService {
 
     const nextCursor = rows.length === take ? rows[rows.length - 1].id : null;
 
-    return { items: rows, nextCursor };
+    return {
+      items: rows,
+      meta: {
+        nextCursor,
+        hasMore: !!nextCursor,
+        limit: take,
+      },
+    };
   }
 
   async unreadCount(params: { workspaceId: string; memberId: string }) {
@@ -182,13 +192,17 @@ export class NotificationsService {
     return { ok: true, updated: res.count, readAt: now };
   }
 
-  async delete(params: { workspaceId: string; memberId: string; notificationId: string }) {
-   await this.prisma.notification.delete({
-  where: {
-    id: params.notificationId,
-    memberId: params.memberId,
-  },
-});
+  async delete(params: {
+    workspaceId: string;
+    memberId: string;
+    notificationId: string;
+  }) {
+    await this.prisma.notification.delete({
+      where: {
+        id: params.notificationId,
+        memberId: params.memberId,
+      },
+    });
     return { ok: true };
   }
 
@@ -215,4 +229,3 @@ export class NotificationsService {
 // =========================
 // Types
 // =========================
-

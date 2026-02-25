@@ -257,6 +257,8 @@ export class InvitationsService {
         });
       }
 
+      let workspaceMemberId: string | null = null;
+
       // 3. Handle Workspace Membership (If applicable)
       if (invite.workspaceId) {
         const existingWsMember = await tx.workspaceMember.findUnique({
@@ -269,13 +271,16 @@ export class InvitationsService {
         });
 
         if (!existingWsMember) {
-          await tx.workspaceMember.create({
+          const newWsMember = await tx.workspaceMember.create({
             data: {
               workspaceId: invite.workspaceId,
               memberId: orgMember.id,
-              roleId: invite.roleId, // The role specified in the invite (Workspace-scoped)
+              roleId: invite.roleId, 
             },
           });
+          workspaceMemberId = newWsMember.id;
+        } else {
+          workspaceMemberId = existingWsMember.id;
         }
       }
 
@@ -285,7 +290,7 @@ export class InvitationsService {
         data: { status: 'ACCEPTED', acceptedAt: new Date() },
       });
 
-      return { user, invite: updatedInvite };
+      return { user, invite: updatedInvite, workspaceMemberId };
     });
 
     // C. Generate Auto-Login Tokens
@@ -295,6 +300,7 @@ export class InvitationsService {
         result.user.email,
         result.invite.organizationId,
         result.invite.workspaceId,
+        result.workspaceMemberId,
         result.user.refreshTokenVersion,
       )),
       user: this.toSafeUser(result.user),
@@ -420,6 +426,7 @@ export class InvitationsService {
     email: string,
     orgId: string | null,
     workspaceId: string | null,
+    workspaceMemberId: string | null,
     version: number,
   ) {
     const payload: JwtPayload = {
@@ -427,6 +434,7 @@ export class InvitationsService {
       email,
       orgId,
       workspaceId,
+      workspaceMemberId,
       ver: version,
     };
     const [at, rt] = await Promise.all([

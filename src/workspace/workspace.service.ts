@@ -283,50 +283,62 @@ export class WorkspaceService {
     return { deleted: true };
   }
 
-  async switchWorkspace(userId: string, targetWorkspaceId: string) {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: targetWorkspaceId },
-      select: {
-        id: true,
-        organizationId: true,
-        organization: {
-          select: { status: true },
+async switchWorkspace(userId: string, targetWorkspaceId: string) {
+  // 1. Verify membership and get the Member ID in one query
+  const membership = await this.prisma.workspaceMember.findFirst({
+    where: {
+      workspaceId: targetWorkspaceId,
+      member: { userId: userId }, // Reaching through OrganizationMember
+    },
+    include: {
+      workspace: {
+        select: {
+          organizationId: true,
+          organization: { select: { status: true } },
         },
       },
-    });
+    },
+  });
 
-    if (!workspace) throw new NotFoundException('Workspace not found');
-    if (workspace.organization.status === 'SUSPENDED') {
-      throw new ForbiddenException('Organization is suspended');
-    }
-
-    // 3. Update "Sticky Session" (Last Active Workspace)
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: { lastActiveWorkspaceId: targetWorkspaceId },
-      select: { id: true, email: true, refreshTokenVersion: true },
-    });
-
-    // 4. Generate New Tokens with the updated context
-    // This allows the frontend to immediately start making requests with the new workspaceId
-    const tokens = await this.authService.generateTokens(
-      user.id,
-      user.email,
-      workspace.organizationId,
-      targetWorkspaceId,
-      user.refreshTokenVersion,
-    );
-
-    // 5. Update the refresh token in the DB (standard auth flow)
-    await this.authService.updateRefreshToken(user.id, tokens.refreshToken);
-
-    return {
-      message: 'Workspace switched successfully',
-      activeWorkspaceId: targetWorkspaceId,
-      activeOrgId: workspace.organizationId,
-      ...tokens,
-    };
+  // 2. Security Checks
+  if (!membership) {
+    throw new ForbiddenException('You are not a member of this workspace');
   }
+  
+  if (membership.workspace.organization.status === 'SUSPENDED') {
+    throw new ForbiddenException('Organization is suspended');
+  }
+
+  const { workspace } = membership;
+
+  // 3. Update "Sticky Session" (Last Active Workspace)
+  const user = await this.prisma.user.update({
+    where: { id: userId },
+    data: { lastActiveWorkspaceId: targetWorkspaceId },
+    select: { id: true, email: true, refreshTokenVersion: true },
+  });
+
+  // 4. Generate New Tokens with the FULL context
+  const tokens = await this.authService.generateTokens(
+    user.id,
+    user.email,
+    workspace.organizationId,
+    targetWorkspaceId,
+    membership.id, 
+    user.refreshTokenVersion,
+  );
+
+  // 5. Update the refresh token in the DB
+  await this.authService.updateRefreshToken(user.id, tokens.refreshToken);
+
+  return {
+    message: 'Workspace switched successfully',
+    activeWorkspaceId: targetWorkspaceId,
+    activeOrgId: workspace.organizationId,
+    activeMemberId: membership.id,
+    ...tokens,
+  };
+}
 
   private normalizeSlug(input: string) {
     const s = input
