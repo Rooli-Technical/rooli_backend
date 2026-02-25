@@ -124,7 +124,15 @@ export class CalendarService {
     // 2. Build the query
     const where: any = {
       workspaceId,
-      ...(platform ? { platform } : {}),
+      ...(platform ? {
+    destinations: {
+      some: {
+        profile: {
+          platform: platform 
+        }
+      }
+    }
+  } : {}),
       OR: [
         // Scheduled posts within the visible range
         { scheduledAt: { gte: start.toJSDate(), lt: end.toJSDate() } },
