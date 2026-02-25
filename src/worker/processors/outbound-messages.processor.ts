@@ -11,7 +11,7 @@ import { ConfigService } from '@nestjs/config';
 
 
 @Injectable()
-@Processor('outbound-messages', { concurrency: 15 })
+@Processor('outbound-messages', { concurrency: 15, lockDuration: 120_000,  })
 export class OutboundMessagesProcessor extends WorkerHost {
   private readonly logger = new Logger(OutboundMessagesProcessor.name);
 

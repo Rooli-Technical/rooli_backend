@@ -33,6 +33,7 @@ export class InboxMessagesService {
       meta?: any;
     }>;
   }) {
+    try{
     const convo = await this.prisma.inboxConversation.findFirst({
       where: { id: params.conversationId, workspaceId: params.workspaceId },
       include: { contact: true },
@@ -101,7 +102,7 @@ export class InboxMessagesService {
       'send-outbound-message',
       { messageId: created.id },
       {
-        jobId: `outbound:${created.id}`,
+        jobId: `outbound-${created.id}`,
         attempts: 15,
         backoff: { type: 'exponential', delay: 2000 },
         removeOnComplete: true,
@@ -130,5 +131,9 @@ export class InboxMessagesService {
     });
 
     return created;
+  } catch (error) {
+    console.error( error);
+    throw error
+  }
   }
 }
