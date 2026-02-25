@@ -3,6 +3,7 @@ export interface JwtPayload {
   email: string;
   orgId: string;
   workspaceId: string;
+  workspaceMemberId: string | null;
   ver: number; 
   role?: string;
   iat?: number;

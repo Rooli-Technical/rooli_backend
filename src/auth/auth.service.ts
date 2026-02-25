@@ -90,6 +90,7 @@ export class AuthService {
       newUser.email,
       null,
       null,
+      null,
       0,
     );
 
@@ -169,6 +170,7 @@ export class AuthService {
             },
           },
         },
+        include: { members: true }
       });
 
       // 3. Create Brand Kit
@@ -206,6 +208,7 @@ export class AuthService {
       txResult.user.email,
       txResult.org.id,
       txResult.workspace.id,
+      txResult.workspace.members[0].id,
       txResult.user.refreshTokenVersion,
     );
 
@@ -275,6 +278,7 @@ export class AuthService {
       user.email,
       context.orgId,
       context.workspaceId,
+      context.workspaceMemberId,
       user.refreshTokenVersion,
     );
 
@@ -346,6 +350,7 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
       user.email,
       context.orgId,
       context.workspaceId,
+      context.workspaceMemberId,
       user.refreshTokenVersion,
     );
 
@@ -405,6 +410,7 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
         user.email,
         context.orgId,
         context.workspaceId,
+        context.workspaceMemberId,
         user.refreshTokenVersion,
       );
 
@@ -439,6 +445,7 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
       newUser.email,
       null,
       null,
+      null,
       0,
     );
     await this.updateRefreshToken(newUser.id, tokens.refreshToken);
@@ -465,6 +472,7 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
 private async resolveLoginContext(user: any) {
   let activeWorkspaceId = user.lastActiveWorkspaceId;
   let activeOrgId: string | null = null;
+  let activeWorkspaceMemberId: string | null = null;
 
   // 1. Verify Sticky Session (Normal path)
   if (activeWorkspaceId) {
@@ -473,11 +481,12 @@ private async resolveLoginContext(user: any) {
         workspaceId: activeWorkspaceId,
         member: { userId: user.id },
       },
-      select: { workspace: { select: { organizationId: true } } },
+      select: { id: true, workspace: { select: { organizationId: true } } },
     });
 
     if (stickyMember) {
       activeOrgId = stickyMember.workspace.organizationId;
+      activeWorkspaceMemberId = stickyMember.id;
     } else {
       activeWorkspaceId = null; 
     }
@@ -493,6 +502,7 @@ private async resolveLoginContext(user: any) {
     if (directWs) {
       activeWorkspaceId = directWs.workspaceId;
       activeOrgId = directWs.workspace.organizationId;
+      activeWorkspaceMemberId = directWs.id;
     }
   }
 
@@ -511,12 +521,20 @@ private async resolveLoginContext(user: any) {
 
     if (firstOrgWithWorkspaces) {
       activeOrgId = firstOrgWithWorkspaces.organizationId;
-      // If the org has workspaces, pick the first one
-      activeWorkspaceId = firstOrgWithWorkspaces.organization.workspaces[0]?.id || null;
+      const fallbackWs = firstOrgWithWorkspaces.organization.workspaces[0];
+      
+      if (fallbackWs) {
+        activeWorkspaceId = fallbackWs.id;
+        const wsMember = await this.prisma.workspaceMember.findFirst({
+          where: { workspaceId: activeWorkspaceId, member: { userId: user.id } },
+          select: { id: true }
+        });
+        if (wsMember) activeWorkspaceMemberId = wsMember.id;
+      }
     }
   }
 
-  return { orgId: activeOrgId, workspaceId: activeWorkspaceId };
+  return { orgId: activeOrgId, workspaceId: activeWorkspaceId, workspaceMemberId: activeWorkspaceMemberId };
 }
 
  async generateTokens(
@@ -524,13 +542,15 @@ private async resolveLoginContext(user: any) {
     email: string,
     orgId: string | null,
     workspaceId: string | null, 
+    workspaceMemberId: string | null,
     version: number,
   ) {
     const payload: JwtPayload = {
       sub: userId,
       email,
       orgId,
-      workspaceId, // Frontend uses this to redirect immediately
+      workspaceId, 
+      workspaceMemberId,
       ver: version,
     };
 

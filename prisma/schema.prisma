@@ -901,74 +901,6 @@ model Notification {
   @@unique([memberId, dedupeKey])
 }
 
-
-
-
-// Conversation = a thread of messages with a user on a platform
-// model Conversation {
-//   id                 String    @id @default(cuid())
-//   organizationId     String
-//   platform           Platform
-//   externalId         String
-//   subject            String?
-//   createdAt          DateTime  @default(now())
-//   updatedAt          DateTime  @updatedAt
-//   lastMessageAt      DateTime?
-//   lastMessagePreview String?
-//   unreadCount        Int       @default(0)
-//   externalUserId     String
-//   externalUsername   String?
-//   tags               String[]
-//   // ADD: Social account context for permission checks
-//   socialAccountId    String?
-
-//   organization  Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-//   socialAccount SocialAccount?            @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
-//   messages      Message[]
-//   // ADD: Track participants for efficient notification targeting
-//   participants  ConversationParticipant[]
-
-//   @@unique([organizationId, platform, externalId])
-//   @@index([socialAccountId]) // ADD
-//   @@index([lastMessageAt]) // ADD for sorting
-//   @@index([platform, organizationId]) // ADD
-// }
-
-// // NEW: Track conversation participants
-// model ConversationParticipant {
-//   id             String    @id @default(cuid())
-//   conversationId String
-//   userId         String
-//   joinedAt       DateTime  @default(now())
-//   lastReadAt     DateTime? // For read receipts
-
-//   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-//   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-//   @@unique([conversationId, userId])
-//   @@index([userId])
-// }
-
-// model Message {
-//   id             String        @id @default(cuid())
-//   conversationId String
-//   senderId       String?
-//   externalSender String?
-//   content        String?
-//   mediaUrl       String?
-//   status         MessageStatus @default(UNREAD)
-//   sentAt         DateTime
-//   createdAt      DateTime      @default(now())
-
-//   conversation  Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-//   sender        User?                @relation(fields: [senderId], references: [id], onDelete: SetNull)
-//   notifications NotificationEntity[]
-
-//   // ADD indexes for efficient querying
-//   @@index([conversationId, sentAt]) // For loading conversation messages
-//   @@index([sentAt]) // For global search/sorting
-// }
-
 model PlatformRateLimitLog {
   id              String   @id @default(cuid())
   platform        Platform
@@ -1227,38 +1159,6 @@ model PostingSchedule {
   @@unique([organizationId, platform])
   @@index([isActive, platform])
 }
-
-// model NotificationEntity {
-//   id              String               @id @default(cuid())
-//   userId          String
-//   organizationId  String
-//   type            NotificationType
-//   socialAccountId String?
-//   title           String
-//   content         String
-//   data            Json? // Flexible data storage
-//   priority        NotificationPriority @default(NORMAL)
-//   read            Boolean              @default(false)
-//   readAt          DateTime?
-//   expiresAt       DateTime? // Auto-cleanup of old notifications
-//   createdAt       DateTime             @default(now())
-
-//   // Relations
-//   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-//   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-//   message       Message?       @relation(fields: [messageId], references: [id], onDelete: SetNull)
-//   post          Post?          @relation(fields: [postId], references: [id], onDelete: SetNull)
-//   socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
-
-//   // Optional references
-//   messageId String?
-//   postId    String?
-
-//   @@index([userId, read])
-//   @@index([createdAt])
-//   @@index([expiresAt])
-// }
-
 
 enum NotificationPriority {
   LOW
