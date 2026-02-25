@@ -9,7 +9,7 @@ import { FeatureGuard } from '@/common/guards/feature.guard';
 
 @ApiTags('Calendar')
 @ApiBearerAuth()
-@Controller('/api/v1/workspaces/:workspaceId/calendar')
+@Controller('/workspaces/:workspaceId/calendar')
 @UseGuards(FeatureGuard)
 @RequireFeature('visualCalendar') 
 export class CalendarController {
