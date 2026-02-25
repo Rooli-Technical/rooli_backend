@@ -20,6 +20,7 @@ import { UpdateConversationDto } from './dtos/send-message.dto';
 import { SendReplyDto } from './dtos/send-reply.dto';
 import { InboxMessagesService } from './services/inbox-messages.service';
 import { InboxService } from './services/inbox.service';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 
 @ApiTags('Messages')
@@ -36,10 +37,9 @@ export class InboxController {
   @ApiResponse({ status: 200, description: 'Returns paginated conversations' })
   async listConversations(
     @Param('workspaceId') workspaceId: string,
-    @Req() req: any, 
+    @CurrentUser('workspaceMemberId') memberId: string,
     @Query() query: ListConversationsDto,
   ) {
-    const memberId = req.user?.userId; 
     
     // Convert "unassigned" string to actual null for the service
     const assignedMemberId = query.assignedMemberId === 'unassigned' ? null : query.assignedMemberId;
@@ -101,9 +101,8 @@ export class InboxController {
   async markRead(
     @Param('workspaceId') workspaceId: string,
     @Param('conversationId') conversationId: string,
-    @Req() req: any,
+    @CurrentUser('workspaceMemberId') memberId: string,
   ) {
-    const memberId = req.user?.userId;
     return this.inboxService.markRead({
       workspaceId,
       conversationId,
@@ -118,11 +117,12 @@ export class InboxController {
     @Param('workspaceId') workspaceId: string,
     @Param('conversationId') conversationId: string,
     @Body() body: SendReplyDto,
+    @CurrentUser('workspaceMemberId') memberId: string,
   ) {
 
     return this.inboxMessagesService.sendReply({
       workspaceId,
-      memberId: body.memberId,
+      memberId,
       conversationId,
       content: body.content,
       attachments: body.attachments,
