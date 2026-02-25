@@ -6,8 +6,6 @@ import {
   Body,
   Param,
   Query,
-  Headers,
-  UseGuards,
   Req,
 } from '@nestjs/common';
 import {
@@ -15,10 +13,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiHeader,
   ApiQuery,
-  ApiProperty,
-  ApiPropertyOptional,
 } from '@nestjs/swagger';
 import { ListConversationsDto } from './dtos/list-conversations.dto';
 import { UpdateConversationDto } from './dtos/send-message.dto';
@@ -56,24 +51,24 @@ export class InboxController {
     });
   }
 
-  @Get(':id')
+  @Get(':conversationId')
   @ApiOperation({ summary: 'Get a specific conversation' })
   @ApiResponse({ status: 200, description: 'Returns conversation details and contact info' })
   async getConversation(
     @Param('workspaceId') workspaceId: string,
-    @Param('id') conversationId: string,
+    @Param('conversationId') conversationId: string,
   ) {
     return this.inboxService.getConversation({ workspaceId, conversationId });
   }
 
-  @Get(':id/messages')
+  @Get(':conversationId/messages')
   @ApiOperation({ summary: 'List messages in a conversation' })
   @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Returns paginated messages' })
   async listMessages(
     @Param('workspaceId') workspaceId: string,
-    @Param('id') conversationId: string,
+    @Param('conversationId') conversationId: string,
     @Query('take') take?: string,
     @Query('cursor') cursor?: string,
   ) {
@@ -85,12 +80,12 @@ export class InboxController {
     });
   }
 
-  @Patch(':id')
+  @Patch(':conversationId')
   @ApiOperation({ summary: 'Update conversation metadata (Assign, Archive, Resolve)' })
   @ApiResponse({ status: 200, description: 'Conversation updated' })
   async updateConversation(
    @Param('workspaceId') workspaceId: string,
-    @Param('id') conversationId: string,
+    @Param('conversationId') conversationId: string,
     @Body() patch: UpdateConversationDto,
   ) {
     return this.inboxService.updateConversation({
@@ -100,12 +95,12 @@ export class InboxController {
     });
   }
 
-  @Post(':id/read')
+  @Post(':conversationId/read')
   @ApiOperation({ summary: 'Mark conversation as read for current agent' })
   @ApiResponse({ status: 201, description: 'Read state updated' })
   async markRead(
     @Param('workspaceId') workspaceId: string,
-    @Param('id') conversationId: string,
+    @Param('conversationId') conversationId: string,
     @Req() req: any,
   ) {
     const memberId = req.user?.userId;
