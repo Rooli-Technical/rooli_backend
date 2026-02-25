@@ -8,6 +8,11 @@ export class SendReplyDto {
   @IsString()
   content: string;
 
+  @ApiProperty({ description: 'Workspace Member ID of the member sending the reply' })
+  @IsNotEmpty()
+  @IsString()
+  memberId: string
+
   @ApiPropertyOptional({
     description: 'Array of attachments to send',
     example: [{ type: 'IMAGE', url: 'https://example.com/image.png' }],

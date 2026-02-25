@@ -7,13 +7,14 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
 import { AllExceptionsFilter } from './common/filters/all-exception-filter.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import * as express from 'express';
-import { EventsGateway } from './events/events.gateway';
-import { WsAuthMiddleware } from './events/ws-auth.middleware';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
   });
+
+  app.useWebSocketAdapter(new IoAdapter(app));
 
 app.enableCors({
   origin: true, // reflect request origin
@@ -68,13 +69,7 @@ const server = app.getHttpAdapter().getInstance();
 server.set('trust proxy', true);
 
  await app.init();
-   // Attach Socket.io auth middleware
-  const wsAuth = app.get(WsAuthMiddleware);
-  const gateway = app.get(EventsGateway);
-
-  // gateway.server is available after init for Nest gateways
-  gateway.server.use(wsAuth.use);
-
+   
 await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

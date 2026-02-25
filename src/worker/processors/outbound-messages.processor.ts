@@ -6,6 +6,8 @@ import { MetaSendMode } from '@/messages/types/meta.types';
 import { PrismaService } from '@/prisma/prisma.service';
 import { DomainEventsService } from '@/events/domain-events.service';
 import { TwitterClient } from '@/messages/integrations/twitter.client';
+import { EncryptionService } from '@/common/utility/encryption.service';
+import { ConfigService } from '@nestjs/config';
 
 
 @Injectable()
@@ -18,6 +20,8 @@ export class OutboundMessagesProcessor extends WorkerHost {
     private readonly meta: MetaClient,
     private readonly twitter: TwitterClient,
     private readonly events: DomainEventsService,
+    private readonly encryption: EncryptionService,
+    private readonly config: ConfigService,
   ) {
     super();
   }
@@ -73,9 +77,12 @@ export class OutboundMessagesProcessor extends WorkerHost {
   private async sendMeta(msg: any) {
     const profile = msg.conversation.socialProfile;
 
-    const accessToken: string | undefined =
+    const encryptedToken: string | undefined =
       profile.metaAccessToken ?? profile.accessToken ?? profile.token;
-    if (!accessToken) throw new Error('Missing Meta access token');
+    
+    if (!encryptedToken) throw new Error('Missing Meta access token');
+
+    const accessToken = await this.encryption.decrypt(encryptedToken);
 
     const sendMode: MetaSendMode = (profile.metaSendMode ?? 'PAGE_SEND_API') as MetaSendMode;
 
@@ -119,8 +126,7 @@ export class OutboundMessagesProcessor extends WorkerHost {
           providerTimestamp: new Date(),
           errorCode: null,
           errorMessage: null,
-          // Recommended: store providerMessageId separately instead of overwriting externalId.
-          // providerMessageId: sendRes?.messageId ?? null,
+           providerMessageId: sendRes?.messageId ?? null,
         },
       });
 
@@ -153,13 +159,23 @@ export class OutboundMessagesProcessor extends WorkerHost {
 private async sendX(msg: any) {
   const profile = msg.conversation.socialProfile;
 
-  // --- You said: "I want to use version1" ---
-  // That means: v1.1 direct_messages/events/new.json
+
   // It REQUIRES OAuth 1.0a user tokens.
-  const appKey = profile.xConsumerKey ?? profile.consumerKey;
-  const appSecret = profile.xConsumerSecret ?? profile.consumerSecret;
-  const accessToken = profile.xAccessToken ?? profile.accessToken;
-  const accessSecret = profile.xAccessTokenSecret ?? profile.accessTokenSecret;
+ //  Pull YOUR App credentials from the environment (.env)
+    const appKey = this.config.getOrThrow<string>('TWITTER_API_KEY');
+    const appSecret = this.config.getOrThrow<string>('TWITTER_API_SECRET');
+
+    //  Pull the USER'S encrypted tokens from Postgres
+    const encAccessToken = profile.accessToken;
+    const encAccessSecret =  profile.refreshToken;
+
+    if (!encAccessToken || !encAccessSecret) {
+      throw new Error('Missing X OAuth1 user tokens in database');
+    }
+
+    //  Decrypt ONLY the user's tokens!
+    const accessToken = await this.encryption.decrypt(encAccessToken);
+    const accessSecret = await this.encryption.decrypt(encAccessSecret);
 
   if (!appKey || !appSecret || !accessToken || !accessSecret) {
     throw new Error('Missing X OAuth1 credentials (consumer key/secret + access token/secret)');
@@ -198,10 +214,7 @@ private async sendX(msg: any) {
           providerTimestamp: now,
           errorCode: null,
           errorMessage: null,
-
-          // ✅ strongly recommended: store providerMessageId separately
-          // providerMessageId: res.messageId ?? null,
-          //
+          providerMessageId: res.messageId ?? null,
           // DO NOT overwrite externalId if it's used for idempotency or unique constraints.
         },
       });

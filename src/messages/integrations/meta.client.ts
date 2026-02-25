@@ -1,7 +1,12 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { Injectable } from '@nestjs/common';
-import { MetaProfileResult, MetaSendMode, MetaSendTextRequest, MetaSendResult, MetaSendAttachmentRequest } from '../types/meta.types';
-
+import {
+  MetaProfileResult,
+  MetaSendMode,
+  MetaSendTextRequest,
+  MetaSendResult,
+  MetaSendAttachmentRequest,
+} from '../types/meta.types';
 
 @Injectable()
 export class MetaClient {
@@ -32,7 +37,7 @@ export class MetaClient {
       ? params.fields
       : ['id', 'username', 'name', 'profile_picture_url'];
 
-    const v = params.apiVersion ?? 'v19.0';
+    const v = params.apiVersion ?? 'v23.0';
 
     try {
       const res = await this.http.get(`/${v}/${igId}`, {
@@ -66,7 +71,11 @@ export class MetaClient {
   ): Promise<MetaSendResult> {
     const v = opts?.apiVersion ?? 'v23.0';
 
-    const endpoint = this.resolveSendEndpoint(mode, { v, pageId: req.pageId, igId: req.igId });
+    const endpoint = this.resolveSendEndpoint(mode, {
+      v,
+      pageId: req.pageId,
+      igId: req.igId,
+    });
 
     const body: any =
       mode === 'IG_MESSAGING_API'
@@ -85,6 +94,7 @@ export class MetaClient {
       const res = await this.http.post(endpoint, body, {
         params: { access_token: req.accessToken },
       });
+      console.log('Meta sendText response:', res.data);
 
       return {
         provider: 'META',
@@ -93,6 +103,7 @@ export class MetaClient {
         raw: res.data,
       };
     } catch (e) {
+      console.log(e)
       throw this.wrapMetaError(e, 'sendText');
     }
   }
@@ -107,7 +118,11 @@ export class MetaClient {
   ): Promise<MetaSendResult> {
     const v = opts?.apiVersion ?? 'v19.0';
 
-    const endpoint = this.resolveSendEndpoint(mode, { v, pageId: req.pageId, igId: req.igId });
+    const endpoint = this.resolveSendEndpoint(mode, {
+      v,
+      pageId: req.pageId,
+      igId: req.igId,
+    });
 
     const body: any =
       mode === 'IG_MESSAGING_API'
@@ -152,7 +167,10 @@ export class MetaClient {
     ctx: { v: string; pageId?: string; igId?: string },
   ) {
     if (mode === 'IG_MESSAGING_API') {
-      if (!ctx.igId) throw new Error('MetaClient: igId is required for IG_MESSAGING_API mode');
+      if (!ctx.igId)
+        throw new Error(
+          'MetaClient: igId is required for IG_MESSAGING_API mode',
+        );
       // /<IG_ID>/messages :contentReference[oaicite:4]{index=4}
       return `/${ctx.v}/${ctx.igId}/messages`;
     }
@@ -169,9 +187,7 @@ export class MetaClient {
     const data = e.response?.data;
 
     const msg =
-      data?.error?.message ??
-      e.message ??
-      'MetaClient request failed';
+      data?.error?.message ?? e.message ?? 'MetaClient request failed';
 
     const code = data?.error?.code ?? data?.error?.error_subcode;
 

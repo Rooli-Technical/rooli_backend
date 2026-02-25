@@ -1,12 +1,8 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { DomainEventsService } from '@/events/domain-events.service';
 import { InjectQueue } from '@nestjs/bullmq';
-
 
 @Injectable()
 export class InboxMessagesService {
@@ -43,13 +39,24 @@ export class InboxMessagesService {
     });
     if (!convo) throw new NotFoundException('Conversation not found');
 
+    const member = await this.prisma.workspaceMember.findFirst({
+      where: {
+        userId: params.memberId,
+        workspaceId: params.workspaceId,
+      },
+    });
+
+    if (!member) {
+      throw new ForbiddenException('You are not a member of this workspace');
+    }
+
     const now = new Date();
 
     const created = await this.prisma.$transaction(async (tx) => {
       const msg = await tx.inboxMessage.create({
         data: {
           conversationId: convo.id,
-          clientMessageId: `msg_${now.getTime()}_${Math.random().toString(36).slice(2)}`, 
+          clientMessageId: `msg_${now.getTime()}_${Math.random().toString(36).slice(2)}`,
           providerMessageId: null,
           content: params.content,
           direction: 'OUTBOUND' as any,
@@ -83,9 +90,18 @@ export class InboxMessagesService {
 
       // Mark agent read at send time (optional but nice)
       await tx.conversationReadState.upsert({
-        where: { conversationId_memberId: { conversationId: convo.id, memberId: params.memberId } },
+        where: {
+          conversationId_memberId: {
+            conversationId: convo.id,
+            memberId: params.memberId,
+          },
+        },
         update: { lastReadAt: now },
-        create: { conversationId: convo.id, memberId: params.memberId, lastReadAt: now },
+        create: {
+          conversationId: convo.id,
+          memberId: params.memberId,
+          lastReadAt: now,
+        },
       });
 
       return msg;
@@ -126,4 +142,3 @@ export class InboxMessagesService {
     return created;
   }
 }
-

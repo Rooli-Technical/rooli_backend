@@ -104,7 +104,7 @@ export class InboxController {
   @ApiOperation({ summary: 'Mark conversation as read for current agent' })
   @ApiResponse({ status: 201, description: 'Read state updated' })
   async markRead(
-    @Headers('x-workspace-id') workspaceId: string,
+    @Param('workspaceId') workspaceId: string,
     @Param('id') conversationId: string,
     @Req() req: any,
   ) {
@@ -116,20 +116,18 @@ export class InboxController {
     });
   }
 
-  @Post(':id/messages')
+  @Post(':conversationId/messages')
   @ApiOperation({ summary: 'Send a reply to the customer' })
   @ApiResponse({ status: 201, description: 'Message queued for sending' })
   async sendReply(
-    @Headers('x-workspace-id') workspaceId: string,
-    @Param('id') conversationId: string,
+    @Param('workspaceId') workspaceId: string,
+    @Param('conversationId') conversationId: string,
     @Body() body: SendReplyDto,
-    @Req() req: any,
   ) {
-    const memberId = req.user?.userId;
 
     return this.inboxMessagesService.sendReply({
       workspaceId,
-      memberId,
+      memberId: body.memberId,
       conversationId,
       content: body.content,
       attachments: body.attachments,
