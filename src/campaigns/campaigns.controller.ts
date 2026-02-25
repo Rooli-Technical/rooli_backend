@@ -9,7 +9,7 @@ import { FeatureGuard } from '@/common/guards/feature.guard';
 
 @ApiTags('Campaigns')
 @ApiBearerAuth()
-@Controller('/api/v1/workspaces/:workspaceId/campaigns')
+@Controller('/workspaces/:workspaceId/campaigns')
 @UseGuards(FeatureGuard)
 @RequireFeature('hasCampaigns')
 export class CampaignController {
