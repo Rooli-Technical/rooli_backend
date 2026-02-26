@@ -202,7 +202,7 @@ export class PostMediaController {
   }))
   async updateAvatar(
     @CurrentUser('userId') userId: string,
-    @Body('workspaceId') workspaceId: string,
+    @Param('workspaceId') workspaceId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {

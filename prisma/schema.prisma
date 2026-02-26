@@ -237,7 +237,7 @@ model SocialConnection {
   organizationId String
   platform       Platform // FACEBOOK, LINKEDIN, TWITTER
 
-  // 🔐 USER CREDENTIALS (The "Master Key")
+  // USER CREDENTIALS (The "Master Key")
   // Used to refresh tokens and fetch list of pages
   platformUserId   String // The generic User ID (e.g. FB User ID)
   platformUsername String?
@@ -270,7 +270,7 @@ model SocialProfile {
 
   followerCount Int @default(0)
 
-  // 🔐 PAGE CREDENTIALS (The "Room Key")
+  // PAGE CREDENTIALS (The "Room Key")
   // Specific token to post to THIS page. 
   // For FB/IG: This is the Page Access Token.
   // For X/LinkedIn: Often a copy of the User Token.
@@ -504,7 +504,7 @@ model QueueSlot {
 }
 
 // ==========================================
-// 6. CONTENT TEMPLATES (Your existing one was good, minor cleanup)
+// 6. CONTENT TEMPLATES
 // ==========================================
 
 model ContentTemplate {
