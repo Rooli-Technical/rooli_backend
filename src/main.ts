@@ -65,6 +65,10 @@ app.useGlobalFilters(
   new AllExceptionsFilter(httpAdapter),
 );
 
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 const server = app.getHttpAdapter().getInstance();
 server.set('trust proxy', true);
 

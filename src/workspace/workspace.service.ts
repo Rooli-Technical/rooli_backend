@@ -167,7 +167,7 @@ export class WorkspaceService {
     ]);
 
     return {
-      data,
+     data: data.map((ws) => this.mapWorkspaceWithSafeUsers(ws)),
       meta: {
         total,
         page,
@@ -209,7 +209,7 @@ export class WorkspaceService {
 
     if (!workspace) throw new NotFoundException('Workspace not found.');
 
-    return workspace;
+    return this.mapWorkspaceWithSafeUsers(workspace);
   }
 
   /**
@@ -449,4 +449,25 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
 
     throw new Error(`Role not found: scope=${scope}, slug=${slug}`);
   }
+
+  private mapWorkspaceWithSafeUsers(workspace: any) {
+  if (!workspace.members) return workspace;
+
+  return {
+    ...workspace,
+    members: workspace.members.map((wm: any) => ({
+      ...wm,
+      member: {
+        ...wm.member,
+        user: {
+          ...wm.member.user,
+          avatar: wm.member.user.avatar ? {
+            ...wm.member.user.avatar,
+            size: wm.member.user.avatar.size.toString(),
+          } : null,
+        },
+      },
+    })),
+  };
+}
 }
