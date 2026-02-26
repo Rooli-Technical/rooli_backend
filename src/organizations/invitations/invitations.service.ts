@@ -135,6 +135,7 @@ export class InvitationsService {
         roleName: invitation.role.name,
         token: invitation.token,
         isWorkspaceInvite: isWorkspace,
+        organizationId
       });
     } catch (error) {
       console.log('Failed to send invitation email. Please try again.');
@@ -349,6 +350,7 @@ export class InvitationsService {
         roleName: updatedInvite.role.name,
         token: updatedInvite.token,
         isWorkspaceInvite: !!updatedInvite.workspaceId,
+        organizationId: invite.organizationId
       });
     } catch (error) {
       console.log('Failed to resend invitation email. Please try again.');

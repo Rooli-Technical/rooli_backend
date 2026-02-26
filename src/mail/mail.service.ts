@@ -89,8 +89,9 @@ export class MailService {
   roleName: string;
   token: string;
   isWorkspaceInvite: boolean; // Helps toggle text in the template
+  organizationId: string;
 }) {
-  const invitationUrl = `${this.configService.get('FRONTEND_URL')}/accept-invitation?token=${payload.token}`;
+  const invitationUrl = `${this.configService.get('FRONTEND_URL')}/accept-invitation?token=${payload.token}&orgId=${payload.organizationId}`;
   
   const context = {
     invitationUrl,
