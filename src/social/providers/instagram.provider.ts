@@ -13,7 +13,7 @@ import {
 @Injectable()
 export class InstagramProvider implements ISocialProvider {
   private readonly logger = new Logger(InstagramProvider.name);
-  
+
   async publish(
     credentials: SocialCredentials,
     content: string,
@@ -406,7 +406,7 @@ export class InstagramProvider implements ISocialProvider {
 
   private resolveHost(token: string): string {
     // Native Instagram tokens usually start with IGQV or IGQW
-    if (token.trim().startsWith('IGQ')) {
+    if (token.trim().startsWith('IG')) {
       return 'https://graph.instagram.com/v23.0';
     }
     return 'https://graph.facebook.com/v23.0';

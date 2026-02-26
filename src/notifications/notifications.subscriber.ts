@@ -287,16 +287,39 @@ export class NotificationsSubscriber {
       // - socialPost
       const post = await this.prisma.post.findFirst({
         where: { id: params.postId, workspaceId: params.workspaceId },
-        select: { id: true, workspaceId: true, author: true },
+        select: { id: true, workspaceId: true, authorId: true },
       });
-      console.log(params.workspaceId)
-      console.log(post)
+   
 
       if (!post) return;
 
-      const recipients = post.author?.id ? [post.author.id] : await this.listWorkspaceMemberIds(post.workspaceId);
+      let recipients: string[] = [];
 
-      console.log(recipients)
+      if (post.authorId) {
+        const member = await this.prisma.workspaceMember.findFirst({
+          where: {
+            workspaceId: post.workspaceId,
+            member: {
+              userId: post.authorId,
+            },
+          },
+          select: { id: true },
+        });
+
+      if (member) {
+        recipients = [member.id];
+      }
+    }
+
+    // 2. Fallback: If no author member found, notify everyone in the workspace
+    if (recipients.length === 0) {
+      recipients = await this.listWorkspaceMemberIds(post.workspaceId);
+    }
+
+    // 3. Final Guard: Don't call createMany if recipients is empty
+    if (recipients.length === 0) return;
+
+    console.log('Final Recipient Member IDs:', recipients);
 
       await this.notifications.createMany({
         workspaceId: post.workspaceId,
