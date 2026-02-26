@@ -6,12 +6,21 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 
 @Injectable()
 export class ContextGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+
+     // 1. Allow endpoints marked as Public or specifically for Billing
+    const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 

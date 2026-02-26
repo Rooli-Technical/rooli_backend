@@ -8,12 +8,18 @@ import { Reflector } from '@nestjs/core';
 import { PERMISSION_KEY } from '../decorators/require-permission.decorator';
 import { PermissionResource, PermissionAction } from '@generated/enums';
 
-
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // 1. Allow endpoints marked as Public or specifically for Billing
+    const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+
     // 1. Get the Required Permission from the Decorator
     const requiredRule = this.reflector.getAllAndOverride<{
       resource: PermissionResource;
@@ -39,7 +45,7 @@ export class PermissionsGuard implements CanActivate {
     // ---------------------------------------------------------
     // 2. PERMISSION WILDCARDS (The "Cascading Check")
     // ---------------------------------------------------------
-    
+
     // A. GLOBAL ADMIN: "ALL.MANAGE"
     // Can do absolutely anything in this scope.
     if (userPermissions.includes(`ALL.MANAGE`)) return true;
@@ -49,19 +55,23 @@ export class PermissionsGuard implements CanActivate {
 
     // C. RESOURCE ADMIN: "POSTS.ALL" or "POSTS.MANAGE"
     if (userPermissions.includes(`${requiredRule.resource}.ALL`)) return true;
-    if (userPermissions.includes(`${requiredRule.resource}.MANAGE`)) return true;
+    if (userPermissions.includes(`${requiredRule.resource}.MANAGE`))
+      return true;
 
     // D. EXACT MATCH: "POSTS.CREATE"
     // The standard check for granular permissions.
-    if (userPermissions.includes(`${requiredRule.resource}.${requiredRule.action}`)) return true;
+    if (
+      userPermissions.includes(
+        `${requiredRule.resource}.${requiredRule.action}`,
+      )
+    )
+      return true;
 
     // ---------------------------------------------------------
     // 3. FAILURE
     // ---------------------------------------------------------
     throw new ForbiddenException(
-      `Permission denied. Required: ${requiredRule.resource}.${requiredRule.action}`
+      `Permission denied. Required: ${requiredRule.resource}.${requiredRule.action}`,
     );
   }
 }
-
-

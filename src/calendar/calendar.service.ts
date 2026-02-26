@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DateTime } from 'luxon';
-import Holidays from 'date-holidays';
+import * as Holidays from 'date-holidays';
 import { CalendarEventDto } from './dtos/calendar-event.dto';
 import { CalendarInclude, GetCalendarQueryDto } from './dtos/get-calendar.dto';
 import { OBSERVANCES } from './observances';
@@ -247,13 +247,12 @@ export class CalendarService {
     lang?: string,
   ): CalendarEventDto[] {
     const events: CalendarEventDto[] = [];
-
     // 1) Public holidays (country-based)
     if (country) {
       try {
-        const hd = new Holidays(
+        const hd = new (Holidays as any)(
           country,
-          state ? ({ state } as any) : undefined,
+          state ? { state } : undefined,
         );
         if (lang) {
           try {
@@ -263,6 +262,9 @@ export class CalendarService {
             // ignore
           }
         }
+
+        console.log(country)
+        console.log(state)
 
         // date-holidays uses JS Dates in local time; we convert to ISO date
         const fromDate = start.toJSDate();
@@ -284,7 +286,8 @@ export class CalendarService {
             meta: { country, type: h.type },
           });
         }
-      } catch {
+      } catch(err) {
+        console.log(err)
         // If invalid country code or library fails, just skip public holidays
       }
     }

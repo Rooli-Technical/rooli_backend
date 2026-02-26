@@ -22,7 +22,6 @@ export class SubscriptionGuard implements CanActivate {
       context.getClass(),
     ]);
     if (isPublic) return true;
-
     // 2. Check for "Bypass" routes (Billing, Profile Settings)
     const bypassSubscription = this.reflector.getAllAndOverride<boolean>(
       BYPASS_SUB_KEY,
