@@ -299,10 +299,12 @@ export class PublishPostProcessor extends WorkerHost {
   }
 
   private async resolveOAuth2Creds(dest: any) {
+    console.log(dest)
     // Generic OAuth2 (LinkedIn/FB/IG typically):
     const encrypted = dest.profile.accessToken ?? dest.profile.connection.accessToken;
     const raw = encrypted ? await this.encryptionService.decrypt(encrypted) : undefined;
     if (!raw) throw new Error('Missing OAuth2 access token.');
+    console.log(raw)
     return { accessToken: raw };
   }
 

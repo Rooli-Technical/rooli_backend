@@ -289,10 +289,14 @@ export class NotificationsSubscriber {
         where: { id: params.postId, workspaceId: params.workspaceId },
         select: { id: true, workspaceId: true, author: true },
       });
+      console.log(params.workspaceId)
+      console.log(post)
 
       if (!post) return;
 
       const recipients = post.author?.id ? [post.author.id] : await this.listWorkspaceMemberIds(post.workspaceId);
+
+      console.log(recipients)
 
       await this.notifications.createMany({
         workspaceId: post.workspaceId,
