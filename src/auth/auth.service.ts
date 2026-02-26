@@ -836,7 +836,10 @@ private async resolveLoginContext(user: any) {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      avatar: user.avatar,
+      avatar: user.avatar ? {
+      ...user.avatar,
+      size: user.avatar.size.toString(), 
+    } : null,
       isEmailVerified: user.isEmailVerified,
       lastActiveAt: user.lastActiveAt,
       userType: user.userType,
