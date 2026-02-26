@@ -36,6 +36,7 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
   ): Promise<AccountMetrics> {
     try {
       const token = credentials.accessToken;
+      const baseUrl = this.resolveHost(token);
 
       const dailyParams = {
         access_token: token,
@@ -44,8 +45,8 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
         metric_type: 'total_value',
       };
 
-      const dailyUrl = `${this.baseUrl}/${igUserId}/insights`;
-      const userUrl = `${this.baseUrl}/${igUserId}`;
+     const dailyUrl = `${baseUrl}/${igUserId}/insights`; 
+      const userUrl = `${baseUrl}/${igUserId}`;
 
       const userParams = {
         access_token: token,
@@ -65,7 +66,7 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
             httpsAgent: this.httpsAgent,
           }),
         ),
-        this.getDemographics(igUserId, token),
+        this.getDemographics(igUserId, token, baseUrl),
       ]);
 
       const insights = insightsRes.data?.data || [];
@@ -109,6 +110,9 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
     credentials: AuthCredentials,
   ): Promise<PostMetrics[]> {
     const token = credentials.accessToken;
+    const baseUrl = this.resolveHost(token);
+
+
     if (mediaIds.length === 0) return [];
     const chunks = this.chunkArray(mediaIds, 50);
     const results = await Promise.all(
@@ -117,7 +121,7 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
           const publicFields =
             'id,like_count,comments_count,media_type,media_product_type';
           const insightMetrics = 'views,reach,saved,shares,total_interactions';
-          const url = `${this.baseUrl}/`;
+          const url = `${baseUrl}/`;
 
           const { data } = await firstValueFrom(
             this.httpService.get(url, {
@@ -167,7 +171,7 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
                 media.media_type === 'VIDEO' ? getInsight('views') : 0,
             };
           });
-        } catch (error) {
+        } catch (error: any) {
           console.log(error);
           // Tip: If one chunk fails (e.g., due to a deleted post), log it but don't crash the whole job
           this.logger.error(`Instagram Chunk Failed: ${error.message}`);
@@ -179,10 +183,10 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
     return results.flat();
   }
 
-  private async getDemographics(igUserId: string, token: string) {
+  private async getDemographics(igUserId: string, token: string, baseUrl: string) {
     try {
       const res = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/${igUserId}/insights`, {
+        this.httpService.get(`${baseUrl}/${igUserId}/insights`, {
           params: {
             access_token: token,
             metric:
@@ -224,5 +228,13 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
       chunks.push(array.slice(i, i + size));
     }
     return chunks;
+  }
+
+
+  private resolveHost(token: string): string {
+    if (token.trim().startsWith('IG')) {
+      return 'https://graph.instagram.com/v23.0';
+    }
+    return 'https://graph.facebook.com/v23.0';
   }
 }
