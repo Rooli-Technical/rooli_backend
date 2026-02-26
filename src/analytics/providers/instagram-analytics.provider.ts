@@ -13,7 +13,7 @@ import * as https from 'https';
 @Injectable()
 export class InstagramAnalyticsProvider implements IAnalyticsProvider {
   private readonly logger = new Logger(InstagramAnalyticsProvider.name);
-  private readonly baseUrl = 'https://graph.facebook.com/v22.0';
+
 
   constructor(
     private readonly config: ConfigService,
