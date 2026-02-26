@@ -124,15 +124,17 @@ export class CalendarService {
     // 2. Build the query
     const where: any = {
       workspaceId,
-      ...(platform ? {
-    destinations: {
-      some: {
-        profile: {
-          platform: platform 
-        }
-      }
-    }
-  } : {}),
+      ...(platform
+        ? {
+            destinations: {
+              some: {
+                profile: {
+                  platform: platform,
+                },
+              },
+            },
+          }
+        : {}),
       OR: [
         // Scheduled posts within the visible range
         { scheduledAt: { gte: start.toJSDate(), lt: end.toJSDate() } },
@@ -250,45 +252,44 @@ export class CalendarService {
     // 1) Public holidays (country-based)
     if (country) {
       try {
-        const hd = new (Holidays as any)(
-          country,
-          state ? { state } : undefined,
-        );
-        if (lang) {
-          try {
-            // date-holidays supports languages, but depends on locale availability
-            (hd as any).setLanguages(lang);
-          } catch {
-            // ignore
-          }
-        }
+        const hd = new (Holidays as any)();
+        hd.init(country, state ? { state } : undefined);
 
-        console.log(country)
-        console.log(state)
+        // Get all unique years in the range (e.g., [2025, 2026])
+        const years = Array.from(new Set([start.year, end.year]));
 
-        // date-holidays uses JS Dates in local time; we convert to ISO date
-        const fromDate = start.toJSDate();
-        const toDate = end.toJSDate();
-        const holidays = hd.getHolidays(fromDate.getFullYear());
-        const holidayInRange = holidays.filter((h: any) => {
-          const d = DateTime.fromISO(h.date).startOf('day');
-          return d >= start.startOf('day') && d < end.startOf('day');
+        let allHolidays: any[] = [];
+        years.forEach((y) => {
+          allHolidays = [...allHolidays, ...hd.getHolidays(y)];
         });
+
+        const holidayInRange = allHolidays.filter((h: any) => {
+          // date-holidays 'date' can be a string or a Date object
+          // We wrap it to ensure Luxon handles it correctly
+          const holidayDate = DateTime.fromJSDate(new Date(h.date)).startOf(
+            'day',
+          );
+
+          return (
+            holidayDate >= start.startOf('day') &&
+            holidayDate < end.startOf('day')
+          );
+        });
+
 
         for (const h of holidayInRange) {
           events.push({
             id: `holiday_${country}_${h.date}_${this.slug(h.name)}`,
             type: 'HOLIDAY',
             title: h.name,
-            start: DateTime.fromISO(h.date).toISODate()!,
+            start: DateTime.fromJSDate(new Date(h.date)).toISODate()!,
             allDay: true,
             color: '#111827',
             meta: { country, type: h.type },
           });
         }
-      } catch(err) {
-        console.log(err)
-        // If invalid country code or library fails, just skip public holidays
+      } catch (err) {
+        console.error('Holiday fetch failed:', err);
       }
     }
 
