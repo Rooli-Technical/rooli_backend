@@ -78,8 +78,6 @@ export class InboxService {
       },
     });
 
-    console.dir(rows, {depth: null})
-
     const items = rows.map((c) => {
      const lastReadAt = c.readStates[0]?.lastReadAt ?? null;
       const isRead = !!lastReadAt && lastReadAt >= c.lastMessageAt;
