@@ -579,14 +579,6 @@ private async resolveLoginContext(user: any) {
     });
   }
 
-  private async fetchSystemRole(name: string) {
-    const role = await this.prisma.role.findFirst({
-      where: { name, scope: 'SYSTEM' },
-    });
-    if (!role)
-      throw new InternalServerErrorException(`System Role '${name}' not found`);
-    return role;
-  }
 
   private async generateUniqueOrgSlug(name: string): Promise<string> {
     const baseSlug = slugify(name, { lower: true, strict: true });

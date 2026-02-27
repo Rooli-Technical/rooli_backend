@@ -78,9 +78,11 @@ export class InboxService {
       },
     });
 
+    console.dir(rows, {depth: null})
+
     const items = rows.map((c) => {
-      const lastReadAt = c.readStates[0]?.lastReadAt ?? null;
-      const isUnreadForMe = lastReadAt ? c.lastMessageAt > lastReadAt : true;
+     const lastReadAt = c.readStates[0]?.lastReadAt ?? null;
+      const isRead = !!lastReadAt && lastReadAt >= c.lastMessageAt;
 
       return {
         id: c.id,
@@ -101,7 +103,7 @@ export class InboxService {
           platform: c.contact.platform,
           externalId: c.contact.externalId,
         },
-        isUnreadForMe,
+        isRead,
         messageCount: c._count.messages,
       };
     });
