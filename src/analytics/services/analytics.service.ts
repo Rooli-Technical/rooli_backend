@@ -39,7 +39,6 @@ export class AnalyticsService {
     private readonly encryptionService: EncryptionService,
     private readonly repo: AnalyticsRepository,
     private readonly normalizer: AnalyticsNormalizerService,
-    
   ) {
     // Strategy Pattern: Map Enum to Service Instance
     this.providers = new Map<Platform, IAnalyticsProvider>([
@@ -67,10 +66,7 @@ export class AnalyticsService {
     try {
       return await provider.getAccountStats(externalProfileId, credentials);
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch account stats for ${platform}`,
-        error,
-      );
+      this.logger.error(`Failed to fetch account stats for ${platform}`, error);
       throw error; // Rethrow so the Worker handles the retry
     }
   }
@@ -93,10 +89,7 @@ export class AnalyticsService {
     try {
       return await provider.getPostStats(externalPostIds, credentials, context);
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch post stats for ${platform}`,
-        error,
-      );
+      this.logger.error(`Failed to fetch post stats for ${platform}`, error);
       // Return empty array on failure so we don't crash the whole job?
       // Better to throw if it's a critical network error, but for partials, providers handle it.
       throw error;
@@ -116,110 +109,125 @@ export class AnalyticsService {
     return provider;
   }
 
- async testFetch(body: { profileId?: string; postDestinationId?: string }) {
-  const { profileId, postDestinationId } = body;
-  const results: any = {};
+  async testFetch(body: { profileId?: string; postDestinationId?: string }) {
+    const { profileId, postDestinationId } = body;
+    const results: any = {};
 
-  let profile = null;
-  let credentials: AuthCredentials | null = null;
+    let profile = null;
+    let credentials: AuthCredentials | null = null;
 
-  // --- STEP 1: RESOLVE CREDENTIALS ---
-  if (profileId) {
-    profile = await this.prisma.socialProfile.findUnique({
-      where: { id: profileId },
-      include: { connection: true },
-    });
+    // --- STEP 1: RESOLVE CREDENTIALS ---
+    if (profileId) {
+      profile = await this.prisma.socialProfile.findUnique({
+        where: { id: profileId },
+        include: { connection: true },
+      });
 
-    if (!profile) throw new BadRequestException('Profile not found');
+      if (!profile) throw new BadRequestException('Profile not found');
 
-
-    const accessToken = await this.encryptionService.decrypt(profile.accessToken);
-    let accessSecret: string | undefined;
-
-    if (profile.platform === 'TWITTER' && profile.connection?.refreshToken) {
-      accessSecret = await this.encryptionService.decrypt(profile.connection.refreshToken);
-    }
-    credentials = { accessToken, accessSecret };
-  }
-
-  // --- STEP 2: ACCOUNT STATS ---
-  if (profileId && !postDestinationId) {
-    try {
-      this.logger.debug(`🔍 Testing Account Fetch & Save for ${profile.platform}...`);
-      
-      const rawAccount = await this.fetchAccountStats(
-        profile.platform,
-        profile.platformId,
-        credentials,
+      const accessToken = await this.encryptionService.decrypt(
+        profile.accessToken,
       );
+      let accessSecret: string | undefined;
 
-      const accountPayload = await this.normalizer.normalizeAccountStats(
-        profile.id,
-        rawAccount,
-      );
-
-      await this.repo.saveAccountAnalytics(accountPayload);
-
-      results.account = accountPayload;
-      results.accountSaved = true;
-    } catch (e: any) {
-      this.logger.error(`Account save failed: ${e.message}`);
-      results.accountError = e.response?.data || e.message;
-    }
-  }
-
-  // --- STEP 3: POST STATS ---
-  if (postDestinationId) {
-    if (!credentials || !profile) {
-      throw new BadRequestException('Post testing requires profileId for credentials');
+      if (profile.platform === 'TWITTER' && profile.connection?.refreshToken) {
+        accessSecret = await this.encryptionService.decrypt(
+          profile.connection.refreshToken,
+        );
+      }
+      credentials = { accessToken, accessSecret };
     }
 
-    const post = await this.prisma.postDestination.findUnique({
-      where: {
-        socialProfileId: profileId,
-        id: postDestinationId,
-        status: 'SUCCESS',
-      },
-    });
-
-    if (!post) throw new BadRequestException('Post destination not found or not successful');
-
-    try {
-      this.logger.debug(`🔍 Testing Post Fetch & Save for ${postDestinationId}...`);
-      
-      const context = profile.platform === 'LINKEDIN' ? { pageId: profile.platformId } : undefined;
-
-      // Fetch (Returns array)
-      const rawPosts = await this.fetchPostStats(
-        profile.platform,
-        [post.platformPostId],
-        credentials,
-        context,
-      );
-
-      if (rawPosts && rawPosts.length > 0) {
-        // Normalize
-        const postPayload = await this.normalizer.normalizePostStats(
-          post.id, 
-          rawPosts[0]
+    // --- STEP 2: ACCOUNT STATS ---
+    if (profileId && !postDestinationId) {
+      try {
+        this.logger.debug(
+          `🔍 Testing Account Fetch & Save for ${profile.platform}...`,
         );
 
-        // Save
-        await this.repo.savePostSnapshot(postPayload);
+        const rawAccount = await this.fetchAccountStats(
+          profile.platform,
+          profile.platformId,
+          credentials,
+        );
 
-        results.post = postPayload;
-        results.postSaved = true;
-      } else {
-        results.postError = "No data returned from platform for this post ID";
+        const accountPayload = await this.normalizer.normalizeAccountStats(
+          profile.id,
+          rawAccount,
+        );
+
+        await this.repo.saveAccountAnalytics(accountPayload);
+
+        results.account = accountPayload;
+        results.accountSaved = true;
+      } catch (e: any) {
+        this.logger.error(`Account save failed: ${e.message}`);
+        results.accountError = e.response?.data || e.message;
       }
-    } catch (e: any) {
-      this.logger.error(`Post save failed: ${e.message}`);
-      results.postError = e?.response?.data || e.message;
     }
-  }
 
-  return results;
-}
+    // --- STEP 3: POST STATS ---
+    if (postDestinationId) {
+      if (!credentials || !profile) {
+        throw new BadRequestException(
+          'Post testing requires profileId for credentials',
+        );
+      }
+
+      const post = await this.prisma.postDestination.findUnique({
+        where: {
+          socialProfileId: profileId,
+          id: postDestinationId,
+          status: 'SUCCESS',
+        },
+      });
+
+      if (!post)
+        throw new BadRequestException(
+          'Post destination not found or not successful',
+        );
+
+      try {
+        this.logger.debug(
+          `🔍 Testing Post Fetch & Save for ${postDestinationId}...`,
+        );
+
+        const context =
+          profile.platform === 'LINKEDIN'
+            ? { pageId: profile.platformId }
+            : undefined;
+
+        // Fetch (Returns array)
+        const rawPosts = await this.fetchPostStats(
+          profile.platform,
+          [post.platformPostId],
+          credentials,
+          context,
+        );
+
+        if (rawPosts && rawPosts.length > 0) {
+          // Normalize
+          const postPayload = await this.normalizer.normalizePostStats(
+            post.id,
+            rawPosts[0],
+          );
+
+          // Save
+          await this.repo.savePostSnapshot(postPayload);
+
+          results.post = postPayload;
+          results.postSaved = true;
+        } else {
+          results.postError = 'No data returned from platform for this post ID';
+        }
+      } catch (e: any) {
+        this.logger.error(`Post save failed: ${e.message}`);
+        results.postError = e?.response?.data || e.message;
+      }
+    }
+
+    return results;
+  }
 
   /**
    * Fetch daily account rows for a specific range.
@@ -453,12 +461,32 @@ export class AnalyticsService {
     }));
   }
 
+  async getDashboardPosts(workspaceId: string) {
+    const [lastPublished, lastRecent] = await Promise.all([
+      this.getWorkspaceRecentPosts(workspaceId),
+
+      this.prisma.post.findMany({
+        where: {
+          workspaceId,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        include: {
+          destinations: {
+            select: {
+              status: true,
+              profile: { select: { platform: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return { lastPublished, lastRecent };
+  }
+
   /**
    * Best-effort demographics aggregation.
-   * Real talk: demographics aren’t additive. The simplest safe approach is:
-   * - pick the latest non-null demographics per profile
-   * - return as "byProfile" so frontend can chart per platform/profile
-   * - OR do a weighted merge if you track follower counts per profile.
    */
   private async getWorkspaceDemographics(profileIds: string[]) {
     const latest = await this.prisma.accountAnalytics.groupBy({
