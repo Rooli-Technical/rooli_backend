@@ -142,6 +142,8 @@ members        WorkspaceMember[]
 invitations     Invitation[]
 notifications Notification[]
 
+comments  Comment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -293,6 +295,7 @@ model SocialProfile {
   isActive Boolean @default(true)
 
  inboxConversations InboxConversation[]
+ comments  Comment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -361,6 +364,8 @@ model Post {
   campaignId   String?
   campaign     Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   approvals    PostApproval[]
+  
+  comments  Comment[]
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   author    User?     @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -899,6 +904,53 @@ model Notification {
   @@index([workspaceId, createdAt])
   @@index([memberId, readAt])
   @@unique([memberId, dedupeKey])
+}
+
+
+model Comment {
+  id                String        @id @default(cuid())
+  workspaceId       String
+  profileId         String
+  postId            String
+  externalCommentId String        
+  
+
+  platform          Platform     
+  direction         Direction     @default(INBOUND)
+  
+
+  status            CommentStatus @default(VISIBLE)
+  
+  // 4. Safer Sender Tracking
+  senderExternalId  String        // The raw ID from the network
+  senderPlatformId  String?       // Page-scoped user ID (PSID) 
+  senderName        String?       
+  
+  content           String        @db.Text
+  
+  parentId          String?
+  parent            Comment?      @relation("CommentToComment", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies           Comment[]     @relation("CommentToComment")
+
+  createdAt         DateTime      @default(now()) 
+  updatedAt         DateTime      @updatedAt
+
+  // Relationships
+  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profile           SocialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  post              Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // 5. The "No Prod Pain" Indexes
+  @@unique([platform, externalCommentId]) 
+  
+  // For loading the Unified Inbox quickly
+  @@index([workspaceId, createdAt(sort: Desc)]) 
+  
+  // For loading all comments on a specific post
+  @@index([postId, createdAt(sort: Desc)]) 
+  
+  // For loading threaded replies instantly
+  @@index([parentId]) 
 }
 
 model PlatformRateLimitLog {
@@ -1579,4 +1631,15 @@ enum NotificationType {
   INBOX_ASSIGNED
   INBOX_MENTION
   SYSTEM_ALERT
+}
+
+enum Direction {
+  INBOUND   // From the audience
+  OUTBOUND  // Sent by the Page/Agent
+}
+
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
 }
