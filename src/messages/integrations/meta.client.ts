@@ -12,8 +12,6 @@ import {
 export class MetaClient {
   private readonly http: AxiosInstance;
 
-  // Default to Graph API base
-  private readonly graphBaseUrl = 'https://graph.facebook.com';
 
   constructor() {
     this.http = axios.create({
