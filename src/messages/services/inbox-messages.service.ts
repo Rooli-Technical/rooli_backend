@@ -100,7 +100,7 @@ export class InboxMessagesService {
 
     await this.outboundQueue.add(
       'send-outbound-message',
-      { messageId: created.id },
+      { messageId: created.id, memberId: params.memberId },
       {
         jobId: `outbound-${created.id}`,
         attempts: 15,
@@ -165,12 +165,12 @@ export class InboxMessagesService {
           profileId: parentComment.profileId,
           postId: parentComment.postId,
           parentId: parentComment.id,
-          network: parentComment.network,
+          platform: parentComment.platform, 
           direction: 'OUTBOUND',
-          status: 'VISIBLE', // Or QUEUED if you added a queue status to your Enum
-          senderExternalId: parentComment.profile.providerId,
+          status: 'VISIBLE',
+          senderExternalId: parentComment.profile.platformId, 
           content: params.content,
-          externalCommentId: `pending_${now.getTime()}_${Math.random().toString(36).slice(2)}`, // Temp ID until Meta replies
+          externalCommentId: `pending_${now.getTime()}_${Math.random().toString(36).slice(2)}`, 
         },
       });
 

@@ -28,9 +28,28 @@ export class OutboundMessagesProcessor extends WorkerHost {
 
   async process(job: Job<any>) {
     try {
-      if (job.name !== 'send-outbound-message') return;
+      switch (job.name) {
+        case 'send-outbound-message':
+          await this.processOutboundMessage(job);
+          break;
+        case 'send-outbound-comment':
+          await this.processOutboundComment(job);
+          break;
+        default:
+          this.logger.warn(`Unknown outbound job: ${job.name}`);
+      }
+    } catch (err: any) {
+      this.logger.error(
+        `Outbound failed [${job.name}] jobId=${job.id}: ${err?.message ?? String(err)}`,
+      );
+      throw err;
+    }
+  }
 
-      const { messageId } = job.data as { messageId: string };
+  async processOutboundMessage(job: Job<any>) {
+    try {
+
+      const { messageId, memberId } = job.data as { messageId: string, memberId?: string };
       if (!messageId) throw new Error('Outbound job missing messageId');
 
       const msg = await this.prisma.inboxMessage.findUnique({
@@ -53,10 +72,10 @@ export class OutboundMessagesProcessor extends WorkerHost {
         data: { deliveryStatus: 'SENDING' as any, errorCode: null, errorMessage: null },
       });
 
-      const platform = String(msg.conversation.socialProfile.platform);
+      const platform = String(msg.conversation.socialProfile.platform.toUpperCase());
 
       if (platform === 'INSTAGRAM' || platform === 'FACEBOOK') {
-        await this.sendMeta(msg);
+        await this.sendMeta(msg, memberId);
         return;
       }
 
@@ -74,7 +93,62 @@ export class OutboundMessagesProcessor extends WorkerHost {
     }
   }
 
-  private async sendMeta(msg: any) {
+  private async processOutboundComment(job: Job<any>) {
+    const { commentId } = job.data;
+    if (!commentId) throw new Error('Outbound job missing commentId');
+
+    // 1. Fetch the pending comment
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      include: {
+        parent: true,
+        profile: true, 
+      },
+    });
+
+    if (!comment || !comment.parent) return;
+
+    // Idempotency: if it doesn't start with "pending_", we already sent it successfully!
+    if (!comment.externalCommentId.startsWith('pending_')) {
+      return;
+    }
+
+    // 2. Make the API Call to Meta
+    // Note: You might need to adjust this depending on how your `this.meta` client is set up!
+    const encryptedToken =  comment.profile.accessToken;
+    if (!encryptedToken) throw new Error('Missing Meta access token');
+    const accessToken = await this.encryption.decrypt(encryptedToken);
+
+    try {
+      // Assuming your Meta Client has a method for replying to comments
+      const metaResponse = await this.meta.replyToComment({
+        accessToken,
+        commentId: comment.parent.externalCommentId, // We reply to the PARENT's external ID
+        message: comment.content,
+        platform: comment.profile.platform as any,
+      });
+
+      // 3. OVERWRITE THE TEMP ID WITH META'S REAL ID
+      await this.prisma.comment.update({
+        where: { id: comment.id },
+        data: {
+          externalCommentId: metaResponse.id, // e.g., "123456_7890"
+          status: 'VISIBLE',
+        },
+      });
+
+      this.logger.log(`Successfully sent comment reply. ID: ${metaResponse.id}`);
+    } catch (error: any) {
+      // Mark as failed in DB so the UI knows
+      await this.prisma.comment.update({
+        where: { id: comment.id },
+        data: { status: 'HIDDEN' }, // Or whatever failed status you use
+      });
+      throw error; // Re-throw to trigger BullMQ retry
+    }
+  }
+// Add memberId to the function signature (pass it down from the process() function)
+  private async sendMeta(msg: any, memberId?: string) {
     const profile = msg.conversation.socialProfile;
 
     const encryptedToken: string | undefined =
@@ -83,7 +157,6 @@ export class OutboundMessagesProcessor extends WorkerHost {
     if (!encryptedToken) throw new Error('Missing Meta access token');
 
     const accessToken = await this.encryption.decrypt(encryptedToken);
-
     const sendMode: MetaSendMode = (profile.metaSendMode ?? 'PAGE_SEND_API') as MetaSendMode;
 
     const recipientId: string | undefined = msg.conversation.contact.externalId;
@@ -92,66 +165,122 @@ export class OutboundMessagesProcessor extends WorkerHost {
     const igId = profile.igAccountId ?? profile.igId;
     const pageId = profile.pageId;
 
-    // Send text (if any)
-    let sendRes: any | null = null;
-    if (msg.content?.trim()) {
-      sendRes = await this.meta.sendText(sendMode, {
-        accessToken,
-        recipient: { id: recipientId },
-        text: msg.content,
-        igId,
-        pageId,
-      });
-    }
+    let finalProviderMessageId: string | null = null;
 
-    // Send attachments (if any)
-    if (Array.isArray(msg.attachments) && msg.attachments.length) {
-      for (const a of msg.attachments) {
-        await this.meta.sendAttachment(sendMode, {
+    // 👇 1. Wrap the API calls in a Try/Catch
+    try {
+      // Send text (if any)
+      if (msg.content?.trim()) {
+        const sendRes = await this.meta.sendText(sendMode, {
           accessToken,
           recipient: { id: recipientId },
-          type: mapAttachmentTypeToMeta(a.type),
-          url: a.proxyUrl ?? a.url,
+          text: msg.content,
           igId,
           pageId,
         });
+        finalProviderMessageId = sendRes?.messageId ?? null;
       }
-    }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.inboxMessage.update({
+      // Send attachments (if any)
+      if (Array.isArray(msg.attachments) && msg.attachments.length) {
+        for (const a of msg.attachments) {
+          const attachRes = await this.meta.sendAttachment(sendMode, {
+            accessToken,
+            recipient: { id: recipientId },
+            type: mapAttachmentTypeToMeta(a.type),
+            url: a.proxyUrl ?? a.url,
+            igId,
+            pageId,
+          });
+          // 👇 2. Capture the ID from the attachment if there was no text!
+          if (!finalProviderMessageId) {
+            finalProviderMessageId = attachRes?.messageId ?? null;
+          }
+        }
+      }
+
+      // --- SUCCESS DB UPDATE ---
+      await this.prisma.$transaction(async (tx) => {
+        await tx.inboxMessage.update({
+          where: { id: msg.id },
+          data: {
+            deliveryStatus: 'SENT' as any,
+            providerTimestamp: new Date(),
+            errorCode: null,
+            errorMessage: null,
+            providerMessageId: finalProviderMessageId,
+          },
+        });
+
+        await tx.inboxConversation.update({
+          where: { id: msg.conversationId },
+          data: {
+            lastMessageAt: new Date(),
+            snippet: (msg.content ?? 'Sent an attachment').slice(0, 140),
+          },
+        });
+
+        // 👇 3. Clear the unread badge for the agent who sent it!
+        if (memberId) {
+          await tx.conversationReadState.upsert({
+            where: {
+              conversationId_memberId: {
+                conversationId: msg.conversationId,
+                memberId: memberId,
+              },
+            },
+            update: { lastReadAt: new Date() },
+            create: {
+              conversationId: msg.conversationId,
+              memberId: memberId,
+              lastReadAt: new Date(),
+            },
+          });
+        }
+      });
+
+      // ✅ Announce SUCCESS to UI
+      this.events.emit('inbox.message.status.updated', {
+        workspaceId: msg.conversation.workspaceId,
+        conversationId: msg.conversationId,
+        messageId: msg.id,
+        deliveryStatus: 'SENT',
+        providerMessageId: finalProviderMessageId,
+      });
+
+      this.events.emit('inbox.conversation.updated', {
+        workspaceId: msg.conversation.workspaceId,
+        conversationId: msg.conversationId,
+        lastMessageAt: new Date(),
+      });
+
+    } catch (error: any) {
+      // 👇 --- FAILURE DB UPDATE ---
+      const errorMsg = error?.response?.data?.error?.message || error.message;
+      const errorCode = error?.response?.data?.error?.code?.toString() || 'API_ERROR';
+
+      await this.prisma.inboxMessage.update({
         where: { id: msg.id },
         data: {
-          deliveryStatus: 'SENT' as any,
-          providerTimestamp: new Date(),
-          errorCode: null,
-          errorMessage: null,
-           providerMessageId: sendRes?.messageId ?? null,
+          deliveryStatus: 'FAILED' as any,
+          errorCode: errorCode,
+          errorMessage: errorMsg,
         },
       });
 
-      await tx.inboxConversation.update({
-        where: { id: msg.conversationId },
-        data: {
-          lastMessageAt: new Date(),
-          snippet: (msg.content ?? '').slice(0, 140),
-        },
+      // ❌ Announce FAILURE to UI
+      this.events.emit('inbox.message.status.updated', {
+        workspaceId: msg.conversation.workspaceId,
+        conversationId: msg.conversationId,
+        messageId: msg.id,
+        deliveryStatus: 'FAILED',
+        errorCode: errorCode,
+        errorMessage: errorMsg,
       });
-    });
 
-    // ✅ announce status update for UI
-    this.events.emit('inbox.message.status.updated', {
-      workspaceId: msg.conversation.workspaceId,
-      conversationId: msg.conversationId,
-      messageId: msg.id,
-      deliveryStatus: 'SENT',
-      providerMessageId: sendRes?.messageId ?? null,
-    });
-    this.events.emit('inbox.conversation.updated', {
-      workspaceId: msg.conversation.workspaceId,
-      conversationId: msg.conversationId,
-      lastMessageAt: new Date(),
-    });
+      // Re-throw so BullMQ knows the job failed and can apply retry/backoff logic
+      throw error; 
+    }
   }
 
   // ✅ Use twitter-api-v2 v1.1 DM send only (OAuth1 user context)

@@ -6,8 +6,9 @@ import { TwitterAdapter } from '@/messages/adapters/twitter.adapter';
 
 import { PrismaService } from '@/prisma/prisma.service';
 import { InboxIngestService } from '@/messages/services/inbox-ingest.service';
-import { NormalizedInboundMessage } from '@/messages/types/adapter.types';
+import { InboundCommentPayload, NormalizedInboundMessage } from '@/messages/types/adapter.types';
 import { DomainEventsService } from '@/events/domain-events.service';
+import { Platform } from '@generated/enums';
 
 
 
@@ -58,13 +59,25 @@ export class InboundWebhooksProcessor extends WorkerHost {
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-          const { conversation, message } = await this.ingest.ingestInboundComment(resolved);
+          
+          
+         // 1. Capture the result WITHOUT destructuring it immediately
+          const result = await this.ingest.ingestInboundComment(resolved as unknown as InboundCommentPayload);
+
+
+          if (!result) {
+            this.logger.warn(`Skipped emitting comment event: Master Post not found in DB.`);
+            return;
+          }
+
+          // 👇 3. Only extract the comment (since post is no longer returned)
+          const { comment } = result;
 
           this.events.emit('inbox.comment.created', {
             workspaceId: resolved.workspaceId,
-            conversationId: conversation.id,
-            messageId: message.id,
-            direction: message.direction,
+            postId: comment.postId,
+            commentId: comment.id,         
+            direction: comment.direction,
           });
 
           return;
@@ -133,6 +146,12 @@ export class InboundWebhooksProcessor extends WorkerHost {
   private async resolveWorkspaceAndProfile(
     normalized: NormalizedInboundMessage,
   ): Promise<NormalizedInboundMessage> {
+
+    const platformInput = normalized.contact?.platform || normalized.platform;
+  
+  // 1. Normalize Enum to Uppercase
+  const platform = platformInput?.toUpperCase() as Platform;
+
     if (normalized.workspaceId && normalized.socialProfileId) return normalized;
 
     const ownerExternalId = normalized.meta?.ownerExternalId;
@@ -144,7 +163,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
     // You need something like (platform, externalAccountId).
     const profile = await this.prisma.socialProfile.findFirst({
       where: {
-        platform: normalized.contact.platform as any,
+        platform,
         platformId: ownerExternalId,
       },
       select: { id: true, workspaceId: true },

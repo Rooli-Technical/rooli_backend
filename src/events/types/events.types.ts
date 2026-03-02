@@ -104,5 +104,12 @@ export type DomainEventPayloadMap = {
     memberId: string;
     readAt: Date;
   };
+
+  'inbox.comment.created': {
+    workspaceId: string;
+    postId: string;
+    commentId: string;
+    direction: 'INBOUND' | 'OUTBOUND';
+  };
 };
 

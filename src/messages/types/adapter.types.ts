@@ -81,7 +81,7 @@ export type NormalizedInboundMessage = {
 
 export interface InboundCommentPayload {
   workspaceId: string;
-  profileId: string;
+  socialProfileId: string;
   platform: Platform;
   externalPostId: string;
   externalCommentId: string;

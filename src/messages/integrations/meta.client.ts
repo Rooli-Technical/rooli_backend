@@ -17,7 +17,6 @@ export class MetaClient {
 
   constructor() {
     this.http = axios.create({
-      baseURL: this.graphBaseUrl,
       timeout: 20_000,
     });
   }
@@ -30,17 +29,17 @@ export class MetaClient {
     accessToken: string;
     igId: string;
     fields?: string[];
-    apiVersion?: string; // e.g., "v19.0"
   }): Promise<MetaProfileResult> {
     const { accessToken, igId } = params;
     const fields = params.fields?.length
       ? params.fields
       : ['id', 'username', 'name', 'profile_picture_url'];
 
-    const v = params.apiVersion ?? 'v23.0';
+    const baseUrl = this.resolveHost(accessToken);
+    const url = `${baseUrl}/${igId}`;
 
     try {
-      const res = await this.http.get(`/${v}/${igId}`, {
+      const res = await this.http.get(url, {
         params: {
           fields: fields.join(','),
           access_token: accessToken,
@@ -67,15 +66,13 @@ export class MetaClient {
   async sendText(
     mode: MetaSendMode,
     req: MetaSendTextRequest,
-    opts?: { apiVersion?: string },
   ): Promise<MetaSendResult> {
-    const v = opts?.apiVersion ?? 'v23.0';
-
+    const baseUrl = 'https://graph.facebook.com/v23.0';
     const endpoint = this.resolveSendEndpoint(mode, {
-      v,
       pageId: req.pageId,
       igId: req.igId,
     });
+    const url = `${baseUrl}${endpoint}`;
 
     const body: any =
       mode === 'IG_MESSAGING_API'
@@ -91,7 +88,7 @@ export class MetaClient {
           };
 
     try {
-      const res = await this.http.post(endpoint, body, {
+      const res = await this.http.post(url, body, {
         params: { access_token: req.accessToken },
       });
       console.log('Meta sendText response:', res.data);
@@ -103,7 +100,7 @@ export class MetaClient {
         raw: res.data,
       };
     } catch (e) {
-      console.log(e)
+      console.log(e);
       throw this.wrapMetaError(e, 'sendText');
     }
   }
@@ -114,15 +111,10 @@ export class MetaClient {
   async sendAttachment(
     mode: MetaSendMode,
     req: MetaSendAttachmentRequest,
-    opts?: { apiVersion?: string },
   ): Promise<MetaSendResult> {
-    const v = opts?.apiVersion ?? 'v19.0';
-
-    const endpoint = this.resolveSendEndpoint(mode, {
-      v,
-      pageId: req.pageId,
-      igId: req.igId,
-    });
+   const baseUrl = 'https://graph.facebook.com/v23.0';
+    const endpoint = this.resolveSendEndpoint(mode, { pageId: req.pageId, igId: req.igId });
+    const url = `${baseUrl}${endpoint}`;
 
     const body: any =
       mode === 'IG_MESSAGING_API'
@@ -147,7 +139,7 @@ export class MetaClient {
           };
 
     try {
-      const res = await this.http.post(endpoint, body, {
+      const res = await this.http.post(url, body, {
         params: { access_token: req.accessToken },
       });
 
@@ -162,9 +154,45 @@ export class MetaClient {
     }
   }
 
+  /**
+   * Reply to a public comment on Facebook or Instagram.
+   */
+  async replyToComment(params: {
+    accessToken: string;
+    commentId: string; // The parent comment's external ID
+    message: string;
+    platform: 'FACEBOOK' | 'INSTAGRAM';
+  }): Promise<{ id: string; provider: string; raw: any }> {
+    const baseUrl = this.resolveHost(params.accessToken);
+    const edge = params.platform === 'INSTAGRAM' ? 'replies' : 'comments';
+    const endpoint = `${baseUrl}/${params.commentId}/${edge}`;
+
+    try {
+      const res = await this.http.post(
+        endpoint,
+        { message: params.message },
+        { params: { access_token: params.accessToken } },
+      );
+
+      console.log(
+        `Meta replyToComment (${params.platform}) response:`,
+        res.data,
+      );
+
+      return {
+        provider: 'META',
+        id: res.data?.id, // This is the official ID we need to save!
+        raw: res.data,
+      };
+    } catch (e) {
+      console.log(e);
+      throw this.wrapMetaError(e, 'replyToComment');
+    }
+  }
+
   private resolveSendEndpoint(
     mode: MetaSendMode,
-    ctx: { v: string; pageId?: string; igId?: string },
+    ctx: { pageId?: string; igId?: string },
   ) {
     if (mode === 'IG_MESSAGING_API') {
       if (!ctx.igId)
@@ -172,13 +200,13 @@ export class MetaClient {
           'MetaClient: igId is required for IG_MESSAGING_API mode',
         );
       // /<IG_ID>/messages :contentReference[oaicite:4]{index=4}
-      return `/${ctx.v}/${ctx.igId}/messages`;
+      return `/${ctx.igId}/messages`;
     }
 
     // PAGE_SEND_API (Messenger Platform style):
     // Usually /me/messages or /{PAGE-ID}/messages :contentReference[oaicite:5]{index=5}
-    if (ctx.pageId) return `/${ctx.v}/${ctx.pageId}/messages`;
-    return `/${ctx.v}/me/messages`;
+    if (ctx.pageId) return `/${ctx.pageId}/messages`;
+    return `/me/messages`;
   }
 
   private wrapMetaError(err: any, op: string) {
@@ -196,5 +224,12 @@ export class MetaClient {
     (out as any).code = code;
     (out as any).raw = data;
     return out;
+  }
+
+  private resolveHost(token: string): string {
+    if (token.trim().startsWith('IG')) {
+      return 'https://graph.instagram.com/v23.0';
+    }
+    return 'https://graph.facebook.com/v23.0';
   }
 }
