@@ -140,7 +140,7 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     return this.service.getWorkspaceDashboard(workspaceId, req?.user?.userPlan, days);
   }
 
-  @Get('/dashboard/posts')
+  @Get(':workspaceId/dashboard/posts')
   @ApiOperation({ 
     summary: 'Get recent successful platform posts with latest analytics' 
   })
