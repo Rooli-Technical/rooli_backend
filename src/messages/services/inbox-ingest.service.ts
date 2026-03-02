@@ -1,11 +1,13 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { MessageDirection } from '@generated/enums';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { NormalizedInboundMessage } from '../types/adapter.types';
 
 
 @Injectable()
 export class InboxIngestService {
+  private readonly logger = new Logger(InboxIngestService.name);
+  
   constructor(private readonly prisma: PrismaService) {}
 
   async ingestInboundMessage(evt: NormalizedInboundMessage) {
@@ -106,5 +108,79 @@ export class InboxIngestService {
 
       return { conversation, message, contact };
     });
+  }
+
+  async ingestInboundComment(payload: InboundCommentPayload) {
+    try {
+      // 1. Ensure the Post exists (Upsert stub if missing)
+      const post = await this.prisma.post.upsert({
+        where: {
+          network_externalPostId: {
+            network: payload.network,
+            externalPostId: payload.externalPostId,
+          },
+        },
+        update: {}, // Do nothing if it already exists
+        create: {
+          workspaceId: payload.workspaceId,
+          profileId: payload.profileId,
+          network: payload.network,
+          externalPostId: payload.externalPostId,
+          content: '[Post content pending sync]', // Placeholder
+        },
+      });
+
+      // 2. Resolve parent comment ID if this is a threaded reply
+      let internalParentId = null;
+      if (payload.externalParentId) {
+        const parentComment = await this.prisma.comment.findUnique({
+          where: {
+            network_externalCommentId: {
+              network: payload.network,
+              externalCommentId: payload.externalParentId,
+            },
+          },
+          select: { id: true },
+        });
+        if (parentComment) {
+          internalParentId = parentComment.id;
+        }
+      }
+
+      // 3. Upsert the actual Comment
+      // We use upsert because Meta webhooks sometimes retry the same payload
+      const comment = await this.prisma.comment.upsert({
+        where: {
+          network_externalCommentId: {
+            network: payload.network,
+            externalCommentId: payload.externalCommentId,
+          },
+        },
+        update: {
+          // If the user edited their comment on Facebook, we update it here
+          content: payload.content,
+          updatedAt: payload.timestamp,
+        },
+        create: {
+          workspaceId: payload.workspaceId,
+          profileId: payload.profileId,
+          postId: post.id,
+          parentId: internalParentId,
+          externalCommentId: payload.externalCommentId,
+          network: payload.network,
+          senderExternalId: payload.senderExternalId,
+          senderName: payload.senderName,
+          content: payload.content,
+          createdAt: payload.timestamp,
+        },
+      });
+
+      this.logger.log(`Successfully ingested ${payload.network} comment: ${comment.id}`);
+
+      return { post, comment };
+    } catch (error) {
+      this.logger.error(`Failed to ingest comment: ${error.message}`, error.stack);
+      throw error; // Let BullMQ catch this and trigger a retry
+    }
   }
 }

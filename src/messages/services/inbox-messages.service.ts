@@ -136,4 +136,69 @@ export class InboxMessagesService {
     throw error
   }
   }
+
+  /**
+   * Comment reply:
+   * - create OUTBOUND comment
+   * - enqueue job so retries don't double-send
+   * - emit events so UI shows "sending…" instantly
+   */
+  async sendCommentReply(params: {
+    workspaceId: string;
+    parentCommentId: string; // The comment the user is replying to
+    content: string;
+  }) {
+    try {
+      // 1. Verify the parent comment exists
+      const parentComment = await this.prisma.comment.findFirst({
+        where: { id: params.parentCommentId, workspaceId: params.workspaceId },
+        include: { post: true, profile: true },
+      });
+      if (!parentComment) throw new NotFoundException('Parent comment not found');
+
+      const now = new Date();
+
+      // 2. Save the outbound reply to the database as QUEUED
+      const createdComment = await this.prisma.comment.create({
+        data: {
+          workspaceId: params.workspaceId,
+          profileId: parentComment.profileId,
+          postId: parentComment.postId,
+          parentId: parentComment.id,
+          network: parentComment.network,
+          direction: 'OUTBOUND',
+          status: 'VISIBLE', // Or QUEUED if you added a queue status to your Enum
+          senderExternalId: parentComment.profile.providerId,
+          content: params.content,
+          externalCommentId: `pending_${now.getTime()}_${Math.random().toString(36).slice(2)}`, // Temp ID until Meta replies
+        },
+      });
+
+      // 3. Queue the job to actually fire the Meta Graph API request
+      await this.outboundQueue.add(
+        'send-outbound-comment', 
+        { commentId: createdComment.id },
+        {
+          jobId: `outbound-comment-${createdComment.id}`,
+          attempts: 15,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: true,
+          removeOnFail: { age: 7 * 24 * 3600 },
+        },
+      );
+
+      // 4. Emit events so the frontend updates the thread immediately
+      this.events.emit('inbox.comment.created', {
+        workspaceId: params.workspaceId,
+        postId: parentComment.postId,
+        commentId: createdComment.id,
+        direction: 'OUTBOUND',
+      });
+
+      return createdComment;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
 }

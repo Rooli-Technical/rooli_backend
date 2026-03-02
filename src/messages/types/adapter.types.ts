@@ -1,3 +1,5 @@
+import { Platform } from "@generated/enums";
+
 export type NormalizedPlatform =
   | 'INSTAGRAM'
   | 'FACEBOOK'
@@ -75,3 +77,17 @@ export type NormalizedInboundMessage = {
   // for debugging (don’t store to DB from adapter; worker may choose to log)
   raw?: any;
 };
+
+
+export interface InboundCommentPayload {
+  workspaceId: string;
+  profileId: string;
+  platform: Platform;
+  externalPostId: string;
+  externalCommentId: string;
+  externalParentId?: string | null; // If it's a reply to another comment
+  senderExternalId: string;
+  senderName: string;
+  content: string;
+  timestamp: Date;
+}

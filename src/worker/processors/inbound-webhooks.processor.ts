@@ -58,18 +58,13 @@ export class InboundWebhooksProcessor extends WorkerHost {
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-          const { conversation, message } = await this.ingest.ingestInboundMessage(resolved);
+          const { conversation, message } = await this.ingest.ingestInboundComment(resolved);
 
-          this.events.emit('inbox.message.created', {
+          this.events.emit('inbox.comment.created', {
             workspaceId: resolved.workspaceId,
             conversationId: conversation.id,
             messageId: message.id,
             direction: message.direction,
-          });
-          this.events.emit('inbox.conversation.updated', {
-            workspaceId: resolved.workspaceId,
-            conversationId: conversation.id,
-            lastMessageAt: conversation.lastMessageAt,
           });
 
           return;
