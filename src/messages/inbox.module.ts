@@ -1,7 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
-import { InboxService } from './services/inbox.service';
-import { InboxController } from './inbox.controller';
-import { InboxMessagesService } from './services/inbox-messages.service';
+import { InboxService } from './services/inbox-message.service';
+import { InboxController } from './controller/inbox-message.controller';
 import { EventsModule } from '@/events/events.module';
 import { WorkerModule } from '@/worker/worker.module';
 import { InboxIngestService } from './services/inbox-ingest.service';
@@ -9,19 +8,27 @@ import { TwitterAdapter } from './adapters/twitter.adapter';
 import { MetaAdapter } from './adapters/meta.adapter';
 import { MetaClient } from './integrations/meta.client';
 import { TwitterClient } from './integrations/twitter.client';
+import { InboxCommentsService } from './services/inbox-comments.service';
+import { InboxCommentsController } from './controller/inbox-comments.controller';
 
 @Module({
   imports: [EventsModule, forwardRef(() => WorkerModule)],
-  controllers: [InboxController],
+  controllers: [InboxController, InboxCommentsController],
   providers: [
     InboxService,
-    InboxMessagesService,
+    InboxCommentsService,
     InboxIngestService,
     MetaAdapter,
     TwitterAdapter,
     MetaClient,
-    TwitterClient
+    TwitterClient,
   ],
-  exports: [InboxIngestService, MetaAdapter, TwitterAdapter, MetaClient, TwitterClient],
+  exports: [
+    InboxIngestService,
+    MetaAdapter,
+    TwitterAdapter,
+    MetaClient,
+    TwitterClient,
+  ],
 })
 export class InboxModule {}

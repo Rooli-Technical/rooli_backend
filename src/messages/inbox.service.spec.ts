@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { InboxService } from './services/inbox.service';
+import { InboxService } from './services/inbox-message.service';
 
 describe('InboxService', () => {
   let service: InboxService;

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { InboxController } from './inbox.controller';
-import { InboxService } from './services/inbox.service';
+import { InboxController } from './controller/inbox-message.controller';
+import { InboxService } from './services/inbox-message.service';
 
 describe('InboxController', () => {
   let controller: InboxController;

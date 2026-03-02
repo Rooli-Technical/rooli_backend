@@ -15,13 +15,11 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { ListConversationsDto } from './dtos/list-conversations.dto';
-import { UpdateConversationDto } from './dtos/send-message.dto';
-import { SendReplyDto } from './dtos/send-reply.dto';
-import { InboxMessagesService } from './services/inbox-messages.service';
-import { InboxService } from './services/inbox.service';
+import { ListConversationsDto } from '../dtos/list-conversations.dto';
+import { UpdateConversationDto } from '../dtos/send-message.dto';
+import { SendReplyDto } from '../dtos/send-reply.dto';
+import { InboxService } from '../services/inbox-message.service';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-
 
 @ApiTags('Messages')
 @ApiBearerAuth()
@@ -29,7 +27,6 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 export class InboxController {
   constructor(
     private readonly inboxService: InboxService,
-    private readonly inboxMessagesService: InboxMessagesService,
   ) {}
 
   @Get()
@@ -40,9 +37,9 @@ export class InboxController {
     @CurrentUser('workspaceMemberId') memberId: string,
     @Query() query: ListConversationsDto,
   ) {
-    
     // Convert "unassigned" string to actual null for the service
-    const assignedMemberId = query.assignedMemberId === 'unassigned' ? null : query.assignedMemberId;
+    const assignedMemberId =
+      query.assignedMemberId === 'unassigned' ? null : query.assignedMemberId;
 
     return this.inboxService.listConversations({
       workspaceId,
@@ -53,7 +50,10 @@ export class InboxController {
 
   @Get(':conversationId')
   @ApiOperation({ summary: 'Get a specific conversation' })
-  @ApiResponse({ status: 200, description: 'Returns conversation details and contact info' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns conversation details and contact info',
+  })
   async getConversation(
     @Param('workspaceId') workspaceId: string,
     @Param('conversationId') conversationId: string,
@@ -81,10 +81,12 @@ export class InboxController {
   }
 
   @Patch(':conversationId')
-  @ApiOperation({ summary: 'Update conversation metadata (Assign, Archive, Resolve)' })
+  @ApiOperation({
+    summary: 'Update conversation metadata (Assign, Archive, Resolve)',
+  })
   @ApiResponse({ status: 200, description: 'Conversation updated' })
   async updateConversation(
-   @Param('workspaceId') workspaceId: string,
+    @Param('workspaceId') workspaceId: string,
     @Param('conversationId') conversationId: string,
     @Body() patch: UpdateConversationDto,
   ) {
@@ -119,8 +121,7 @@ export class InboxController {
     @Body() body: SendReplyDto,
     @CurrentUser('workspaceMemberId') memberId: string,
   ) {
-
-    return this.inboxMessagesService.sendReply({
+    return this.inboxService.sendReply({
       workspaceId,
       memberId,
       conversationId,
