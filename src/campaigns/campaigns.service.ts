@@ -139,7 +139,7 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
               mediaFile: {
                 select:{
                   url: true,
-                  type: true
+                  mimeType: true
                 }
               }
             }
