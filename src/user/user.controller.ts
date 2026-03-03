@@ -97,5 +97,22 @@ export class UserController {
   ) {
     return this.usersService.getUserWorkspaces(userId);
   }
+
+@Post('change-password/request-otp')
+  @ApiOperation({ 
+    summary: 'Request a password change OTP', 
+    description: 'Generates a 6-digit OTP and sends it to the currently logged-in user\'s email address for password verification.' 
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'OTP has been successfully generated and sent.',
+    schema: {
+      example: { message: 'OTP sent to your email' }
+    }
+  })
+  async requestChangePasswordOtp(@CurrentUser('userId') userId: string) {
+    await this.usersService.requestChangePasswordOtp(userId);
+    return { message: 'OTP sent to your email' };
+  } 
 }
 

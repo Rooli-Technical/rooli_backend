@@ -5,6 +5,7 @@ export type DomainEventName =
   | 'inbox.conversation.updated'
   | 'inbox.message.status.updated'
   | 'inbox.conversation.assigned'
+  |  'inbox.comment.sent'
   | 'publishing.post.published'
   | 'publishing.post.failed'
   | 'publishing.post.declined'

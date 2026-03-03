@@ -11,13 +11,16 @@ import * as argon2 from 'argon2';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BillingService } from '@/billing/billing.service';
+import * as crypto from 'crypto';
+import { MailService } from '@/mail/mail.service';
 
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
   constructor(
     private readonly prisma: PrismaService,
-    private readonly billingService: BillingService,
+    private readonly emailService: MailService,
+
   ) {}
 
   async findById(id: string): Promise<SafeUser | null> {
@@ -114,32 +117,88 @@ async getUserWorkspaces(userId: string) {
     return this.toSafeUser(user);
   }
 
-  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+  async requestChangePasswordOtp(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    // 1. Generate a secure 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    // 2. Hash the OTP (Do NOT store plain text OTPs)
+    const hashedOtp = await argon2.hash(otp);
+
+    // 3. Set Expiration (15 minutes from now)
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    // 4. Save to Database
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordResetOtp: hashedOtp,
+        passwordResetOtpExpires: expiresAt,
+      },
+    });
+
+    // 5. Send Email with the plain text OTP
+    await this.emailService.sendPasswordResetOtp(user.email,user.firstName ,otp).catch((err) =>
+      this.logger.error(`Failed to send change-password OTP to ${user.email}`, err),
+    );
+  }
+
+async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId, deletedAt: null },
     });
     if (!user) throw new NotFoundException('User not found');
 
+    // 1. Verify Current Password
     const isCurrentValid = await argon2.verify(
       user.password,
       dto.currentPassword,
     );
-    if (!isCurrentValid)
+    if (!isCurrentValid) {
       throw new UnauthorizedException('Current password is incorrect');
+    }
 
+    // 2. Verify OTP Existence & Expiration
+    if (!user.passwordResetOtp || !user.passwordResetOtpExpires) {
+      throw new BadRequestException('Please request an OTP first');
+    }
+
+    if (new Date() > user.passwordResetOtpExpires) {
+      // Clean up the expired OTP
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordResetOtp: null, passwordResetOtpExpires: null },
+      });
+      throw new BadRequestException('OTP has expired. Please request a new one.');
+    }
+
+    // 3. Verify OTP Match
+    const isValidOtp = await argon2.verify(user.passwordResetOtp, dto.otp);
+    if (!isValidOtp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    // 4. Validate & Hash New Password
     this.validatePasswordStrength(dto.newPassword);
     const hashedPassword = await argon2.hash(dto.newPassword);
 
+    // 5. Update User & Cleanup
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         password: hashedPassword,
         lastPasswordChange: new Date(),
-        refreshToken: null, // Revoke sessions
+        passwordResetOtp: null,        
+        passwordResetOtpExpires: null, 
+        refreshToken: null,            // Revoke sessions
         refreshTokenVersion: { increment: 1 },
       },
     });
-
   }
 
   async deactivateMyAccount(userId: string): Promise<void> {

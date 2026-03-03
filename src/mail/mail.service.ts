@@ -126,4 +126,27 @@ export class MailService {
 
     await this.sendZeptoMail(email, `Welcome to Rooli, ${userName}!`, html);
   }
+
+  async sendPasswordResetOtp(email: string, userName: string, otp: string) {
+  const context = {
+    userName: userName || 'there',
+    otp, 
+    year: new Date().getFullYear(),
+    updateTime: new Date().toLocaleString('en-US', { 
+      timeZone: 'UTC', 
+      hour12: true, 
+      dateStyle: 'medium', 
+      timeStyle: 'short' 
+    }),
+  };
+
+  // Ensure you create a file named 'password-reset-otp.hbs'
+  const html = await this.compileTemplate('password-reset-otp', context);
+
+  await this.sendZeptoMail(
+    email, 
+    `${otp} is your Rooli password reset code`, 
+    html
+  );
+}
 }

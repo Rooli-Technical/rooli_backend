@@ -30,6 +30,9 @@ model User {
   isEmailVerified Boolean @default(false)
   refreshToken    String?
 
+  passwordResetOtp        String?   // Stores the hashed OTP
+  passwordResetOtpExpires DateTime?
+
   // Security
   loginAttempts       Int       @default(0)
   lockedUntil         DateTime?
