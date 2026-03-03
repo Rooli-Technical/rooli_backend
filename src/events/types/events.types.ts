@@ -1,3 +1,5 @@
+import { Platform } from '@generated/enums';
+
 export type DomainEventName =
   | 'inbox.message.created'
   | 'inbox.conversation.updated'
@@ -15,6 +17,14 @@ export type InboxMessageCreatedEvent = {
   conversationId: string;
   messageId: string;
   direction: 'INBOUND' | 'OUTBOUND';
+};
+
+export type InboxCommentReplyEvent = {
+  workspaceId: string;
+  postId: string;
+  externalId: string;
+  content: string;
+  platform: Platform;
 };
 
 export type InboxConversationUpdatedEvent = {
@@ -111,5 +121,12 @@ export type DomainEventPayloadMap = {
     commentId: string;
     direction: 'INBOUND' | 'OUTBOUND';
   };
-};
 
+  'inbox.comment.sent': {
+    workspaceId: string;
+    postId: string; // Internal Post ID
+    externalId: string;
+    content: string;
+    platform: Platform;
+  };
+};

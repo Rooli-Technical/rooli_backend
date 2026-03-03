@@ -808,4 +808,48 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
 
   return { finalScheduledAt, status };
 }
+
+async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?: string }) {
+    const { workspaceId, take, cursor } = params;
+
+    const posts = await this.prisma.post.findMany({
+      where: { workspaceId },
+      take,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        destinations: {
+          include: {
+            profile: true,
+            postAnalyticsSnapshots: {
+              orderBy: { day: 'desc' },
+              take: 1,
+            }
+          }
+        },
+      },
+    });
+
+    console.log(posts)
+
+    const items = posts.map((post) => {
+      const primaryDest = post.destinations[0];
+      const latestStats = primaryDest?.postAnalyticsSnapshots[0];
+
+      return {
+        id: post.id,
+        platform: primaryDest?.profile?.platform ?? 'UNKNOWN',
+        externalPostId: primaryDest?.platformPostId ?? null,
+        postContent: post.content,
+        createdAt: post.createdAt,
+        likes: latestStats?.likes ?? 0,
+        totalComments: latestStats?.comments ?? 0,
+        shares: latestStats?.shares ?? 0,
+      };
+    });
+
+    const nextCursor = posts.length === take ? posts[posts.length - 1].id : null;
+    return { items, nextCursor };
+  }
 }

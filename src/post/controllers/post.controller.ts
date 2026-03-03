@@ -15,7 +15,13 @@ import { RequireFeature } from '@/common/decorators/require-feature.decorator';
 import { FeatureGuard } from '@/common/guards/feature.guard';
 import { CreatePostDto } from '../dto/request/create-post.dto';
 import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
-import { ApiOperation, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiQuery,
+  ApiOperation,
+  ApiParam,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { BulkExecuteResponseDto } from '../dto/response/bulk-execute.response.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { UpdatePostDto } from '../dto/request/update-post.dto';
@@ -49,10 +55,29 @@ export class PostController {
   @Get()
   @ApiOperation({ summary: 'Get all posts in the workspace' })
   @ApiPaginatedResponse(PostDto)
-  async findAll(@Param('workspaceId') workspaceId: string, @Query() query: GetWorkspacePostsDto,) {
+  async findAll(
+    @Param('workspaceId') workspaceId: string,
+    @Query() query: GetWorkspacePostsDto,
+  ) {
     return this.postService.getWorkspacePosts(workspaceId, query);
   }
 
+  @Get('metrics')
+  @ApiOperation({ summary: 'List all posts with metrics' })
+  @ApiQuery({ name: 'take', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Returns threaded comments' })
+  async listPosts(
+    @Param('workspaceId') workspaceId: string,
+    @Query('take') take?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    return this.postService.listPostsWithMetrics({
+      workspaceId,
+      take: take ? parseInt(take, 10) : 50,
+      cursor,
+    });
+  }
 
   @Get(':postId')
   @ApiOperation({ summary: 'Get a single post by ID' })
@@ -78,7 +103,9 @@ export class PostController {
   }
 
   @Delete(':postId')
-  @ApiOperation({ summary: 'Delete a post by ID (including its thread children)' })
+  @ApiOperation({
+    summary: 'Delete a post by ID (including its thread children)',
+  })
   @ApiStandardResponse(PostDto)
   async delete(
     @Param('workspaceId') workspaceId: string,

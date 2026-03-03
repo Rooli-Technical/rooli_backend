@@ -10,6 +10,7 @@ import { MetaClient } from './integrations/meta.client';
 import { TwitterClient } from './integrations/twitter.client';
 import { InboxCommentsService } from './services/inbox-comments.service';
 import { InboxCommentsController } from './controller/inbox-comments.controller';
+import { EncryptionService } from '@/common/utility/encryption.service';
 
 @Module({
   imports: [EventsModule, forwardRef(() => WorkerModule)],
@@ -22,6 +23,7 @@ import { InboxCommentsController } from './controller/inbox-comments.controller'
     TwitterAdapter,
     MetaClient,
     TwitterClient,
+    EncryptionService
   ],
   exports: [
     InboxIngestService,

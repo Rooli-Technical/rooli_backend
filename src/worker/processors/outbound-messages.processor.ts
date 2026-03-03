@@ -339,12 +339,11 @@ private async sendX(msg: any) {
       await tx.inboxMessage.update({
         where: { id: msg.id },
         data: {
-          deliveryStatus: 'SENT' as any, // "accepted by X" (true delivered/read comes later if you support it)
+          deliveryStatus: 'SENT' as any, 
           providerTimestamp: now,
           errorCode: null,
           errorMessage: null,
           providerMessageId: res.messageId ?? null,
-          // DO NOT overwrite externalId if it's used for idempotency or unique constraints.
         },
       });
 

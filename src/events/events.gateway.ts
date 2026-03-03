@@ -124,4 +124,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, 
   private roomMember(memberId: string) {
     return `member:${memberId}`;
   }
+
+  
 }

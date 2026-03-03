@@ -152,6 +152,40 @@ export class MetaClient {
     }
   }
 
+
+  /**
+   * Fetch comments live from Meta for a specific post/media.
+   */
+  async getPostComments(params: {
+    accessToken: string;
+    externalPostId: string;
+    platform: 'FACEBOOK' | 'INSTAGRAM';
+  }): Promise<any[]> {
+    const baseUrl = this.resolveHost(params.accessToken);
+    const url = `${baseUrl}/${params.externalPostId}/comments`;
+
+    // FB and IG return slightly different fields
+    const fields = params.platform === 'INSTAGRAM' 
+      ? 'id,text,timestamp,from,replies{id,text,timestamp,from}' 
+      : 'id,message,created_time,from,comments{id,message,created_time,from}';
+
+    try {
+      const res = await this.http.get(url, {
+        params: {
+          access_token: params.accessToken,
+          fields,
+          // Limit to 50 top-level comments for MVP
+          limit: 50, 
+        },
+      });
+
+      return res.data.data || [];
+    } catch (e) {
+      console.log(e);
+      throw this.wrapMetaError(e, 'getPostComments');
+    }
+  }
+
   /**
    * Reply to a public comment on Facebook or Instagram.
    */
