@@ -125,13 +125,44 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
     return stats;
   }
 
-  async get(workspaceId: string, campaignId: string) {
-    const c = await this.prisma.campaign.findFirst({
-      where: { id: campaignId, workspaceId },
-    });
-    if (!c) throw new NotFoundException('Campaign not found');
-    return c;
-  }
+ async get(workspaceId: string, campaignId: string) {
+  const campaign = await this.prisma.campaign.findFirst({
+    where: { 
+      id: campaignId, 
+      workspaceId 
+    },
+    include: {
+      posts: {
+        include: {
+          media: {
+            select: {
+              mediaFile: {
+                select:{
+                  url: true,
+                  type: true
+                }
+              }
+            }
+          },
+          destinations: {
+            include: {
+              profile: {
+                select: {
+                  platform: true,
+                  name: true,
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }
+    }
+  });
+
+  if (!campaign) throw new NotFoundException('Campaign not found');
+  return campaign;
+}
     
   async list(workspaceId: string, status?: string) {
     return await this.prisma.campaign.findMany({

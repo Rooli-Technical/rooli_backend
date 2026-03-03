@@ -261,26 +261,33 @@ export class WorkspaceService {
    * If you want soft-delete, add deletedAt and update instead.
    */
   async deleteWorkspace(workspaceId: string) {
+    // 1. Fetch the workspace and figure out what Organization it belongs to
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { id: true, organizationId: true },
     });
+    
     if (!workspace) throw new NotFoundException('Workspace not found.');
 
-    //if workspace has members throw error
-    const memberCount = await this.prisma.workspaceMember.count({
-      where: { workspaceId },
+    // 2. Count how many workspaces this Organization currently has
+    const totalWorkspacesInOrg = await this.prisma.workspace.count({
+      where: { organizationId: workspace.organizationId },
     });
-    if (memberCount > 0) {
+
+    // 3. ENFORCE THE LAST WORKSPACE RULE
+    if (totalWorkspacesInOrg <= 1) {
       throw new BadRequestException(
-        'Cannot delete workspace with active members. Please remove all members before deleting.',
+        'You cannot delete the last workspace in your organization. ' +
+        'If you wish to close your account, please delete your Organization instead.'
       );
     }
 
-    // If posts/media/etc have onDelete: Cascade, this is fine.
-    // If not, you’ll get FK errors, so decide your delete strategy.
-    await this.prisma.workspace.delete({ where: { id: workspaceId } });
-    return { deleted: true };
+    // 4. Delete the workspace!
+    await this.prisma.workspace.delete({ 
+      where: { id: workspaceId } 
+    });
+
+    return { deleted: true, message: 'Workspace successfully deleted.' };
   }
 
 async switchWorkspace(userId: string, targetWorkspaceId: string) {
