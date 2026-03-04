@@ -825,27 +825,59 @@ async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?:
             postAnalyticsSnapshots: {
               orderBy: { day: 'desc' },
               take: 1,
+              // 1. INCLUDE THE SPECIFIC TABLES
+              include: {
+                twitterStats: true,
+                linkedInStats: true,
+                facebookStats: true,
+                instagramStats: true,
+              }
             }
           }
         },
       },
     });
 
-    console.log(posts)
-
     const items = posts.map((post) => {
+      // Assuming a 1-to-1 post-to-destination mapping for this list view
       const primaryDest = post.destinations[0];
       const latestStats = primaryDest?.postAnalyticsSnapshots[0];
+      const platform = primaryDest?.profile?.platform ?? 'UNKNOWN';
+
+      // 2. DYNAMICALLY RESOLVE "SHARES" BASED ON PLATFORM
+      let resolvedShares = 0;
+      if (latestStats) {
+        switch (platform) {
+          case 'TWITTER':
+            resolvedShares = (latestStats.twitterStats?.retweets ?? 0) + (latestStats.twitterStats?.quotes ?? 0);
+            break;
+          case 'LINKEDIN':
+            resolvedShares = latestStats.linkedInStats?.reposts ?? 0;
+            break;
+          case 'FACEBOOK':
+            resolvedShares = latestStats.facebookStats?.shares ?? 0;
+            break;
+          case 'INSTAGRAM':
+            resolvedShares = latestStats.instagramStats?.shares ?? 0;
+            break;
+        }
+      }
 
       return {
         id: post.id,
-        platform: primaryDest?.profile?.platform ?? 'UNKNOWN',
+        platform,
         externalPostId: primaryDest?.platformPostId ?? null,
-        postContent: post.content,
+        postContent: post.content, 
         createdAt: post.createdAt,
+        
+        // Base Omnichannel Metrics
         likes: latestStats?.likes ?? 0,
         totalComments: latestStats?.comments ?? 0,
-        shares: latestStats?.shares ?? 0,
+        impressions: latestStats?.impressions ?? 0,
+        reach: latestStats?.reach ?? 0,
+        
+        // Dynamically Resolved Metric
+        shares: resolvedShares,
       };
     });
 
