@@ -3,17 +3,16 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import {
-  AccountMetrics,
   AuthCredentials,
+  FetchAccountResult,
+  FetchPostResult,
   IAnalyticsProvider,
-  PostMetrics,
 } from '../interfaces/analytics-provider.interface';
 import * as https from 'https';
 
 @Injectable()
 export class InstagramAnalyticsProvider implements IAnalyticsProvider {
   private readonly logger = new Logger(InstagramAnalyticsProvider.name);
-
 
   constructor(
     private readonly config: ConfigService,
@@ -33,7 +32,7 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
   async getAccountStats(
     igUserId: string,
     credentials: AuthCredentials,
-  ): Promise<AccountMetrics> {
+  ): Promise<FetchAccountResult> {
     try {
       const token = credentials.accessToken;
       const baseUrl = this.resolveHost(token);
@@ -45,7 +44,7 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
         metric_type: 'total_value',
       };
 
-     const dailyUrl = `${baseUrl}/${igUserId}/insights`; 
+      const dailyUrl = `${baseUrl}/${igUserId}/insights`;
       const userUrl = `${baseUrl}/${igUserId}`;
 
       const userParams = {
@@ -85,14 +84,19 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
 
       return {
         platformId: igUserId,
-        followersCount: userRes.data?.followers_count ?? 0,
-        impressionsCount: getMetric('views'),
-        reach: getMetric('reach'),
-        engagementCount: getMetric('total_interactions'),
-        clicks: getMetric('profile_links_taps'),
-        profileViews: getMetric('profile_links_taps'),
-        demographics: demographicsData ?? {},
         fetchedAt: new Date(),
+        unified: {
+          followersTotal: userRes.data?.followers_count ?? 0,
+          impressions: getMetric('views'),
+          reach: getMetric('reach'),
+          profileViews: getMetric('profile_links_taps'),
+          clicks: getMetric('profile_links_taps'),
+          engagementCount: getMetric('total_interactions'),
+        },
+        specific: {
+          demographics: demographicsData ?? {},
+          websiteClicks: getMetric('profile_links_taps'), // usually overlaps
+        },
       };
     } catch (error) {
       console.log(error);
@@ -108,10 +112,9 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
   async getPostStats(
     mediaIds: string[],
     credentials: AuthCredentials,
-  ): Promise<PostMetrics[]> {
+  ): Promise<FetchPostResult[]> {
     const token = credentials.accessToken;
     const baseUrl = this.resolveHost(token);
-
 
     if (mediaIds.length === 0) return [];
     const chunks = this.chunkArray(mediaIds, 50);
@@ -158,17 +161,20 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
             };
 
             return {
-              postId: media.id,
-              impressions: getInsight('views'),
-              reach: getInsight('reach'),
-              likes: media.like_count || 0,
-              comments: media.comments_count || 0,
-              shares: getInsight('shares'),
-              saves: getInsight('saved'),
-              engagement: getInsight('total_interactions'),
-              clicks: 0,
-              videoViews:
-                media.media_type === 'VIDEO' ? getInsight('views') : 0,
+              unified: {
+                postId: media.id,
+                impressions: getInsight('views'),
+                reach: getInsight('reach'),
+                likes: media.like_count || 0,
+                comments: media.comments_count || 0,
+                engagementCount: getInsight('total_interactions'),
+              },
+              specific: {
+                saves: getInsight('saved'),
+                shares: getInsight('shares'),
+                videoViews:
+                  media.media_type === 'VIDEO' ? getInsight('views') : 0,
+              },
             };
           });
         } catch (error: any) {
@@ -183,7 +189,11 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
     return results.flat();
   }
 
-  private async getDemographics(igUserId: string, token: string, baseUrl: string) {
+  private async getDemographics(
+    igUserId: string,
+    token: string,
+    baseUrl: string,
+  ) {
     try {
       const res = await firstValueFrom(
         this.httpService.get(`${baseUrl}/${igUserId}/insights`, {
@@ -229,7 +239,6 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
     }
     return chunks;
   }
-
 
   private resolveHost(token: string): string {
     if (token.trim().startsWith('IG')) {

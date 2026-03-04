@@ -183,7 +183,7 @@ model WorkspaceMember {
   id          String @id @default(cuid())
   workspaceId String
   
-  memberId    String?  //this should be mandatory remove optional as soon as you can, it's needed for permission checks and frontend logic
+  memberId    String  
   
   workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   member      OrganizationMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -969,73 +969,207 @@ model PlatformRateLimitLog {
   @@index([platform, socialAccountId, windowStart, windowEnd])
 }
 
-// ========================
-// ANALYTICS & REPORTING
-// ========================
 
+// ==========================================
+// 📊 POST ANALYTICS (OMNICHANNEL BASE)
+// ==========================================
 model PostAnalyticsSnapshot {
-  id                String @id @default(cuid())
+  id                String   @id @default(cuid())
   postDestinationId String
+  
+  day               DateTime @db.Date // Normalized day (e.g., 2026-03-04)
+  fetchedAt         DateTime @default(now())
 
-  day       DateTime @db.Date // normalized day (e.g. 2026-01-28)
-  fetchedAt DateTime @default(now())
-
-  likes       Int @default(0)
-  comments    Int @default(0)
-  shares      Int @default(0)
-  impressions Int @default(0)
-  reach       Int @default(0)
-  clicks      Int @default(0)
-
-  saves      Int @default(0) // Bookmarks (X), Saves (IG)
-  videoViews Int @default(0) // 3-second views (FB/IG)
-  engagementCount Int @default(0)
+  // --- THE OMNICHANNEL CORE ---
+  // Only metrics shared across ALL platforms go here.
+  likes           Int @default(0)
+  comments        Int @default(0)
+  impressions     Int @default(0) // Total views
+  reach           Int @default(0) // Unique viewers (if platform provides it)
+  engagementCount Int @default(0) // Aggregated sum for quick dashboard sorting
 
   postDestination PostDestination @relation(fields: [postDestinationId], references: [id], onDelete: Cascade)
 
-  metadata Json?
+  // --- PLATFORM SPECIFIC RELATIONS ---
+  twitterStats   TwitterPostStats?
+  linkedInStats  LinkedInPostStats?
+  facebookStats  FacebookPostStats?
+  instagramStats InstagramPostStats?
 
-  @@unique([postDestinationId, day]) // Only one snapshot per post per day
+  @@unique([postDestinationId, day]) 
   @@index([postDestinationId, day])
 }
 
+// ==========================================
+// 🐦 TWITTER POST STATS
+// ==========================================
+model TwitterPostStats {
+  id         String @id @default(cuid())
+  snapshotId String @unique
+  snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  retweets   Int @default(0)
+  quotes     Int @default(0)
+  bookmarks  Int @default(0)
+  videoViews Int @default(0)
+}
+
+// ==========================================
+// 💼 LINKEDIN POST STATS
+// ==========================================
+// ==========================================
+// 💼 LINKEDIN POST STATS
+// ==========================================
+model LinkedInPostStats {
+  id         String @id @default(cuid())
+  snapshotId String @unique
+  snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  // Shared metrics (Available to both Personal & Org)
+  reposts    Int @default(0)
+  
+  // Organization Only (Make these optional/nullable)
+  clicks     Int? 
+  videoViews Int? 
+}
+
+// ==========================================
+// 📘 FACEBOOK POST STATS
+// ==========================================
+model FacebookPostStats {
+  id         String @id @default(cuid())
+  snapshotId String @unique
+  snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  shares     Int @default(0)
+  linkClicks Int @default(0)
+  videoViews Int @default(0) // E.g., 3-second views
+  // You could even add reactions breakdown here later (haha, wow, sad)
+}
+
+// ==========================================
+// 📸 INSTAGRAM POST STATS
+// ==========================================
+model InstagramPostStats {
+  id         String @id @default(cuid())
+  snapshotId String @unique
+  snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  saves      Int @default(0)
+  shares     Int @default(0)
+  videoViews Int @default(0)
+  plays      Int @default(0) // For Reels
+}
+
 // Store daily aggregate data for the Account/Page itself
+// ==========================================
+// 📈 ACCOUNT ANALYTICS (OMNICHANNEL BASE)
+// ==========================================
 model AccountAnalytics {
-  id String @id @default(cuid())
-
+  id              String   @id @default(cuid())
   socialProfileId String
-  socialProfile   SocialProfile @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
+  date            DateTime @db.Date
 
-  date DateTime @db.Date // The specific day this data represents
-
+  // --- THE OMNICHANNEL CORE ---
   // Growth
   followersTotal  Int @default(0)
   followersGained Int @default(0)
   followersLost   Int @default(0)
 
-  // Reach & Traffic (Account Level)
-  impressions   Int @default(0) // Total views of all content + profile
-  reach         Int @default(0) // Unique people
-  profileViews  Int @default(0)
-  clicks          Int      @default(0) 
-
-  // Engagement Breakdown
-  reactions   Int @default(0)
-  comments    Int @default(0)
-  shares      Int @default(0)
-
-  // Engagement (Aggregate)
+  // Reach & Traffic
+  impressions     Int @default(0) 
+  reach           Int @default(0) 
+  profileViews    Int @default(0)
+  clicks          Int @default(0) // Aggregated clicks across the profile
+  
+  // Overall Engagement
   engagementCount Int @default(0) // Sum of all interactions that day
 
-  demographics    Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  socialProfile   SocialProfile @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
 
-   metadata Json?
+  // --- PLATFORM SPECIFIC RELATIONS ---
+  twitterStats    TwitterAccountStats?
+  linkedInStats   LinkedInAccountStats?
+  facebookStats   FacebookAccountStats?
+  instagramStats  InstagramAccountStats?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([socialProfileId, date])
   @@index([socialProfileId, date])
-   @@index([date])
+  @@index([date])
+}
+
+// ==========================================
+// 🐦 TWITTER ACCOUNT STATS
+// ==========================================
+model TwitterAccountStats {
+  id               String @id @default(cuid())
+  accountStatsId   String @unique
+  accountAnalytics AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
+
+  mentions         Int @default(0)
+  tweetCount       Int @default(0) // Number of tweets sent that day
+}
+
+// ==========================================
+// 💼 LINKEDIN ACCOUNT STATS
+// ==========================================
+model LinkedInAccountStats {
+  id                String @id @default(cuid())
+  accountStatsId    String @unique
+  accountAnalytics  AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
+
+  // We should track the type of LinkedIn entity this snapshot belongs to 
+  // just in case we need to filter analytics at the DB level later.
+  isOrganization    Boolean @default(false)
+
+  // Organization Only Metrics (Must be nullable)
+  customButtonClicks Int?
+  uniqueVisitors     Int?
+  pageViews          Int? // Differentiates from the omnichannel "profileViews" if needed
+  
+  // LinkedIn demographics (Industry, Seniority, Company Size, etc.)
+  // Only available for Organization Pages with >300 followers usually.
+  demographics       Json? 
+  
+  // Personal Profile Only Metrics
+  // (If you ever get access to them via API or scraping, otherwise leave null)
+  searchAppearances  Int? 
+}
+
+// ==========================================
+// 📘 FACEBOOK ACCOUNT STATS
+// ==========================================
+model FacebookAccountStats {
+  id               String @id @default(cuid())
+  accountStatsId   String @unique
+  accountAnalytics AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
+
+  pageLikes        Int @default(0)
+  pageFollows      Int @default(0)
+  videoViews       Int @default(0)
+
+  // FB demographics (age, gender, locale)
+  demographics     Json? 
+}
+
+// ==========================================
+// 📸 INSTAGRAM ACCOUNT STATS
+// ==========================================
+model InstagramAccountStats {
+  id                String @id @default(cuid())
+  accountStatsId    String @unique
+  accountAnalytics  AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
+
+  websiteClicks     Int @default(0)
+  emailContacts     Int @default(0)
+  textMessageClicks Int @default(0)
+  phoneCallClicks   Int @default(0)
+
+  // IG demographics (age, gender, city, country)
+  demographics      Json? 
 }
 
 // ========================
@@ -1073,7 +1207,7 @@ model Role {
   organizationId String?
 
   name        String
-  slug        String?  //this should be mandatory remove optional as soon as you can, it's needed for permission checks and frontend logic
+  slug        String  
   description String?
 
   isSystem    Boolean  @default(false)

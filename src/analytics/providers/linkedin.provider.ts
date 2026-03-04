@@ -3,10 +3,10 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { Platform } from '@generated/enums';
 import {
-  AccountMetrics,
   AuthCredentials,
+  FetchAccountResult,
+  FetchPostResult,
   IAnalyticsProvider,
-  PostMetrics,
 } from '../interfaces/analytics-provider.interface';
 import { DateTime } from 'luxon';
 import * as https from 'https';
@@ -36,7 +36,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
   async getAccountStats(
     id: string,
     credentials: AuthCredentials,
-  ): Promise<AccountMetrics> {
+  ): Promise<FetchAccountResult> {
     const token = credentials.accessToken;
     const fullUrn = this.ensureUrn(id);
     if (fullUrn.includes('organization')) {
@@ -48,7 +48,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
   private async getOrganizationStats(
     orgUrn: string,
     token: string,
-  ): Promise<AccountMetrics> {
+  ): Promise<FetchAccountResult> {
     try {
       const headers = this.headers(token);
       const { period } = this.getAnalyticsWindow();
@@ -212,18 +212,21 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
       return {
         platformId: orgUrn,
         fetchedAt: new Date(),
-        followersCount: totalFollowers,
-
-        profileViews,
-        clicks: profileClicks,
-
-        impressionsCount: impressions,
-        engagementCount,
-        reach: undefined,
-
-        demographics,
+        unified: {
+          followersTotal: totalFollowers,
+          impressions: impressions,
+          reach: reach,
+          profileViews: profileViews,
+          clicks: profileClicks,
+          engagementCount: engagementCount,
+        },
+        specific: {
+          isOrganization: true,
+          customButtonClicks: profileClicks, // Or specific button clicks if parsed
+          demographics: demographics,
+        },
       };
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
       this.logger.error(`LinkedIn Account Stats Failed: ${error.message}`);
       this.logger.error(
@@ -237,7 +240,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
   private async getPersonalProfileStats(
     personUrn: string,
     token: string,
-  ): Promise<AccountMetrics> {
+  ): Promise<FetchAccountResult> {
     try {
       const [followersRes, totals] = await Promise.all([
         firstValueFrom(
@@ -255,14 +258,17 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
       return {
         platformId: personUrn,
         fetchedAt: new Date(),
-        followersCount: followers,
-        impressionsCount: impressions || 0,
-        reach: reached || 0,
-        engagementCount: reactions + comments + reshares || 0,
-
-        profileViews: undefined,
-        clicks: undefined,
-        demographics: null,
+        unified: {
+          followersTotal: followers,
+          impressions: impressions || 0,
+          reach: reached || 0,
+          profileViews: 0,
+          clicks: 0,
+          engagementCount: reactions + comments + reshares || 0,
+        },
+        specific: {
+          isOrganization: false,
+        },
       };
     } catch (e: any) {
       console.log(e);
@@ -270,25 +276,17 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
       throw e;
     }
 
-    // If none worked, return “not available”
-    return {
-      platformId: personUrn,
-      followersCount: undefined,
-      fetchedAt: new Date(),
-      impressionsCount: undefined,
-      profileViews: undefined,
-    };
   }
 
   async getPostStats(
     postIds: string[],
     credentials: AuthCredentials,
     context?: { pageId?: string },
-  ): Promise<PostMetrics[]> {
+  ): Promise<FetchPostResult[]> {
     const token = credentials.accessToken;
     if (postIds.length === 0) return [];
     // Ensure all post IDs are URNs (shares or ugcPosts)
-   const postUrns = postIds.map((id) => id.trim());
+    const postUrns = postIds.map((id) => id.trim());
 
     const isOrganizationContext =
       context?.pageId && context.pageId.includes('organization');
@@ -303,66 +301,67 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
     }
   }
 
-async fetchCompanyPageStats(
-  orgUrn: string,
-  token: string,
-  postUrns: string[],
-): Promise<PostMetrics[]> {
-  if (!postUrns?.length) return [];
+  async fetchCompanyPageStats(
+    orgUrn: string,
+    token: string,
+    postUrns: string[],
+  ): Promise<FetchPostResult[]> {
+    if (!postUrns?.length) return [];
 
-  const url = `${this.baseUrl}/organizationalEntityShareStatistics`;
-  const headers = this.headers(token);
+    const url = `${this.baseUrl}/organizationalEntityShareStatistics`;
+    const headers = this.headers(token);
 
-  // It handles repeated keys (ugcPosts=...&ugcPosts=...)
-const linkedinBatchSerializer = (params: any) => {
-  const parts: string[] = [];
-  for (const [key, value] of Object.entries(params)) {
-    if (Array.isArray(value)) {
-      // Corrected: Wraps in List() and joins with commas
-      const listString = `List(${value.map(v => encodeURIComponent(v)).join(',')})`;
-      parts.push(`${key}=${listString}`);
-    } else {
-      parts.push(`${key}=${encodeURIComponent(value as string)}`);
-    }
-  }
-  return parts.join('&');
-};
-
-  const chunks = this.chunkArray(postUrns, 20);
-  const out: PostMetrics[] = [];
-
-  for (const chunk of chunks) {
-    const ugcPosts = chunk.filter(urn => urn.includes('ugcPost'));
-    const shares = chunk.filter(urn => urn.includes('share'));
-
-    const params: Record<string, any> = {
-      q: 'organizationalEntity',
-      organizationalEntity: orgUrn,
+    // It handles repeated keys (ugcPosts=...&ugcPosts=...)
+    const linkedinBatchSerializer = (params: any) => {
+      const parts: string[] = [];
+      for (const [key, value] of Object.entries(params)) {
+        if (Array.isArray(value)) {
+          // Corrected: Wraps in List() and joins with commas
+          const listString = `List(${value.map((v) => encodeURIComponent(v)).join(',')})`;
+          parts.push(`${key}=${listString}`);
+        } else {
+          parts.push(`${key}=${encodeURIComponent(value as string)}`);
+        }
+      }
+      return parts.join('&');
     };
 
-    // In 2026 version, we use the array directly (no [0] indices)
-    if (ugcPosts.length > 0) params.ugcPosts = ugcPosts;
-    if (shares.length > 0) params.shares = shares;
+    const chunks = this.chunkArray(postUrns, 20);
+    const out:FetchPostResult[] = [];
 
-    try {
-      const { data } = await firstValueFrom(
-        this.http.get(url, { 
-          headers, 
-          params, 
-          paramsSerializer: linkedinBatchSerializer 
-        }),
-      );
-      
-      out.push(...this.mapShareStatsElements(data?.elements ?? []));
-    } catch (e: any) {
-      console.log(e)
-      this.logger.error(`LinkedIn Batch Failed: ${e?.response?.data?.message || e.message}`);
+    for (const chunk of chunks) {
+      const ugcPosts = chunk.filter((urn) => urn.includes('ugcPost'));
+      const shares = chunk.filter((urn) => urn.includes('share'));
+
+      const params: Record<string, any> = {
+        q: 'organizationalEntity',
+        organizationalEntity: orgUrn,
+      };
+
+      // In 2026 version, we use the array directly (no [0] indices)
+      if (ugcPosts.length > 0) params.ugcPosts = ugcPosts;
+      if (shares.length > 0) params.shares = shares;
+
+      try {
+        const { data } = await firstValueFrom(
+          this.http.get(url, {
+            headers,
+            params,
+            paramsSerializer: linkedinBatchSerializer,
+          }),
+        );
+
+        out.push(...this.mapShareStatsElements(data?.elements ?? []));
+      } catch (e: any) {
+        console.log(e);
+        this.logger.error(
+          `LinkedIn Batch Failed: ${e?.response?.data?.message || e.message}`,
+        );
+      }
+      await new Promise((r) => setTimeout(r, 120));
     }
-    await new Promise((r) => setTimeout(r, 120));
+    return out;
   }
-  return out;
-}
-
 
   async getMemberAccountTotals(token: string): Promise<{
     impressions: number;
@@ -439,31 +438,31 @@ const linkedinBatchSerializer = (params: any) => {
     return `urn:li:person:${id}`;
   }
 
-private mapShareStatsElements(elements: any[]): PostMetrics[] {
-  return elements.map((el) => {
-    const s = el.totalShareStatistics ?? {};
-
-    const postId = el.ugcPost || el.share || el.organizationalEntity;
-
-    const clicks = s.clickCount ?? 0;
-    const likes = s.likeCount ?? 0;
-    const comments = s.commentCount ?? 0;
-    const shares = s.shareCount ?? 0;
-    
-    return {
-      postId,
-      impressions: s.impressionCount ?? 0,
-      reach: s.uniqueImpressionsCount ?? 0,
-      clicks,
-      likes,
-      comments,
-      shares,
-      engagement: clicks + likes + comments + shares,
-      videoViews: s.videoViews ?? undefined, 
-      saves: undefined,
-    };
-  });
-}
+  private mapShareStatsElements(elements: any[]): FetchPostResult[] {
+    return elements.map((el) => {
+      const s = el.totalShareStatistics ?? {};
+      const clicks = s.clickCount ?? 0;
+      const likes = s.likeCount ?? 0;
+      const comments = s.commentCount ?? 0;
+      const shares = s.shareCount ?? 0;
+      
+      return {
+        unified: {
+          postId: el.ugcPost || el.share || el.organizationalEntity,
+          impressions: s.impressionCount ?? 0,
+          reach: s.uniqueImpressionsCount ?? 0,
+          likes,
+          comments,
+          engagementCount: clicks + likes + comments + shares,
+        },
+        specific: {
+          reposts: shares,
+          clicks: clicks,
+          videoViews: s.videoViews ?? 0,
+        }
+      };
+    });
+  }
 
   /**
    * Returns a clean time range for "Yesterday".

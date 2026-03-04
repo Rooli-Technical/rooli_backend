@@ -1,12 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-
 import { TwitterApi } from 'twitter-api-v2';
 import { Platform } from '@generated/enums';
 import { ConfigService } from '@nestjs/config';
 import {
-  AccountMetrics,
+  FetchAccountResult,
+  FetchPostResult,
   IAnalyticsProvider,
-  PostMetrics,
 } from '../interfaces/analytics-provider.interface';
 
 @Injectable()
@@ -49,11 +48,11 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
   async getPostStats(
     postIds: string[],
     credentials: any,
-  ): Promise<PostMetrics[]> {
+  ): Promise<FetchPostResult[]> {
     if (!postIds.length) return [];
 
     const client = this.makeClient(credentials);
-    const results: PostMetrics[] = [];
+    const results: FetchPostResult[] = [];
 
     // Twitter allows batching up to 100 IDs
     const chunks = this.chunkArray(postIds, 100);
@@ -81,10 +80,7 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
   }
 
 
-  async getAccountStats(
-    userId: string,
-    credentials: any,
-  ): Promise<AccountMetrics> {
+  async getAccountStats(userId: string, credentials: any): Promise<FetchAccountResult> {
     try{
     const client = this.makeClient(credentials);
 
@@ -93,15 +89,23 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
       'user.fields': ['public_metrics'],
     });
 
+    const userStats = user.public_metrics || {};
 
     return {
       platformId: user.id,
-      followersCount: user.public_metrics?.followers_count ?? 0,
-      engagementCount: user.public_metrics?.like_count ?? 0,
-      // Account-level impressions are not available via standard X API
-      impressionsCount: undefined,
-      profileViews: undefined,
       fetchedAt: new Date(),
+      unified: {
+        followersTotal: userStats.followers_count ?? 0,
+        impressions: 0, // Not available via standard v2 API
+        reach: 0,
+        profileViews: 0,
+        clicks: 0,
+        engagementCount: userStats.like_count ?? 0,
+      },
+      specific: {
+        mentions: 0, // Populate if you have premium API
+        tweetCount: userStats.tweet_count ?? 0,
+      }
     };
   }catch(e){
     console.log(e)
@@ -109,7 +113,7 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
   }
   }
 
-private mapToDomain(tweet: any): PostMetrics {
+private mapToDomain(tweet: any): FetchPostResult {
     const publicM = tweet.public_metrics ?? {};
     const organic = tweet.organic_metrics;
     const nonPublic = tweet.non_public_metrics;
@@ -117,15 +121,20 @@ private mapToDomain(tweet: any): PostMetrics {
     const profileClicks = organic?.user_profile_clicks ?? nonPublic?.user_profile_clicks ?? 0;
 
     return {
-      postId: tweet.id,
-      likes: publicM.like_count ?? 0,
-      comments: publicM.reply_count ?? 0,
-      shares: (publicM.retweet_count ?? 0) + (publicM.quote_count ?? 0),
-      saves: publicM.bookmark_count ?? 0,
-      videoViews: publicM.view_count ?? 0,
-      impressions: nonPublic?.impression_count ?? organic?.impression_count ?? 0,
-      reach: undefined, 
-      clicks: linkClicks + profileClicks, 
+      unified: {
+        postId: tweet.id,
+        likes: publicM.like_count ?? 0,
+        comments: publicM.reply_count ?? 0,
+        impressions: nonPublic?.impression_count ?? organic?.impression_count ?? 0,
+        reach: 0,
+        engagementCount: (publicM.like_count ?? 0) + (publicM.reply_count ?? 0) + (publicM.retweet_count ?? 0) + linkClicks,
+      },
+      specific: {
+        retweets: publicM.retweet_count ?? 0,
+        quotes: publicM.quote_count ?? 0,
+        bookmarks: publicM.bookmark_count ?? 0,
+        videoViews: publicM.view_count ?? 0,
+      }
     };
   }
 

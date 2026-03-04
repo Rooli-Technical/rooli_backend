@@ -3,10 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import {
-  AccountMetrics,
   AuthCredentials,
+  FetchAccountResult,
+  FetchPostResult,
   IAnalyticsProvider,
-  PostMetrics,
 } from '../interfaces/analytics-provider.interface';
 import { DateTime } from 'luxon';
 import * as https from 'https';
@@ -36,7 +36,7 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
   async getAccountStats(
     pageId: string,
     credentials: AuthCredentials,
-  ): Promise<AccountMetrics> {
+  ): Promise<FetchAccountResult> {
     const token = credentials.accessToken;
     const { fbSince, fbUntil } = this.getAnalyticsWindow();
 
@@ -82,17 +82,22 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
         return values[values.length - 1]?.value ?? 0;
       };
 
-      return {
-        platformId: pageId,
-        fetchedAt: new Date(),
-        followersCount:
-          pageRes.data.followers_count ?? pageRes.data.fan_count ?? 0,
-        impressionsCount: getVal('page_media_view'),
-        reach: getVal('page_impressions_unique'),
-        engagementCount: getVal('page_post_engagements'),
-        clicks: getVal('page_total_actions'),
-        demographics: demographicsData ?? {},
-      };
+     return {
+    platformId: pageId,
+    fetchedAt: new Date(),
+    unified: {
+      followersTotal: pageRes.data.followers_count ?? pageRes.data.fan_count ?? 0,
+      impressions: getVal('page_media_view'),
+      reach: getVal('page_impressions_unique'),
+      profileViews: 0, 
+      clicks: getVal('page_total_actions'),
+      engagementCount: getVal('page_post_engagements'),
+    },
+    specific: {
+      demographics: demographicsData ?? {},
+      // You can add pageLikes, pageFollows if you extract them
+    }
+  };
     } catch (error: any) {
       const msg = error.response?.data?.error?.message || error.message;
       this.logger.error(`[Facebook Page Stats] Failed for ${pageId}: ${msg}`);
@@ -103,7 +108,7 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
   async getPostStats(
     postIds: string[],
     credentials: AuthCredentials,
-  ): Promise<PostMetrics[]> {
+  ): Promise<FetchPostResult[]> {
     if (postIds.length === 0) return [];
 
     // Batching in chunks of 50
@@ -134,7 +139,7 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
 
           // Map the data correctly
           return Object.values(data).map((post: any) => this.mapPostData(post));
-        } catch (error) {
+        } catch (error: any) {
           this.logger.error(
             `Facebook Batch Fetch failed for chunk: ${error.message}`,
           );
@@ -176,21 +181,26 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
   }
 }
 
-  private mapPostData(post: any): PostMetrics {
+ private mapPostData(post: any): FetchPostResult {
     const insights = post.insights?.data || [];
-    const getInsight = (name: string) =>
-      insights.find((i: any) => i.name === name)?.values?.[0]?.value || 0;
+    const getInsight = (name: string) => insights.find((i: any) => i.name === name)?.values?.[0]?.value || 0;
+    
     return {
-      postId: post.id,
-      impressions: getInsight('post_media_view') || getInsight('post_impressions_unique'),
-      reach: getInsight('post_impressions_unique'),
-      clicks: getInsight('post_clicks'),
-      likes: post.reactions?.summary?.total_count || 0,
-      comments: post.comments?.summary?.total_count || 0,
-      shares: post.shares?.count || 0,
+      unified: {
+        postId: post.id,
+        impressions: getInsight('post_media_view') || getInsight('post_impressions_unique'),
+        reach: getInsight('post_impressions_unique'),
+        likes: post.reactions?.summary?.total_count || 0,
+        comments: post.comments?.summary?.total_count || 0,
+        engagementCount: (post.reactions?.summary?.total_count || 0) + (post.comments?.summary?.total_count || 0) + (post.shares?.count || 0) + getInsight('post_clicks'),
+      },
+      specific: {
+        shares: post.shares?.count || 0,
+        linkClicks: getInsight('post_clicks'),
+        videoViews: 0, // Add if querying video metrics
+      }
     };
   }
-
   protected chunkArray<T>(array: T[], size: number): T[][] {
     const chunks: T[][] = [];
     for (let i = 0; i < array.length; i += size) {

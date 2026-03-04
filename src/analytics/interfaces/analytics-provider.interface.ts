@@ -1,52 +1,56 @@
-export interface AccountMetrics {
-  platformId: string;
-  followersCount: number;
-  impressionsCount?: number;
-  reach?:number,
-  profileViews?: number;
-  fetchedAt: Date;
-  engagementCount?: number; 
-  clicks?: number;
-  demographics?: any;
+
+// ==========================================
+// UNIFIED CORE METRICS
+// ==========================================
+export interface UnifiedAccountMetrics {
+  followersTotal: number;
+  impressions: number;
+  reach: number;
+  profileViews: number;
+  clicks: number;
+  engagementCount: number;
 }
 
-export interface PostMetrics {
+export interface UnifiedPostMetrics {
   postId: string;
   likes: number;
   comments: number;
-  shares: number;
-  impressions?: number;
-  reach?: number;
-  clicks?: number;
-  videoViews?: number;
-  saves?: number; // Primarily for IG/Twitter
+  impressions: number;
+  reach: number;
+  engagementCount: number;
 }
 
+// ==========================================
+// PLATFORM SPECIFIC METRICS
+// ==========================================
+// We use a flexible specific object, but you can strictly type these 
+// to match the Prisma tables perfectly if you prefer.
+export interface FetchAccountResult {
+  platformId: string;
+  fetchedAt: Date;
+  unified: UnifiedAccountMetrics;
+  specific: any; // e.g., { demographics: {...}, customButtonClicks: 10 }
+}
+
+export interface FetchPostResult {
+  unified: UnifiedPostMetrics;
+  specific: any; // e.g., { retweets: 5, bookmarks: 2 }
+}
+
+export interface IAnalyticsProvider {
+  getAccountStats(id: string, credentials: AuthCredentials): Promise<FetchAccountResult>;
+  
+  getPostStats(
+    postIds: string[], 
+    credentials: AuthCredentials, 
+    context?: Record<string, any>
+  ): Promise<FetchPostResult[]>;
+}
 export interface AuthCredentials {
   accessToken: string;
   accessSecret?: string; 
 }
 
-export interface IAnalyticsProvider {
-  /**
-   * Fetches high-level account stats (Followers, etc.)
-   * @param id The platform-specific ID (Page ID, User ID, or URN)
-   * @param credentials Platform specific auth (Token string or OAuth object)
-   */
-  getAccountStats(id: string, credentials: AuthCredentials): Promise<AccountMetrics>;
-
-  /**
-   * Fetches stats for a list of posts (Batched)
-   * @param postIds Array of platform-specific Post IDs
-   * @param credentials Platform specific auth
-   * @param context Optional extra info (like pageId for LinkedIn)
-   */
-  getPostStats(
-    postIds: string[], 
-    credentials: AuthCredentials, 
-    context?: Record<string, any>
-  ): Promise<PostMetrics[]>;
-}
 
 export const LINKEDIN_MAPS: Record<string, Record<string, string>> = {
   seniority: {

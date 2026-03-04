@@ -11,7 +11,7 @@ async function main() {
   // await seedUsers();
 
   // console.log('Seeding plans...');
-  // await seedPlans();
+  await seedPlans();
 
   console.log('✔ All seeders completed');
 }
