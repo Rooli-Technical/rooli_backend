@@ -5,10 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  AccountMetrics,
   AuthCredentials,
+  FetchAccountResult,
+  FetchPostResult,
   IAnalyticsProvider,
-  PostMetrics,
 } from '../interfaces/analytics-provider.interface';
 import { FacebookAnalyticsProvider } from '../providers/facebook-analytics.provider';
 import { InstagramAnalyticsProvider } from '../providers/instagram-analytics.provider';
@@ -56,18 +56,16 @@ export class AnalyticsService {
     platform: Platform,
     externalProfileId: string,
     credentials: AuthCredentials,
-  ): Promise<AccountMetrics> {
+  ): Promise<FetchAccountResult> {
     const provider = this.getProvider(platform);
-
     this.logger.log(
       `Fetching Account Stats for ${platform}:${externalProfileId}`,
     );
-
     try {
       return await provider.getAccountStats(externalProfileId, credentials);
     } catch (error) {
       this.logger.error(`Failed to fetch account stats for ${platform}`, error);
-      throw error; // Rethrow so the Worker handles the retry
+      throw error;
     }
   }
 
@@ -78,20 +76,16 @@ export class AnalyticsService {
     platform: Platform,
     externalPostIds: string[],
     credentials: AuthCredentials,
-    context?: { pageId?: string }, // Extra context for platforms like LinkedIn
-  ): Promise<PostMetrics[]> {
+    context?: { pageId?: string },
+  ): Promise<FetchPostResult[]> {
     const provider = this.getProvider(platform);
-
     this.logger.log(
       `Fetching Post Stats for ${platform} (${externalPostIds.length} posts)`,
     );
-
     try {
       return await provider.getPostStats(externalPostIds, credentials, context);
     } catch (error) {
       this.logger.error(`Failed to fetch post stats for ${platform}`, error);
-      // Return empty array on failure so we don't crash the whole job?
-      // Better to throw if it's a critical network error, but for partials, providers handle it.
       throw error;
     }
   }
@@ -153,9 +147,9 @@ export class AnalyticsService {
 
         const accountPayload = await this.normalizer.normalizeAccountStats(
           profile.id,
+          profile.platform,
           rawAccount,
         );
-
         await this.repo.saveAccountAnalytics(accountPayload);
 
         results.account = accountPayload;
@@ -207,12 +201,11 @@ export class AnalyticsService {
 
         if (rawPosts && rawPosts.length > 0) {
           // Normalize
-          const postPayload = await this.normalizer.normalizePostStats(
+          const postPayload = this.normalizer.normalizePostStats(
             post.id,
+            profile.platform, // Add platform here
             rawPosts[0],
           );
-
-          // Save
           await this.repo.savePostSnapshot(postPayload);
 
           results.post = postPayload;
@@ -486,37 +479,57 @@ export class AnalyticsService {
   }
 
   /**
-   * Best-effort demographics aggregation.
+   * Best-effort demographics aggregation (Updated for Relational Architecture)
    */
   private async getWorkspaceDemographics(profileIds: string[]) {
+    // 1. Find the latest analytics date for each profile
     const latest = await this.prisma.accountAnalytics.groupBy({
       by: ['socialProfileId'],
       where: {
         socialProfileId: { in: profileIds },
-        demographics: { not: Prisma.DbNull },
       },
       _max: { date: true },
     });
 
-    const or = latest
+    // 2. Build the exact row conditions
+    const orConditions = latest
       .filter((x) => x._max.date)
       .map((x) => ({ socialProfileId: x.socialProfileId, date: x._max.date! }));
 
-    if (or.length === 0) return { byProfile: [] };
+    if (orConditions.length === 0) return { byProfile: [] };
 
+    // 3. Fetch the rows AND include the specific platform tables
     const rows = await this.prisma.accountAnalytics.findMany({
-      where: { OR: or },
-      select: { socialProfileId: true, demographics: true },
+      where: { OR: orConditions },
+      include: {
+        linkedInStats: true,
+        facebookStats: true,
+        instagramStats: true,
+        // Twitter doesn't have demographics in our schema, so we skip it
+      },
     });
 
-    return {
-      byProfile: rows.map((r) => ({
-        socialProfileId: r.socialProfileId,
-        demographics: r.demographics,
-      })),
-    };
-  }
+    // 4. Extract the demographics from whichever platform relation is populated
+    const byProfile = rows
+      .map((r) => {
+        // Look inside the relations for the demographics JSON
+        const demographics =
+          r.linkedInStats?.demographics ||
+          r.facebookStats?.demographics ||
+          r.instagramStats?.demographics ||
+          null;
 
+        return {
+          socialProfileId: r.socialProfileId,
+          demographics,
+        };
+      })
+      // Optional: Filter out profiles that didn't have demographics (like Twitter)
+      .filter((p) => p.demographics !== null); 
+
+    return { byProfile };
+  }
+  
   // =========================
   // ROCKET EXTRAS
   // =========================
