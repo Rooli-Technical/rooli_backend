@@ -393,6 +393,110 @@ export class AnalyticsService {
     };
   }
 
+  /**
+   * Calculates the best day and hour to post based on historical engagement.
+   * Returns a 168-hour matrix (7 days x 24 hours) for a UI Heatmap.
+   */
+  async getBestTimeToPost(profileId: string, days = 90) {
+    // 1. Determine the lookback window (90 days is standard for statistical significance)
+    const startDate = subDays(new Date(), days);
+
+    // 2. Fetch historical posts and their final engagement count
+    const posts = await this.prisma.postDestination.findMany({
+      where: {
+        socialProfileId: profileId,
+        status: 'SUCCESS', // Only count successfully published posts
+        createdAt: { gte: startDate },
+      },
+      select: {
+        createdAt: true, // The exact time it was published
+        postAnalyticsSnapshots: {
+          orderBy: { day: 'desc' }, // Get the most recent snapshot
+          take: 1,
+          select: { engagementCount: true },
+        },
+      },
+    });
+
+    // 3. Initialize the 168-hour week map (7 days * 24 hours)
+    // Key format: "day-hour" (e.g., "1-14" = Monday 14:00 / 2 PM)
+    const heatmapMap = new Map<string, { totalEng: number; count: number }>();
+
+    // Pre-fill the map so the frontend receives a perfect 7x24 grid, 
+    // even for hours where the user has never posted.
+    for (let d = 0; d < 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        heatmapMap.set(`${d}-${h}`, { totalEng: 0, count: 0 });
+      }
+    }
+
+    // 4. Aggregate the engagement data
+    for (const post of posts) {
+      // NOTE: .getUTCDay() and .getUTCHours() extract the time in UTC.
+      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const day = post.createdAt.getUTCDay();
+      const hour = post.createdAt.getUTCHours();
+      const key = `${day}-${hour}`;
+
+      const engagement = post.postAnalyticsSnapshots[0]?.engagementCount || 0;
+      
+      const current = heatmapMap.get(key)!;
+      current.totalEng += engagement;
+      current.count += 1;
+    }
+
+    // 5. Calculate Averages & Find the Maximum Average
+    let maxAverage = 0;
+    const rawResults = [];
+
+    for (const [key, data] of heatmapMap.entries()) {
+      const [dayStr, hourStr] = key.split('-');
+      
+      // We use average engagement so posting 5 times at 9AM doesn't 
+      // artificially beat a single viral post at 2PM.
+      const average = data.count > 0 ? data.totalEng / data.count : 0;
+
+      if (average > maxAverage) {
+        maxAverage = average;
+      }
+
+      rawResults.push({
+        day: parseInt(dayStr, 10),
+        hour: parseInt(hourStr, 10),
+        averageEngagement: Number(average.toFixed(2)),
+        postCount: data.count,
+      });
+    }
+
+    // 6. Apply the intensity scale and find the absolute best time
+    let bestTime = null;
+
+    const heatmap = rawResults.map((r) => {
+      // Re-use your existing intensityByMax helper!
+      const intensity = this.intensityByMax(r.averageEngagement, maxAverage);
+      
+      // Keep track of the highest performing slot for the summary
+      if (!bestTime || r.averageEngagement > bestTime.averageEngagement) {
+        bestTime = { ...r, intensity };
+      }
+
+      return { ...r, intensity };
+    });
+
+    return {
+      // A quick summary object so the UI can say: "Your best time to post is Monday at 14:00"
+      summary: {
+        hasData: posts.length > 0,
+        bestDay: bestTime?.day ?? null,
+        bestHour: bestTime?.hour ?? null,
+        maxAverageEngagement: Number(maxAverage.toFixed(2)),
+        totalPostsAnalyzed: posts.length,
+      },
+      // The full array to render the grid
+      heatmap, 
+    };
+  }
+
   private async getWorkspaceBusiness(
     profileIds: string[],
     start: Date,

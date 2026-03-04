@@ -171,4 +171,25 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
   ){
     return this.service.getDashboardPosts(workspaceId);
   }
+
+  @Get('profile/:profileId/best-time')
+  @ApiOperation({ 
+    summary: 'Get heatmap data for the best time to post',
+    description: 'Calculates average engagement across a 168-hour weekly matrix based on historical post performance.'
+  })
+  @ApiParam({ name: 'profileId', description: 'CUID of the social profile' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Lookback window in days', example: 90 })
+  @ApiResponse({ 
+    status: 200, 
+    description: '168-hour heatmap matrix returned successfully.',
+  })
+  async getBestTime(
+    @Param('profileId') profileId: string,
+    @Query('days') days?: string,
+  ) {
+    const daysCount = days ? parseInt(days, 10) : 90;
+    
+    // Safety check: ensure the profile exists before running heavy aggregation
+    return this.service.getBestTimeToPost(profileId, daysCount);
+  }
 }
