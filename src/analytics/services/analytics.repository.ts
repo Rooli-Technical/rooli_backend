@@ -41,54 +41,69 @@ export class AnalyticsRepository {
     });
   }
 
-  // ==========================================
-  // 2. SAVING DATA (Upsert Logic)
-  // ==========================================
+  async saveAccountAnalytics(payload: { baseData: any; specificKey: string; specificData: any }) {
+    const { baseData, specificKey, specificData } = payload;
+    const dateKey = startOfDay(new Date(baseData.date));
 
-  async saveAccountAnalytics(
-    data: Prisma.AccountAnalyticsUncheckedCreateInput,
-  ) {
-    const dateKey = startOfDay(new Date(data.date));
+    // Prisma nested upsert logic
+    const nestedWrite = {
+      upsert: {
+        create: specificData,
+        update: specificData,
+      },
+    };
 
     return this.prisma.accountAnalytics.upsert({
       where: {
         socialProfileId_date: {
-          socialProfileId: data.socialProfileId,
+          socialProfileId: baseData.socialProfileId,
           date: dateKey,
         },
       },
+      create: {
+        ...baseData,
+        date: dateKey,
+        // E.g., linkedInStats: { create: { demographics: {...} } }
+        [specificKey]: { create: specificData }, 
+      },
       update: {
-        ...data,
+        ...baseData,
         date: dateKey,
         updatedAt: new Date(),
-      },
-      create: {
-        ...data,
-        date: dateKey,
+        // E.g., linkedInStats: { upsert: { create: {...}, update: {...} } }
+        [specificKey]: nestedWrite,
       },
     });
   }
 
-  async savePostSnapshot(
-    data: Prisma.PostAnalyticsSnapshotUncheckedCreateInput,
-  ) {
-    const dateKey = startOfDay(new Date(data.day));
+  async savePostSnapshot(payload: { baseData: any; specificKey: string; specificData: any }) {
+    const { baseData, specificKey, specificData } = payload;
+    const dateKey = startOfDay(new Date(baseData.day));
+
+    const nestedWrite = {
+      upsert: {
+        create: specificData,
+        update: specificData,
+      },
+    };
 
     return this.prisma.postAnalyticsSnapshot.upsert({
       where: {
         postDestinationId_day: {
-          postDestinationId: data.postDestinationId,
+          postDestinationId: baseData.postDestinationId,
           day: dateKey,
         },
       },
+      create: {
+        ...baseData,
+        day: dateKey,
+        [specificKey]: { create: specificData },
+      },
       update: {
-        ...data,
+        ...baseData,
         day: dateKey,
         fetchedAt: new Date(),
-      },
-      create: {
-        ...data,
-        day: dateKey,
+        [specificKey]: nestedWrite,
       },
     });
   }
