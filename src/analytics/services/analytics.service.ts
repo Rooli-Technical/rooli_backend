@@ -18,11 +18,8 @@ import { PlanTier, Platform } from '@generated/enums';
 import { PrismaService } from '@/prisma/prisma.service';
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { AnalyticsRepository } from './analytics.repository';
-import { endOfDay } from 'date-fns/endOfDay';
 import { startOfDay } from 'date-fns/startOfDay';
 import { subDays } from 'date-fns/subDays';
-import { Prisma } from '@generated/client';
-import { differenceInDays } from 'date-fns/differenceInDays';
 import { AnalyticsNormalizerService } from './analytics-normalizer.service';
 
 @Injectable()
@@ -88,6 +85,86 @@ export class AnalyticsService {
       this.logger.error(`Failed to fetch post stats for ${platform}`, error);
       throw error;
     }
+  }
+
+  /**
+   * Fetch detailed analytics for a single social profile
+   */
+  async getProfileDashboard(profileId: string, days = 30) {
+    const { start, end } = this.computePeriods(days);
+
+    // 1. Fetch the Profile to know what platform we are dealing with
+    const profile = await this.prisma.socialProfile.findUnique({
+      where: { id: profileId },
+      select: { platform: true, name: true }
+    });
+
+    if (!profile) throw new NotFoundException('Profile not found');
+
+    // 2. Fetch the Account Level History (Includes Demographics & Specifics)
+    const accountHistory = await this.prisma.accountAnalytics.findMany({
+      where: {
+        socialProfileId: profileId,
+        date: { gte: start, lte: end }
+      },
+      orderBy: { date: 'asc' },
+      include: {
+        twitterStats: true,
+        linkedInStats: true,
+        facebookStats: true,
+        instagramStats: true,
+      }
+    });
+
+    // 3. Fetch the Post Level History (Top posts for this profile)
+    const topPosts = await this.prisma.postAnalyticsSnapshot.findMany({
+      where: {
+        postDestination: { socialProfileId: profileId },
+        day: { gte: start, lte: end }
+      },
+      orderBy: { engagementCount: 'desc' }, // Sort by our unified engagement!
+      take: 10,
+      include: {
+        twitterStats: true,
+        linkedInStats: true,
+        facebookStats: true,
+        instagramStats: true,
+        postDestination: { select: { platformPostId: true, contentOverride: true } }
+      }
+    });
+
+    // 4. Clean up the payload so the frontend doesn't get a bunch of nulls
+    const cleanAccountHistory = accountHistory.map(row => ({
+      date: row.date,
+      base: {
+        followers: row.followersTotal,
+        impressions: row.impressions,
+        engagement: row.engagementCount,
+      },
+      // Dynamically attach ONLY the specific stats that exist
+      specific: row.twitterStats || row.linkedInStats || row.facebookStats || row.instagramStats || {}
+    }));
+
+    const cleanTopPosts = topPosts.map(post => ({
+      postId: post.postDestination.platformPostId,
+      content: post.postDestination.contentOverride,
+      base: {
+        likes: post.likes,
+        comments: post.comments,
+        impressions: post.impressions,
+      },
+      // Dynamically attach ONLY the specific stats that exist
+      specific: post.twitterStats || post.linkedInStats || post.facebookStats || post.instagramStats || {}
+    }));
+
+    // 5. Return the unified payload
+    return {
+      platform: profile.platform,
+      handle: profile.name,
+      period: { start, end },
+      accountHistory: cleanAccountHistory,
+      topPosts: cleanTopPosts,
+    };
   }
 
   /**
@@ -529,7 +606,7 @@ export class AnalyticsService {
 
     return { byProfile };
   }
-  
+
   // =========================
   // ROCKET EXTRAS
   // =========================

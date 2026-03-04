@@ -140,6 +140,24 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     return this.service.getWorkspaceDashboard(workspaceId, req?.user?.userPlan, days);
   }
 
+@Get('profile/:profileId/dashboard')
+  @ApiOperation({ 
+    summary: 'Get detailed dashboard data for a specific social profile',
+    description: 'Returns historical account growth, demographics, and top performing posts.'
+  })
+  @ApiParam({ name: 'profileId', description: 'The UUID of the social profile' })
+  @ApiQuery({ name: 'days', required: false, type: Number, example: 30 })
+  @ApiResponse({ status: 200, description: 'Unified analytics payload returned successfully.' })
+  @ApiResponse({ status: 404, description: 'Profile not found.' })
+  async getProfileDashboard(
+    @Param('profileId') profileId: string,
+    @Query('days') days?: string,
+  ) {
+    // Note: Query params come in as strings, so we parse to number
+    const daysCount = days ? parseInt(days, 10) : 30;
+    return this.service.getProfileDashboard(profileId, daysCount);
+  }
+
   @Get(':workspaceId/dashboard/posts')
   @ApiOperation({ 
     summary: 'Get recent successful platform posts with latest analytics' 
