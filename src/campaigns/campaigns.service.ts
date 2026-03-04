@@ -67,24 +67,33 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
     });
   }
 
- async getCampaignAnalytics(workspaceId: string, campaignId: string) {
+async getCampaignAnalytics(workspaceId: string, campaignId: string) {
+    // 1. Validate / Fetch Campaign
     await this.get(workspaceId, campaignId);
 
-    // 2. Fetch Hierarchy
-    // We get all posts for this campaign that have at least one published destination
+    // 2. Fetch Hierarchy (Now including the split tables!)
     const posts = await this.prisma.post.findMany({
       where: { 
         workspaceId, 
         campaignId,
-        destinations: { some: { status: PublishStatus.SUCCESS } } 
+        destinations: { some: { status: 'SUCCESS' } } 
       },
       include: {
         destinations: {
-          where: { status: PublishStatus.SUCCESS },
+          where: { status: 'SUCCESS' },
           include: {
+            // We need the platform to know which stats table to check
+            profile: { select: { platform: true } }, 
             postAnalyticsSnapshots: {
-              orderBy: { fetchedAt: 'desc' },
+              orderBy: { day: 'desc' }, // 'day' is usually better than fetchedAt for snapshots
               take: 1,
+              // Bring in our new specific tables!
+              include: {
+                twitterStats: true,
+                linkedInStats: true,
+                facebookStats: true,
+                instagramStats: true,
+              }
             },
           },
         },
@@ -96,28 +105,53 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
       totalPosts: posts.length,
       totalImpressions: 0,
       totalReach: 0,
-      totalEngagements: 0,
       totalLikes: 0,
       totalComments: 0,
       totalShares: 0,
       totalClicks: 0,
+      totalEngagements: 0, 
     };
 
-    // 4. Manual Aggregation
+    // 4. Aggregation
     for (const post of posts) {
       for (const dest of post.destinations) {
-        // Grab the latest snapshot (if it exists)
         const snapshot = dest.postAnalyticsSnapshots[0];
+        const platform = dest.profile.platform;
         
         if (snapshot) {
+          // --- THE UNIFIED CORE ---
           stats.totalImpressions += snapshot.impressions || 0;
           stats.totalReach += snapshot.reach || 0;
           stats.totalLikes += snapshot.likes || 0;
           stats.totalComments += snapshot.comments || 0;
-          stats.totalShares += snapshot.shares || 0;
-          stats.totalClicks += snapshot.clicks || 0;
           
-          stats.totalEngagements += (snapshot.likes || 0) + (snapshot.comments || 0) + (snapshot.shares || 0) + (snapshot.clicks || 0);
+          // We can just use our pre-calculated engagement count from the base table!
+          stats.totalEngagements += snapshot.engagementCount || 0;
+
+          // --- THE PLATFORM SPECIFICS ---
+          // We have to route shares and clicks based on the platform's unique terminology
+          switch (platform) {
+            case 'TWITTER':
+              stats.totalShares += snapshot.twitterStats?.retweets || 0;
+              stats.totalShares += snapshot.twitterStats?.quotes || 0;
+              // Twitter doesn't return clicks reliably without premium API, so we skip or add if you have it
+              break;
+
+            case 'LINKEDIN':
+              stats.totalShares += snapshot.linkedInStats?.reposts || 0;
+              stats.totalClicks += snapshot.linkedInStats?.clicks || 0;
+              break;
+
+            case 'FACEBOOK':
+              stats.totalShares += snapshot.facebookStats?.shares || 0;
+              stats.totalClicks += snapshot.facebookStats?.linkClicks || 0;
+              break;
+
+            case 'INSTAGRAM':
+              stats.totalShares += snapshot.instagramStats?.shares || 0;
+              // IG doesn't have link clicks on regular feed posts usually, but you can map it if needed
+              break;
+          }
         }
       }
     }
