@@ -143,7 +143,6 @@ export class SocialConnectionService {
 
     // 4. RETURN PAGES
     const availablePages = await this.getImportablePages(connection.id);
-
     return {
       message: 'Connection successful',
       connectionId: connection.id,
@@ -166,6 +165,7 @@ export class SocialConnectionService {
     const accessToken = await this.encryptionService.decrypt(
       connection.accessToken,
     );
+
 
     let pages;
 
@@ -195,7 +195,7 @@ export class SocialConnectionService {
         return pages; // Return everything including tokens
       }
       return pages.map(({ accessToken, refreshToken, ...safe }) => safe);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Failed to fetch pages: ${error.message}`);
       return [];
     }
@@ -241,19 +241,93 @@ export class SocialConnectionService {
     }
   }
 
-  async subscribeFacebookPage(
-  connectionId: string,
-  pageId: string,
-  pageAccessToken: string,
-) {
-  const connection = await this.prisma.socialConnection.findUnique({
-    where: { id: connectionId },
-  });
+  async subscribePage(
+    connectionId: string,
+    pageId: string,
+    pageAccessToken: string,
+  ) {
+    const connection = await this.prisma.socialConnection.findUnique({
+      where: { id: connectionId },
+    });
 
-  if (!connection || connection.platform !== 'FACEBOOK') {
-    throw new BadRequestException('Invalid Facebook connection');
+    if (!connection) {
+      throw new BadRequestException('Invalid Facebook connection');
+    }
+    // 2. Routing Logic
+    try {
+      switch (connection.platform) {
+        case 'FACEBOOK':
+          // Facebook just needs the ID and Token
+          return await this.facebook.subscribeAppToPage(
+            pageId,
+            pageAccessToken,
+          );
+
+        case 'LINKEDIN':
+          if (!pageId.startsWith('urn:li:organization:')) {
+            this.logger.debug(`Skipping webhook sub for personal profile: ${pageId}`);
+            return false; // Skip safely without throwing an error
+          }
+          
+          const userUrn = connection.platformUserId;
+          return await this.linkedin.subscribeOrganizationToWebhook(
+            userUrn,
+            pageId, // This is your organizationUrn
+            pageAccessToken,
+          );
+
+        default:
+          throw new BadRequestException(
+            `Platform ${connection.platform} not supported for webhooks`,
+          );
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `Subscription failed for ${connection.platform}: ${error.message}`,
+      );
+      throw error;
+    }
   }
 
-  await this.facebook.subscribeAppToPage(pageId, pageAccessToken);
-}
+  async subscribeByConnectionId(connectionId: string): Promise<boolean> {
+    // 1. Fetch the specific LinkedIn connection
+    const connection = await this.prisma.socialConnection.findUnique({
+      where: { id: connectionId },
+    });
+
+    // 2. Validation
+    if (!connection || connection.platform !== 'LINKEDIN') {
+      throw new BadRequestException('Valid LinkedIn connection required');
+    }
+
+    if (!connection.accessToken) {
+      throw new BadRequestException('Missing access token for LinkedIn connection');
+    }
+
+    const token = await this.encryptionService.decrypt(connection.accessToken)
+
+    // 3. Extract necessary URNs
+    // pageId is usually stored in the 'externalId' or 'platformPageId' column
+    const organizationUrn = 'urn:li:organization:109376565'; 
+    const userUrn = 'urn:li:person:oaxV-EunJg'
+
+    if (!organizationUrn || !userUrn) {
+      throw new BadRequestException('Connection missing required URNs (User or Organization)');
+    }
+
+    // 4. Safety Check
+    if (!organizationUrn.startsWith('urn:li:organization:')) {
+      this.logger.warn(`Attempted to subscribe a non-organization URN: ${organizationUrn}`);
+      return false;
+    }
+
+    this.logger.log(`Initiating LinkedIn subscription for Org: ${organizationUrn}`);
+
+    // 5. Delegate to your provider
+    return await this.linkedin.subscribeOrganizationToWebhook(
+      userUrn,
+      organizationUrn,
+      token,
+    );
+  }
 }

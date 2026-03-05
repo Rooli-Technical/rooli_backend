@@ -149,7 +149,6 @@ export class PublishPostProcessor extends WorkerHost {
     const meta = (dest.metadata ?? {}) as any;
     const thread: ThreadNode[] = Array.isArray(meta.thread) ? meta.thread : [];
 
-    console.log('Publishing Twitter thread replies:', thread.length);
 
     for (const node of thread) {
       // Optional targeting per node
@@ -299,12 +298,10 @@ export class PublishPostProcessor extends WorkerHost {
   }
 
   private async resolveOAuth2Creds(dest: any) {
-    console.log(dest)
     // Generic OAuth2 (LinkedIn/FB/IG typically):
     const encrypted = dest.profile.accessToken ?? dest.profile.connection.accessToken;
     const raw = encrypted ? await this.encryptionService.decrypt(encrypted) : undefined;
     if (!raw) throw new Error('Missing OAuth2 access token.');
-    console.log(raw)
     return { accessToken: raw };
   }
 

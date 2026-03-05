@@ -1,7 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, firstValueFrom } from 'rxjs';
 import * as https from 'https';
 
 @Injectable()
@@ -34,7 +34,7 @@ export class LinkedInService {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.config.get('LINKEDIN_CLIENT_ID'),
-      redirect_uri:this.config.get('LINKEDIN_REDIRECT_URI') ,
+      redirect_uri: this.config.get('LINKEDIN_REDIRECT_URI'),
       state: state,
       scope: scopes,
     });
@@ -72,7 +72,7 @@ export class LinkedInService {
           : null,
         scopes: data.scope ? data.scope.split(' ') : [],
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('LinkedIn Token Exchange Failed', error.response?.data);
       throw new BadRequestException('Invalid LinkedIn authorization code');
     }
@@ -85,7 +85,6 @@ export class LinkedInService {
 
     // B. Get Companies the user Administers
     const companies = await this.getUserCompanies(accessToken);
-
     // C. Merge them into a standard format
     const importable = [];
 
@@ -115,6 +114,62 @@ export class LinkedInService {
 
     return importable;
   }
+
+  async subscribeOrganizationToWebhook(
+  urn: string, // urn:li:person:AbCdEfG
+  organizationUrn: string, // urn:li:organization:123456
+  accessToken: string,
+): Promise<boolean> {
+  try {
+    const appId = this.config.get<string>('LINKEDIN_APP_ID');
+    const webhookUrl = this.config.get<string>('LINKEDIN_WEBHOOK_URL');
+
+    // 1. Extract just the IDs
+    const personId = urn.split(':').pop(); 
+    const orgId = organizationUrn.split(':').pop();
+
+    // 2. Construct the internal URNs 
+    // Note: The doc specifies 'urn:li:user' for the member part of this specific key
+    const devAppUrn = `urn:li:developerApplication:${appId}`;
+    const userUrn = `urn:li:user:${personId}`;
+    const entityUrn = `urn:li:organization:${orgId}`;
+
+    // 3. Build the Resource Key
+    // We keep the parentheses and commas literal, but encode the URNs inside
+    const resourceKey = `(` +
+      `developerApplication:${encodeURIComponent(devAppUrn)},` +
+      `user:${encodeURIComponent(userUrn)},` +
+      `entity:${encodeURIComponent(entityUrn)},` +
+      `eventType:ORGANIZATION_SOCIAL_ACTION_NOTIFICATIONS` +
+      `)`;
+
+    const url = `https://api.linkedin.com/rest/eventSubscriptions/${resourceKey}`;
+
+    const res = await firstValueFrom(
+      this.httpService.put(
+        url,
+        { webhook: webhookUrl },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'LinkedIn-Version': '202601',
+            'X-Restli-Protocol-Version': '2.0.0',
+            'Content-Type': 'application/json',
+          },
+        },
+      ),
+    );
+
+
+    this.logger.log(`✅ Subscribed ${organizationUrn} successfully.`);
+    return true;
+  } catch (error: any) {
+    console.log(error)
+    const errorData = error.response?.data;
+    console.error('LinkedIn Error Detail:', JSON.stringify(errorData, null, 2));
+    return false;
+  }
+}
 
   // -----------------------------------------------------------------------
   // PRIVATE HELPERS
@@ -156,7 +211,7 @@ export class LinkedInService {
         given_name: data.localizedFirstName,
         picture: pictureUrl,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Failed to fetch Legacy Profile', error.response?.data);
       throw error;
     }
@@ -174,6 +229,7 @@ export class LinkedInService {
         `${this.API_URL}/organizationAcls` +
         `?q=roleAssignee&state=APPROVED` +
         `&projection=(elements*(role,state,organization~(id,localizedName,vanityName,logoV2(original~:playableStreams))))`;
+     
 
       const { data } = await lastValueFrom(
         this.httpService.get(aclsUrl, {
@@ -220,12 +276,22 @@ export class LinkedInService {
 
       // Filter out nulls (non-admins or failed parses)
       return companies.filter((c) => c !== null);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         'Failed to fetch LinkedIn companies',
         error?.response?.data || error.message,
       );
       return [];
     }
+  }
+
+  private formatAuthorUrn(id: string): string {
+    // 1. If it already starts with 'urn:li:', trust the database (It's a Page)
+    if (id.startsWith('urn:li:')) {
+      return id;
+    }
+
+    // 2. If it's a raw ID, assume it is a Person (Profile)
+    return `urn:li:person:${id}`;
   }
 }

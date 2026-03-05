@@ -173,31 +173,44 @@ export class WebhookController {
     return { status: 'success' };
   }
 
+  // @Get('linkedin')
+  // verifyLinkedIn(@Query('challengeCode') challengeCode: string) {
+  //   if (!challengeCode) {
+  //     throw new BadRequestException('Missing challengeCode');
+  //   }
+
+  //   const clientSecret = this.config.get<string>('LINKEDIN_APP_ID');
+  //   if (!clientSecret) {
+  //     this.logger.error(
+  //       'LINKEDIN_LINKEDIN_APP_ID is missing in environment variables.',
+  //     );
+  //     throw new InternalServerErrorException('Webhook configuration error');
+  //   }
+
+  //   // 1. Create the Hex-encoded HMAC-SHA256 hash
+  //   const challengeResponse = createHmac('sha256', clientSecret)
+  //     .update(challengeCode)
+  //     .digest('hex');
+
+  //   // 2. Return the exact JSON structure LinkedIn requires
+  //   // NestJS automatically sets Content-Type to application/json and returns a 200 OK.
+  //   return {
+  //     challengeCode,
+  //     challengeResponse,
+  //   };
+  // }
+
   @Get('linkedin')
-  verifyLinkedIn(@Query('challengeCode') challengeCode: string) {
+  verifyLinkedIn(@Query('challengeCode') challengeCode: string, @Res() res: Response) {
     if (!challengeCode) {
       throw new BadRequestException('Missing challengeCode');
     }
 
-    const clientSecret = this.config.get<string>('LINKEDIN_CLIENT_SECRET');
-    if (!clientSecret) {
-      this.logger.error(
-        'LINKEDIN_CLIENT_SECRET is missing in environment variables.',
-      );
-      throw new InternalServerErrorException('Webhook configuration error');
-    }
+    this.logger.log(`[LinkedIn] Handshake received: ${challengeCode}`);
 
-    // 1. Create the Hex-encoded HMAC-SHA256 hash
-    const challengeResponse = createHmac('sha256', clientSecret)
-      .update(challengeCode)
-      .digest('hex');
-
-    // 2. Return the exact JSON structure LinkedIn requires
-    // NestJS automatically sets Content-Type to application/json and returns a 200 OK.
-    return {
-      challengeCode,
-      challengeResponse,
-    };
+    // ✅ FIX: LinkedIn expects the challengeCode returned as PLAIN TEXT 
+    // with a 200 OK status. Do not return JSON.
+    return res.status(200).set('Content-Type', 'text/plain').send(challengeCode);
   }
 
   /**

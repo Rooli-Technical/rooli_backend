@@ -133,8 +133,6 @@ export class FacebookProvider implements ISocialProvider {
       access_token: token,
     });
 
-    console.log('Facebook Carousel Post Response:');
-    console.log(response.data);
 
     return this.formatResult(response.data.id, pageId);
   }

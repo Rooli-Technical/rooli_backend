@@ -211,8 +211,7 @@ export class InstagramProvider implements ISocialProvider {
 
       const response = await axios.post(url, body);
 
-      console.log('Instagram Create Container Response:');
-      console.log(response.data);
+
       const containerId = response.data.id;
 
       // 🛑 CRITICAL: Wait for Video Processing
