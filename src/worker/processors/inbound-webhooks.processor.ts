@@ -9,6 +9,7 @@ import { InboxIngestService } from '@/messages/services/inbox-ingest.service';
 import { InboundCommentPayload, NormalizedInboundMessage } from '@/messages/types/adapter.types';
 import { DomainEventsService } from '@/events/domain-events.service';
 import { Platform } from '@generated/enums';
+import { LinkedInAdapter } from '@/messages/adapters/linkedIn.adapter';
 
 
 
@@ -22,6 +23,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
     private readonly ingest: InboxIngestService,
     private readonly metaAdapter: MetaAdapter,
     private readonly twitterAdapter: TwitterAdapter,
+    private readonly linkedInAdapter: LinkedInAdapter,
     private readonly events: DomainEventsService,
   ) {
     super();
@@ -122,6 +124,34 @@ export class InboundWebhooksProcessor extends WorkerHost {
             workspaceId: resolved.workspaceId,
             conversationId: conversation.id,
             lastMessageAt: conversation.lastMessageAt,
+          });
+
+          return;
+        }
+        case 'linkedin-inbound-comment': {
+          // 1. Create a LinkedInAdapter to normalize the wild LinkedIn JSON
+          const normalized = this.linkedInAdapter.normalizeComment(job.data.payload);
+          if (!normalized) return;
+
+          // 2. Resolve the profile just like you do for Meta/Twitter
+          const resolved = await this.resolveWorkspaceAndProfile(normalized);
+          
+          // 3. Save it to the database
+          const result = await this.ingest.ingestInboundComment(resolved as unknown as InboundCommentPayload);
+
+          if (!result) {
+            this.logger.warn(`Skipped emitting comment event: Master Post not found in DB.`);
+            return;
+          }
+
+          const { comment } = result;
+
+          // 4. Emit your domain events so the UI updates in real-time
+          this.events.emit('inbox.comment.created', {
+            workspaceId: resolved.workspaceId,
+            postId: comment.postDestinationId, // Using the new destination relation!
+            commentId: comment.id,         
+            direction: comment.direction,
           });
 
           return;

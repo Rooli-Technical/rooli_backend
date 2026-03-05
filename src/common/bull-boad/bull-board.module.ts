@@ -37,6 +37,10 @@ import { ExpressAdapter } from '@bull-board/express';
       name: 'outbound-messages',
       adapter: BullMQAdapter,
     }),
+    BullBoardModule.forFeature({
+      name: 'inbox-sync',
+      adapter: BullMQAdapter,
+    }),
   ],
 })
 export class RooliBullBoardModule {}

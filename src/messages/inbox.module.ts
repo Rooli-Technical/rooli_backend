@@ -11,6 +11,7 @@ import { TwitterClient } from './integrations/twitter.client';
 import { InboxCommentsService } from './services/inbox-comments.service';
 import { InboxCommentsController } from './controller/inbox-comments.controller';
 import { EncryptionService } from '@/common/utility/encryption.service';
+import { LinkedInAdapter } from './adapters/linkedIn.adapter';
 
 @Module({
   imports: [EventsModule, forwardRef(() => WorkerModule)],
@@ -21,6 +22,7 @@ import { EncryptionService } from '@/common/utility/encryption.service';
     InboxIngestService,
     MetaAdapter,
     TwitterAdapter,
+    LinkedInAdapter,
     MetaClient,
     TwitterClient,
     EncryptionService
@@ -29,6 +31,7 @@ import { EncryptionService } from '@/common/utility/encryption.service';
     InboxIngestService,
     MetaAdapter,
     TwitterAdapter,
+    LinkedInAdapter,
     MetaClient,
     TwitterClient,
   ],

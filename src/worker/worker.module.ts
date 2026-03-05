@@ -21,6 +21,7 @@ import { InboxModule } from '@/messages/inbox.module';
       { name: 'publishing-queue' },
       { name: 'inbox-webhooks' },
       { name: 'outbound-messages' },
+      { name: 'inbox-sync' }
     ),
     PostMediaModule,
     SocialModule,
