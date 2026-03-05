@@ -37,6 +37,7 @@ import { AuditInterceptor } from './audit/interceptors/audit.intercetor';
 import { InboxModule } from './messages/inbox.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { PollingModule } from './polling/polling.module';
 
 @Module({
   imports: [
@@ -140,6 +141,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       delimiter: '.',
       maxListeners: 10,
     }),
+
+    PollingModule,
   ],
   controllers: [AppController],
   providers: [
