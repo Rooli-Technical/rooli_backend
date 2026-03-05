@@ -57,7 +57,9 @@ model User {
   approvalsGiven     PostApproval[]         @relation("ApprovalApprover")
   auditLogs          AuditLog[]
   favoriteTemplates  UserFavoriteTemplate[]
-  //conversationParticipants ConversationParticipant[]
+
+
+  comments Comment[]
 
   @@index([email, deletedAt])
   @@index([createdAt])
@@ -303,8 +305,7 @@ model SocialProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([workspaceId, platform, platformId])
-  //@@unique([platform, platformId]) //this should be the correct one
+  @@unique([platform, platformId]) 
   @@index([workspaceId])
 }
 
@@ -368,7 +369,6 @@ model Post {
   campaign     Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   approvals    PostApproval[]
   
-  comments  Comment[]
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   author    User?     @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -409,6 +409,8 @@ model PostDestination {
   metadata Json?
 
   postAnalyticsSnapshots PostAnalyticsSnapshot[]
+
+    comments  Comment[]
 
   @@unique([postId, socialProfileId])
   @@index([status])
@@ -914,22 +916,23 @@ model Comment {
   id                String        @id @default(cuid())
   workspaceId       String
   profileId         String
-  postId            String
+  
+  // 1. THE FIX: The required network ID for the post
+  externalPostId    String        
   externalCommentId String        
   
-
   platform          Platform     
   direction         Direction     @default(INBOUND)
-  
-
   status            CommentStatus @default(VISIBLE)
   
   // 4. Safer Sender Tracking
   senderExternalId  String        // The raw ID from the network
   senderPlatformId  String?       // Page-scoped user ID (PSID) 
   senderName        String?       
+  senderAvatarUrl   String?       @db.Text
   
   content           String        @db.Text
+  mediaUrl          String?       @db.Text
   
   parentId          String?
   parent            Comment?      @relation("CommentToComment", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -938,22 +941,24 @@ model Comment {
   createdAt         DateTime      @default(now()) 
   updatedAt         DateTime      @updatedAt
 
+  isResolved        Boolean       @default(false)
+  resolvedAt        DateTime?
+  
+  // 2. THE UPGRADE: Relate the resolver to your User model
+  resolvedById      String?
+  resolvedBy        User?         @relation(fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  postDestinationId String?       // Optional: Null if the post wasn't published via Rooli
+  postDestination   PostDestination? @relation(fields: [postDestinationId], references: [id], onDelete: Cascade)
+
   // Relationships
   workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   profile           SocialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  post              Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  // 5. The "No Prod Pain" Indexes
   @@unique([platform, externalCommentId]) 
-  
-  // For loading the Unified Inbox quickly
-  @@index([workspaceId, createdAt(sort: Desc)]) 
-  
-  // For loading all comments on a specific post
-  @@index([postId, createdAt(sort: Desc)]) 
-  
-  // For loading threaded replies instantly
-  @@index([parentId]) 
+  @@index([workspaceId, isResolved, createdAt(sort: Desc)]) 
+  @@index([externalPostId, createdAt(sort: Desc)]) 
+  @@index([parentId])
 }
 
 model PlatformRateLimitLog {
