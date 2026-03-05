@@ -917,7 +917,6 @@ model Comment {
   workspaceId       String
   profileId         String
   
-  // 1. THE FIX: The required network ID for the post
   externalPostId    String        
   externalCommentId String        
   

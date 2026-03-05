@@ -75,7 +75,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
 
           this.events.emit('inbox.comment.created', {
             workspaceId: resolved.workspaceId,
-            postId: comment.postId,
+            postId: comment.postDestinationId,
             commentId: comment.id,         
             direction: comment.direction,
           });

@@ -118,7 +118,7 @@ async ingestInboundComment(payload: InboundCommentPayload) {
         platformPostId: payload.externalPostId,
         profile: { platform: payload.platform } 
       },
-      select: { postId: true }
+      select: { id: true, postId: true }
     });
 
     if (!destination) {
@@ -156,7 +156,7 @@ async ingestInboundComment(payload: InboundCommentPayload) {
       create: {
         workspaceId: payload.workspaceId,
         profileId: payload.socialProfileId,
-        postId: destination.postId, // Linked to master Post
+        postDestinationId: destination.id,
         parentId: internalParentId,
         externalCommentId: payload.externalCommentId,
         platform: payload.platform,
@@ -164,11 +164,12 @@ async ingestInboundComment(payload: InboundCommentPayload) {
         senderName: payload.senderName,
         content: payload.content,
         createdAt: payload.timestamp,
+        externalPostId: payload.externalPostId,
       },
     });
 
     return { comment };
-  } catch (error) {
+  } catch (error: any) {
     this.logger.error(`Failed to ingest comment: ${error.message}`);
     throw error;
   }

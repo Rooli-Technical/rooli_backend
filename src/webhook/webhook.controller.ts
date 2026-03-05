@@ -11,8 +11,11 @@ import {
   Logger,
   Body,
   UseGuards,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { createHmac } from 'crypto';
 import { Public } from '@/common/decorators/public.decorator';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
@@ -20,6 +23,7 @@ import { Queue } from 'bullmq';
 import { PaystackWebhookGuard } from './guards/paystack.guard';
 import { MetaWebhookGuard } from './guards/meta.guard';
 import { PrismaService } from '@/prisma/prisma.service';
+import { LinkedInWebhookGuard } from './guards/linkedin.guard';
 
 @Controller('webhooks')
 @Public()
@@ -152,7 +156,11 @@ export class WebhookController {
         'meta-system-event',
         { entry },
         {
-          jobId: `meta-system-${entry?.id ?? cryptoRandomId()}-${Date.now()}`.replace(/:/g, '-'),
+          jobId:
+            `meta-system-${entry?.id ?? cryptoRandomId()}-${Date.now()}`.replace(
+              /:/g,
+              '-',
+            ),
           attempts: 10,
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: true,
@@ -162,6 +170,60 @@ export class WebhookController {
     }
 
     // Always respond fast
+    return { status: 'success' };
+  }
+
+  @Get('linkedin')
+  verifyLinkedIn(@Query('challengeCode') challengeCode: string) {
+    if (!challengeCode) {
+      throw new BadRequestException('Missing challengeCode');
+    }
+
+    const clientSecret = this.config.get<string>('LINKEDIN_CLIENT_SECRET');
+    if (!clientSecret) {
+      this.logger.error(
+        'LINKEDIN_CLIENT_SECRET is missing in environment variables.',
+      );
+      throw new InternalServerErrorException('Webhook configuration error');
+    }
+
+    // 1. Create the Hex-encoded HMAC-SHA256 hash
+    const challengeResponse = createHmac('sha256', clientSecret)
+      .update(challengeCode)
+      .digest('hex');
+
+    // 2. Return the exact JSON structure LinkedIn requires
+    // NestJS automatically sets Content-Type to application/json and returns a 200 OK.
+    return {
+      challengeCode,
+      challengeResponse,
+    };
+  }
+
+  /**
+   * LinkedIn webhook receiver.
+   * LinkedIn sends actual live comment data here via POST.
+   */
+  @Post('linkedin')
+  @UseGuards(LinkedInWebhookGuard)
+  async handleLinkedIn(@Body() payload: any) {
+    // LinkedIn includes a unique notificationId to help you deduplicate
+    const notificationId = payload?.notificationId || cryptoRandomId();
+
+    // Instantly offload the payload to BullMQ for the InboxProcessor to handle
+    await this.inboxQueue.add(
+      'linkedin-inbound-comment',
+      { payload },
+      {
+        jobId: `linkedin-webhook-${notificationId}`,
+        attempts: 15, // High retry count is great for network blips
+        backoff: { type: 'exponential', delay: 1500 },
+        removeOnComplete: true,
+        removeOnFail: { age: 7 * 24 * 3600 },
+      },
+    );
+
+    // Always respond quickly to prevent LinkedIn from blocking your endpoint
     return { status: 'success' };
   }
 }

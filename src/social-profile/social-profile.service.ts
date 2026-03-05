@@ -62,8 +62,7 @@ export class SocialProfileService {
       try {
         const profile = await this.prisma.socialProfile.upsert({
           where: {
-            workspaceId_platform_platformId: {
-              workspaceId,
+            platform_platformId: {
               platform: pageData.platform as Platform,
               platformId: pageData.id,
             },
