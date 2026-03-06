@@ -276,8 +276,6 @@ export class InstagramProvider implements ISocialProvider {
       access_token: token,
     });
 
-    console.log('Instagram publish carousel Response:');
-    console.log(response.data);
 
     const parentContainerId = response.data.id;
 

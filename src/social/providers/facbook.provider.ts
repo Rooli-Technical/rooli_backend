@@ -184,9 +184,6 @@ async editContent(accessToken: string, id: string, newContent: string) {
       access_token: token,
     });
 
-     console.log('Facebook single Photo Response:');
-    console.log(response.data);
-
     return this.formatResult(response.data.post_id || response.data.id, pageId);
   }
 
