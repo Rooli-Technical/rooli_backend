@@ -21,6 +21,7 @@ import { AnalyticsRepository } from './analytics.repository';
 import { startOfDay } from 'date-fns/startOfDay';
 import { subDays } from 'date-fns/subDays';
 import { AnalyticsNormalizerService } from './analytics-normalizer.service';
+import { DateTime } from 'luxon';
 
 @Injectable()
 export class AnalyticsService {
@@ -90,13 +91,18 @@ export class AnalyticsService {
   /**
    * Fetch detailed analytics for a single social profile
    */
-  async getProfileDashboard(profileId: string, days = 30) {
-    const { start, end } = this.computePeriods(days);
+  async getProfileDashboard(
+    profileId: string,
+    days?: number,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const { start, end } = this.computePeriods(days, startDate, endDate);
 
     // 1. Fetch the Profile to know what platform we are dealing with
     const profile = await this.prisma.socialProfile.findUnique({
       where: { id: profileId },
-      select: { platform: true, name: true }
+      select: { platform: true, name: true },
     });
 
     if (!profile) throw new NotFoundException('Profile not found');
@@ -105,7 +111,7 @@ export class AnalyticsService {
     const accountHistory = await this.prisma.accountAnalytics.findMany({
       where: {
         socialProfileId: profileId,
-        date: { gte: start, lte: end }
+        date: { gte: start, lte: end },
       },
       orderBy: { date: 'asc' },
       include: {
@@ -113,14 +119,14 @@ export class AnalyticsService {
         linkedInStats: true,
         facebookStats: true,
         instagramStats: true,
-      }
+      },
     });
 
     // 3. Fetch the Post Level History (Top posts for this profile)
     const topPosts = await this.prisma.postAnalyticsSnapshot.findMany({
       where: {
         postDestination: { socialProfileId: profileId },
-        day: { gte: start, lte: end }
+        day: { gte: start, lte: end },
       },
       orderBy: { engagementCount: 'desc' }, // Sort by our unified engagement!
       take: 10,
@@ -129,12 +135,14 @@ export class AnalyticsService {
         linkedInStats: true,
         facebookStats: true,
         instagramStats: true,
-        postDestination: { select: { platformPostId: true, contentOverride: true } }
-      }
+        postDestination: {
+          select: { platformPostId: true, contentOverride: true },
+        },
+      },
     });
 
     // 4. Clean up the payload so the frontend doesn't get a bunch of nulls
-    const cleanAccountHistory = accountHistory.map(row => ({
+    const cleanAccountHistory = accountHistory.map((row) => ({
       date: row.date,
       base: {
         followers: row.followersTotal,
@@ -142,10 +150,15 @@ export class AnalyticsService {
         engagement: row.engagementCount,
       },
       // Dynamically attach ONLY the specific stats that exist
-      specific: row.twitterStats || row.linkedInStats || row.facebookStats || row.instagramStats || {}
+      specific:
+        row.twitterStats ||
+        row.linkedInStats ||
+        row.facebookStats ||
+        row.instagramStats ||
+        {},
     }));
 
-    const cleanTopPosts = topPosts.map(post => ({
+    const cleanTopPosts = topPosts.map((post) => ({
       postId: post.postDestination.platformPostId,
       content: post.postDestination.contentOverride,
       base: {
@@ -154,7 +167,12 @@ export class AnalyticsService {
         impressions: post.impressions,
       },
       // Dynamically attach ONLY the specific stats that exist
-      specific: post.twitterStats || post.linkedInStats || post.facebookStats || post.instagramStats || {}
+      specific:
+        post.twitterStats ||
+        post.linkedInStats ||
+        post.facebookStats ||
+        post.instagramStats ||
+        {},
     }));
 
     // 5. Return the unified payload
@@ -331,9 +349,17 @@ export class AnalyticsService {
     });
   }
 
-  async getWorkspaceDashboard(workspaceId: string, tier: PlanTier, days = 30) {
+  async getWorkspaceDashboard(
+    workspaceId: string,
+    tier: PlanTier,
+    days?: number,
+    startDate?: string,
+    endDate?: string,
+  ) {
     const { start, end, prevStart, prevEnd } = this.computePeriods(
-      Math.min(days, 365),
+      days,
+      startDate,
+      endDate,
     );
     const profileIds = await this.getActiveProfileIds(workspaceId);
 
@@ -422,7 +448,7 @@ export class AnalyticsService {
     // Key format: "day-hour" (e.g., "1-14" = Monday 14:00 / 2 PM)
     const heatmapMap = new Map<string, { totalEng: number; count: number }>();
 
-    // Pre-fill the map so the frontend receives a perfect 7x24 grid, 
+    // Pre-fill the map so the frontend receives a perfect 7x24 grid,
     // even for hours where the user has never posted.
     for (let d = 0; d < 7; d++) {
       for (let h = 0; h < 24; h++) {
@@ -439,7 +465,7 @@ export class AnalyticsService {
       const key = `${day}-${hour}`;
 
       const engagement = post.postAnalyticsSnapshots[0]?.engagementCount || 0;
-      
+
       const current = heatmapMap.get(key)!;
       current.totalEng += engagement;
       current.count += 1;
@@ -451,8 +477,8 @@ export class AnalyticsService {
 
     for (const [key, data] of heatmapMap.entries()) {
       const [dayStr, hourStr] = key.split('-');
-      
-      // We use average engagement so posting 5 times at 9AM doesn't 
+
+      // We use average engagement so posting 5 times at 9AM doesn't
       // artificially beat a single viral post at 2PM.
       const average = data.count > 0 ? data.totalEng / data.count : 0;
 
@@ -474,7 +500,7 @@ export class AnalyticsService {
     const heatmap = rawResults.map((r) => {
       // Re-use your existing intensityByMax helper!
       const intensity = this.intensityByMax(r.averageEngagement, maxAverage);
-      
+
       // Keep track of the highest performing slot for the summary
       if (!bestTime || r.averageEngagement > bestTime.averageEngagement) {
         bestTime = { ...r, intensity };
@@ -493,7 +519,7 @@ export class AnalyticsService {
         totalPostsAnalyzed: posts.length,
       },
       // The full array to render the grid
-      heatmap, 
+      heatmap,
     };
   }
 
@@ -706,7 +732,7 @@ export class AnalyticsService {
         };
       })
       // Optional: Filter out profiles that didn't have demographics (like Twitter)
-      .filter((p) => p.demographics !== null); 
+      .filter((p) => p.demographics !== null);
 
     return { byProfile };
   }
@@ -948,13 +974,38 @@ export class AnalyticsService {
     return profiles.map((p) => p.id);
   }
 
-  private computePeriods(days: number) {
-    const end = startOfDay(new Date()); // day bucket end
-    const start = startOfDay(subDays(end, days - 1));
+  private computePeriods(days?: number, startDate?: string, endDate?: string) {
+    let start: DateTime;
+    let end: DateTime;
 
-    const prevEnd = subDays(start, 1);
-    const prevStart = startOfDay(subDays(prevEnd, days - 1));
+    if (startDate && endDate) {
+      // 1. User provided a specific range
+      start = DateTime.fromISO(startDate).startOf('day');
+      end = DateTime.fromISO(endDate).endOf('day');
 
-    return { start, end, prevStart, prevEnd };
+      if (!start.isValid || !end.isValid) {
+        throw new BadRequestException('Invalid date format. Use YYYY-MM-DD.');
+      }
+    } else {
+      // 2. Fallback to rolling "days" (e.g., last 30 days)
+      const lookback = Math.min(days || 30, 365);
+      end = DateTime.now().endOf('day');
+      start = end.minus({ days: lookback - 1 }).startOf('day');
+    }
+
+    // 3. Calculate the "Previous Period" for growth metrics
+    // We determine the number of days in the current selection
+    // and jump back that same amount of time.
+    const diffInDays = Math.floor(end.diff(start, 'days').days) + 1;
+
+    const prevEnd = start.minus({ seconds: 1 }).endOf('day');
+    const prevStart = prevEnd.minus({ days: diffInDays - 1 }).startOf('day');
+
+    return {
+      start: start.toJSDate(),
+      end: end.toJSDate(),
+      prevStart: prevStart.toJSDate(),
+      prevEnd: prevEnd.toJSDate(),
+    };
   }
 }

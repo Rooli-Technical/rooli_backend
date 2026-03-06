@@ -4,6 +4,7 @@ import { AnalyticsScheduler } from './scheduler/analytics.scheduler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiOkResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '@/common/decorators/public.decorator';
 import { subDays } from 'date-fns/subDays';
+import { startOfDay, endOfDay } from 'date-fns';
 
 @Controller('analytics')
 @ApiBearerAuth()
@@ -88,6 +89,8 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
   @Get('account/:profileId')
   @ApiOperation({ summary: 'Get account performance history (followers, views, etc.)' })
   @ApiQuery({ name: 'days', required: false, description: 'Lookback window (default 30)' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Start date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'End date (YYYY-MM-DD)' })
   async getAccountStats(
     @Param('profileId') profileId: string,
     @Query('days') days?: number,
@@ -103,14 +106,23 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
   @Get('post/:postDestinationId')
   @ApiOperation({ summary: 'Get performance history for a specific post' })
   @ApiQuery({ name: 'days', required: false, description: 'Lookback window (default 30)' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Start date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'End date (YYYY-MM-DD)' })
   async getPostStats(
     @Param('postDestinationId',) postDestinationId: string,
     @Query('days') days?: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ){
-    const lookback = days ? Number(days) : 30;
-    const end = new Date();
-    const start = subDays(end, lookback);
-
+    let start, end;
+    if (startDate && endDate) {
+      start = startOfDay(new Date(startDate));
+      end = endOfDay(new Date(endDate));
+    } else {
+      const lookback = days ? Number(days) : 30;
+      end = new Date();
+      start = subDays(end, lookback);
+    }
     return this.service.getPostHistory(postDestinationId, start, end);
   }
 
@@ -134,10 +146,12 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
   async getWorkspaceDashboard(
     @Param('id') workspaceId: string,
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
     @Req() req?: any,
   ) {
     if (days < 1) throw new BadRequestException('days must be >= 1');
-    return this.service.getWorkspaceDashboard(workspaceId, req?.user?.userPlan, days);
+    return this.service.getWorkspaceDashboard(workspaceId, req?.user?.userPlan, days, startDate, endDate);
   }
 
 @Get('profile/:profileId/dashboard')
@@ -146,16 +160,20 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     description: 'Returns historical account growth, demographics, and top performing posts.'
   })
   @ApiParam({ name: 'profileId', description: 'The UUID of the social profile' })
-  @ApiQuery({ name: 'days', required: false, type: Number, example: 30 })
+ @ApiQuery({ name: 'days', required: false, type: Number, example: 30 })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Explicit start date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'Explicit end date (YYYY-MM-DD)' })
   @ApiResponse({ status: 200, description: 'Unified analytics payload returned successfully.' })
   @ApiResponse({ status: 404, description: 'Profile not found.' })
   async getProfileDashboard(
     @Param('profileId') profileId: string,
     @Query('days') days?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     // Note: Query params come in as strings, so we parse to number
     const daysCount = days ? parseInt(days, 10) : 30;
-    return this.service.getProfileDashboard(profileId, daysCount);
+    return this.service.getProfileDashboard(profileId, daysCount, startDate, endDate);
   }
 
   @Get(':workspaceId/dashboard/posts')
