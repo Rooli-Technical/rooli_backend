@@ -8,20 +8,19 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
 
-
 @Processor('publishing-queue')
 export class PublishPostProcessor extends WorkerHost {
   private readonly logger = new Logger(PublishPostProcessor.name);
   constructor(
     private prisma: PrismaService,
-        private socialFactory: SocialFactory,
-        private encryptionService: EncryptionService,
-        private events: DomainEventsService,
+    private socialFactory: SocialFactory,
+    private encryptionService: EncryptionService,
+    private events: DomainEventsService,
   ) {
     super();
   }
 
- async process(job: Job<{ postId: string }>) {
+  async process(job: Job<{ postId: string }>) {
     const { postId } = job.data;
 
     // Load once for routing
@@ -97,10 +96,21 @@ export class PublishPostProcessor extends WorkerHost {
         default:
           throw new Error(`Unsupported platform: ${platform}`);
       }
+      this.events.emit('publishing.post.published', {
+        workspaceId: post.workspaceId,
+        postId: post.id,
+        platform: platform,
+      });
     } catch (e: any) {
       await this.prisma.postDestination.update({
         where: { id: dest.id },
         data: { status: 'FAILED', errorMessage: e?.message ?? 'Unknown error' },
+      });
+      this.events.emit('publishing.post.failed', {
+        workspaceId: post.workspaceId,
+        postId: post.id,
+        platform: platform,
+        reason: e?.message ?? 'Unknown error',
       });
       throw e;
     }
@@ -149,7 +159,6 @@ export class PublishPostProcessor extends WorkerHost {
     const meta = (dest.metadata ?? {}) as any;
     const thread: ThreadNode[] = Array.isArray(meta.thread) ? meta.thread : [];
 
-
     for (const node of thread) {
       // Optional targeting per node
       if (
@@ -172,7 +181,9 @@ export class PublishPostProcessor extends WorkerHost {
       });
 
       if (!res?.platformPostId) {
-        throw new Error('Twitter returned empty platformPostId for a reply tweet.');
+        throw new Error(
+          'Twitter returned empty platformPostId for a reply tweet.',
+        );
       }
 
       lastId = res.platformPostId;
@@ -299,8 +310,11 @@ export class PublishPostProcessor extends WorkerHost {
 
   private async resolveOAuth2Creds(dest: any) {
     // Generic OAuth2 (LinkedIn/FB/IG typically):
-    const encrypted = dest.profile.accessToken ?? dest.profile.connection.accessToken;
-    const raw = encrypted ? await this.encryptionService.decrypt(encrypted) : undefined;
+    const encrypted =
+      dest.profile.accessToken ?? dest.profile.connection.accessToken;
+    const raw = encrypted
+      ? await this.encryptionService.decrypt(encrypted)
+      : undefined;
     if (!raw) throw new Error('Missing OAuth2 access token.');
     return { accessToken: raw };
   }
@@ -319,68 +333,44 @@ export class PublishPostProcessor extends WorkerHost {
   // ===========================================================================
   // Master post status recompute
   // ===========================================================================
-// inside PublishPostProcessor
+  // inside PublishPostProcessor
 
-private async recomputeMasterPostStatus(postId: string) {
-  const post = await this.prisma.post.findUnique({
-    where: { id: postId },
-    select: { id: true, workspaceId: true, status: true },
-  });
-  if (!post) return;
-
-  const counts = await this.prisma.postDestination.groupBy({
-    by: ['status'],
-    where: { postId },
-    _count: { status: true },
-  });
-
-  const map = new Map(counts.map((c) => [c.status, c._count.status]));
-  const success = map.get('SUCCESS') ?? 0;
-  const failed = map.get('FAILED') ?? 0;
-  const scheduled = map.get('SCHEDULED') ?? 0;
-  const publishing = map.get('PUBLISHING') ?? 0;
-
-  const remaining = scheduled + publishing;
-
-  let nextStatus: 'PUBLISHING' | 'PUBLISHED' | 'PARTIAL' | 'FAILED' = 'PUBLISHING';
-
-  if (remaining === 0) {
-    if (success > 0 && failed === 0) nextStatus = 'PUBLISHED';
-    else if (success > 0 && failed > 0) nextStatus = 'PARTIAL';
-    else nextStatus = 'FAILED';
-  }
-
-  // Only update+emit on actual change
-  if (post.status !== nextStatus) {
-    await this.prisma.post.update({
+  private async recomputeMasterPostStatus(postId: string) {
+    const post = await this.prisma.post.findUnique({
       where: { id: postId },
-      data: { status: nextStatus },
+      select: { id: true, workspaceId: true, status: true },
+    });
+    if (!post) return;
+
+    const counts = await this.prisma.postDestination.groupBy({
+      by: ['status'],
+      where: { postId },
+      _count: { status: true },
     });
 
-    // ✅ Emit domain events for notifications
-    if (nextStatus === 'PUBLISHED') {
-      this.events.emit('publishing.post.published', {
-        workspaceId: post.workspaceId,
-        postId: postId,
-      });
-    } else if (nextStatus === 'FAILED') {
-      this.events.emit('publishing.post.failed', {
-        workspaceId: post.workspaceId,
-        postId: postId,
-        reason: 'All destinations failed',
-      });
-    } else if (nextStatus === 'PARTIAL') {
-      // PARTIAL is not DECLINED. Don’t lie to yourself.
-      // Either create a new event type or treat as failed-with-success.
-      this.events.emit('publishing.post.failed', {
-        workspaceId: post.workspaceId,
-        postId: postId,
-        reason: 'Some destinations failed',
+    const map = new Map(counts.map((c) => [c.status, c._count.status]));
+    const success = map.get('SUCCESS') ?? 0;
+    const failed = map.get('FAILED') ?? 0;
+    const scheduled = map.get('SCHEDULED') ?? 0;
+    const publishing = map.get('PUBLISHING') ?? 0;
+
+    const remaining = scheduled + publishing;
+
+    let nextStatus: 'PUBLISHING' | 'PUBLISHED' | 'PARTIAL' | 'FAILED' =
+      'PUBLISHING';
+
+    if (remaining === 0) {
+      if (success > 0 && failed === 0) nextStatus = 'PUBLISHED';
+      else if (success > 0 && failed > 0) nextStatus = 'PARTIAL';
+      else nextStatus = 'FAILED';
+    }
+
+    // Only update+emit on actual change
+    if (post.status !== nextStatus) {
+      await this.prisma.post.update({
+        where: { id: postId },
+        data: { status: nextStatus },
       });
     }
   }
 }
-
-
-}
-

@@ -184,7 +184,6 @@ async addProfilesToWorkspace(
       },
     });
   }
-
   /**
    * 3. REMOVE PROFILE
    * Only removes it from the workspace. Does NOT delete the parent connection.

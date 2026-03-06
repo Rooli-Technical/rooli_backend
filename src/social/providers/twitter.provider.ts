@@ -131,6 +131,7 @@ export class TwitterProvider implements ISocialProvider {
 
       return mediaId;
     } catch (error) {
+      console.log(error)
       this.logger.error(`Media upload failed: ${url}`, error);
       throw error;
     } finally {
