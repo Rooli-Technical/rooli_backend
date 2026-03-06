@@ -6,6 +6,7 @@ export type DomainEventName =
   | 'inbox.message.status.updated'
   | 'inbox.conversation.assigned'
   |  'inbox.comment.sent'
+  | 'inbox.comment.updated'
   | 'publishing.post.published'
   | 'publishing.post.failed'
   | 'publishing.post.declined'
@@ -130,4 +131,11 @@ export type DomainEventPayloadMap = {
     content: string;
     platform: Platform;
   };
+
+  'inbox.comment.updated': {
+        workspaceId: string;
+        commentId: string;
+        status: string;
+        error?: string;
+  }
 };

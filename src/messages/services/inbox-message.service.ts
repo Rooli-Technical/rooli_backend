@@ -322,7 +322,7 @@ export class InboxService {
       { messageId: created.id, memberId: params.memberId },
       {
         jobId: `outbound-${created.id}`,
-        attempts: 15,
+        attempts: 1,
         backoff: { type: 'exponential', delay: 2000 },
         removeOnComplete: true,
         removeOnFail: { age: 7 * 24 * 3600 },

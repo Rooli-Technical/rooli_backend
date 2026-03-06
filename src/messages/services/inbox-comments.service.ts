@@ -165,128 +165,108 @@ export class InboxCommentsService {
    * - enqueue job so retries don't double-send
    * - emit events so UI shows "sending…" instantly
    */
-  // async sendCommentReply(params: {
-  //   workspaceId: string;
-  //   parentCommentId: string; // The comment the user is replying to
-  //   content: string;
-  // }) {
-  //   try {
-  //     // 1. Verify the parent comment exists
-  //     const parentComment = await this.prisma.comment.findFirst({
-  //       where: { id: params.parentCommentId, workspaceId: params.workspaceId },
-  //       include: { post: true, profile: true },
-  //     });
-  //     if (!parentComment)
-  //       throw new NotFoundException('Parent comment not found');
-
-  //     const now = new Date();
-
-  //     // 2. Save the outbound reply to the database as QUEUED
-  //     const createdComment = await this.prisma.comment.create({
-  //       data: {
-  //         workspaceId: params.workspaceId,
-  //         profileId: parentComment.profileId,
-  //         postId: parentComment.postId,
-  //         parentId: parentComment.id,
-  //         platform: parentComment.platform,
-  //         direction: 'OUTBOUND',
-  //         status: 'VISIBLE',
-  //         senderExternalId: parentComment.profile.platformId,
-  //         content: params.content,
-  //         externalCommentId: `pending_${now.getTime()}_${Math.random().toString(36).slice(2)}`,
-  //       },
-  //     });
-
-  //     // 3. Queue the job to actually fire the Meta Graph API request
-  //     await this.outboundQueue.add(
-  //       'send-outbound-comment',
-  //       { commentId: createdComment.id },
-  //       {
-  //         jobId: `outbound-comment-${createdComment.id}`,
-  //         attempts: 15,
-  //         backoff: { type: 'exponential', delay: 2000 },
-  //         removeOnComplete: true,
-  //         removeOnFail: { age: 7 * 24 * 3600 },
-  //       },
-  //     );
-
-  //     // 4. Emit events so the frontend updates the thread immediately
-  //     this.events.emit('inbox.comment.created', {
-  //       workspaceId: params.workspaceId,
-  //       postId: parentComment.postId,
-  //       commentId: createdComment.id,
-  //       direction: 'OUTBOUND',
-  //     });
-
-  //     return createdComment;
-  //   } catch (error) {
-  //     console.error(error);
-  //     throw error;
-  //   }
-  // }
-
   async sendCommentReply(params: {
-  workspaceId: string;
-  postId: string;           // We need this to find the access token
-  parentCommentId: string;   // The Meta ID of the comment (e.g., "123456789_98765")
-  content: string;
-}) {
-  const { workspaceId, postId, parentCommentId, content } = params;
+    workspaceId: string;
+    parentCommentId: string; // The internal DB ID of the comment they are replying to
+    content: string;
+  }) {
+    try {
+      // 1. Verify the parent comment exists
+      const parentComment = await this.prisma.comment.findFirst({
+        where: { id: params.parentCommentId, workspaceId: params.workspaceId },
+        include: {  profile: true },
+      });
+      if (!parentComment)
+        throw new NotFoundException('Parent comment not found');
 
-  // 1. Find the Meta destination for this post
-  const post = await this.prisma.post.findUnique({
-    where: { id: postId, workspaceId },
-    include: {
-      destinations: {
-        include: { profile: true }
-      }
+      const now = new Date();
+
+      // 2. Save the outbound reply to the database as QUEUED
+      const createdComment = await this.prisma.comment.create({
+        data: {
+          workspaceId: params.workspaceId,
+          profileId: parentComment.profileId,
+          postDestinationId: parentComment.postDestinationId,
+          parentId: parentComment.id,
+          platform: parentComment.platform,
+          direction: 'OUTBOUND',
+          status: 'VISIBLE',
+          senderExternalId: parentComment.profile.platformId,
+          externalPostId: parentComment.externalPostId,
+          content: params.content,
+          externalCommentId: `pending_${now.getTime()}_${Math.random().toString(36).slice(2)}`,
+        },
+      });
+
+      // 3. Queue the job to actually fire the Meta Graph API request
+      await this.outboundQueue.add(
+        'send-outbound-comment',
+        {
+          commentId: createdComment.id,
+          workspaceId: params.workspaceId,
+          platform: parentComment.platform,
+          externalParentId: parentComment.externalCommentId,
+        },
+        {
+          jobId: `outbound-comment-${createdComment.id}`,
+          attempts: 1,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: true,
+        },
+      );
+
+      // 4. Emit events so the frontend updates the thread immediately
+      this.events.emit('inbox.comment.created', {
+        workspaceId: params.workspaceId,
+        postId: parentComment.postDestinationId,
+        commentId: createdComment.id,
+        direction: 'OUTBOUND',
+      });
+
+      return createdComment;
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
-  });
-
-  if (!post) throw new NotFoundException('Post not found');
-
-  // 2. Filter for a Meta destination (FB/IG) that has been published
-  const dest = post.destinations.find(d => 
-    (d.profile.platform === 'FACEBOOK' || d.profile.platform === 'INSTAGRAM') && 
-    d.platformPostId
-  );
-
-  if (!dest) {
-    throw new BadRequestException('No active Meta destination found for this post.');
   }
 
-  // 3. Get the decrypted token
-  const encryptedToken = dest.profile.accessToken;
-  if (!encryptedToken) throw new Error('Missing access token');
-  const accessToken = await this.encryptionService.decrypt(encryptedToken);
-
-  try {
-    // 4. Fire the request directly to Meta (instead of queuing)
-    // Note: Meta treats replies as POST requests to /{comment-id}/comments
-    const result = await this.metaClient.replyToComment({
-      accessToken,
-      commentId:parentCommentId, // This must be the external Meta ID
-      message: content,
-      platform: dest.profile.platform as 'FACEBOOK' | 'INSTAGRAM',
+  async retryCommentReply(workspaceId: string, commentId: string) {
+    // 1. Find the failed comment
+    const failedComment = await this.prisma.comment.findUnique({
+      where: { id: commentId, workspaceId, status: 'FAILED' },
+      include: { parent: true }
     });
 
-    // 5. Emit event for the frontend with the Meta response
-    this.events.emit('inbox.comment.sent', {
-      workspaceId,
-      postId,
-      externalId: result.id, // The ID returned by Meta
-      content,
-      platform: dest.profile.platform,
+    if (!failedComment || !failedComment.parent) {
+      throw new BadRequestException('Comment cannot be retried.');
+    }
+
+    // 2. Flip it back to QUEUED instantly
+    await this.prisma.comment.update({
+      where: { id: commentId },
+      data: { status: 'VISIBLE' }
     });
 
-    return {
-      success: true,
-      externalId: result.id,
-    };
+    // 3. Emit event to change the UI back to the "grey clock"
+    this.events.emit('inbox.comment.updated', {
+      workspaceId: workspaceId,
+      commentId: commentId,
+      status: 'VISIBLE',
+    });
 
-  } catch (error: any) {
-    console.error('Meta API Error:', error.response?.data || error.message);
-    throw new BadRequestException('Failed to send reply to Meta');
+    // 4. Throw it back into the queue!
+    await this.outboundQueue.add(
+      'send-outbound-comment',
+      { 
+        commentId: failedComment.id,
+      },
+      {
+        jobId: `retry-outbound-comment-${failedComment.id}-${Date.now()}`,
+        attempts: 1, 
+        removeOnComplete: true,
+      },
+    );
+
+    return { success: true, message: 'Retrying message' };
   }
-}
 }

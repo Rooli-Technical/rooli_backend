@@ -12,6 +12,8 @@ import { InboxCommentsService } from './services/inbox-comments.service';
 import { InboxCommentsController } from './controller/inbox-comments.controller';
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { LinkedInAdapter } from './adapters/linkedIn.adapter';
+import { CommentOutboundService } from './outbound-service/comments.service';
+import { MessagingOutboundService } from './outbound-service/messages.service';
 
 @Module({
   imports: [EventsModule, forwardRef(() => WorkerModule)],
@@ -25,7 +27,9 @@ import { LinkedInAdapter } from './adapters/linkedIn.adapter';
     LinkedInAdapter,
     MetaClient,
     TwitterClient,
-    EncryptionService
+    EncryptionService,
+    CommentOutboundService,
+    MessagingOutboundService
   ],
   exports: [
     InboxIngestService,
@@ -34,6 +38,8 @@ import { LinkedInAdapter } from './adapters/linkedIn.adapter';
     LinkedInAdapter,
     MetaClient,
     TwitterClient,
+   CommentOutboundService,
+    MessagingOutboundService
   ],
 })
 export class InboxModule {}

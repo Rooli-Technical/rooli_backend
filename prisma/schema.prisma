@@ -1783,4 +1783,5 @@ enum CommentStatus {
   VISIBLE
   HIDDEN
   DELETED
+  FAILED
 }

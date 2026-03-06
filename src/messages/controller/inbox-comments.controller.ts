@@ -40,7 +40,6 @@ export class InboxCommentsController {
   ) {
     return this.inboxService.sendCommentReply({
       workspaceId,
-      postId,
       parentCommentId,
       content: body.content,
     });
