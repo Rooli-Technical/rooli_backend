@@ -7,6 +7,6 @@ import { InstagramProvider } from './providers/instagram.provider';
 
 @Module({
   providers: [SocialFactory, TwitterProvider, LinkedInProvider, FacebookProvider, InstagramProvider],
-  exports: [SocialFactory],
+  exports: [SocialFactory, FacebookProvider],
 })
 export class SocialModule {}

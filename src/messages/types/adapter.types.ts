@@ -87,6 +87,7 @@ export interface InboundCommentPayload {
   externalCommentId: string;
   externalParentId?: string | null; // If it's a reply to another comment
   senderExternalId: string;
+  senderAvatarUrl?: string | null;
   senderName: string;
   content: string;
   timestamp: Date;

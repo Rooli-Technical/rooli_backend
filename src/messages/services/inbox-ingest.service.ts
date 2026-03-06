@@ -200,6 +200,7 @@ export class InboxIngestService {
         update: {
           content: payload.content,
           updatedAt: payload.timestamp,
+          senderAvatarUrl: payload.senderAvatarUrl,
         },
         create: {
           workspaceId: payload.workspaceId,
@@ -213,6 +214,7 @@ export class InboxIngestService {
           content: payload.content,
           createdAt: payload.timestamp,
           externalPostId: payload.externalPostId,
+          senderAvatarUrl: payload.senderAvatarUrl,
         },
       });
 

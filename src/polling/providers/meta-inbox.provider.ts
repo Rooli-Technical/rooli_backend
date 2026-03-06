@@ -20,7 +20,7 @@ export class MetaInboxProvider {
      const { data } = await firstValueFrom(
         this.httpService.get(url, {
           params: {
-            fields: 'id,comments{id,message,from,created_time,parent}',
+            fields: 'id,comments{id,message,from{id,name,picture.type(large)},created_time,parent}',
             limit: 5,
             access_token: accessToken,
           },
@@ -38,6 +38,7 @@ export class MetaInboxProvider {
               post_id: post.id,
               comment_id: comment.id,
               from: comment.from,
+              profile_picture: comment.from?.picture?.data?.url || null,
               message: comment.message,
               created_time: Math.floor(new Date(comment.created_time).getTime() / 1000),
               parent_id: comment.parent?.id,
@@ -58,7 +59,7 @@ export class MetaInboxProvider {
    */
   async getRecentDMs(pageId: string, accessToken: string): Promise<any[]> {
     try {
-      const url = `${this.baseUrl}/${pageId}//conversations`;
+      const url = `${this.baseUrl}/${pageId}/conversations`;
      const { data } = await firstValueFrom(
         this.httpService.get(url, {
         params: {

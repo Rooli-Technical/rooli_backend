@@ -13,6 +13,8 @@ import { EventsModule } from '@/events/events.module';
 import { InboundWebhooksProcessor } from './processors/inbound-webhooks.processor';
 import { OutboundMessagesProcessor } from './processors/outbound-messages.processor';
 import { InboxModule } from '@/messages/inbox.module';
+import { InboxSyncProcessor } from './processors/polling.processor';
+import { PollingModule } from '@/polling/polling.module';
 
 @Module({
   imports: [
@@ -21,13 +23,14 @@ import { InboxModule } from '@/messages/inbox.module';
       { name: 'publishing-queue' },
       { name: 'inbox-webhooks' },
       { name: 'outbound-messages' },
-      { name: 'inbox-sync' }
     ),
     PostMediaModule,
     SocialModule,
     AnalyticsModule,
     EventsModule,
+    PollingModule,
     forwardRef(() => InboxModule),
+    forwardRef(() => PollingModule),
   ],
   controllers: [WorkerController],
   providers: [
@@ -37,7 +40,8 @@ import { InboxModule } from '@/messages/inbox.module';
     EncryptionService,
     AnalyticsProcessor,
     InboundWebhooksProcessor,
-    OutboundMessagesProcessor
+    OutboundMessagesProcessor,
+    InboxSyncProcessor
   ],
   exports: [
     BullModule, 

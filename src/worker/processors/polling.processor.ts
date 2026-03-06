@@ -159,6 +159,7 @@ export class InboxSyncProcessor extends WorkerHost {
       externalParentId: normalized.message.meta?.parentId || null,
       senderExternalId: normalized.contact.externalId,
       senderName: normalized.contact.username || 'Unknown User',
+      senderAvatarUrl: normalized.contact.avatarUrl || null,
     };
   }
 

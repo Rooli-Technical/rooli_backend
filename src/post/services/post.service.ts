@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { CreatePostDto } from '../dto/request/create-post.dto';
@@ -18,6 +19,8 @@ import { isBefore, subMinutes } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 import { BulkCreatePostDto } from '../dto/request/bulk-schedule.dto';
 import { QueueSlotService } from '@/queue/queue.service';
+import { SocialFactory } from '@/social/social.factory';
+import { EncryptionService } from '@/common/utility/encryption.service';
 
 @Injectable()
 export class PostService {
@@ -28,6 +31,8 @@ export class PostService {
     private postFactory: PostFactory,
     private destinationBuilder: DestinationBuilder,
     private queueService: QueueSlotService,
+    private socialFactory: SocialFactory,
+    private encryptionService: EncryptionService,
   ) {}
 
   async createPost(user: any, workspaceId: string, dto: CreatePostDto) {
@@ -434,6 +439,115 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
     return this.prisma.post.deleteMany({
       where: { workspaceId, id: { in: deleteIds } } as any,
     });
+  }
+
+  async editPublishedPost(workspaceId: string, postId: string, newContent: string) {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, workspaceId },
+      include: {
+        destinations: {
+          include: { profile: { include: { connection: true } } },
+        },
+      },
+    });
+
+    if (!post) throw new NotFoundException('Post not found');
+    if (!['PUBLISHED', 'PARTIAL'].includes(post.status)) {
+      throw new BadRequestException('You can only edit posts that have already been published.');
+    }
+
+    const results = { success: [] as string[], errors: [] as any[] };
+    let dbUpdated = false;
+
+    for (const dest of post.destinations) {
+      if (!dest.platformPostId || dest.status !== 'SUCCESS') continue;
+
+      // strictly block non-facebook platforms
+      if (dest.profile.platform !== 'FACEBOOK') {
+        results.errors.push({
+          platform: dest.profile.platform,
+          message: `Editing published posts is blocked by the ${dest.profile.platform} API.`,
+        });
+        continue;
+      }
+
+      try {
+        const provider = this.socialFactory.getProvider('FACEBOOK') as any; // Cast to your FB provider
+        const credentials = await this.resolveOAuth2Creds(dest);
+        
+        await provider.editContent(credentials.accessToken, dest.platformPostId, newContent);
+
+        // Update the destination's specific override content
+        await this.prisma.postDestination.update({
+          where: { id: dest.id },
+          data: { contentOverride: newContent },
+        });
+
+        results.success.push(dest.profile.name);
+        dbUpdated = true;
+      } catch (error: any) {
+        results.errors.push({ platform: 'FACEBOOK', message: error.message });
+      }
+    }
+
+    // Update the master post content if at least one edit succeeded
+    if (dbUpdated) {
+      await this.prisma.post.update({
+        where: { id: postId },
+        data: { content: newContent },
+      });
+    }
+
+    return { message: 'Edit operation complete', results };
+  }
+
+  async deletePublishedPost(workspaceId: string, postId: string) {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, workspaceId },
+      include: {
+        destinations: {
+          include: { profile: { include: { connection: true } } },
+        },
+      },
+    });
+
+    if (!post) throw new NotFoundException('Post not found');
+    if (!['PUBLISHED', 'PARTIAL'].includes(post.status)) {
+      throw new BadRequestException('Can only delete published posts.');
+    }
+
+    const results = { success: [] as string[], errors: [] as any[] };
+
+    for (const dest of post.destinations) {
+      if (!dest.platformPostId || dest.status !== 'SUCCESS') continue;
+
+      if (dest.profile.platform !== 'FACEBOOK') {
+        results.errors.push({
+          platform: dest.profile.platform,
+          message: `Deleting published posts is blocked by the ${dest.profile.platform} API.`,
+        });
+        continue;
+      }
+
+      try {
+        const provider = this.socialFactory.getProvider('FACEBOOK') as any;
+        const credentials = await this.resolveOAuth2Creds(dest);
+        
+        await provider.deleteContent(credentials.accessToken, dest.platformPostId);
+
+        // Mark destination as deleted in DB
+        await this.prisma.postDestination.update({
+          where: { id: dest.id },
+          data: { status: 'FAILED', errorMessage: 'Deleted by user' }, // Or create a 'DELETED' status
+        });
+
+        results.success.push(dest.profile.name);
+      } catch (error: any) {
+        results.errors.push({ platform: 'FACEBOOK', message: error.message });
+      }
+    }
+
+    return { message: 'Delete operation complete', results };
   }
 
   async getOne(workspaceId: string, postId: string) {
@@ -883,5 +997,35 @@ async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?:
 
     const nextCursor = posts.length === take ? posts[posts.length - 1].id : null;
     return { items, nextCursor };
+  }
+
+
+  private async resolveOAuth2Creds(dest: any): Promise<{ accessToken: string }> {
+    // 1. Find the encrypted token. 
+    // Depending on your database schema, the token might be saved directly on the 
+    // SocialProfile, or it might be inherited from the parent SocialConnection.
+    const encryptedToken = dest.profile?.accessToken ?? dest.profile?.connection?.accessToken;
+
+    // 2. Fail fast if the user's account is disconnected or missing a token
+    if (!encryptedToken) {
+      throw new BadRequestException(
+        `Your ${dest.profile?.platform} account (${dest.profile?.name}) is missing an access token. Please reconnect it.`
+      );
+    }
+
+    try {
+      const rawAccessToken = await this.encryptionService.decrypt(encryptedToken);
+
+      if (!rawAccessToken) {
+        throw new Error('Decryption returned null or empty string');
+      }
+
+      return { accessToken: rawAccessToken };
+      
+    } catch (error: any) {
+      throw new InternalServerErrorException(
+        `Security Error: Could not decrypt credentials for ${dest.profile?.platform}. Please reconnect the account.`
+      );
+    }
   }
 }

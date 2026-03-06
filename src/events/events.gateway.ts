@@ -62,6 +62,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, 
       client.join(this.roomWorkspace(wid));
     }
 
+    client.join(this.roomMember(client.user.memberId));
+
     this.logger.log(`Socket connected: ${client.id} user=${client.user.userId}`);
   }
 

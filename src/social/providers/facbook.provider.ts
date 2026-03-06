@@ -104,7 +104,38 @@ export class FacebookProvider implements ISocialProvider {
   return this.postText(pageId, accessToken, content);
 }
 
+async editContent(accessToken: string, id: string, newContent: string) {
+    try {
+      this.logger.log(`Editing Facebook content ${id}...`);
+      const url = `${this.GRAPH_URL}/${id}`;
+      
+      const response = await axios.post(url, {
+        message: newContent,
+        access_token: accessToken,
+      });
 
+      return { success: response.data.success || true };
+    } catch (error: any) {
+      this.handleError(error);
+    }
+  }
+
+
+  async deleteContent(accessToken: string, id: string) {
+    try {
+      this.logger.log(`Deleting Facebook content ${id}...`);
+      const url = `${this.GRAPH_URL}/${id}`;
+      
+      const response = await axios.delete(url, {
+        params: { access_token: accessToken },
+      });
+
+      return { success: response.data.success || true };
+    } catch (error: any) {
+      this.handleError(error);
+    }
+
+  }
 
   // ==================================================
   // 🖼️ SCENARIO: Multiple Photos (Carousel)

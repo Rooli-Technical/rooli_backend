@@ -172,7 +172,7 @@ export class MetaAdapter implements SocialAdapter {
         platform,
         externalId: fromId,
         username: fromName ?? `meta_${fromId.slice(0, 8)}`,
-        avatarUrl: null,
+        avatarUrl: value.profile_picture || null,
       },
       message: {
         externalId: commentId,

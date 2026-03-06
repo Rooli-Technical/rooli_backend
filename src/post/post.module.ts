@@ -7,13 +7,16 @@ import { PostFactory } from './services/post-factory.service';
 import { PlatformRulesService } from './services/platform-rules.service';
 import { QueueModule } from '@/queue/queue.module';
 import { WorkerModule } from '@/worker/worker.module';
+import { SocialModule } from '@/social/social.module';
+import { EncryptionService } from '@/common/utility/encryption.service';
 
 @Module({
   imports: [
    WorkerModule,
-    QueueModule
+    QueueModule,
+    SocialModule
   ],
   controllers: [PostController, PostApprovalController],
-  providers: [PostService, PostFactory, DestinationBuilder, PlatformRulesService,],
+  providers: [PostService, PostFactory, DestinationBuilder, PlatformRulesService,EncryptionService],
 })
 export class PostModule {}
