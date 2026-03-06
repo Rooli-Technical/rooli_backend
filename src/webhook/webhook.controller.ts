@@ -115,10 +115,9 @@ export class WebhookController {
             { entryId: entry.id, messaging: m, rawEntry: entry, objectType },
             {
               jobId,
-              attempts: 15,
+              attempts: 5,
               backoff: { type: 'exponential', delay: 1500 },
               removeOnComplete: true,
-              removeOnFail: { age: 7 * 24 * 3600 }, // keep fails for a week
             },
           );
         }
@@ -141,10 +140,9 @@ export class WebhookController {
             { entryId: entry.id, change, rawEntry: entry },
             {
               jobId: `meta-feed-${changeId}`.replace(/:/g, '-'),
-              attempts: 15,
+              attempts: 5,
               backoff: { type: 'exponential', delay: 1500 },
               removeOnComplete: true,
-              removeOnFail: { age: 7 * 24 * 3600 },
             },
           );
         }
@@ -161,7 +159,7 @@ export class WebhookController {
               /:/g,
               '-',
             ),
-          attempts: 10,
+          attempts: 5,
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: true,
           removeOnFail: { age: 14 * 24 * 3600 },
@@ -229,7 +227,7 @@ export class WebhookController {
       { payload },
       {
         jobId: `linkedin-webhook-${notificationId}`,
-        attempts: 15, // High retry count is great for network blips
+        attempts: 5, // High retry count is great for network blips
         backoff: { type: 'exponential', delay: 1500 },
         removeOnComplete: true,
         removeOnFail: { age: 7 * 24 * 3600 },
