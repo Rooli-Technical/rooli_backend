@@ -5,8 +5,6 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-
-import { InboxService } from '../services/inbox-message.service';
 import { InboxCommentsService } from '../services/inbox-comments.service';
 import { SendCommentReplyDto } from '../dtos/send-comment.dto';
 
@@ -34,7 +32,6 @@ export class InboxCommentsController {
   @ApiResponse({ status: 201, description: 'Comment reply queued for sending' })
   async replyToComment(
     @Param('workspaceId') workspaceId: string,
-    @Param('postId') postId: string,
     @Param('commentId') parentCommentId: string,
     @Body() body: SendCommentReplyDto,
   ) {
@@ -43,5 +40,17 @@ export class InboxCommentsController {
       parentCommentId,
       content: body.content,
     });
+  }
+
+  @Post(':postId/comments/:commentId/retry')
+  @ApiOperation({ summary: 'Retry sending a comment reply' })
+  async retrySendingComment(
+    @Param('workspaceId') workspaceId: string,
+    @Param('commentId') parentCommentId: string,
+  ) {
+    return this.inboxService.retryCommentReply(
+      workspaceId,
+      parentCommentId,
+    );
   }
 }

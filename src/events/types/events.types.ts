@@ -2,10 +2,11 @@ import { Platform } from '@generated/enums';
 
 export type DomainEventName =
   | 'inbox.message.created'
+  | 'inbox.comment.created'
   | 'inbox.conversation.updated'
   | 'inbox.message.status.updated'
   | 'inbox.conversation.assigned'
-  |  'inbox.comment.sent'
+  | 'inbox.comment.sent'
   | 'inbox.comment.updated'
   | 'publishing.post.published'
   | 'publishing.post.failed'
@@ -133,9 +134,9 @@ export type DomainEventPayloadMap = {
   };
 
   'inbox.comment.updated': {
-        workspaceId: string;
-        commentId: string;
-        status: string;
-        error?: string;
-  }
+    workspaceId: string;
+    commentId: string;
+    status: string;
+    error?: string;
+  };
 };

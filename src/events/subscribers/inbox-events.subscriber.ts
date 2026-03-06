@@ -67,4 +67,32 @@ export class InboxEventsSubscriber {
     );
   }
 
+  @OnEvent('inbox.comment.created')
+  handleCommentCreated(payload: {
+    workspaceId: string;
+    postId: string;
+    commentId: string;
+    direction: 'INBOUND' | 'OUTBOUND';
+  }) {
+    this.gateway.emitToWorkspace(
+      payload.workspaceId, 
+      'inbox.comment.created', 
+      payload
+    );
+  }
+
+  @OnEvent('inbox.comment.updated')
+  handleCommentUpdated(payload: {
+    workspaceId: string;
+    commentId: string;
+    status: string;
+    error?: string;
+  }) {
+    this.gateway.emitToWorkspace(
+      payload.workspaceId,
+      'inbox.comment.updated',
+      payload
+    );
+  }
+
 }
