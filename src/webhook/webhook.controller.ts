@@ -227,7 +227,7 @@ export class WebhookController {
       { payload },
       {
         jobId: `linkedin-webhook-${notificationId}`,
-        attempts: 5, // High retry count is great for network blips
+        attempts: 5, 
         backoff: { type: 'exponential', delay: 1500 },
         removeOnComplete: true,
         removeOnFail: { age: 7 * 24 * 3600 },
