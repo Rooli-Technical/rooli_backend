@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DomainEventsService } from '../events/domain-events.service';
 import { Prisma } from '@generated/client';
-import { NotificationType } from '@generated/enums';
 import {
   CreateNotificationInput,
   CreateManyNotificationsInput,

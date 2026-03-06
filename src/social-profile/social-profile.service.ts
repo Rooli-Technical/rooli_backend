@@ -26,15 +26,15 @@ async addProfilesToWorkspace(
   workspaceId: string,
   dto: BulkAddProfilesDto,
 ) {
-  const { remaining, allowedPlatforms } =
-    await this.getWorkspaceLimitInfo(workspaceId);
+  // const { remaining, allowedPlatforms } =
+  //   await this.getWorkspaceLimitInfo(workspaceId);
 
-  // // 1. Plan guard
-  if (!allowedPlatforms.includes(dto.platform)) {
-    throw new ForbiddenException(
-      `The ${dto.platform} platform is not available on your current plan.`,
-    );
-  }
+  // // // 1. Plan guard
+  // if (!allowedPlatforms.includes(dto.platform)) {
+  //   throw new ForbiddenException(
+  //     `The ${dto.platform} platform is not available on your current plan.`,
+  //   );
+  // }
 
   // 2. Fetch importable pages once
   const importablePages =
@@ -62,11 +62,11 @@ async addProfilesToWorkspace(
     id => !existingIds.has(id),
   ).length;
 
-  if (newProfilesCount > remaining) {
-    throw new ForbiddenException(
-      `You have ${remaining} slots left, but tried to add ${newProfilesCount} new profiles.`,
-    );
-  }
+  // if (newProfilesCount > remaining) {
+  //   throw new ForbiddenException(
+  //     `You have ${remaining} slots left, but tried to add ${newProfilesCount} new profiles.`,
+  //   );
+  // }
 
   const added: any[] = [];
 

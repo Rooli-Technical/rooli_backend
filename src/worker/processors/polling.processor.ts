@@ -164,6 +164,7 @@ export class InboxSyncProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job, error: Error) {
+    console.log(error)
     this.logger.error(`❌ Inbox Sync Job Failed [${job.id}]: ${error.message}`);
   }
 }

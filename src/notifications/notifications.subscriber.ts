@@ -338,6 +338,51 @@ export class NotificationsSubscriber {
     }
   }
 
+  @OnEvent('inbox.comment.created')
+  async onInboxCommentCreated(evt: {
+    workspaceId: string;
+    postId: string;
+    commentId: string;
+    direction: 'INBOUND' | 'OUTBOUND';
+  }) {
+    try {
+      if (evt.direction !== 'INBOUND') return;
+
+      // 1. Fetch the comment and post info to make a nice notification text
+      const comment = await this.prisma.comment.findUnique({
+        where: { id: evt.commentId },
+        select: { senderName: true, platform: true }
+      });
+      if (!comment) return;
+
+      // 2. Decide who gets it (For MVP, let's just send to all workspace members)
+      const recipientMemberIds = await this.listWorkspaceMemberIds(evt.workspaceId);
+      if (!recipientMemberIds.length) return;
+
+      const title = `New comment`;
+      const body = `${comment.senderName} commented on your ${comment.platform} post.`;
+
+      // 3. Save to Database! 
+      await this.notifications.createMany({
+        workspaceId: evt.workspaceId,
+        memberIds: recipientMemberIds,
+        type: NotificationType.INBOX_NEW_MESSAGE, // Or create a NEW_COMMENT type!
+        title,
+        body,
+        link: `/inbox/comments/${evt.postId}`,
+        data: {
+          postId: evt.postId,
+          commentId: evt.commentId,
+          platform: comment.platform,
+        } as Prisma.InputJsonValue,
+        dedupeKey: `inbox:new_comment:${evt.commentId}`,
+        skipDuplicates: true,
+      });
+    } catch (e: any) {
+      this.logger.warn(`onInboxCommentCreated failed: ${e?.message ?? String(e)}`);
+    }
+  }
+
   // ============================================================================
   // Recipient helpers
   // ============================================================================
