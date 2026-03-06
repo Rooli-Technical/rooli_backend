@@ -38,6 +38,7 @@ export class InstagramInboxProvider {
       );
 
       const posts = data?.data || [];
+
       
       return posts.flatMap((post) => 
         (post.comments?.data || []).map((comment) => ({
@@ -48,7 +49,10 @@ export class InstagramInboxProvider {
               verb: 'add',
               post_id: post.id,
               comment_id: comment.id,
-              from: comment.from,
+              from: {
+                id: comment.from?.id,
+                name: comment.from?.username 
+              },
               // Map IG's 'text' to 'message' so your MetaAdapter doesn't break
               message: comment.text, 
               // IG uses 'timestamp', FB uses 'created_time'
