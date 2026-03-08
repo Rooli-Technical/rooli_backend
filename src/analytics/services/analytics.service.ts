@@ -424,8 +424,15 @@ export class AnalyticsService {
    * Returns a 168-hour matrix (7 days x 24 hours) for a UI Heatmap.
    */
   async getBestTimeToPost(profileId: string, days = 90) {
-    // 1. Determine the lookback window (90 days is standard for statistical significance)
+    const profile = await this.prisma.socialProfile.findUnique({
+      where: { id: profileId },
+      select: { platform: true, name: true }
+    });
+
+    if (!profile) throw new NotFoundException('Profile not found');
+
     const startDate = subDays(new Date(), days);
+
 
     // 2. Fetch historical posts and their final engagement count
     const posts = await this.prisma.postDestination.findMany({
@@ -510,6 +517,11 @@ export class AnalyticsService {
     });
 
     return {
+      profile: {
+        id: profileId,
+        platform: profile.platform,
+        handle: profile.name,
+      },
       // A quick summary object so the UI can say: "Your best time to post is Monday at 14:00"
       summary: {
         hasData: posts.length > 0,
@@ -530,12 +542,13 @@ export class AnalyticsService {
     prevStart: Date,
     prevEnd: Date,
   ) {
-    const [currentAgg, prevAgg, heatmapRows, demographicsAgg] =
+    const [currentAgg, prevAgg, heatmapRows, demographicsAgg, topPosts] =
       await Promise.all([
         this.getWorkspaceAggregatedMetrics(profileIds, start, end),
         this.getWorkspaceAggregatedMetrics(profileIds, prevStart, prevEnd),
         this.getWorkspaceDailyEngagementDB(profileIds, start, end),
-        this.getWorkspaceDemographics(profileIds), // keep your "byProfile" approach
+        this.getWorkspaceDemographics(profileIds), 
+        this.getWorkspaceTopPostsPerPlatform(profileIds, start, end),
       ]);
 
     const engagementRate = this.calcRate(
@@ -573,6 +586,7 @@ export class AnalyticsService {
       },
       engagementHeatmap: heatmap,
       demographics: demographicsAgg ?? {},
+      topPerformingPosts: topPosts,
     };
   }
 
@@ -1007,5 +1021,65 @@ export class AnalyticsService {
       prevStart: prevStart.toJSDate(),
       prevEnd: prevEnd.toJSDate(),
     };
+  }
+
+  /**
+   * Fetches the top 3 best performing posts for EACH platform in the workspace.
+   */
+  private async getWorkspaceTopPostsPerPlatform(profileIds: string[], start: Date, end: Date, takePerPlatform = 3) {
+    // 1. Fetch snapshots in the date range, ordered globally by highest engagement
+    const snapshots = await this.prisma.postAnalyticsSnapshot.findMany({
+      where: {
+        postDestination: { socialProfileId: { in: profileIds } },
+        day: { gte: start, lte: end },
+      },
+      orderBy: { engagementCount: 'desc' },
+      include: {
+        postDestination: {
+          include: { profile: { select: { platform: true, name: true } } }
+        }
+      }
+    });
+
+    // 2. Deduplicate (ensure we only track the highest snapshot per post)
+    const seenPostIds = new Set<string>();
+    
+    // 3. Initialize buckets for the platforms
+    const results: Record<string, any[]> = {
+      TWITTER: [],
+      LINKEDIN: [],
+      FACEBOOK: [],
+      INSTAGRAM: []
+    };
+
+    // 4. Sort into buckets until each bucket hits the limit
+    for (const snap of snapshots) {
+      const destId = snap.postDestinationId;
+      if (seenPostIds.has(destId)) continue; // Skip older snapshots of the same post
+      
+      seenPostIds.add(destId);
+
+      const platform = snap.postDestination.profile.platform;
+      
+      // If we haven't hit the limit (e.g., 3) for this platform yet, add it!
+      if (results[platform] && results[platform].length < takePerPlatform) {
+        results[platform].push({
+          id: snap.postDestination.id,
+          platformPostId: snap.postDestination.platformPostId,
+          content: snap.postDestination.contentOverride,
+          handle: snap.postDestination.profile.name,
+          platform: platform,
+          publishedAt: snap.postDestination.createdAt,
+          metrics: {
+            engagement: snap.engagementCount ?? 0,
+            likes: snap.likes ?? 0,
+            comments: snap.comments ?? 0,
+            impressions: snap.impressions ?? 0,
+          }
+        });
+      }
+    }
+
+    return results;
   }
 }
