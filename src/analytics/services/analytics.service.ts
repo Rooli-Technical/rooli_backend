@@ -426,13 +426,12 @@ export class AnalyticsService {
   async getBestTimeToPost(profileId: string, days = 90) {
     const profile = await this.prisma.socialProfile.findUnique({
       where: { id: profileId },
-      select: { platform: true, name: true }
+      select: { platform: true, name: true },
     });
 
     if (!profile) throw new NotFoundException('Profile not found');
 
     const startDate = subDays(new Date(), days);
-
 
     // 2. Fetch historical posts and their final engagement count
     const posts = await this.prisma.postDestination.findMany({
@@ -547,7 +546,7 @@ export class AnalyticsService {
         this.getWorkspaceAggregatedMetrics(profileIds, start, end),
         this.getWorkspaceAggregatedMetrics(profileIds, prevStart, prevEnd),
         this.getWorkspaceDailyEngagementDB(profileIds, start, end),
-        this.getWorkspaceDemographics(profileIds), 
+        this.getWorkspaceDemographics(profileIds),
         this.getWorkspaceTopPostsPerPlatform(profileIds, start, end),
       ]);
 
@@ -675,7 +674,48 @@ export class AnalyticsService {
     }));
   }
 
-  async getDashboardPosts(workspaceId: string) {
+  async getAppHomeDashboard(workspaceId: string) {
+    // 1. Define the "Quick Pulse" Timeframes (Last 7 Days vs Previous 7 Days)
+    const now = new Date();
+    const startOfPulse = subDays(now, 7);
+    const startOfPrevPulse = subDays(now, 14);
+
+    const profileIds = await this.getActiveProfileIds(workspaceId);
+
+    // 2. Fetch the KPI Data in parallel
+    const [
+      currentEngagement,
+      prevEngagement,
+      currentFollowers,
+      prevFollowers,
+      currentPublishedCount,
+      prevPublishedCount,
+    ] = await Promise.all([
+      // Engagement
+      this.getWorkspaceEngagementTotal(profileIds, startOfPulse, now),
+      this.getWorkspaceEngagementTotal(
+        profileIds,
+        startOfPrevPulse,
+        startOfPulse,
+      ),
+      this.getWorkspaceLatestFollowersTotal(profileIds),
+      this.getWorkspaceLatestFollowersTotal(profileIds),
+      this.prisma.post.count({
+        where: {
+          workspaceId,
+          status: 'PUBLISHED',
+          publishedAt: { gte: startOfPulse, lte: now },
+        },
+      }),
+      this.prisma.post.count({
+        where: {
+          workspaceId,
+          status: 'PUBLISHED',
+          publishedAt: { gte: startOfPrevPulse, lte: startOfPulse },
+        },
+      }),
+    ]);
+
     const [lastPublished, lastRecent] = await Promise.all([
       this.getWorkspaceRecentPosts(workspaceId),
 
@@ -696,7 +736,22 @@ export class AnalyticsService {
       }),
     ]);
 
-    return { lastPublished, lastRecent };
+    return {
+      kpis: {
+        engagement: this.buildMetric(currentEngagement, prevEngagement),
+        publishedPosts: this.buildMetric(
+          currentPublishedCount,
+          prevPublishedCount,
+        ),
+        totalAudience: {
+          value: currentFollowers,
+          // Placeholder for audience growth until you track historical follower counts perfectly
+          growthPercentage: 0,
+        },
+      },
+      lastPublished,
+      lastRecent,
+    };
   }
 
   /**
@@ -1026,7 +1081,12 @@ export class AnalyticsService {
   /**
    * Fetches the top 3 best performing posts for EACH platform in the workspace.
    */
-  private async getWorkspaceTopPostsPerPlatform(profileIds: string[], start: Date, end: Date, takePerPlatform = 3) {
+  private async getWorkspaceTopPostsPerPlatform(
+    profileIds: string[],
+    start: Date,
+    end: Date,
+    takePerPlatform = 3,
+  ) {
     // 1. Fetch snapshots in the date range, ordered globally by highest engagement
     const snapshots = await this.prisma.postAnalyticsSnapshot.findMany({
       where: {
@@ -1036,31 +1096,31 @@ export class AnalyticsService {
       orderBy: { engagementCount: 'desc' },
       include: {
         postDestination: {
-          include: { profile: { select: { platform: true, name: true } } }
-        }
-      }
+          include: { profile: { select: { platform: true, name: true } } },
+        },
+      },
     });
 
     // 2. Deduplicate (ensure we only track the highest snapshot per post)
     const seenPostIds = new Set<string>();
-    
+
     // 3. Initialize buckets for the platforms
     const results: Record<string, any[]> = {
       TWITTER: [],
       LINKEDIN: [],
       FACEBOOK: [],
-      INSTAGRAM: []
+      INSTAGRAM: [],
     };
 
     // 4. Sort into buckets until each bucket hits the limit
     for (const snap of snapshots) {
       const destId = snap.postDestinationId;
       if (seenPostIds.has(destId)) continue; // Skip older snapshots of the same post
-      
+
       seenPostIds.add(destId);
 
       const platform = snap.postDestination.profile.platform;
-      
+
       // If we haven't hit the limit (e.g., 3) for this platform yet, add it!
       if (results[platform] && results[platform].length < takePerPlatform) {
         results[platform].push({
@@ -1075,7 +1135,7 @@ export class AnalyticsService {
             likes: snap.likes ?? 0,
             comments: snap.comments ?? 0,
             impressions: snap.impressions ?? 0,
-          }
+          },
         });
       }
     }

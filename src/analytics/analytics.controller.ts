@@ -176,18 +176,18 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     return this.service.getProfileDashboard(profileId, daysCount, startDate, endDate);
   }
 
-  @Get(':workspaceId/dashboard/posts')
+  @Get(':workspaceId/dashboard')
   @ApiOperation({ 
-    summary: 'Get recent successful platform posts with latest analytics' 
+    summary: 'Get app dashboard metrics' 
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'List of dashboard posts across all platforms' 
+    description: 'Get App home dashboard' 
   })
   async getRecentPublished(
     @Param('workspaceId') workspaceId: string,
   ){
-    return this.service.getDashboardPosts(workspaceId);
+    return this.service.getAppHomeDashboard(workspaceId);
   }
 
   @Get('profile/:profileId/best-time')
