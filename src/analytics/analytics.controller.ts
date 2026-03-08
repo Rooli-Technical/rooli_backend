@@ -208,6 +208,6 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     const daysCount = days ? parseInt(days, 10) : 90;
     
     // Safety check: ensure the profile exists before running heavy aggregation
-    return this.service.getBestTimeToPost(profileId, daysCount);
+    return this.service.getWorkspaceBestTimeToPost(profileId, daysCount);
   }
 }

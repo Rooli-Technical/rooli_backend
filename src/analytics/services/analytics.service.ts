@@ -423,116 +423,69 @@ export class AnalyticsService {
    * Calculates the best day and hour to post based on historical engagement.
    * Returns a 168-hour matrix (7 days x 24 hours) for a UI Heatmap.
    */
-  async getBestTimeToPost(profileId: string, days = 90) {
-    const profile = await this.prisma.socialProfile.findUnique({
-      where: { id: profileId },
-      select: { platform: true, name: true },
-    });
-
-    if (!profile) throw new NotFoundException('Profile not found');
-
+async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
     const startDate = subDays(new Date(), days);
 
-    // 2. Fetch historical posts and their final engagement count
+    // 1. Fetch ALL successful posts for the entire workspace
     const posts = await this.prisma.postDestination.findMany({
       where: {
-        socialProfileId: profileId,
-        status: 'SUCCESS', // Only count successfully published posts
+        profile: { workspaceId },
+        status: 'SUCCESS',
         createdAt: { gte: startDate },
       },
       select: {
-        createdAt: true, // The exact time it was published
+        createdAt: true,
+        profile: { select: { platform: true } },
         postAnalyticsSnapshots: {
-          orderBy: { day: 'desc' }, // Get the most recent snapshot
+          orderBy: { day: 'desc' },
           take: 1,
           select: { engagementCount: true },
         },
       },
     });
 
-    // 3. Initialize the 168-hour week map (7 days * 24 hours)
-    // Key format: "day-hour" (e.g., "1-14" = Monday 14:00 / 2 PM)
-    const heatmapMap = new Map<string, { totalEng: number; count: number }>();
+    // 2. Initialize our data structures
+    const platforms = ['LINKEDIN', 'TWITTER', 'FACEBOOK', 'INSTAGRAM'];
+    
+    // We will store the raw data here before formatting
+    const rawData: Record<string, Map<string, { totalEng: number; count: number }>> = {
+      WORKSPACE: this.createEmptyHeatmapMap(),
+    };
+    
+    platforms.forEach(p => rawData[p] = this.createEmptyHeatmapMap());
 
-    // Pre-fill the map so the frontend receives a perfect 7x24 grid,
-    // even for hours where the user has never posted.
-    for (let d = 0; d < 7; d++) {
-      for (let h = 0; h < 24; h++) {
-        heatmapMap.set(`${d}-${h}`, { totalEng: 0, count: 0 });
-      }
-    }
-
-    // 4. Aggregate the engagement data
+    // 3. Single-pass aggregation!
     for (const post of posts) {
-      // NOTE: .getUTCDay() and .getUTCHours() extract the time in UTC.
-      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       const day = post.createdAt.getUTCDay();
       const hour = post.createdAt.getUTCHours();
       const key = `${day}-${hour}`;
-
       const engagement = post.postAnalyticsSnapshots[0]?.engagementCount || 0;
+      const platform = post.profile.platform;
 
-      const current = heatmapMap.get(key)!;
-      current.totalEng += engagement;
-      current.count += 1;
+      // Add to Workspace Aggregate
+      const wsCurrent = rawData['WORKSPACE'].get(key)!;
+      wsCurrent.totalEng += engagement;
+      wsCurrent.count += 1;
+
+      // Add to Specific Platform
+      if (rawData[platform]) {
+        const platCurrent = rawData[platform].get(key)!;
+        platCurrent.totalEng += engagement;
+        platCurrent.count += 1;
+      }
     }
 
-    // 5. Calculate Averages & Find the Maximum Average
-    let maxAverage = 0;
-    const rawResults = [];
+    // 4. Format the final output
+    const response: Record<string, any> = {};
 
-    for (const [key, data] of heatmapMap.entries()) {
-      const [dayStr, hourStr] = key.split('-');
-
-      // We use average engagement so posting 5 times at 9AM doesn't
-      // artificially beat a single viral post at 2PM.
-      const average = data.count > 0 ? data.totalEng / data.count : 0;
-
-      if (average > maxAverage) {
-        maxAverage = average;
-      }
-
-      rawResults.push({
-        day: parseInt(dayStr, 10),
-        hour: parseInt(hourStr, 10),
-        averageEngagement: Number(average.toFixed(2)),
-        postCount: data.count,
-      });
+    for (const [scope, mapData] of Object.entries(rawData)) {
+      response[scope] = this.formatHeatmap(mapData);
     }
 
-    // 6. Apply the intensity scale and find the absolute best time
-    let bestTime = null;
-
-    const heatmap = rawResults.map((r) => {
-      // Re-use your existing intensityByMax helper!
-      const intensity = this.intensityByMax(r.averageEngagement, maxAverage);
-
-      // Keep track of the highest performing slot for the summary
-      if (!bestTime || r.averageEngagement > bestTime.averageEngagement) {
-        bestTime = { ...r, intensity };
-      }
-
-      return { ...r, intensity };
-    });
-
-    return {
-      profile: {
-        id: profileId,
-        platform: profile.platform,
-        handle: profile.name,
-      },
-      // A quick summary object so the UI can say: "Your best time to post is Monday at 14:00"
-      summary: {
-        hasData: posts.length > 0,
-        bestDay: bestTime?.day ?? null,
-        bestHour: bestTime?.hour ?? null,
-        maxAverageEngagement: Number(maxAverage.toFixed(2)),
-        totalPostsAnalyzed: posts.length,
-      },
-      // The full array to render the grid
-      heatmap,
-    };
+    return response;
   }
+
+
 
   private async getWorkspaceBusiness(
     profileIds: string[],
@@ -1142,4 +1095,56 @@ export class AnalyticsService {
 
     return results;
   }
+
+    private createEmptyHeatmapMap() {
+    const map = new Map<string, { totalEng: number; count: number }>();
+    for (let d = 0; d < 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        map.set(`${d}-${h}`, { totalEng: 0, count: 0 });
+      }
+    }
+    return map;
+  }
+
+  private formatHeatmap(mapData: Map<string, { totalEng: number; count: number }>) {
+    let maxAverage = 0;
+    const rawResults = [];
+    let totalPostsAnalyzed = 0;
+
+    for (const [key, data] of mapData.entries()) {
+      const [dayStr, hourStr] = key.split('-');
+      const average = data.count > 0 ? data.totalEng / data.count : 0;
+      
+      if (average > maxAverage) maxAverage = average;
+      totalPostsAnalyzed += data.count;
+
+      rawResults.push({
+        day: parseInt(dayStr, 10),
+        hour: parseInt(hourStr, 10),
+        averageEngagement: Number(average.toFixed(2)),
+        postCount: data.count,
+      });
+    }
+
+    let bestTime = null;
+    const heatmap = rawResults.map((r) => {
+      const intensity = this.intensityByMax(r.averageEngagement, maxAverage);
+      if (!bestTime || r.averageEngagement > bestTime.averageEngagement) {
+        bestTime = { ...r, intensity };
+      }
+      return { ...r, intensity };
+    });
+
+    return {
+      summary: {
+        hasData: totalPostsAnalyzed > 0,
+        bestDay: bestTime?.day ?? null,
+        bestHour: bestTime?.hour ?? null,
+        maxAverageEngagement: Number(maxAverage.toFixed(2)),
+        totalPostsAnalyzed,
+      },
+      heatmap,
+    };
+  }
+
 }
