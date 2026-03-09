@@ -8,13 +8,22 @@ import { AllExceptionsFilter } from './common/filters/all-exception-filter.filte
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import * as express from 'express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { RedisIoAdapter } from './events/adapters/redis-io.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
   });
 
-  app.useWebSocketAdapter(new IoAdapter(app));
+  // 1. You created the Adapter
+  const redisIoAdapter = new RedisIoAdapter(app);
+  
+  // 2. You connected it to Redis
+  await redisIoAdapter.connectToRedis();
+  
+  // 3. You forced your entire NestJS app (and the Gateway) to use it!
+  app.useWebSocketAdapter(redisIoAdapter);
+  //app.useWebSocketAdapter(new IoAdapter(app));
 
 app.enableCors({
   origin: true, // reflect request origin

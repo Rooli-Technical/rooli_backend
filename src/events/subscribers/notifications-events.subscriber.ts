@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EventsGateway } from '../events.gateway';
+import { RealtimeEmitterService } from '../realtime-emitter.service';
 
 /**
  * WebSocket push integration for notifications.
@@ -17,7 +18,7 @@ import { EventsGateway } from '../events.gateway';
  */
 @Injectable()
 export class NotificationsEventsSubscriber {
-  constructor(private readonly gateway: EventsGateway) {}
+  constructor(private readonly emitterService: RealtimeEmitterService) {}
 
   @OnEvent('notification.created')
   onNotificationCreated(evt: {
@@ -26,7 +27,7 @@ export class NotificationsEventsSubscriber {
     notification: any;
   }) {
     // Emit to member-specific room
-    this.gateway.emitToMember(evt.memberId, 'notification.created', evt.notification);
+    this.emitterService.emitToMember(evt.memberId, 'notification.created', evt.notification);
 
     // Optional: also update workspace-wide counters, etc. (usually not needed)
     // this.gateway.emitToWorkspace(evt.workspaceId, 'notification.created', evt.notification);
@@ -39,7 +40,7 @@ export class NotificationsEventsSubscriber {
     notificationIds: string[];
     readAt: Date;
   }) {
-    this.gateway.emitToMember(evt.memberId, 'notification.read', {
+    this.emitterService.emitToMember(evt.memberId, 'notification.read', {
       ids: evt.notificationIds,
       readAt: evt.readAt,
     });
@@ -51,7 +52,7 @@ export class NotificationsEventsSubscriber {
     memberId: string;
     readAt: Date;
   }) {
-    this.gateway.emitToMember(evt.memberId, 'notification.read_all', {
+    this.emitterService.emitToMember(evt.memberId, 'notification.read_all', {
       readAt: evt.readAt,
     });
   }

@@ -6,6 +6,7 @@ import { DomainEventsService } from './domain-events.service';
 import { EventsGateway } from './events.gateway';
 import { InboxEventsSubscriber } from './subscribers/inbox-events.subscriber';
 import { WsAuthMiddleware } from './ws-auth.middleware';
+import { RealtimeEmitterService } from './realtime-emitter.service';
 
 @Module({
   imports: [
@@ -20,8 +21,9 @@ import { WsAuthMiddleware } from './ws-auth.middleware';
     DomainEventsService,
     EventsGateway,
     InboxEventsSubscriber,
+    RealtimeEmitterService,
     WsAuthMiddleware,
   ],
-  exports: [DomainEventsService],
+  exports: [DomainEventsService, RealtimeEmitterService,],
 })
 export class EventsModule {}

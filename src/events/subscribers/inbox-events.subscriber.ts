@@ -7,6 +7,7 @@ import {
   InboxMessageStatusUpdatedEvent,
   InboxCommentReplyEvent,
 } from '../types/events.types';
+import { RealtimeEmitterService } from '../realtime-emitter.service';
 /**
  * Routes domain events to transports:
  * - WebSockets (Socket.io)
@@ -16,15 +17,15 @@ import {
  */
 @Injectable()
 export class InboxEventsSubscriber {
-  constructor(private readonly gateway: EventsGateway) {}
+  constructor(private readonly emitterService: RealtimeEmitterService) {}
 
   @OnEvent('inbox.message.created', { async: false })
   onMessageCreated(evt: InboxMessageCreatedEvent) {
     // Workspace-wide: update list + badges
-    this.gateway.emitToWorkspace(evt.workspaceId, 'inbox.message.created', evt);
+    this.emitterService.emitToWorkspace(evt.workspaceId, 'inbox.message.created', evt);
 
     // Conversation-specific: update open thread view
-    this.gateway.emitToConversation(
+    this.emitterService.emitToConversation(
       evt.workspaceId,
       evt.conversationId,
       'inbox.thread.message',
@@ -34,7 +35,7 @@ export class InboxEventsSubscriber {
 
   @OnEvent('inbox.conversation.updated', { async: false })
   onConversationUpdated(evt: InboxConversationUpdatedEvent) {
-    this.gateway.emitToWorkspace(
+    this.emitterService.emitToWorkspace(
       evt.workspaceId,
       'inbox.conversation.updated',
       evt,
@@ -43,12 +44,12 @@ export class InboxEventsSubscriber {
 
   @OnEvent('inbox.message.status.updated', { async: false })
   onMessageStatusUpdated(evt: InboxMessageStatusUpdatedEvent) {
-    this.gateway.emitToWorkspace(
+    this.emitterService.emitToWorkspace(
       evt.workspaceId,
       'inbox.message.status.updated',
       evt,
     );
-    this.gateway.emitToConversation(
+    this.emitterService.emitToConversation(
       evt.workspaceId,
       evt.conversationId,
       'inbox.thread.message_status',
@@ -58,8 +59,8 @@ export class InboxEventsSubscriber {
 
   @OnEvent('inbox.comment.sent')
   handleInboxCommentSent(evt: InboxCommentReplyEvent) {
-    this.gateway.emitToWorkspace(evt.workspaceId, 'inbox.comment.sent', evt);
-    this.gateway.emitToConversation(
+    this.emitterService.emitToWorkspace(evt.workspaceId, 'inbox.comment.sent', evt);
+    this.emitterService.emitToConversation(
       evt.workspaceId,
       evt.postId,
       'inbox.comment.sent',
@@ -74,7 +75,7 @@ export class InboxEventsSubscriber {
     commentId: string;
     direction: 'INBOUND' | 'OUTBOUND';
   }) {
-    this.gateway.emitToWorkspace(
+    this.emitterService.emitToWorkspace(
       payload.workspaceId, 
       'inbox.comment.created', 
       payload
@@ -88,7 +89,7 @@ export class InboxEventsSubscriber {
     status: string;
     error?: string;
   }) {
-    this.gateway.emitToWorkspace(
+    this.emitterService.emitToWorkspace(
       payload.workspaceId,
       'inbox.comment.updated',
       payload

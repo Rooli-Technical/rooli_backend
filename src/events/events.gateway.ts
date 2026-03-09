@@ -73,21 +73,21 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, 
 
   // ---- Broadcast helpers (called by subscribers) ----
 
-  emitToWorkspace(workspaceId: string, eventName: string, payload: any) {
-    this.logger.log(`Broadcasting ${eventName} to workspace:${workspaceId}`);
-    this.server.to(this.roomWorkspace(workspaceId)).emit(eventName, payload);
-  }
+  // emitToWorkspace(workspaceId: string, eventName: string, payload: any) {
+  //   this.logger.log(`Broadcasting ${eventName} to workspace:${workspaceId}`);
+  //   this.server.to(this.roomWorkspace(workspaceId)).emit(eventName, payload);
+  // }
 
-  emitToConversation(workspaceId: string, conversationId: string, eventName: string, payload: any) {
-      this.logger.log(`Broadcasting ${eventName} to conversation:${conversationId} in workspace:${workspaceId}`);
-    // You can choose to have clients join conversation rooms too.
-    this.server.to(this.roomConversation(workspaceId, conversationId)).emit(eventName, payload);
-  }
+  // emitToConversation(workspaceId: string, conversationId: string, eventName: string, payload: any) {
+  //     this.logger.log(`Broadcasting ${eventName} to conversation:${conversationId} in workspace:${workspaceId}`);
+  //   // You can choose to have clients join conversation rooms too.
+  //   this.server.to(this.roomConversation(workspaceId, conversationId)).emit(eventName, payload);
+  // }
 
-   emitToMember(memberId: string, eventName: string, payload: any) {
-    this.logger.log(`Emitting ${eventName} to member:${memberId}`);
-    this.server.to(this.roomMember(memberId)).emit(eventName, payload);
-  }
+  //  emitToMember(memberId: string, eventName: string, payload: any) {
+  //   this.logger.log(`Emitting ${eventName} to member:${memberId}`);
+  //   this.server.to(this.roomMember(memberId)).emit(eventName, payload);
+  // }
 
   // ---- Optional client -> server events ----
   // Keep these tiny. Persisting read state should still be done via HTTP endpoint OR a dedicated service.
