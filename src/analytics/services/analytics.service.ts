@@ -423,7 +423,7 @@ export class AnalyticsService {
    * Calculates the best day and hour to post based on historical engagement.
    * Returns a 168-hour matrix (7 days x 24 hours) for a UI Heatmap.
    */
-async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
+  async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
     const startDate = subDays(new Date(), days);
 
     // 1. Fetch ALL successful posts for the entire workspace
@@ -446,13 +446,16 @@ async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
 
     // 2. Initialize our data structures
     const platforms = ['LINKEDIN', 'TWITTER', 'FACEBOOK', 'INSTAGRAM'];
-    
+
     // We will store the raw data here before formatting
-    const rawData: Record<string, Map<string, { totalEng: number; count: number }>> = {
+    const rawData: Record<
+      string,
+      Map<string, { totalEng: number; count: number }>
+    > = {
       WORKSPACE: this.createEmptyHeatmapMap(),
     };
-    
-    platforms.forEach(p => rawData[p] = this.createEmptyHeatmapMap());
+
+    platforms.forEach((p) => (rawData[p] = this.createEmptyHeatmapMap()));
 
     // 3. Single-pass aggregation!
     for (const post of posts) {
@@ -484,8 +487,6 @@ async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
 
     return response;
   }
-
-
 
   private async getWorkspaceBusiness(
     profileIds: string[],
@@ -604,6 +605,7 @@ async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
       take,
       select: {
         id: true,
+        postId: true,
         createdAt: true,
         platformPostId: true,
         contentOverride: true,
@@ -617,7 +619,8 @@ async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
     });
 
     return posts.map((p) => ({
-      postId: p.id,
+      postId: p.postId,
+      postDestinationId: p.id,
       platform: p.profile?.platform,
       content: p.contentOverride,
       platformPostId: p.platformPostId!,
@@ -1096,7 +1099,7 @@ async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
     return results;
   }
 
-    private createEmptyHeatmapMap() {
+  private createEmptyHeatmapMap() {
     const map = new Map<string, { totalEng: number; count: number }>();
     for (let d = 0; d < 7; d++) {
       for (let h = 0; h < 24; h++) {
@@ -1106,7 +1109,9 @@ async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
     return map;
   }
 
-  private formatHeatmap(mapData: Map<string, { totalEng: number; count: number }>) {
+  private formatHeatmap(
+    mapData: Map<string, { totalEng: number; count: number }>,
+  ) {
     let maxAverage = 0;
     const rawResults = [];
     let totalPostsAnalyzed = 0;
@@ -1114,7 +1119,7 @@ async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
     for (const [key, data] of mapData.entries()) {
       const [dayStr, hourStr] = key.split('-');
       const average = data.count > 0 ? data.totalEng / data.count : 0;
-      
+
       if (average > maxAverage) maxAverage = average;
       totalPostsAnalyzed += data.count;
 
@@ -1146,5 +1151,4 @@ async getWorkspaceBestTimeToPost(workspaceId: string, days = 90) {
       heatmap,
     };
   }
-
 }

@@ -1,4 +1,4 @@
-// src/events/events.gateway.ts
+
 import {
   ConnectedSocket,
   MessageBody,
