@@ -15,6 +15,7 @@ import { OutboundMessagesProcessor } from './processors/outbound-messages.proces
 import { InboxModule } from '@/messages/inbox.module';
 import { InboxSyncProcessor } from './processors/polling.processor';
 import { PollingModule } from '@/polling/polling.module';
+import { RedisModule } from '@/redis/redis.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PollingModule } from '@/polling/polling.module';
     PollingModule,
     forwardRef(() => InboxModule),
     forwardRef(() => PollingModule),
+    RedisModule, 
   ],
   controllers: [WorkerController],
   providers: [

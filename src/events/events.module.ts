@@ -7,6 +7,7 @@ import { EventsGateway } from './events.gateway';
 import { InboxEventsSubscriber } from './subscribers/inbox-events.subscriber';
 import { WsAuthMiddleware } from './ws-auth.middleware';
 import { RealtimeEmitterService } from './realtime-emitter.service';
+import { RedisModule } from '@/redis/redis.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { RealtimeEmitterService } from './realtime-emitter.service';
       secret: process.env.JWT_SECRET!,
       signOptions: { expiresIn: '7d' },
     }),
+    RedisModule
   ],
   providers: [
     PrismaService,
