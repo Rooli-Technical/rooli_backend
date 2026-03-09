@@ -28,6 +28,7 @@ import Redis from 'ioredis';
           username: url.username ? decodeURIComponent(url.username) : undefined,
           password: url.password ? decodeURIComponent(url.password) : undefined,
           ...(isTls ? { tls: { rejectUnauthorized: false } } : {}),
+          keepAlive: 10000,
         };
       },
     },
@@ -40,6 +41,7 @@ import Redis from 'ioredis';
           ...options,
           maxRetriesPerRequest: null,
           enableReadyCheck: false,
+          pingInterval: 10000,
         });
 
         client.on('error', (err) => {

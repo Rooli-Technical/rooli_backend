@@ -15,9 +15,9 @@ async function bootstrap() {
     rawBody: true,
   });
 
-  const redisClient = app.get<any>('REDIS_CLIENT');
-
-  // 2. Pass it into the Adapter
+ const redisClient = app.get('REDIS_CLIENT');
+  
+  // ONLY the Web Service gets the Adapter!
   const redisIoAdapter = new RedisIoAdapter(app, redisClient);
   await redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);
