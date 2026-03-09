@@ -128,9 +128,24 @@ export class InstagramService {
           accessToken: accessToken, 
         },
       ];
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`IG Fetch Failed: ${error.message}`, error.response?.data);
       return [];
     }
   }
+
+  async disconnect(accessToken: string): Promise<void> {
+  try {
+    await lastValueFrom(
+      this.httpService.delete(`${this.GRAPH_HOST}/me/permissions`, {
+        params: { access_token: accessToken },
+      }),
+    );
+    this.logger.log(`Successfully revoked Instagram token`);
+  } catch (error: any) {
+    // We log a warning but don't throw; we still want to delete the local record
+    const errorMsg = error.response?.data?.error?.message || error.message;
+    this.logger.warn(`External revocation failed: ${errorMsg}`);
+  }
+}
 }

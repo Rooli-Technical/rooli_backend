@@ -166,7 +166,6 @@ export class SocialConnectionService {
       connection.accessToken,
     );
 
-
     let pages;
 
     try {
@@ -206,16 +205,39 @@ export class SocialConnectionService {
    * Revokes tokens (optional) and deletes the connection.
    * Cascade deletes all linked SocialProfiles in Workspaces.
    */
-  async disconnect(connectionId: string, organizationId: string) {
+async disconnect(connectionId: string, organizationId: string) {
     const connection = await this.prisma.socialConnection.findFirst({
       where: { id: connectionId, organizationId },
+      include: { profiles: true }, 
     });
 
-    if (!connection) throw new NotFoundException('Connection not found');
+    if (!connection) throw new NotFoundException('Social Connection not found');
 
-    // Optional: Call provider API to revoke token (Clean exit)
-    // await this.facebook.revokeToken(connection.accessToken);
+    const token = await this.encryptionService.decrypt(connection.accessToken);
 
+
+    switch (connection.platform) {
+      case 'FACEBOOK':
+        await this.facebook.disconnect(token);
+        break;
+
+      case 'INSTAGRAM':
+        const isNativeIg = token.trim().startsWith('IG');
+        
+        if (isNativeIg) {
+          await this.instagram.disconnect(token);
+        } else {
+          this.logger.log(`Skipping token revocation for FB-connected IG connection to protect parent Facebook login.`);
+        }
+        break;
+
+      default:
+        this.logger.warn(
+          `No revocation logic defined for platform: ${connection.platform}`,
+        );
+    }
+
+    // 4. Delete the connection from the database (cascades to profiles)
     await this.prisma.socialConnection.delete({
       where: { id: connectionId },
     });
@@ -265,10 +287,12 @@ export class SocialConnectionService {
 
         case 'LINKEDIN':
           if (!pageId.startsWith('urn:li:organization:')) {
-            this.logger.debug(`Skipping webhook sub for personal profile: ${pageId}`);
+            this.logger.debug(
+              `Skipping webhook sub for personal profile: ${pageId}`,
+            );
             return false; // Skip safely without throwing an error
           }
-          
+
           const userUrn = connection.platformUserId;
           return await this.linkedin.subscribeOrganizationToWebhook(
             userUrn,
@@ -301,27 +325,35 @@ export class SocialConnectionService {
     }
 
     if (!connection.accessToken) {
-      throw new BadRequestException('Missing access token for LinkedIn connection');
+      throw new BadRequestException(
+        'Missing access token for LinkedIn connection',
+      );
     }
 
-    const token = await this.encryptionService.decrypt(connection.accessToken)
+    const token = await this.encryptionService.decrypt(connection.accessToken);
 
     // 3. Extract necessary URNs
     // pageId is usually stored in the 'externalId' or 'platformPageId' column
-    const organizationUrn = 'urn:li:organization:109376565'; 
-    const userUrn = 'urn:li:person:oaxV-EunJg'
+    const organizationUrn = 'urn:li:organization:109376565';
+    const userUrn = 'urn:li:person:oaxV-EunJg';
 
     if (!organizationUrn || !userUrn) {
-      throw new BadRequestException('Connection missing required URNs (User or Organization)');
+      throw new BadRequestException(
+        'Connection missing required URNs (User or Organization)',
+      );
     }
 
     // 4. Safety Check
     if (!organizationUrn.startsWith('urn:li:organization:')) {
-      this.logger.warn(`Attempted to subscribe a non-organization URN: ${organizationUrn}`);
+      this.logger.warn(
+        `Attempted to subscribe a non-organization URN: ${organizationUrn}`,
+      );
       return false;
     }
 
-    this.logger.log(`Initiating LinkedIn subscription for Org: ${organizationUrn}`);
+    this.logger.log(
+      `Initiating LinkedIn subscription for Org: ${organizationUrn}`,
+    );
 
     // 5. Delegate to your provider
     return await this.linkedin.subscribeOrganizationToWebhook(

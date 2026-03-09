@@ -38,13 +38,13 @@ export class FacebookService {
 
       'pages_manage_metadata',
       'pages_messaging',
-      'pages_manage_engagement', 
+      'pages_manage_engagement',
       // Instagram
       'instagram_basic',
       'instagram_content_publish', // For IG Posting
       'instagram_manage_insights', // For IG Analytics
       'instagram_manage_messages', // For IG DMs
-      'instagram_manage_comments'
+      'instagram_manage_comments',
     ].join(',');
 
     return (
@@ -160,48 +160,63 @@ export class FacebookService {
     }
   }
 
-async subscribeAppToPage(
-  pageId: string,
-  pageAccessToken: string,
-): Promise<void> {
-  const url = `${this.GRAPH_URL}/${pageId}/subscribed_apps`;
+  async subscribeAppToPage(
+    pageId: string,
+    pageAccessToken: string,
+  ): Promise<void> {
+    const url = `${this.GRAPH_URL}/${pageId}/subscribed_apps`;
 
-  const subscribedFields = [
-    'feed',
-    'messages',
-    'messaging_postbacks',
-    'messaging_handovers',
-    'mention',
-    'ratings',
-  ].join(',');
+    const subscribedFields = [
+      'feed',
+      'messages',
+      'messaging_postbacks',
+      'messaging_handovers',
+      'mention',
+      'ratings',
+    ].join(',');
 
-  try {
-    const { data } = await lastValueFrom(
-      this.httpService.post(url, null, {
-        params: {
-          access_token: pageAccessToken,
-          subscribed_fields: subscribedFields,
-        },
-      }),
-    );
-
-    if (data?.success !== true) {
-      this.logger.warn(
-        `Meta subscribe call returned non-success for page ${pageId}`,
-        data,
+    try {
+      const { data } = await lastValueFrom(
+        this.httpService.post(url, null, {
+          params: {
+            access_token: pageAccessToken,
+            subscribed_fields: subscribedFields,
+          },
+        }),
       );
-    } else {
-      this.logger.log(`Subscribed app to Facebook Page ${pageId}`);
-    }
-  } catch (err) {
-    this.logger.error(
-      `Failed to subscribe app to page ${pageId}`,
-      err.response?.data || err.message,
-    );
 
-    throw new BadRequestException(
-      'Could not install app on Facebook Page. Ensure the Page token has pages_manage_metadata permission.',
-    );
+      if (data?.success !== true) {
+        this.logger.warn(
+          `Meta subscribe call returned non-success for page ${pageId}`,
+          data,
+        );
+      } else {
+        this.logger.log(`Subscribed app to Facebook Page ${pageId}`);
+      }
+    } catch (err) {
+      this.logger.error(
+        `Failed to subscribe app to page ${pageId}`,
+        err.response?.data || err.message,
+      );
+
+      throw new BadRequestException(
+        'Could not install app on Facebook Page. Ensure the Page token has pages_manage_metadata permission.',
+      );
+    }
   }
-}
+
+  async disconnect(accessToken: string): Promise<void> {
+    try {
+      await lastValueFrom(
+        this.httpService.delete(`${this.GRAPH_URL}/me/permissions`, {
+          params: { access_token: accessToken },
+        }),
+      );
+      this.logger.log(`Successfully revoked Meta token`);
+    } catch (error: any) {
+      // We log a warning but don't throw; we still want to delete the local record
+      const errorMsg = error.response?.data?.error?.message || error.message;
+      this.logger.warn(`External revocation failed: ${errorMsg}`);
+    }
+  }
 }
