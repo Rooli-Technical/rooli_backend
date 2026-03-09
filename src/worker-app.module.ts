@@ -16,11 +16,26 @@ import { RedisModule } from './redis/redis.module';
     // 2. DATABASE (Essential for your processors)
     PrismaModule, 
 
-    // 3. REDIS CONNECTION (Copied exactly from AppModule)
-    BullModule.forRootAsync({
-  inject: ['REDIS_OPTIONS'],
-  useFactory: (redisOptions) => ({
-    connection: redisOptions,
+
+  BullModule.forRootAsync({
+  inject: ['REDIS_OPTIONS', 'REDIS_CLIENT'], // Inject your existing client to steal its listener logic
+  useFactory: (redisOptions, redisClient) => ({
+    connection: {
+      ...redisOptions,
+      // BullMQ needs to know how to handle connection errors internally
+      reconnectOnError: (err) => {
+        const targetError = 'READONLY';
+        if (err.message.includes(targetError)) {
+          return true;
+        }
+        return false;
+      },
+    },
+    defaultJobOptions: {
+      removeOnComplete: true,
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 1000 },
+    },
   }),
 }),
 RedisModule,

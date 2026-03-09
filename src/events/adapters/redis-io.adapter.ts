@@ -13,20 +13,34 @@ export class RedisIoAdapter extends IoAdapter {
   }
 
   async connectToRedis(): Promise<void> {
-    // Socket.io requires a separate client for subscribing, so we duplicate the one you passed in.
-    // .duplicate() automatically copies the TLS settings from your RedisModule!
-    const subClient = this.pubClient.duplicate();
+  const subClient = this.pubClient.duplicate();
 
+  // 1. ADD THIS: This prevents the log-only ECONNRESET from crashing the process
+  subClient.on('error', (err) => {
+    // We log it as a warning since ioredis will auto-reconnect anyway
+    console.warn('[RedisIoAdapter] subClient connection reset:', err.message);
+  });
+
+  // 2. Wrap the ready check in a try/catch to ensure it doesn't hang your startup
+  try {
     await Promise.all([
-      new Promise<void>((resolve) => {
+      new Promise<void>((resolve, reject) => {
         if (this.pubClient.status === 'ready') return resolve();
-        this.pubClient.on('ready', resolve);
+        this.pubClient.once('ready', resolve);
+        this.pubClient.once('error', reject);
       }),
-      new Promise<void>((resolve) => subClient.on('ready', resolve)),
+      new Promise<void>((resolve, reject) => {
+        if (subClient.status === 'ready') return resolve();
+        subClient.once('ready', resolve);
+        subClient.once('error', reject);
+      }),
     ]);
-
-    this.adapterConstructor = createAdapter(this.pubClient, subClient);
+  } catch (err: any) {
+    console.error('Redis Adapter failed to reach "ready" status:', err.message);
   }
+
+  this.adapterConstructor = createAdapter(this.pubClient, subClient);
+}
 
   createIOServer(port: number, options?: ServerOptions): any {
     const server = super.createIOServer(port, options);
