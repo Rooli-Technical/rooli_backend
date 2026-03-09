@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from './prisma/prisma.module';
 import { WorkerModule } from './worker/worker.module';
+import { RedisModule } from './redis/redis.module';
 
 
 @Module({
@@ -22,7 +23,7 @@ import { WorkerModule } from './worker/worker.module';
     connection: redisOptions,
   }),
 }),
-
+RedisModule,
     // 4. THE LOGIC (Your existing module)
     WorkerModule, 
   ],

@@ -25,8 +25,8 @@ import Redis from 'ioredis';
         return {
           host: url.hostname,
           port: Number(url.port),
-          username: url.username || undefined,
-          password: url.password || undefined,
+          username: url.username ? decodeURIComponent(url.username) : undefined,
+          password: url.password ? decodeURIComponent(url.password) : undefined,
           ...(isTls ? { tls: { rejectUnauthorized: false } } : {}),
         };
       },
