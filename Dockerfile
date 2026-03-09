@@ -36,7 +36,7 @@ RUN npm run build
 # We assume this appends to dist/ or has a specific output. 
 # If 'nest build worker' clears the dist folder, you must change the order 
 # or configure nest-cli.json to not delete output.
-RUN npm run build:worker
+# RUN npm run build:worker
 
 # ----------------------------
 # Final Stage (Production)
@@ -54,6 +54,6 @@ COPY --from=build /app/generated ./generated
 COPY --from=build /app/prisma ./prisma 
 
 EXPOSE 3000
-#CMD [ "npm", "run", "start:prod" ]
+CMD [ "npm", "run", "start:prod" ]
 # Start both processes using the new script
-CMD [ "npm", "run", "start:all" ]
+# CMD [ "npm", "run", "start:all" ]

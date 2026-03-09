@@ -110,7 +110,6 @@ import { PollingModule } from './polling/polling.module';
 
     PostMediaModule,
 
-    WorkerModule,
 
     QueueModule,
 
