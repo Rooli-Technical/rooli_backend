@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, Inject } from '@nestjs/common';
 import { Emitter } from '@socket.io/redis-emitter';
 import Redis from 'ioredis';
 
@@ -7,19 +7,16 @@ export class RealtimeEmitterService implements OnModuleInit {
   private emitter: Emitter;
   private readonly logger = new Logger(RealtimeEmitterService.name);
 
+  constructor(@Inject('REDIS_CLIENT') private readonly redisClient: Redis) {}
+
   async onModuleInit() {
     try {
-      // 1. ioredis connects automatically
-      const client = new Redis(process.env.REDIS_URL as string);
-      
-      // 2. Wait for it to be fully ready
-      await new Promise<void>((resolve) => client.on('ready', resolve));
-      
-      // 3. Bind the emitter
-      this.emitter = new Emitter(client);
-      this.logger.log('Realtime Emitter successfully connected to Redis');
+      // The RedisModule already handles connections and TLS. 
+      // We just pass the client directly into the Emitter.
+      this.emitter = new Emitter(this.redisClient);
+      this.logger.log('Realtime Emitter successfully connected to Redis via global RedisModule');
     } catch (error) {
-      this.logger.error('Failed to connect Realtime Emitter to Redis', error);
+      this.logger.error('Failed to initialize Realtime Emitter', error);
     }
   }
 

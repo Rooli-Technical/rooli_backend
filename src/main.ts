@@ -15,13 +15,11 @@ async function bootstrap() {
     rawBody: true,
   });
 
-  // 1. You created the Adapter
-  const redisIoAdapter = new RedisIoAdapter(app);
-  
-  // 2. You connected it to Redis
+  const redisClient = app.get<any>('REDIS_CLIENT');
+
+  // 2. Pass it into the Adapter
+  const redisIoAdapter = new RedisIoAdapter(app, redisClient);
   await redisIoAdapter.connectToRedis();
-  
-  // 3. You forced your entire NestJS app (and the Gateway) to use it!
   app.useWebSocketAdapter(redisIoAdapter);
   //app.useWebSocketAdapter(new IoAdapter(app));
 
