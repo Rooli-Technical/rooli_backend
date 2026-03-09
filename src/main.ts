@@ -25,6 +25,8 @@ async function bootstrap() {
     rawBody: true,
   });
 
+  app.enableShutdownHooks();
+
  const redisClient = app.get('REDIS_CLIENT');
   
   // ONLY the Web Service gets the Adapter!
