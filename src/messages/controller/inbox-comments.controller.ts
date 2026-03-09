@@ -14,16 +14,16 @@ import { SendCommentReplyDto } from '../dtos/send-comment.dto';
 export class InboxCommentsController {
   constructor(private readonly inboxService: InboxCommentsService) {}
 
-  @Get(':postId/comments')
+  @Get(':platformPostId/comments')
   @ApiOperation({ summary: 'List all comments for a specific post' })
   @ApiResponse({ status: 200, description: 'Returns threaded comments' })
   async listComments(
     @Param('workspaceId') workspaceId: string,
-    @Param('postId') postId: string,
+    @Param('platformPostId') platformPostId: string,
   ) {
     return this.inboxService.listCommentsForPost({
       workspaceId,
-      postId,
+      platformPostId,
     });
   }
 

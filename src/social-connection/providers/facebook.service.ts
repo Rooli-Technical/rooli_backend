@@ -94,7 +94,7 @@ export class FacebookService {
         expiresAt,
         scopes: tokenData.scopes,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.response?.data || error.message);
       throw new BadRequestException('Failed to exchange Facebook code');
     }
@@ -154,7 +154,7 @@ export class FacebookService {
       }
 
       return options;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error fetching FB pages: ${error.message}`);
       throw new BadRequestException('Could not fetch Facebook Pages');
     }
@@ -193,7 +193,7 @@ export class FacebookService {
       } else {
         this.logger.log(`Subscribed app to Facebook Page ${pageId}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(
         `Failed to subscribe app to page ${pageId}`,
         err.response?.data || err.message,
