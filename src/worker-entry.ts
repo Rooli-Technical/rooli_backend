@@ -8,6 +8,8 @@ async function bootstrap() {
   // This enables system signals (like Ctrl+C or Render shutdowns) to close connections gracefully
   app.enableShutdownHooks(); 
 
+  const redis = app.get('REDIS_CLIENT');
+
   console.log('🚀 Background Worker is listening for jobs...');
 }
 bootstrap();
