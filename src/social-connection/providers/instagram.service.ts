@@ -92,8 +92,7 @@ export class InstagramService {
 
       };
 
-    } catch (error) {
-      console.log(error)
+    } catch (error: any) {
       this.logger.error('IG (No-Page) Exchange Failed', error.response?.data || error.message);
       throw new BadRequestException(error.message || 'Failed to connect Instagram account');
     }
