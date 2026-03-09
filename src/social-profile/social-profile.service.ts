@@ -48,7 +48,6 @@ async addProfilesToWorkspace(
     await this.prisma.socialProfile.findMany({
       where: {
         workspaceId,
-        platform: dto.platform as Platform,
         platformId: { in: dto.platformIds },
       },
       select: { platformId: true },
@@ -58,9 +57,11 @@ async addProfilesToWorkspace(
     existingInWorkspace.map(p => p.platformId),
   );
 
+
   const newProfilesCount = dto.platformIds.filter(
     id => !existingIds.has(id),
   ).length;
+
 
   if (newProfilesCount > remaining) {
     throw new ForbiddenException(
