@@ -73,21 +73,29 @@ export class InstagramInboxProvider {
   /**
    * Fetches recent Instagram DMs
    */
-  async getRecentDMs(igUserId: string, accessToken: string): Promise<any[]> {
+  async getRecentDMs(igUserId: string, accessToken: string, pageId?: string): Promise<any[]> {
     try {
+      const isFbToken = accessToken.trim().startsWith('EA');
       const baseUrl = this.resolveHost(accessToken);
+
+      const targetId = isFbToken ? pageId : igUserId;
+
+      if (isFbToken && !pageId) {
+        this.logger.warn(`IG Profile ${igUserId} uses an EA token but has no pageId. DM fetch will likely fail.`);
+      }
       
-      const url = `${baseUrl}/${igUserId}/conversations`;
+      const url = `${baseUrl}/${targetId}/conversations`;
       const { data } = await firstValueFrom(
         this.httpService.get(url, {
           params: {
-            platform: 'instagram', // CRITICAL: Tells Meta we want IG DMs, not Messenger DMs
+            platform: 'instagram', 
             fields: 'id,messages{id,message,from,created_time}',
             limit: 5,
             access_token: accessToken,
           },
         })
       );
+
 
       const conversations = data?.data || [];
       return conversations.flatMap((conv: any) => 
@@ -107,6 +115,7 @@ export class InstagramInboxProvider {
         })),
       );
     } catch (error: any) {
+      console.log(error)
       this.logger.error(`Failed to fetch IG DMs for ${igUserId}: ${error.response?.data?.error?.message || error.message}`);
       return [];
     }

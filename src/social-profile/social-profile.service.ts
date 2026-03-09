@@ -119,6 +119,7 @@ async addProfilesToWorkspace(
           accessToken: await this.encryption.encrypt(
             pageData.accessToken,
           ),
+          facebookPageId: pageData.facebookPageId || null,
         },
         create: {
           workspaceId,
@@ -135,6 +136,7 @@ async addProfilesToWorkspace(
             pageData.type,
             pageData.platform,
           ),
+          facebookPageId: pageData.facebookPageId || null,
         },
       });
 

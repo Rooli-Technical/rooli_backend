@@ -270,6 +270,9 @@ model SocialProfile {
   socialConnectionId String // Link back to the parent login
 
   platform   Platform
+
+  facebookPageId String?
+  
   platformId String // The Page ID / IG Business ID
   name       String // "Nike Official"
   username   String? // "@nike"

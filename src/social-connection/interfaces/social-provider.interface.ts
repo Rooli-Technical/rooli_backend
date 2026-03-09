@@ -15,4 +15,5 @@ export interface SocialPageOption {
   type: 'PAGE' | 'PROFILE' | 'GROUP';
   accessToken?: string;    // The specific Page Token (if available immediately)
   username: string;
+  facebookPageId?: string;
 }

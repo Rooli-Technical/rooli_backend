@@ -130,7 +130,7 @@ export class InboxSyncProcessor extends WorkerHost {
     }
 
     // DMs
-    const rawDms = await this.instagramProvider.getRecentDMs(profile.platformId, accessToken);
+    const rawDms = await this.instagramProvider.getRecentDMs(profile.platformId, accessToken, profile.facebookPageId);
     for (const dm of rawDms) {
       const normalizedDm = this.metaAdapter.normalizeDirectMessage(dm);
       if (normalizedDm) {

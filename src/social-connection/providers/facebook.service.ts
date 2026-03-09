@@ -148,6 +148,7 @@ export class FacebookService {
             //To post to IG, you use the *FB Page Token* of the parent page.
             // So we copy the same page.access_token here.
             accessToken: page.access_token,
+            facebookPageId: page.id,
           });
         }
       }
