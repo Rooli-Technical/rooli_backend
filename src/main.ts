@@ -10,6 +10,16 @@ import * as express from 'express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { RedisIoAdapter } from './events/adapters/redis-io.adapter';
 
+
+process.on('uncaughtException', (err) => {
+  console.error('🚨 [Uncaught Exception] The process is crashing:', err);
+  console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 [Unhandled Rejection] A promise failed completely:', reason);
+});
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
