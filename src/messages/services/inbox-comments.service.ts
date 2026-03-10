@@ -152,7 +152,7 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
       // 4. Emit events so the frontend updates the thread immediately
       this.events.emit('inbox.comment.created', {
         workspaceId: params.workspaceId,
-        postId: parentComment.postDestinationId,
+        postDestinationId: parentComment.postDestinationId,
         commentId: createdComment.id,
         direction: 'OUTBOUND',
       });

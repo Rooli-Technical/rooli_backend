@@ -98,7 +98,7 @@ export class PublishPostProcessor extends WorkerHost {
       }
       this.events.emit('publishing.post.published', {
         workspaceId: post.workspaceId,
-        postId: post.id,
+        postDestinationId: dest.id,
         platform: platform,
       });
     } catch (e: any) {
@@ -108,7 +108,7 @@ export class PublishPostProcessor extends WorkerHost {
       });
       this.events.emit('publishing.post.failed', {
         workspaceId: post.workspaceId,
-        postId: post.id,
+        postDestinationId: dest.id,
         platform: platform,
         reason: e?.message ?? 'Unknown error',
       });

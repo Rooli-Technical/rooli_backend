@@ -77,7 +77,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
 
           this.events.emit('inbox.comment.created', {
             workspaceId: resolved.workspaceId,
-            postId: comment.postDestinationId,
+            postDestinationId: comment.postDestinationId,
             commentId: comment.id,         
             direction: comment.direction,
           });
@@ -149,7 +149,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
           // 4. Emit your domain events so the UI updates in real-time
           this.events.emit('inbox.comment.created', {
             workspaceId: resolved.workspaceId,
-            postId: comment.postDestinationId, // Using the new destination relation!
+            postDestinationId: comment.postDestinationId, // Using the new destination relation!
             commentId: comment.id,         
             direction: comment.direction,
           });

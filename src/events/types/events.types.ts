@@ -24,7 +24,7 @@ export type InboxMessageCreatedEvent = {
 
 export type InboxCommentReplyEvent = {
   workspaceId: string;
-  postId: string;
+  postDestinationId: string;
   externalId: string;
   content: string;
   platform: Platform;
@@ -81,13 +81,13 @@ export type DomainEventPayloadMap = {
 
   'publishing.post.published': {
     workspaceId: string;
-    postId: string;
+    postDestinationId: string;
     platform?: string;
   };
 
   'publishing.post.failed': {
     workspaceId: string;
-    postId: string;
+    postDestinationId: string;
     platform?: string;
     reason?: string;
   };
@@ -120,14 +120,14 @@ export type DomainEventPayloadMap = {
 
   'inbox.comment.created': {
     workspaceId: string;
-    postId: string;
+    postDestinationId: string;
     commentId: string;
     direction: 'INBOUND' | 'OUTBOUND';
   };
 
   'inbox.comment.sent': {
     workspaceId: string;
-    postId: string; // Internal Post ID
+    postDestinationId: string; // Internal Post ID
     externalId: string;
     content: string;
     platform: Platform;

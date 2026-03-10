@@ -221,7 +221,7 @@ export class InboxIngestService {
       if (isNew) {
         this.events.emit('inbox.comment.created', {
           workspaceId: payload.workspaceId,
-          postId: destination.id,
+          postDestinationId: destination.id,
           commentId: comment.id,
           direction: comment.direction,
         });

@@ -62,7 +62,7 @@ export class InboxEventsSubscriber {
     this.emitterService.emitToWorkspace(evt.workspaceId, 'inbox.comment.sent', evt);
     this.emitterService.emitToConversation(
       evt.workspaceId,
-      evt.postId,
+      evt.postDestinationId,
       'inbox.comment.sent',
       evt,
     );
