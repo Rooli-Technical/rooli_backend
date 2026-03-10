@@ -8,6 +8,7 @@ import { InboxEventsSubscriber } from './subscribers/inbox-events.subscriber';
 import { WsAuthMiddleware } from './ws-auth.middleware';
 import { RealtimeEmitterService } from './realtime-emitter.service';
 import { RedisModule } from '@/redis/redis.module';
+import { NotificationsEventsSubscriber } from './subscribers/notifications-events.subscriber';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RedisModule } from '@/redis/redis.module';
     EventsGateway,
     InboxEventsSubscriber,
     RealtimeEmitterService,
+    NotificationsEventsSubscriber,
     WsAuthMiddleware,
   ],
   exports: [DomainEventsService, RealtimeEmitterService,],

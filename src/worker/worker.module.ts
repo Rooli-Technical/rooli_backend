@@ -16,6 +16,7 @@ import { InboxModule } from '@/messages/inbox.module';
 import { InboxSyncProcessor } from './processors/polling.processor';
 import { PollingModule } from '@/polling/polling.module';
 import { RedisModule } from '@/redis/redis.module';
+import { NotificationsModule } from '@/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { RedisModule } from '@/redis/redis.module';
     forwardRef(() => InboxModule),
     forwardRef(() => PollingModule),
     RedisModule, 
+    NotificationsModule
   ],
   controllers: [WorkerController],
   providers: [
