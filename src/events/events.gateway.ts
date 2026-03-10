@@ -35,6 +35,7 @@ declare module 'socket.io' {
 @WebSocketGateway({
   namespace: '/events',
   cors: { origin: true, credentials: true },
+  transports: ['websocket'],
 })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
   private readonly logger = new Logger(EventsGateway.name);

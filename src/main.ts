@@ -7,8 +7,8 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
 import { AllExceptionsFilter } from './common/filters/all-exception-filter.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import * as express from 'express';
-import { IoAdapter } from '@nestjs/platform-socket.io';
-import { RedisIoAdapter } from './events/adapters/redis-io.adapter';
+import {  RedisSocketIoAdapter } from './events/adapters/redis-io.adapter';
+import Redis from 'ioredis';
 
 
 process.on('uncaughtException', (err) => {
@@ -27,20 +27,16 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
- const redisClient = app.get('REDIS_CLIENT');
-  
-  // ONLY the Web Service gets the Adapter!
-  const redisIoAdapter = new RedisIoAdapter(app, redisClient);
-  try {
-    // 3. Wait for the Pub/Sub clients to be Ready
-    await redisIoAdapter.connectToRedis();
-    app.useWebSocketAdapter(redisIoAdapter);
-    console.log('🚀 Redis WebSockets initialized');
-  } catch (err) {
-    console.error('❌ Failed to initialize Redis adapter:', err);
-    // Depending on your requirements, you might want to 
-    // process.exit(1) here if Redis is mandatory.
-  }
+ const redisClient = app.get<Redis>('REDIS_CLIENT');
+
+  const pubClient = redisClient;
+  const subClient = redisClient.duplicate();
+
+  const redisAdapter = new RedisSocketIoAdapter(app, pubClient, subClient);
+
+  await redisAdapter.connectToRedis();
+
+  app.useWebSocketAdapter(redisAdapter);
   //app.useWebSocketAdapter(new IoAdapter(app));
 
 app.enableCors({
