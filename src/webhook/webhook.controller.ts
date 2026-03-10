@@ -102,6 +102,16 @@ export class WebhookController {
     const objectType = payload?.object;
     const entries = payload?.entry ?? [];
 
+    const log = await this.prisma.webhookLog.create({
+      data: {
+        provider: 'META',
+        eventType: objectType, 
+        resourceId: entries[0]?.id || 'system-event',
+        payload: payload,
+        status: 'PENDING',
+      },
+    });
+
     for (const entry of entries) {
       // 1) Messaging events (DMs)
       if (Array.isArray(entry.messaging)) {
@@ -220,6 +230,16 @@ export class WebhookController {
   async handleLinkedIn(@Body() payload: any) {
     // LinkedIn includes a unique notificationId to help you deduplicate
     const notificationId = payload?.notificationId || cryptoRandomId();
+
+    const log = await this.prisma.webhookLog.create({
+      data: {
+        provider: 'LINKEDIN',
+        eventType: 'notification',
+        resourceId: notificationId,
+        payload: payload,
+        status: 'PENDING',
+      },
+    });
 
     // Instantly offload the payload to BullMQ for the InboxProcessor to handle
     await this.inboxQueue.add(
