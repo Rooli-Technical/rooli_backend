@@ -11,15 +11,6 @@ import {  RedisSocketIoAdapter } from './events/adapters/redis-io.adapter';
 import Redis from 'ioredis';
 
 
-process.on('uncaughtException', (err) => {
-  console.error('🚨 [Uncaught Exception] The process is crashing:', err);
-  console.error(err.stack);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 [Unhandled Rejection] A promise failed completely:', reason);
-});
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
@@ -29,14 +20,15 @@ async function bootstrap() {
 
  const redisClient = app.get<Redis>('REDIS_CLIENT');
 
-  const pubClient = redisClient;
-  const subClient = redisClient.duplicate();
+const pubClient = redisClient;
+const subClient = redisClient.duplicate();
 
-  const redisAdapter = new RedisSocketIoAdapter(app, pubClient, subClient);
+await subClient.connect();
 
-  await redisAdapter.connectToRedis();
+const redisAdapter = new RedisSocketIoAdapter(app, pubClient, subClient);
+await redisAdapter.connectToRedis();
 
-  app.useWebSocketAdapter(redisAdapter);
+app.useWebSocketAdapter(redisAdapter);
   //app.useWebSocketAdapter(new IoAdapter(app));
 
 app.enableCors({
