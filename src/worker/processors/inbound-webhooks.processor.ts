@@ -38,20 +38,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
 
-          const { conversation, message, contact } = await this.ingest.ingestInboundMessage(resolved);
-
-          //  domain events for UI / notifications / analytics
-          this.events.emit('inbox.message.created', {
-            workspaceId: resolved.workspaceId,
-            conversationId: conversation.id,
-            messageId: message.id,
-            direction: message.direction,
-          });
-          this.events.emit('inbox.conversation.updated', {
-            workspaceId: resolved.workspaceId,
-            conversationId: conversation.id,
-            lastMessageAt: conversation.lastMessageAt,
-          });
+           await this.ingest.ingestInboundMessage(resolved);
 
           return;
         }
@@ -72,15 +59,6 @@ export class InboundWebhooksProcessor extends WorkerHost {
             return;
           }
 
-          // 👇 3. Only extract the comment (since post is no longer returned)
-          const { comment } = result;
-
-          this.events.emit('inbox.comment.created', {
-            workspaceId: resolved.workspaceId,
-            postDestinationId: comment.postDestinationId,
-            commentId: comment.id,         
-            direction: comment.direction,
-          });
 
           return;
         }
@@ -90,20 +68,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-          const { conversation, message } = await this.ingest.ingestInboundMessage(resolved);
-
-          this.events.emit('inbox.message.created', {
-            workspaceId: resolved.workspaceId,
-            conversationId: conversation.id,
-            messageId: message.id,
-            direction: message.direction,
-          });
-          this.events.emit('inbox.conversation.updated', {
-            workspaceId: resolved.workspaceId,
-            conversationId: conversation.id,
-            lastMessageAt: conversation.lastMessageAt,
-          });
-
+           await this.ingest.ingestInboundMessage(resolved);
           return;
         }
 
@@ -112,20 +77,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-          const { conversation, message } = await this.ingest.ingestInboundMessage(resolved);
-
-          this.events.emit('inbox.message.created', {
-            workspaceId: resolved.workspaceId,
-            conversationId: conversation.id,
-            messageId: message.id,
-            direction: message.direction,
-          });
-          this.events.emit('inbox.conversation.updated', {
-            workspaceId: resolved.workspaceId,
-            conversationId: conversation.id,
-            lastMessageAt: conversation.lastMessageAt,
-          });
-
+          await this.ingest.ingestInboundMessage(resolved);  
           return;
         }
         case 'linkedin-inbound-comment': {
@@ -144,15 +96,6 @@ export class InboundWebhooksProcessor extends WorkerHost {
             return;
           }
 
-          const { comment } = result;
-
-          // 4. Emit your domain events so the UI updates in real-time
-          this.events.emit('inbox.comment.created', {
-            workspaceId: resolved.workspaceId,
-            postDestinationId: comment.postDestinationId, // Using the new destination relation!
-            commentId: comment.id,         
-            direction: comment.direction,
-          });
 
           return;
         }
