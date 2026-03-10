@@ -31,8 +31,16 @@ async function bootstrap() {
   
   // ONLY the Web Service gets the Adapter!
   const redisIoAdapter = new RedisIoAdapter(app, redisClient);
-  await redisIoAdapter.connectToRedis();
-  app.useWebSocketAdapter(redisIoAdapter);
+  try {
+    // 3. Wait for the Pub/Sub clients to be Ready
+    await redisIoAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisIoAdapter);
+    console.log('🚀 Redis WebSockets initialized');
+  } catch (err) {
+    console.error('❌ Failed to initialize Redis adapter:', err);
+    // Depending on your requirements, you might want to 
+    // process.exit(1) here if Redis is mandatory.
+  }
   //app.useWebSocketAdapter(new IoAdapter(app));
 
 app.enableCors({
