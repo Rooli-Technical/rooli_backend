@@ -18,14 +18,13 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
- const redisClient = app.get<Redis>('REDIS_CLIENT');
+const redisClient = app.get<Redis>('REDIS_CLIENT');
 
 const pubClient = redisClient;
 const subClient = redisClient.duplicate();
 
-await subClient.connect();
-
 const redisAdapter = new RedisSocketIoAdapter(app, pubClient, subClient);
+
 await redisAdapter.connectToRedis();
 
 app.useWebSocketAdapter(redisAdapter);
