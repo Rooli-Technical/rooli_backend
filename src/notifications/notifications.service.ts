@@ -28,7 +28,6 @@ export class NotificationsService {
       },
       select: this.notificationSelect(),
     });
-
     this.events.emit('notification.created' as any, {
       workspaceId: row.workspaceId,
       memberId: row.memberId,
@@ -46,11 +45,12 @@ export class NotificationsService {
    * If you did NOT add dedupeKey uniqueness, set `skipDuplicates` to false.
    */
   async createMany(input: CreateManyNotificationsInput) {
+
     const now = new Date();
 
     const skipDuplicates = input.skipDuplicates ?? false;
 
-    await this.prisma.notification.createMany({
+    const notifications = await this.prisma.notification.createManyAndReturn({
       data: input.memberIds.map((memberId) => ({
         workspaceId: input.workspaceId,
         memberId,
@@ -68,20 +68,20 @@ export class NotificationsService {
 
     // Emit lightweight events per member (don’t fetch all rows; not worth it).
     // Client can refetch list/unread count.
-    for (const memberId of input.memberIds) {
-      this.events.emit('notification.created' as any, {
-        workspaceId: input.workspaceId,
-        memberId,
-        notification: {
-          // minimal payload
-          type: input.type,
-          title: input.title,
-          body: input.body ?? null,
-          link: input.link ?? null,
-          createdAt: now,
-        },
-      });
-    }
+    for (const record of notifications) {
+    this.events.emit('notification.created' as any, {
+      workspaceId: record.workspaceId,
+      memberId: record.memberId,
+      notification: {
+        id: record.id, 
+        type: record.type,
+        title: record.title,
+        body: record.body,
+        link: record.link,
+        createdAt: record.createdAt,
+      },
+    });
+  }
 
     return { ok: true, createdAt: now };
   }

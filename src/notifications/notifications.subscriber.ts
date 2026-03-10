@@ -339,7 +339,7 @@ export class NotificationsSubscriber {
   @OnEvent('inbox.comment.created')
   async onInboxCommentCreated(evt: {
     workspaceId: string;
-    postId: string;
+    postDestinationId: string;
     commentId: string;
     direction: 'INBOUND' | 'OUTBOUND';
   }) {
@@ -367,9 +367,9 @@ export class NotificationsSubscriber {
         type: NotificationType.INBOX_NEW_MESSAGE, // Or create a NEW_COMMENT type!
         title,
         body,
-        link: `/inbox/comments/${evt.postId}`,
+        link: `/inbox/comments/${evt.postDestinationId}`,
         data: {
-          postId: evt.postId,
+          postDestinationId: evt.postDestinationId,
           commentId: evt.commentId,
           platform: comment.platform,
         } as Prisma.InputJsonValue,

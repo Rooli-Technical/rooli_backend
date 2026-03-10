@@ -617,6 +617,7 @@ export class AnalyticsService {
         },
       },
     });
+    
 
     return posts.map((p) => ({
       postId: p.postId,
