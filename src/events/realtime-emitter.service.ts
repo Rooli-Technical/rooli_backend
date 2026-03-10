@@ -32,16 +32,16 @@ export class RealtimeEmitterService implements OnModuleInit {
   // Add this line:
   this.logger.debug(`📡 [Worker -> Redis] Emitting ${event} to room ${room}`);
   
-  this.emitter.to(room).emit(event, payload);
+  this.emitter.of('/events').to(room).emit(event, payload);
 }
 
   emitToConversation(workspaceId: string, conversationId: string, event: string, payload: any) {
     if (!this.emitter) return;
-    this.emitter.to(`workspace:${workspaceId}:conversation:${conversationId}`).emit(event, payload);
+    this.emitter.of('/events').to(`workspace:${workspaceId}:conversation:${conversationId}`).emit(event, payload);
   }
 
   emitToMember(memberId: string, event: string, payload: any) {
     if (!this.emitter) return;
-    this.emitter.to(`member:${memberId}`).emit(event, payload);
+    this.emitter.of('/events').to(`member:${memberId}`).emit(event, payload);
   }
 }
