@@ -38,6 +38,7 @@ import { InboxModule } from './messages/inbox.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PollingModule } from './polling/polling.module';
+import Redis from 'ioredis';
 
 @Module({
   imports: [
@@ -55,27 +56,17 @@ import { PollingModule } from './polling/polling.module';
     ]),
 
     BullModule.forRootAsync({
-      useFactory: () => {
-        if (process.env.REDIS_URL) {
-          const url = new URL(process.env.REDIS_URL);
-          const isTls = process.env.REDIS_URL.startsWith('rediss://');
-
-          return {
-            connection: {
-              host: url.hostname,
-              port: Number(url.port),
-              username: url.username || undefined,
-              password: url.password || undefined,
-              ...(isTls ? { tls: { rejectUnauthorized: false } } : {}),
-            },
-          };
-        }
-
+      // 1. We inject the existing client from your RedisModule
+      inject: ['REDIS_CLIENT'], 
+      useFactory: (redisClient: Redis) => {
         return {
-          connection: {
-            host: process.env.REDIS_HOST || 'localhost',
-            port: Number(process.env.REDIS_PORT || 6379),
-            password: process.env.REDIS_PASSWORD || undefined,
+          // 2. Pass the actual instance, NOT a config object.
+          // This forces BullMQ to share the existing socket.
+          connection: redisClient, 
+          defaultJobOptions: {
+            removeOnComplete: true,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 1000 },
           },
         };
       },
