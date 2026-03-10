@@ -6,45 +6,46 @@ import Redis from 'ioredis';
 
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
-  private readonly subClient: Redis;
 
+  // Accept the existing pubClient from main.ts
   constructor(app: INestApplicationContext, private readonly pubClient: Redis) {
     super(app);
-    this.subClient = this.pubClient.duplicate();
-    // 1. Always initialize this factory immediately in the constructor
-    this.adapterConstructor = createAdapter(this.pubClient, this.subClient);
   }
 
   async connectToRedis(): Promise<void> {
-    const handleError = (name: string) => (err: any) => {
-      console.error(`[RedisIoAdapter] ${name} error:`, err.message);
-    };
+  const subClient = this.pubClient.duplicate();
 
-    this.pubClient.on('error', handleError('pubClient'));
-    this.subClient.on('error', handleError('subClient'));
+  subClient.on('message', (channel, message) => {
+    // This logs EVERY time the Web API receives a real-time event from the Worker via Redis
+    console.log(`📥 [Redis -> Web API] Received event on channel: ${channel}`);
+  });
 
-    try {
-      // 2. Ensuring readiness before app.listen() prevents "lost" initial events
-      await Promise.all([
-        this.waitForReady(this.pubClient, 'pubClient'),
-        this.waitForReady(this.subClient, 'subClient'),
-      ]);
-      console.log('🔌 Redis clients are READY');
-      
-      // Note: Removed manual psubscribe to avoid conflict with the adapter's internal logic.
-    } catch (err: any) {
-      console.error('❌ Redis Connection Failed:', err.message);
-      throw err;
-    }
+  // 1. ADD THIS: This prevents the log-only ECONNRESET from crashing the process
+  subClient.on('error', (err) => {
+    // We log it as a warning since ioredis will auto-reconnect anyway
+    console.warn('[RedisIoAdapter] subClient connection reset:', err.message);
+  });
+
+  // 2. Wrap the ready check in a try/catch to ensure it doesn't hang your startup
+  try {
+    await Promise.all([
+      new Promise<void>((resolve, reject) => {
+        if (this.pubClient.status === 'ready') return resolve();
+        this.pubClient.once('ready', resolve);
+        this.pubClient.once('error', reject);
+      }),
+      new Promise<void>((resolve, reject) => {
+        if (subClient.status === 'ready') return resolve();
+        subClient.once('ready', resolve);
+        subClient.once('error', reject);
+      }),
+    ]);
+  } catch (err: any) {
+    console.error('Redis Adapter failed to reach "ready" status:', err.message);
   }
 
-  private waitForReady(client: Redis, name: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (client.status === 'ready') return resolve();
-      client.once('ready', resolve);
-      client.once('error', (err) => reject(new Error(`${name}: ${err.message}`)));
-    });
-  }
+  this.adapterConstructor = createAdapter(this.pubClient, subClient);
+}
 
   createIOServer(port: number, options?: ServerOptions): any {
     const server = super.createIOServer(port, options);
