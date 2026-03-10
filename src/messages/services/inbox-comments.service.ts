@@ -54,8 +54,6 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
       return { post: null, comments: [] };
     }
 
-    console.log(topLevelComments)
-
     // 2. Derive the Post information safely (handles both Organic and Rooli posts)
     const referenceComment = topLevelComments[0];
     const postInfo = {

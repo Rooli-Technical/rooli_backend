@@ -319,8 +319,6 @@ export class NotificationsSubscriber {
     // 3. Final Guard: Don't call createMany if recipients is empty
     if (recipients.length === 0) return;
 
-    console.log('Final Recipient Member IDs:', recipients);
-
       await this.notifications.createMany({
         workspaceId: post.workspaceId,
         memberIds: recipients,

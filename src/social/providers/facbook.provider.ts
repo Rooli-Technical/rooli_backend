@@ -197,8 +197,6 @@ async editContent(accessToken: string, id: string, newContent: string) {
       access_token: token,
     });
 
-     console.log('Facebook Text Post Response:');
-    console.log(response.data);
 
     return this.formatResult(response.data.id, pageId);
   }
