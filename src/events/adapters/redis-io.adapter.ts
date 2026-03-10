@@ -15,6 +15,11 @@ export class RedisIoAdapter extends IoAdapter {
   async connectToRedis(): Promise<void> {
   const subClient = this.pubClient.duplicate();
 
+  subClient.on('message', (channel, message) => {
+    // This logs EVERY time the Web API receives a real-time event from the Worker via Redis
+    console.log(`📥 [Redis -> Web API] Received event on channel: ${channel}`);
+  });
+
   // 1. ADD THIS: This prevents the log-only ECONNRESET from crashing the process
   subClient.on('error', (err) => {
     // We log it as a warning since ioredis will auto-reconnect anyway

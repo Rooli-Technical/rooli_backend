@@ -22,10 +22,18 @@ export class RealtimeEmitterService implements OnModuleInit {
 
   // --- Your Broadcasting Methods ---
 
-  emitToWorkspace(workspaceId: string, event: string, payload: any) {
-    if (!this.emitter) return;
-    this.emitter.to(`workspace:${workspaceId}`).emit(event, payload);
+ emitToWorkspace(workspaceId: string, event: string, payload: any) {
+  if (!this.emitter) {
+    this.logger.error(`❌ Emitter not initialized. Failed to broadcast ${event}`);
+    return;
   }
+  
+  const room = `workspace:${workspaceId}`;
+  // Add this line:
+  this.logger.debug(`📡 [Worker -> Redis] Emitting ${event} to room ${room}`);
+  
+  this.emitter.to(room).emit(event, payload);
+}
 
   emitToConversation(workspaceId: string, conversationId: string, event: string, payload: any) {
     if (!this.emitter) return;
