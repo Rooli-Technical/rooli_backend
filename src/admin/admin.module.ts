@@ -1,2 +1,2 @@
 
-import { SupportModule } from './ticket/support/support.module';
+import { SupportTicketModule } from './support-ticket/support-ticket.module';
