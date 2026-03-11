@@ -38,6 +38,7 @@ import { InboxModule } from './messages/inbox.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PollingModule } from './polling/polling.module';
+import { SupportTicketModule } from './support-ticket/support-ticket.module';
 import Redis from 'ioredis';
 
 @Module({
@@ -133,6 +134,8 @@ import Redis from 'ioredis';
     }),
 
     PollingModule,
+
+    SupportTicketModule,
   ],
   controllers: [AppController],
   providers: [
