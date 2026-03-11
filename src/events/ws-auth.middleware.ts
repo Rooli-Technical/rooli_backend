@@ -65,18 +65,28 @@ const memberId = memberships[0]?.id;
     }
   };
 
-  private extractToken(client: Socket): string | null {
-    // 1) Authorization: Bearer <token>
-    const authHeader = client.handshake.headers['authorization'];
-    if (typeof authHeader === 'string') {
-      const [type, token] = authHeader.split(' ');
-      if (type?.toLowerCase() === 'bearer' && token) return token.trim();
+private extractToken(client: Socket): string | null {
+  const authHeader = client.handshake.headers['authorization'];
+  
+  if (authHeader && typeof authHeader === 'string') {
+    const parts = authHeader.split(' ');
+    if (parts.length === 2) {
+      const [type, token] = parts;
+      if (type.toLowerCase() === 'bearer' && token) {
+        return token.trim();
+      }
     }
-
-    // 2) query token ?token=...
-    const q = client.handshake.query?.token;
-    if (typeof q === 'string' && q.trim()) return q.trim();
-
-    return null;
   }
+
+  // 2) Fallback to Socket.io Auth object
+  const authObj = client.handshake.auth?.token;
+  if (authObj && typeof authObj === 'string') {
+    return authObj.trim();
+  }
+
+  const queryToken = client.handshake.query?.token;
+  if (typeof queryToken === 'string' && queryToken.trim()) return queryToken.trim();
+
+  return null;
+}
 }

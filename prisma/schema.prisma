@@ -1021,9 +1021,7 @@ model TwitterPostStats {
   videoViews Int @default(0)
 }
 
-// ==========================================
-// 💼 LINKEDIN POST STATS
-// ==========================================
+
 // ==========================================
 // 💼 LINKEDIN POST STATS
 // ==========================================
@@ -1266,7 +1264,7 @@ model RolePermission {
 // }
 
 /// ===============================
-/// AUDIT LOGS (use enums, keep org context)
+/// AUDIT LOGS 
 /// ===============================
 
 model AuditLog {
@@ -1295,7 +1293,7 @@ model AuditLog {
 }
 
 /// ===============================
-/// APPROVALS (store history; don't lock to one row per post)
+/// APPROVALS 
 /// ===============================
 
 model PostApproval {
@@ -1319,23 +1317,6 @@ model PostApproval {
   @@index([requesterId])
   @@index([approverId])
 }
-
-/// ===============================
-/// ENUMS (keep yours; add audit resource type)
-/// ===============================
-
-enum PermissionScope {
-  SYSTEM
-  ORGANIZATION
-  WORKSPACE
-}
-
-enum RoleScope {
-  SYSTEM
-  ORGANIZATION
-  WORKSPACE
-}
-
 
 
 model PostingSchedule {
@@ -1404,7 +1385,7 @@ enum PostStatus {
   DRAFT
   PENDING_APPROVAL
   SCHEDULED
-  PUBLISHING // Currently uploading
+  PUBLISHING 
   PUBLISHED
   FAILED
   PARTIAL
@@ -1431,7 +1412,6 @@ enum TemplateCategory {
   EDUCATIONAL
   HOLIDAY
   INSPIRATIONAL
-  // ... others
 }
 
 enum QueueStatus {
@@ -1788,4 +1768,17 @@ enum CommentStatus {
   HIDDEN
   DELETED
   FAILED
+}
+
+
+enum PermissionScope {
+  SYSTEM
+  ORGANIZATION
+  WORKSPACE
+}
+
+enum RoleScope {
+  SYSTEM
+  ORGANIZATION
+  WORKSPACE
 }
