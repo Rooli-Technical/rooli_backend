@@ -20,7 +20,6 @@ export class RealtimeEmitterService implements OnModuleInit {
     }
   }
 
-  // --- Your Broadcasting Methods ---
 
  emitToWorkspace(workspaceId: string, event: string, payload: any) {
   if (!this.emitter) {
