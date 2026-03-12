@@ -174,7 +174,6 @@ export class AnalyticsService {
         post.instagramStats ||
         {},
     }));
-
     // 5. Return the unified payload
     return {
       platform: profile.platform,
@@ -330,6 +329,9 @@ export class AnalyticsService {
         },
       },
       orderBy: { date: 'asc' },
+      include: {
+        socialProfile: { select: { platform: true, name: true } },
+      },
     });
   }
 
@@ -346,6 +348,15 @@ export class AnalyticsService {
         },
       },
       orderBy: { day: 'asc' },
+      include: {
+        postDestination: {
+          select: {
+            platformPostId: true,
+            contentOverride: true,
+            profile: { select: { platform: true, name: true } },
+          },
+        },
+      }
     });
   }
 
@@ -631,7 +642,6 @@ export class AnalyticsService {
   }
 
   async getAppHomeDashboard(workspaceId: string) {
-    console.log(workspaceId)
     // 1. Define the "Quick Pulse" Timeframes (Last 7 Days vs Previous 7 Days)
     const now = new Date();
     const startOfPulse = subDays(now, 7);
@@ -680,7 +690,7 @@ export class AnalyticsService {
         in: ['PUBLISHED', 'PARTIAL'], 
       },
         },
-        orderBy: { publishedAt: 'desc' }, // Most recently published at the top
+        orderBy: { createdAt: 'desc' }, 
         take: 5,
         include: {
           destinations: {
@@ -754,6 +764,7 @@ export class AnalyticsService {
     const rows = await this.prisma.accountAnalytics.findMany({
       where: { OR: orConditions },
       include: {
+        socialProfile: { select: { platform: true, name: true } },
         linkedInStats: true,
         facebookStats: true,
         instagramStats: true,
@@ -773,6 +784,8 @@ export class AnalyticsService {
 
         return {
           socialProfileId: r.socialProfileId,
+          platform: r.socialProfile.platform,
+          handle: r.socialProfile.name,
           demographics,
         };
       })
