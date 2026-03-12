@@ -11,6 +11,9 @@ export type DomainEventName =
   | 'publishing.post.published'
   | 'publishing.post.failed'
   | 'publishing.post.declined'
+  | 'ticket.created'
+  | 'ticket.comment.added'
+  | 'ticket.updated'
   | 'notification.created'
   | 'notification.read'
   | 'notification.read_all';
@@ -138,5 +141,37 @@ export type DomainEventPayloadMap = {
     commentId: string;
     status: string;
     error?: string;
+  };
+
+  'ticket.created': {
+    workspaceId: string;
+    ticketId: string;
+    ticketNumber: number;
+    title: string;
+    priority: string;
+    status: string;
+    requesterName: string;
+    createdAt: Date;
+  };
+
+  'ticket.comment.added': {
+    workspaceId: string;
+    ticketId: string;
+    id: string; // comment ID
+    content: string;
+    isFromSupport: boolean;
+    isInternal: boolean;
+    createdAt: Date;
+    author: { id: string; name: string; };
+    mediaFiles: any[];
+  };
+
+  'ticket.updated': {
+    workspaceId: string;
+    ticketId: string;
+    status?: string;
+    priority?: string;
+    assigneeId?: string;
+    closedAt?: Date | null;
   };
 };

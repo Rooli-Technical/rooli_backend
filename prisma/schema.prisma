@@ -61,6 +61,9 @@ model User {
 
   comments Comment[]
 
+  assignedTickets   Ticket[]              @relation("TicketAssignee")    
+  ticketComments    TicketComment[]
+
   @@index([email, deletedAt])
   @@index([createdAt])
   @@index([lastActiveAt])
@@ -149,6 +152,9 @@ notifications Notification[]
 
 comments  Comment[]
 
+ticketCounter Int @default(0)
+tickets  Ticket[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -198,7 +204,7 @@ model WorkspaceMember {
 
   notifications Notification[]
 
-  
+  submittedTickets  Ticket[]  @relation("TicketRequester")
 
   createdAt   DateTime @default(now())
 
@@ -492,6 +498,12 @@ model MediaFile {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  ticketId        String?
+  ticket          Ticket?        @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  ticketCommentId String?
+  ticketComment   TicketComment? @relation(fields: [ticketCommentId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, mimeType])
 }
@@ -1247,6 +1259,23 @@ model RolePermission {
   @@index([roleId])
 }
 
+model Permission {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  scope       PermissionScope
+  resource    PermissionResource
+  action      PermissionAction
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+
+  @@unique([scope, resource, action])
+  @@index([scope])
+}
+
 /// Optional: if you REALLY need exceptions later, do it explicitly (not JSON).
 /// Keep this model commented until you actually need it.
 // model MemberPermissionGrant {
@@ -1337,29 +1366,70 @@ model PostingSchedule {
   @@index([isActive, platform])
 }
 
-enum NotificationPriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
+
+model Ticket {
+  id               String         @id @default(cuid())
+  workspaceId      String
+  
+  // Custom ticket number (e.g., Ticket #1042)
+  ticketNumber     Int            
+
+  title            String
+  description      String         @db.Text
+  status           TicketStatus   @default(OPEN)
+  category         TicketCategory @default(OTHER)
+  priority         TicketPriority @default(MEDIUM)
+
+  // 1. THE REQUESTER: The Rooli user who needs help
+  // We link this to WorkspaceMember so you know exactly which workspace they belong to.
+  requesterId      String
+  requester        WorkspaceMember @relation("TicketRequester", fields: [requesterId], references: [id])
+
+  // 2. THE ASSIGNEE: The Rooli Admin/Support Agent fixing the issue
+  // We link this directly to the User model, assuming your support agents are global users with an "ADMIN" role.
+  assigneeId       String?
+  assignee         User?           @relation("TicketAssignee", fields: [assigneeId], references: [id])
+
+  // --- RELATIONS ---
+  workspace        Workspace       @relation(fields: [workspaceId], references: [id])
+  mediaFiles       MediaFile[]     // Reusing your media files instead of custom attachments
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  closedAt         DateTime?
+
+  comments         TicketComment[]
+
+  @@index([workspaceId, status])
+  @@index([assigneeId, status])
 }
 
-model Permission {
-  id          String             @id @default(cuid())
-  name        String
-  description String?
-  scope       PermissionScope
-  resource    PermissionResource
-  action      PermissionAction
+model TicketComment {
+  id             String   @id @default(cuid())
+  ticketId       String
+  
+  // Who wrote this comment? (We link directly to the User model)
+  authorUserId   String
+  author         User     @relation(fields: [authorUserId], references: [id])
+  
+  // Is this comment from the customer or from Rooli Support?
+  isFromSupport  Boolean  @default(false) 
+  
+  // Can the customer see this, or is it a secret note for other Rooli admins?
+  isInternal     Boolean  @default(false) 
+  
+  content        String   @db.Text
+  
+  // --- RELATIONS ---
+  ticket         Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  mediaFiles     MediaFile[] 
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime @default(now())
 
-  rolePermissions RolePermission[]
-
-  @@unique([scope, resource, action])
-  @@index([scope])
+  @@index([ticketId])
 }
+
+
 
 enum SocialProfileType {
   FACEBOOK_PAGE
@@ -1781,4 +1851,35 @@ enum RoleScope {
   SYSTEM
   ORGANIZATION
   WORKSPACE
+}
+
+
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketCategory {
+  BILLING
+  BUG
+  FEATURE_REQUEST
+  GENERAL_INQUIRY
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }

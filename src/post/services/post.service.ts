@@ -452,7 +452,7 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
     });
 
     if (!post) throw new NotFoundException('Post not found');
-    if (!['PUBLISHED', 'PARTIAL'].includes(post.status)) {
+    if (!['PUBLISHED'].includes(post.status)) {
       throw new BadRequestException('You can only edit posts that have already been published.');
     }
 
@@ -512,7 +512,7 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
     });
 
     if (!post) throw new NotFoundException('Post not found');
-    if (!['PUBLISHED', 'PARTIAL'].includes(post.status)) {
+    if (!['PUBLISHED'].includes(post.status)) {
       throw new BadRequestException('Can only delete published posts.');
     }
 

@@ -617,7 +617,6 @@ export class AnalyticsService {
         },
       },
     });
-    
 
     return posts.map((p) => ({
       postId: p.postId,
@@ -632,6 +631,7 @@ export class AnalyticsService {
   }
 
   async getAppHomeDashboard(workspaceId: string) {
+    console.log(workspaceId)
     // 1. Define the "Quick Pulse" Timeframes (Last 7 Days vs Previous 7 Days)
     const now = new Date();
     const startOfPulse = subDays(now, 7);
@@ -661,26 +661,45 @@ export class AnalyticsService {
         where: {
           workspaceId,
           status: 'PUBLISHED',
-          publishedAt: { gte: startOfPulse, lte: now },
         },
       }),
       this.prisma.post.count({
         where: {
           workspaceId,
           status: 'PUBLISHED',
-          publishedAt: { gte: startOfPrevPulse, lte: startOfPulse },
         },
       }),
     ]);
 
-    const [lastPublished, lastRecent] = await Promise.all([
-      this.getWorkspaceRecentPosts(workspaceId),
-
+    const [recentPosts, upcomingPosts] = await Promise.all([
+      // RECENT: Already published, newest first
       this.prisma.post.findMany({
         where: {
           workspaceId,
+          status: {
+        in: ['PUBLISHED', 'PARTIAL'], 
+      },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { publishedAt: 'desc' }, // Most recently published at the top
+        take: 5,
+        include: {
+          destinations: {
+            select: {
+              status: true,
+              profile: { select: { platform: true } },
+            },
+          },
+        },
+      }),
+
+      // UPCOMING: Scheduled for the future, soonest first
+      this.prisma.post.findMany({
+        where: {
+          workspaceId,
+          status: 'SCHEDULED', // Adjust this if your enum value is different
+          scheduledAt: { gte: now }, // Only grab posts meant for the future
+        },
+        orderBy: { scheduledAt: 'asc' }, // The post going out SOONEST is at the top
         take: 5,
         include: {
           destinations: {
@@ -706,8 +725,8 @@ export class AnalyticsService {
           growthPercentage: 0,
         },
       },
-      lastPublished,
-      lastRecent,
+      recentPosts,
+      upcomingPosts
     };
   }
 
