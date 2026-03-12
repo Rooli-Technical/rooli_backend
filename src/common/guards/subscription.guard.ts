@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { BYPASS_SUB_KEY } from '../decorators/bypass-subscription.decorator';
+import { IS_ADMIN_ROUTE_KEY } from '../decorators/admin-route.decorator';
 
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
@@ -16,7 +17,14 @@ export class SubscriptionGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // 1. Allow endpoints marked as Public or specifically for Billing
+    //  Admin Bypass: Admins don't need SaaS subscriptions
+    const isAdminRoute = this.reflector.getAllAndOverride<boolean>(IS_ADMIN_ROUTE_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isAdminRoute) return true;
+
+    //  Allow endpoints marked as Public or specifically for Billing
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
       context.getClass(),
