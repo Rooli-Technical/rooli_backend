@@ -16,7 +16,9 @@ export type DomainEventName =
   | 'ticket.updated'
   | 'notification.created'
   | 'notification.read'
-  | 'notification.read_all';
+  | 'notification.read_all'
+  | 'system.social_profile.connected'
+  ;
 
 export type InboxMessageCreatedEvent = {
   workspaceId: string;
@@ -173,5 +175,11 @@ export type DomainEventPayloadMap = {
     priority?: string;
     assigneeId?: string;
     closedAt?: Date | null;
+  };
+
+  'system.social_profile.connected': {
+    workspaceId: string;
+    profileId: string;
+    platform: string;
   };
 };

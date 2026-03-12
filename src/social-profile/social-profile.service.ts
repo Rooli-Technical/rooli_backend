@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
 import { Platform } from '@generated/enums';
+import { DomainEventsService } from '@/events/domain-events.service';
 
 @Injectable()
 export class SocialProfileService {
@@ -20,6 +21,7 @@ export class SocialProfileService {
     private readonly prisma: PrismaService,
     private readonly connectionService: SocialConnectionService,
     private readonly encryption: EncryptionService,
+    private readonly domainEvents: DomainEventsService,
   ) {}
 
 async addProfilesToWorkspace(
@@ -155,6 +157,12 @@ async addProfilesToWorkspace(
     }
 
     added.push(profile);
+
+    this.domainEvents.emit('system.social_profile.connected', {
+      workspaceId,
+      profileId: profile.id,
+      platform: profile.platform,
+    });
   }
 
   return {

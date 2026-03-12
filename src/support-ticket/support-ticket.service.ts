@@ -170,9 +170,6 @@ export class SupportTicketService {
     authorUserId: string,
     data: AddCommentDto,
   ) {
-    // Note: We completely removed `isInternal` from the user-facing DTO/Function.
-    // A regular user cannot create an internal note anyway!
-
     const ticketExists = await this.prisma.ticket.count({
       where: { id: ticketId, workspaceId },
     });

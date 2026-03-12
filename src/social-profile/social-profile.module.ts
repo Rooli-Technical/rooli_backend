@@ -9,9 +9,10 @@ import { HttpModule } from '@nestjs/axios';
 import { LinkedInService } from '@/social-connection/providers/linkedin.service';
 import { TwitterService } from '@/social-connection/providers/twitter.service';
 import { InstagramService } from '@/social-connection/providers/instagram.service';
+import { EventsModule } from '@/events/events.module';
 
 @Module({
-  imports: [SocialConnectionModule, HttpModule],
+  imports: [SocialConnectionModule, HttpModule, EventsModule],
   controllers: [SocialProfileController],
   providers: [
     SocialProfileService,
