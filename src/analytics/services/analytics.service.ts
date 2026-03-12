@@ -102,7 +102,7 @@ export class AnalyticsService {
     // 1. Fetch the Profile to know what platform we are dealing with
     const profile = await this.prisma.socialProfile.findUnique({
       where: { id: profileId },
-      select: { platform: true, name: true },
+      select: { platform: true, name: true, type: true },
     });
 
     if (!profile) throw new NotFoundException('Profile not found');
@@ -330,7 +330,7 @@ export class AnalyticsService {
       },
       orderBy: { date: 'asc' },
       include: {
-        socialProfile: { select: { platform: true, name: true } },
+        socialProfile: { select: { platform: true, name: true, type: true } },
       },
     });
   }
@@ -353,7 +353,7 @@ export class AnalyticsService {
           select: {
             platformPostId: true,
             contentOverride: true,
-            profile: { select: { platform: true, name: true } },
+            profile: { select: { platform: true, name: true, type: true } },
           },
         },
       }
@@ -620,7 +620,7 @@ export class AnalyticsService {
         createdAt: true,
         platformPostId: true,
         contentOverride: true,
-        profile: { select: { platform: true } },
+        profile: { select: { platform: true, type: true } },
         postAnalyticsSnapshots: {
           take: 1,
           orderBy: { day: 'desc' },
@@ -635,6 +635,7 @@ export class AnalyticsService {
       platform: p.profile?.platform,
       content: p.contentOverride,
       platformPostId: p.platformPostId!,
+      type: p.profile?.type,
       publishedAt: p.createdAt,
       likes: p.postAnalyticsSnapshots[0]?.likes ?? 0,
       comments: p.postAnalyticsSnapshots[0]?.comments ?? 0,
@@ -764,7 +765,7 @@ export class AnalyticsService {
     const rows = await this.prisma.accountAnalytics.findMany({
       where: { OR: orConditions },
       include: {
-        socialProfile: { select: { platform: true, name: true } },
+        socialProfile: { select: { platform: true, name: true, type: true } },
         linkedInStats: true,
         facebookStats: true,
         instagramStats: true,
@@ -786,6 +787,7 @@ export class AnalyticsService {
           socialProfileId: r.socialProfileId,
           platform: r.socialProfile.platform,
           handle: r.socialProfile.name,
+          type: r.socialProfile.type,
           demographics,
         };
       })
@@ -1085,7 +1087,7 @@ export class AnalyticsService {
       orderBy: { engagementCount: 'desc' },
       include: {
         postDestination: {
-          include: { profile: { select: { platform: true, name: true } } },
+          include: { profile: { select: { platform: true, name: true, type: true } } },
         },
       },
     });
@@ -1118,6 +1120,7 @@ export class AnalyticsService {
           content: snap.postDestination.contentOverride,
           handle: snap.postDestination.profile.name,
           platform: platform,
+          type: snap.postDestination.profile.type,
           publishedAt: snap.postDestination.createdAt,
           metrics: {
             engagement: snap.engagementCount ?? 0,
