@@ -1442,6 +1442,7 @@ enum SocialProfileType {
 enum UserType {
   INDIVIDUAL
   AGENCY
+  SUPER_ADMIN
 }
 
 enum ContentType {
