@@ -136,7 +136,7 @@ export class AnalyticsService {
         facebookStats: true,
         instagramStats: true,
         postDestination: {
-          select: { platformPostId: true, contentOverride: true },
+          select: { platformPostId: true, contentOverride: true, publishedAt: true },
         },
       },
     });
@@ -161,6 +161,7 @@ export class AnalyticsService {
     const cleanTopPosts = topPosts.map((post) => ({
       postId: post.postDestination.platformPostId,
       content: post.postDestination.contentOverride,
+      publishedAt: post.postDestination.publishedAt,
       base: {
         likes: post.likes,
         comments: post.comments,
