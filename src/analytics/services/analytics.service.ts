@@ -91,24 +91,25 @@ export class AnalyticsService {
   /**
    * Fetch detailed analytics for a single social profile
    */
-  async getProfileDashboard(
-    profileId: string,
-    days?: number,
-    startDate?: string,
-    endDate?: string,
-  ) {
-    const { start, end } = this.computePeriods(days, startDate, endDate);
+async getProfileDashboard(
+  profileId: string,
+  days?: number,
+  startDate?: string,
+  endDate?: string,
+) {
+  const { start, end } = this.computePeriods(days, startDate, endDate);
 
-    // 1. Fetch the Profile to know what platform we are dealing with
-    const profile = await this.prisma.socialProfile.findUnique({
-      where: { id: profileId },
-      select: { platform: true, name: true, type: true },
-    });
+  // 1. Fetch the profile
+  const profile = await this.prisma.socialProfile.findUnique({
+    where: { id: profileId },
+    select: { platform: true, name: true, type: true },
+  });
 
-    if (!profile) throw new NotFoundException('Profile not found');
+  if (!profile) throw new NotFoundException('Profile not found');
 
-    // 2. Fetch the Account Level History (Includes Demographics & Specifics)
-    const accountHistory = await this.prisma.accountAnalytics.findMany({
+  // 2. Fetch account history + top posts in parallel — no reason to waterfall these
+  const [accountHistory, topPostIds] = await Promise.all([
+    this.prisma.accountAnalytics.findMany({
       where: {
         socialProfileId: profileId,
         date: { gte: start, lte: end },
@@ -120,70 +121,133 @@ export class AnalyticsService {
         facebookStats: true,
         instagramStats: true,
       },
-    });
+    }),
 
-    // 3. Fetch the Post Level History (Top posts for this profile)
-    const topPosts = await this.prisma.postAnalyticsSnapshot.findMany({
-      where: {
-        postDestination: { socialProfileId: profileId },
-        day: { gte: start, lte: end },
-      },
-      orderBy: { engagementCount: 'desc' }, // Sort by our unified engagement!
-      take: 10,
-      include: {
-        twitterStats: true,
-        linkedInStats: true,
-        facebookStats: true,
-        instagramStats: true,
-        postDestination: {
-          select: { platformPostId: true, contentOverride: true, publishedAt: true },
-        },
-      },
-    });
+    // Raw query: DISTINCT ON gives us the best snapshot per post, sorted by engagement
+    this.prisma.$queryRaw<{ postDestinationId: string }[]>`
+      SELECT DISTINCT ON (s."postDestinationId")
+        s."postDestinationId"
+      FROM "PostAnalyticsSnapshot" s
+      INNER JOIN "PostDestination" d ON d.id = s."postDestinationId"
+      WHERE d."socialProfileId" = ${profileId}
+        AND s.day >= ${start}
+        AND s.day <= ${end}
+      ORDER BY s."postDestinationId", s."engagementCount" DESC NULLS LAST
+      LIMIT 10
+    `,
+  ]);
 
-    // 4. Clean up the payload so the frontend doesn't get a bunch of nulls
-    const cleanAccountHistory = accountHistory.map((row) => ({
-      date: row.date,
-      base: {
-        followers: row.followersTotal,
-        impressions: row.impressions,
-        engagement: row.engagementCount,
-      },
-      // Dynamically attach ONLY the specific stats that exist
-      specific:
-        row.twitterStats ||
-        row.linkedInStats ||
-        row.facebookStats ||
-        row.instagramStats ||
-        {},
-    }));
+  // 3. Calculate growth summary
+  const growthSummary = {
+    followerGrowth: 0,
+    followerPercent: 0,
+    totalImpressions: 0,
+    totalEngagement: 0,
+  };
 
-    const cleanTopPosts = topPosts.map((post) => ({
-      postId: post.postDestination.platformPostId,
-      content: post.postDestination.contentOverride,
-      publishedAt: post.postDestination.publishedAt,
-      base: {
-        likes: post.likes,
-        comments: post.comments,
-        impressions: post.impressions,
-      },
-      // Dynamically attach ONLY the specific stats that exist
-      specific:
-        post.twitterStats ||
-        post.linkedInStats ||
-        post.facebookStats ||
-        post.instagramStats ||
-        {},
-    }));
-    // 5. Return the unified payload
-    return {
-      platform: profile.platform,
-      handle: profile.name,
-      period: { start, end },
-      accountHistory: cleanAccountHistory,
-      topPosts: cleanTopPosts,
-    };
+  if (accountHistory.length > 0) {
+    const firstEntry = accountHistory[0];
+    const lastEntry = accountHistory[accountHistory.length - 1];
+
+    growthSummary.totalImpressions = accountHistory.reduce(
+      (sum, row) => sum + (row.impressions ?? 0),
+      0,
+    );
+    growthSummary.totalEngagement = accountHistory.reduce(
+      (sum, row) => sum + (row.engagementCount ?? 0),
+      0,
+    );
+
+    const initialFollowers = firstEntry.followersTotal ?? 0;
+    const currentFollowers = lastEntry.followersTotal ?? 0;
+    growthSummary.followerGrowth = currentFollowers - initialFollowers;
+
+    if (initialFollowers > 0) {
+      growthSummary.followerPercent = parseFloat(
+        ((growthSummary.followerGrowth / initialFollowers) * 100).toFixed(2),
+      );
+    } else if (growthSummary.followerGrowth > 0) {
+      growthSummary.followerPercent = 100;
+    }
   }
+
+  // 4. Hydrate the top posts via Prisma for full typing — raw query only gave us the IDs
+  const destinationIds = topPostIds.map((r) => r.postDestinationId);
+
+  const topPosts = destinationIds.length > 0
+    ? await this.prisma.postAnalyticsSnapshot.findMany({
+        where: { postDestinationId: { in: destinationIds } },
+        orderBy: { engagementCount: 'desc' },
+        distinct: ['postDestinationId'],
+        include: {
+          twitterStats: true,
+          linkedInStats: true,
+          facebookStats: true,
+          instagramStats: true,
+          postDestination: {
+            select: {
+              platformPostId: true,
+              contentOverride: true,
+              createdAt: true,
+              publishedAt: true,
+              post: { select: { scheduledAt: true } },
+            },
+          },
+        },
+      })
+    : [];
+
+  // 5. Shape the top posts payload
+  const cleanTopPosts = topPosts.map((snapshot) => {
+    const dest = snapshot.postDestination;
+    const bestPublishedDate =
+      dest.publishedAt ?? dest.post?.scheduledAt ?? dest.createdAt;
+
+    return {
+      postId: dest.platformPostId,
+      content: dest.contentOverride,
+      publishedAt: bestPublishedDate,
+      base: {
+        likes: snapshot.likes ?? 0,
+        comments: snapshot.comments ?? 0,
+        impressions: snapshot.impressions ?? 0,
+        engagement: snapshot.engagementCount ?? 0,
+      },
+      specific:
+        snapshot.twitterStats ??
+        snapshot.linkedInStats ??
+        snapshot.facebookStats ??
+        snapshot.instagramStats ??
+        {},
+    };
+  });
+
+  // 6. Shape the account history payload
+  const cleanAccountHistory = accountHistory.map((row) => ({
+    date: row.date,
+    base: {
+      followers: row.followersTotal ?? 0,
+      impressions: row.impressions ?? 0,
+      engagement: row.engagementCount ?? 0,
+    },
+    specific:
+      row.twitterStats ??
+      row.linkedInStats ??
+      row.facebookStats ??
+      row.instagramStats ??
+      {},
+  }));
+
+  // 7. Return unified payload
+  return {
+    platform: profile.platform,
+    handle: profile.name,
+    period: { start, end },
+    summary: growthSummary,
+    accountHistory: cleanAccountHistory,
+    topPosts: cleanTopPosts,
+  };
+}
 
   /**
    * Helper: Get the correct provider or throw error
@@ -357,7 +421,7 @@ export class AnalyticsService {
             profile: { select: { platform: true, name: true, type: true } },
           },
         },
-      }
+      },
     });
   }
 
@@ -446,6 +510,7 @@ export class AnalyticsService {
         createdAt: { gte: startDate },
       },
       select: {
+        publishedAt: true,
         createdAt: true,
         profile: { select: { platform: true } },
         postAnalyticsSnapshots: {
@@ -471,8 +536,9 @@ export class AnalyticsService {
 
     // 3. Single-pass aggregation!
     for (const post of posts) {
-      const day = post.createdAt.getUTCDay();
-      const hour = post.createdAt.getUTCHours();
+      const publishTime = post.publishedAt ?? post.createdAt;
+      const day = publishTime.getUTCDay();
+      const hour = publishTime.getUTCHours();
       const key = `${day}-${hour}`;
       const engagement = post.postAnalyticsSnapshots[0]?.engagementCount || 0;
       const platform = post.profile.platform;
@@ -667,18 +733,24 @@ export class AnalyticsService {
         startOfPrevPulse,
         startOfPulse,
       ),
-      this.getWorkspaceLatestFollowersTotal(profileIds),
-      this.getWorkspaceLatestFollowersTotal(profileIds),
+      this.getWorkspaceLatestFollowersTotal(profileIds), // current
+      this.getWorkspaceEarliestFollowersTotal(
+        profileIds,
+        startOfPrevPulse,
+        startOfPulse,
+      ), // prev
       this.prisma.post.count({
         where: {
           workspaceId,
           status: 'PUBLISHED',
+          createdAt: { gte: startOfPulse, lte: now },
         },
       }),
       this.prisma.post.count({
         where: {
           workspaceId,
           status: 'PUBLISHED',
+          createdAt: { gte: startOfPrevPulse, lt: startOfPulse },
         },
       }),
     ]);
@@ -689,10 +761,10 @@ export class AnalyticsService {
         where: {
           workspaceId,
           status: {
-        in: ['PUBLISHED', 'PARTIAL'], 
-      },
+            in: ['PUBLISHED', 'PARTIAL'],
+          },
         },
-        orderBy: { createdAt: 'desc' }, 
+        orderBy: { createdAt: 'desc' },
         take: 5,
         include: {
           destinations: {
@@ -738,7 +810,7 @@ export class AnalyticsService {
         },
       },
       recentPosts,
-      upcomingPosts
+      upcomingPosts,
     };
   }
 
@@ -912,29 +984,23 @@ export class AnalyticsService {
   }
 
   private async getWorkspaceLatestFollowersTotal(profileIds: string[]) {
-    // 1) For each profile, find its latest date in accountAnalytics
-    const latestDates = await this.prisma.accountAnalytics.groupBy({
-      by: ['socialProfileId'],
-      where: { socialProfileId: { in: profileIds } },
-      _max: { date: true },
-    });
+    if (profileIds.length === 0) return 0;
 
-    // 2) Build OR conditions to fetch the exact latest row per profile
-    // NOTE: this assumes (socialProfileId, date) uniquely identifies a snapshot row.
-    const or = latestDates
-      .filter((x) => x._max.date)
-      .map((x) => ({ socialProfileId: x.socialProfileId, date: x._max.date! }));
+    const result = await this.prisma.$queryRaw<{ total: bigint }[]>`
+    SELECT COALESCE(SUM(a."followersTotal"), 0) AS total
+    FROM "AccountAnalytics" a
+    INNER JOIN (
+      SELECT "socialProfileId", MAX(date) AS max_date
+      FROM "AccountAnalytics"
+      WHERE "socialProfileId" = ANY(${profileIds})
+      GROUP BY "socialProfileId"
+    ) latest
+    ON a."socialProfileId" = latest."socialProfileId"
+    AND a.date = latest.max_date
+  `;
 
-    if (or.length === 0) return 0;
-
-    const rows = await this.prisma.accountAnalytics.findMany({
-      where: { OR: or },
-      select: { followersTotal: true },
-    });
-
-    return rows.reduce((sum, r) => sum + (r.followersTotal ?? 0), 0);
+    return Number(result[0]?.total ?? 0);
   }
-
   private async getWorkspaceDailyEngagementDB(
     profileIds: string[],
     start: Date,
@@ -1048,8 +1114,10 @@ export class AnalyticsService {
         throw new BadRequestException('Invalid date format. Use YYYY-MM-DD.');
       }
     } else {
-      // 2. Fallback to rolling "days" (e.g., last 30 days)
-      const lookback = Math.min(days || 30, 365);
+      if (days && days > 365) {
+        throw new BadRequestException('Date range cannot exceed 365 days.');
+      }
+      const lookback = days || 30;
       end = DateTime.now().endOf('day');
       start = end.minus({ days: lookback - 1 }).startOf('day');
     }
@@ -1080,58 +1148,54 @@ export class AnalyticsService {
     takePerPlatform = 3,
   ) {
     // 1. Fetch snapshots in the date range, ordered globally by highest engagement
-    const snapshots = await this.prisma.postAnalyticsSnapshot.findMany({
-      where: {
-        postDestination: { socialProfileId: { in: profileIds } },
-        day: { gte: start, lte: end },
-      },
-      orderBy: { engagementCount: 'desc' },
-      include: {
-        postDestination: {
-          include: { profile: { select: { platform: true, name: true, type: true } } },
-        },
-      },
-    });
+    const platforms = ['TWITTER', 'LINKEDIN', 'FACEBOOK', 'INSTAGRAM'];
 
-    // 2. Deduplicate (ensure we only track the highest snapshot per post)
-    const seenPostIds = new Set<string>();
+    const results = Object.fromEntries(platforms.map((p) => [p, []]));
 
-    // 3. Initialize buckets for the platforms
-    const results: Record<string, any[]> = {
-      TWITTER: [],
-      LINKEDIN: [],
-      FACEBOOK: [],
-      INSTAGRAM: [],
-    };
-
-    // 4. Sort into buckets until each bucket hits the limit
-    for (const snap of snapshots) {
-      const destId = snap.postDestinationId;
-      if (seenPostIds.has(destId)) continue; // Skip older snapshots of the same post
-
-      seenPostIds.add(destId);
-
-      const platform = snap.postDestination.profile.platform;
-
-      // If we haven't hit the limit (e.g., 3) for this platform yet, add it!
-      if (results[platform] && results[platform].length < takePerPlatform) {
-        results[platform].push({
-          id: snap.postDestination.id,
-          platformPostId: snap.postDestination.platformPostId,
-          content: snap.postDestination.contentOverride,
-          handle: snap.postDestination.profile.name,
-          platform: platform,
-          type: snap.postDestination.profile.type,
-          publishedAt: snap.postDestination.createdAt,
-          metrics: {
-            engagement: snap.engagementCount ?? 0,
-            likes: snap.likes ?? 0,
-            comments: snap.comments ?? 0,
-            impressions: snap.impressions ?? 0,
+    await Promise.all(
+      platforms.map(async (platform) => {
+        const snapshots = await this.prisma.postAnalyticsSnapshot.findMany({
+          where: {
+            postDestination: {
+              socialProfileId: { in: profileIds },
+              profile: { platform: platform as any },
+            },
+            day: { gte: start, lte: end },
+          },
+          orderBy: { engagementCount: 'desc' },
+          take: takePerPlatform * 5, // small buffer for dedup only
+          include: {
+            postDestination: {
+              include: {
+                profile: { select: { platform: true, name: true, type: true } },
+              },
+            },
           },
         });
-      }
-    }
+
+        const seen = new Set<string>();
+        for (const snap of snapshots) {
+          if (seen.has(snap.postDestinationId)) continue;
+          seen.add(snap.postDestinationId);
+          if (results[platform].length >= takePerPlatform) break;
+          results[platform].push({
+            id: snap.postDestination.id,
+            platformPostId: snap.postDestination.platformPostId,
+            content: snap.postDestination.contentOverride,
+            handle: snap.postDestination.profile.name,
+            platform: platform,
+            type: snap.postDestination.profile.type,
+            publishedAt: snap.postDestination.createdAt,
+            metrics: {
+              engagement: snap.engagementCount ?? 0,
+              likes: snap.likes ?? 0,
+              comments: snap.comments ?? 0,
+              impressions: snap.impressions ?? 0,
+            },
+          });
+        }
+      }),
+    );
 
     return results;
   }
@@ -1187,5 +1251,33 @@ export class AnalyticsService {
       },
       heatmap,
     };
+  }
+
+  private async getWorkspaceEarliestFollowersTotal(
+    profileIds: string[],
+    start: Date,
+    end: Date,
+  ) {
+    const earliestDates = await this.prisma.accountAnalytics.groupBy({
+      by: ['socialProfileId'],
+      where: {
+        socialProfileId: { in: profileIds },
+        date: { gte: start, lte: end },
+      },
+      _min: { date: true },
+    });
+
+    const or = earliestDates
+      .filter((x) => x._min.date)
+      .map((x) => ({ socialProfileId: x.socialProfileId, date: x._min.date! }));
+
+    if (or.length === 0) return 0;
+
+    const rows = await this.prisma.accountAnalytics.findMany({
+      where: { OR: or },
+      select: { followersTotal: true },
+    });
+
+    return rows.reduce((sum, r) => sum + (r.followersTotal ?? 0), 0);
   }
 }
