@@ -275,7 +275,6 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
       this.logger.warn(`LinkedIn memberFollowersCount failed: ${e.message}`);
       throw e;
     }
-
   }
 
   async getPostStats(
@@ -296,8 +295,9 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
       const orgUrn = this.ensureUrn(context.pageId!);
       return this.fetchCompanyPageStats(orgUrn, token, postUrns);
     } else {
+      return this.fetchPersonalProfilePostStats(token, postUrns);
       // Fallback to Personal Profile logic
-      return [];
+      //return [];
     }
   }
 
@@ -327,7 +327,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
     };
 
     const chunks = this.chunkArray(postUrns, 20);
-    const out:FetchPostResult[] = [];
+    const out: FetchPostResult[] = [];
 
     for (const chunk of chunks) {
       const ugcPosts = chunk.filter((urn) => urn.includes('ugcPost'));
@@ -445,7 +445,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
       const likes = s.likeCount ?? 0;
       const comments = s.commentCount ?? 0;
       const shares = s.shareCount ?? 0;
-      
+
       return {
         unified: {
           postId: el.ugcPost || el.share || el.organizationalEntity,
@@ -459,7 +459,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
           reposts: shares,
           clicks: clicks,
           videoViews: s.videoViews ?? 0,
-        }
+        },
       };
     });
   }
@@ -516,5 +516,105 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
 
     if (!urn) return 'Unknown';
     return mappings[urn] ?? urn.split(':').pop() ?? urn;
+  }
+
+  async fetchPersonalProfilePostStats(
+    token: string,
+    postUrns: string[],
+  ): Promise<FetchPostResult[]> {
+    if (!postUrns?.length) return [];
+
+    const url = `${this.baseUrl}/memberCreatorPostAnalytics`;
+    const out: FetchPostResult[] = [];
+
+    // 1. Calculate a safe dateRange (e.g., from 2020 to Today) to ensure we capture the lifetime stats of the post
+    const now = new Date();
+    const dateRange = `(start:(day:1,month:1,year:2020),end:(day:${now.getUTCDate()},month:${now.getUTCMonth() + 1},year:${now.getUTCFullYear()}))`;
+
+    for (const urn of postUrns) {
+      // 2. Correctly format the entity string: (share:urn:li:share:123)
+      const entityType = urn.includes('ugcPost') ? 'ugcPost' : 'share';
+      const formattedEntity = `(${entityType}:${urn})`;
+
+      console.log(formattedEntity);
+
+      try {
+        // 3. Helper function to fetch specific metrics
+        const fetchMetric = async (queryType: string) => {
+          const now = new Date();
+          const dateRangeStr = `(start:(day:1,month:1,year:2020),end:(day:${now.getUTCDate()},month:${now.getUTCMonth() + 1},year:${now.getUTCFullYear()}))`;
+
+          // ✅ THE FIX: Encode ONLY the URN, leave the wrapper alone!
+          const encodedUrn = encodeURIComponent(urn); // Turns colons into %3A
+          const entityType = urn.includes('ugcPost') ? 'ugcPost' : 'share';
+          const formattedEntity = `(${entityType}:${encodedUrn})`; 
+
+          const params = {
+            q: 'entity',
+            entity: formattedEntity,
+            queryType,
+            aggregation: 'TOTAL',
+            dateRange: dateRangeStr,
+          };
+
+          // Custom serializer that just joins the strings (since we pre-encoded the URN)
+          const customSerializer = (p: any) => {
+            return Object.entries(p)
+              .map(([key, val]) => `${key}=${val}`)
+              .join('&');
+          };
+
+          // 🚨 DEBUG: Print the exact URL we are sending to LinkedIn!
+          const fullUrl = `${url}?${customSerializer(params)}`;
+
+          const { data } = await firstValueFrom(
+            this.http.get(url, {
+              headers: {
+                ...this.headers(token),
+                'X-Restli-Protocol-Version': '2.0.0',
+              },
+              params,
+              paramsSerializer: customSerializer,
+            }),
+          );
+            console.dir(data, { depth: null });
+          return data?.elements?.[0]?.count ?? 0;
+        };
+
+      
+
+        // 4. Fetch all metrics concurrently for this specific post
+        const [impressions, likes, comments, reposts] = await Promise.all([
+          fetchMetric('IMPRESSION'),
+          fetchMetric('REACTION'),
+          fetchMetric('COMMENT'),
+          fetchMetric('RESHARE'),
+        ]);
+
+        out.push({
+          unified: {
+            postId: urn,
+            impressions,
+            reach: impressions, 
+            likes,
+            comments,
+            engagementCount: likes + comments + reposts,
+          },
+          specific: {
+            reposts,
+            clicks: 0, 
+            videoViews: 0,
+          },
+        });
+      } catch (e: any) {
+       console.log(e)
+      }
+
+      // 5. Safe delay to prevent HTTP 429 Too Many Requests
+      // Since we are making 4 requests per post, we need to respect rate limits
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    return out;
   }
 }
