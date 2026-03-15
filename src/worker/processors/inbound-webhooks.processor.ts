@@ -139,7 +139,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
         platform,
         platformId: ownerExternalId,
       },
-      select: { id: true, workspaceId: true },
+      select: { id: true, workspaceId: true, accessToken: true, },
     });
 
     if (!profile) {

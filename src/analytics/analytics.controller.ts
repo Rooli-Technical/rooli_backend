@@ -184,7 +184,7 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     status: 200, 
     description: 'Get App home dashboard' 
   })
-  async getRecentPublished(
+  async getAppDashboard(
     @Param('workspaceId') workspaceId: string,
   ){
     return this.service.getAppHomeDashboard(workspaceId);

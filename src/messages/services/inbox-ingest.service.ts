@@ -6,6 +6,8 @@ import {
   NormalizedInboundMessage,
 } from '../types/adapter.types';
 import { DomainEventsService } from '@/events/domain-events.service';
+import { EncryptionService } from '@/common/utility/encryption.service';
+import { MetaClient } from '../integrations/meta.client';
 
 @Injectable()
 export class InboxIngestService {
@@ -14,12 +16,16 @@ export class InboxIngestService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly events: DomainEventsService,
+    private readonly metaClient: MetaClient,
+    private readonly encryptionService : EncryptionService
   ) {}
 
   async ingestInboundMessage(evt: NormalizedInboundMessage) {
     const occurredAt =
       evt.occurredAt ?? evt.message.providerTimestamp ?? new Date();
     const snippet = (evt.snippet ?? evt.message.content ?? '').slice(0, 140);
+
+    const { resolvedUsername, resolvedAvatarUrl } = await this.findSocialContact(evt);
 
     return this.prisma.$transaction(async (tx) => {
       // 1) upsert contact (workspace-scoped)
@@ -32,15 +38,15 @@ export class InboxIngestService {
           },
         },
         update: {
-          username: evt.contact.username,
-          avatarUrl: evt.contact.avatarUrl ?? undefined,
+          username: resolvedUsername ?? undefined,
+          avatarUrl: resolvedAvatarUrl ?? undefined,
         },
         create: {
           workspaceId: evt.workspaceId,
           platform: evt.contact.platform as any,
           externalId: evt.contact.externalId,
-          username: evt.contact.username,
-          avatarUrl: evt.contact.avatarUrl ?? null,
+         username: resolvedUsername || 'Unknown User',
+          avatarUrl: resolvedAvatarUrl ?? null,
         },
       });
 
@@ -232,5 +238,48 @@ export class InboxIngestService {
       this.logger.error(`Failed to ingest comment: ${error.message}`);
       throw error;
     }
+  }
+
+  private async findSocialContact(evt: any) {
+    if (evt.accessToken) {
+       evt.accessToken = await this.encryptionService.decrypt(evt.accessToken);
+    }
+
+    let resolvedUsername = evt.contact.username;
+    let resolvedAvatarUrl = evt.contact.avatarUrl;
+
+    const existingContact = await this.prisma.socialContact.findUnique({
+      where: {
+        workspaceId_platform_externalId: {
+          workspaceId: evt.workspaceId,
+          platform: evt.contact.platform,
+          externalId: evt.contact.externalId,
+        },
+      },
+      select: { username: true, avatarUrl: true },
+    });
+
+    if (!existingContact && (evt.contact.platform === 'FACEBOOK' || evt.contact.platform === 'INSTAGRAM')) {
+      try {
+        if (!evt.accessToken) throw new Error('Missing accessToken');
+
+        const metaProfile = await this.metaClient.fetchContactProfile({
+          senderId: evt.contact.externalId,
+          platform: evt.contact.platform,
+          accessToken: evt.accessToken, 
+        });
+
+        resolvedUsername = metaProfile.username || metaProfile.name || 'Unknown User';
+        resolvedAvatarUrl = metaProfile.avatarUrl;
+      } catch (error) {
+        this.logger.error(`Failed to fetch Meta profile for ${evt.contact.externalId}`, error);
+        resolvedUsername = 'Unknown User'; 
+      }
+    } else if (existingContact) {
+      resolvedUsername = resolvedUsername || existingContact.username;
+      resolvedAvatarUrl = resolvedAvatarUrl || existingContact.avatarUrl;
+    }
+
+    return { resolvedUsername, resolvedAvatarUrl };
   }
 }

@@ -222,6 +222,76 @@ export class MetaClient {
     }
   }
 
+  /**
+   * Fetch the profile of the person who sent a DM (Contact Profile)
+   * Handles both legacy FB Page routing and the new IG-only tokens.
+   */
+  async fetchContactProfile(params: {
+    senderId: string; // The PSID (Facebook) or IGSID (Instagram)
+    platform: 'FACEBOOK' | 'INSTAGRAM';
+    accessToken: string; // Either the IG token or the FB Page token
+  }): Promise<{ 
+    id: string; 
+    name?: string; 
+    firstName?: string; 
+    lastName?: string; 
+    username?: string; 
+    avatarUrl?: string;
+  }> {
+    
+    // 1. Smart Routing based on the Token
+    const isIgOnlyToken = params.accessToken.startsWith('IG');
+    const baseUrl = isIgOnlyToken 
+      ? 'https://graph.instagram.com/v23.0' 
+      : 'https://graph.facebook.com/v23.0';
+
+    // 2. Request the correct fields based on Platform/Token
+    let fields = '';
+    if (params.platform === 'INSTAGRAM') {
+      // Instagram only provides the full name and username.
+      fields = 'name,username,profile_pic';
+    } else {
+      // Facebook provides split first/last names.
+      fields = 'first_name,last_name,profile_pic';
+    }
+
+    const url = `${baseUrl}/${params.senderId}`;
+
+    try {
+      const res = await this.http.get(url, {
+        params: {
+          fields,
+          access_token: params.accessToken,
+        },
+      });
+
+      const data = res.data;
+      console.log(data)
+
+      // 3. Normalize the response for your Rooli Database
+      if (params.platform === 'INSTAGRAM') {
+        return {
+          id: data.id,
+          name: data.name, // "John Doe"
+          username: data.username, // "@johndoe"
+          avatarUrl: data.profile_pic,
+        };
+      } else {
+        return {
+          id: data.id,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+          avatarUrl: data.profile_pic,
+        };
+      }
+    } catch (e) {
+      console.log(e)
+      console.log(`Failed to fetch ${params.platform} profile for sender ${params.senderId}`);
+      throw this.wrapMetaError(e, 'fetchContactProfile');
+    }
+  }
+
   private resolveSendEndpoint(
     mode: MetaSendMode,
     ctx: { pageId?: string; igId?: string },
