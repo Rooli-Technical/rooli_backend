@@ -3,7 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Platform, PlanTier } from '@generated/enums';
+import { Platform, PlanTier, ConnectionStatus } from '@generated/enums';
 
 @Injectable()
 export class AnalyticsScheduler {
@@ -38,6 +38,7 @@ export class AnalyticsScheduler {
         cursor: cursor ? { id: cursor } : undefined,
         orderBy: { id: 'asc' },
         where: {
+          status: ConnectionStatus.CONNECTED,
           isActive: true,
           accessToken: { not: null },
           workspace: {

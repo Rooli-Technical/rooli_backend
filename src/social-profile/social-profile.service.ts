@@ -1,6 +1,5 @@
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { PrismaService } from '@/prisma/prisma.service';
-import { FacebookService } from '@/social-connection/providers/facebook.service';
 import { SocialConnectionService } from '@/social-connection/social-connection.service';
 import {
   BadRequestException,
@@ -11,7 +10,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
-import { Platform } from '@generated/enums';
+import { ConnectionStatus, Platform } from '@generated/enums';
 import { DomainEventsService } from '@/events/domain-events.service';
 
 @Injectable()
@@ -123,6 +122,7 @@ async addProfilesToWorkspace(
             pageData.accessToken,
           ),
           facebookPageId: pageData.facebookPageId || null,
+          status: ConnectionStatus.CONNECTED,
         },
         create: {
           workspaceId,
@@ -140,6 +140,7 @@ async addProfilesToWorkspace(
             pageData.platform,
           ),
           facebookPageId: pageData.facebookPageId || null,
+          status: ConnectionStatus.CONNECTED,
         },
       });
 
@@ -176,7 +177,7 @@ async addProfilesToWorkspace(
    */
   async getWorkspaceProfiles(workspaceId: string) {
     return this.prisma.socialProfile.findMany({
-      where: { workspaceId },
+      where: { workspaceId, status: ConnectionStatus.CONNECTED },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -186,6 +187,7 @@ async addProfilesToWorkspace(
         type: true,
         username: true,
         isActive: true,
+        status: true,
         followerCount: true,
         connection: {
           select: {
@@ -195,9 +197,10 @@ async addProfilesToWorkspace(
       },
     });
   }
-  /**
+
+/**
    * 3. REMOVE PROFILE
-   * Only removes it from the workspace. Does NOT delete the parent connection.
+   * Soft disconnects the profile from the workspace.
    */
   async removeProfile(workspaceId: string, profileId: string) {
     const profile = await this.prisma.socialProfile.findFirst({
@@ -206,11 +209,14 @@ async addProfilesToWorkspace(
 
     if (!profile) throw new NotFoundException('Profile not found');
 
-    await this.prisma.socialProfile.delete({
+    await this.prisma.socialProfile.update({
       where: { id: profileId },
+      data: { 
+        status: ConnectionStatus.DISCONNECTED 
+      },
     });
 
-    return { message: 'Account removed from workspace' };
+    return { message: 'Account disconnected from workspace. History preserved.' };
   }
 
   // ===========================================================================

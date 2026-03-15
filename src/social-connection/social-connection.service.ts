@@ -1,5 +1,5 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { Platform } from '@generated/enums';
+import { ConnectionStatus, Platform } from '@generated/enums';
 import {
   BadRequestException,
   ForbiddenException,
@@ -127,6 +127,7 @@ export class SocialConnectionService {
           : null,
         tokenExpiresAt: authData.expiresAt,
         updatedAt: new Date(),
+        status: ConnectionStatus.CONNECTED,
       },
       create: {
         organizationId,
@@ -158,7 +159,7 @@ export class SocialConnectionService {
     includeTokens = false,
   ): Promise<SocialPageOption[]> {
     const connection = await this.prisma.socialConnection.findUnique({
-      where: { id: connectionId },
+      where: { id: connectionId, status: ConnectionStatus.CONNECTED },
     });
     if (!connection) throw new NotFoundException('Connection not found');
 
@@ -207,7 +208,7 @@ export class SocialConnectionService {
    */
 async disconnect(connectionId: string, organizationId: string) {
     const connection = await this.prisma.socialConnection.findFirst({
-      where: { id: connectionId, organizationId },
+      where: { id: connectionId, organizationId, status: ConnectionStatus.CONNECTED },
       include: { profiles: true }, 
     });
 
@@ -237,12 +238,23 @@ async disconnect(connectionId: string, organizationId: string) {
         );
     }
 
-    // 4. Delete the connection from the database (cascades to profiles)
-    await this.prisma.socialConnection.delete({
+    // 4. Soft Delete the connection from the database
+    await this.prisma.socialConnection.update({
       where: { id: connectionId },
+      data: { 
+        status: ConnectionStatus.DISCONNECTED,
+        // Cascade the disconnect to all linked profiles automatically
+        profiles: {
+          updateMany: {
+            where: { socialConnectionId: connectionId },
+            data: { status: ConnectionStatus.DISCONNECTED }
+          }
+        }
+      },
     });
 
-    return { message: 'Connection removed and associated profiles unlinked.' };
+    return { message: 'Connection disconnected and associated profiles paused.' };
+
   }
 
   private async ensurePlatformAllowed(orgId: string, platform: Platform) {
@@ -269,7 +281,7 @@ async disconnect(connectionId: string, organizationId: string) {
     pageAccessToken: string,
   ) {
     const connection = await this.prisma.socialConnection.findUnique({
-      where: { id: connectionId },
+      where: { id: connectionId, status: ConnectionStatus.CONNECTED  },
     });
 
     if (!connection) {
@@ -316,7 +328,7 @@ async disconnect(connectionId: string, organizationId: string) {
   async subscribeByConnectionId(connectionId: string): Promise<boolean> {
     // 1. Fetch the specific LinkedIn connection
     const connection = await this.prisma.socialConnection.findUnique({
-      where: { id: connectionId },
+      where: { id: connectionId, status: ConnectionStatus.CONNECTED  },
     });
 
     // 2. Validation

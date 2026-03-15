@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@/prisma/prisma.service';
+import { ConnectionStatus } from '@generated/enums';
 
 
 @Injectable()
@@ -37,6 +38,7 @@ export class InboxSyncScheduler {
         orderBy: { id: 'asc' },
         where: {
           isActive: true,
+          status: ConnectionStatus.CONNECTED,
           accessToken: { not: null },
           // Only sync workspaces that have an active subscription
           workspace: { organization: { isActive: true } },

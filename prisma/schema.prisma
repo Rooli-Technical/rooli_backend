@@ -249,6 +249,7 @@ model SocialConnection {
   id             String   @id @default(cuid())
   organizationId String
   platform       Platform // FACEBOOK, LINKEDIN, TWITTER
+  status         ConnectionStatus @default(CONNECTED)
 
   // USER CREDENTIALS (The "Master Key")
   // Used to refresh tokens and fetch list of pages
@@ -285,6 +286,8 @@ model SocialProfile {
   picture    String?
 
   followerCount Int @default(0)
+
+  status         ConnectionStatus @default(CONNECTED)
 
   // PAGE CREDENTIALS (The "Room Key")
   // Specific token to post to THIS page. 
@@ -1429,7 +1432,11 @@ model TicketComment {
   @@index([ticketId])
 }
 
-
+enum ConnectionStatus {
+  CONNECTED 
+  EXPIRED
+  DISCONNECTED
+}
 
 enum SocialProfileType {
   FACEBOOK_PAGE

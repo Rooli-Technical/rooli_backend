@@ -14,7 +14,7 @@ import { FacebookAnalyticsProvider } from '../providers/facebook-analytics.provi
 import { InstagramAnalyticsProvider } from '../providers/instagram-analytics.provider';
 import { LinkedInAnalyticsProvider } from '../providers/linkedin.provider';
 import { TwitterAnalyticsProvider } from '../providers/twitter.provider';
-import { PlanTier, Platform } from '@generated/enums';
+import { ConnectionStatus, PlanTier, Platform } from '@generated/enums';
 import { PrismaService } from '@/prisma/prisma.service';
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { AnalyticsRepository } from './analytics.repository';
@@ -101,7 +101,7 @@ async getProfileDashboard(
 
   // 1. Fetch the profile
   const profile = await this.prisma.socialProfile.findUnique({
-    where: { id: profileId },
+    where: { id: profileId, status: ConnectionStatus.CONNECTED },
     select: { platform: true, name: true, type: true },
   });
 
@@ -272,7 +272,7 @@ async getProfileDashboard(
     // --- STEP 1: RESOLVE CREDENTIALS ---
     if (profileId) {
       profile = await this.prisma.socialProfile.findUnique({
-        where: { id: profileId },
+        where: { id: profileId, status: ConnectionStatus.CONNECTED },
         include: { connection: true },
       });
 
@@ -1095,7 +1095,7 @@ async getProfileDashboard(
 
   private async getActiveProfileIds(workspaceId: string): Promise<string[]> {
     const profiles = await this.prisma.socialProfile.findMany({
-      where: { workspaceId, isActive: true },
+      where: { workspaceId, isActive: true, status: ConnectionStatus.CONNECTED },
       select: { id: true },
     });
     return profiles.map((p) => p.id);

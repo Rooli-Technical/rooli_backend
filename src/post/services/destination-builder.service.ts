@@ -1,5 +1,5 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { Platform, Prisma } from '@generated/client';
+import { ConnectionStatus, Platform, Prisma } from '@generated/client';
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as twitter from 'twitter-text';
 import { PlatformRulesService } from './platform-rules.service';
@@ -43,7 +43,7 @@ export class DestinationBuilder {
   async preparePayloads(workspaceId: string, dto: CreatePostDto): Promise<any[]> {
     // 1) Fetch profiles
     const profiles = await this.prisma.socialProfile.findMany({
-      where: { id: { in: dto.socialProfileIds }, workspaceId },
+      where: { id: { in: dto.socialProfileIds, }, workspaceId, status: ConnectionStatus.CONNECTED },
       select: { id: true, platform: true, name: true,  },
     });
 
