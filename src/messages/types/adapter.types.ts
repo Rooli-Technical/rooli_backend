@@ -76,6 +76,8 @@ export type NormalizedInboundMessage = {
 
   // for debugging (don’t store to DB from adapter; worker may choose to log)
   raw?: any;
+
+  accessToken?: string;
 };
 
 

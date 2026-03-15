@@ -148,6 +148,6 @@ export class InboundWebhooksProcessor extends WorkerHost {
       );
     }
 
-    return { ...normalized, socialProfileId: profile.id, workspaceId: profile.workspaceId };
+    return { ...normalized, socialProfileId: profile.id, workspaceId: profile.workspaceId, accessToken: profile.accessToken };
   }
 }

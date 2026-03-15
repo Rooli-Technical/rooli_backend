@@ -206,10 +206,6 @@ export class MetaClient {
         { params: { access_token: params.accessToken } },
       );
 
-      console.log(
-        `Meta replyToComment (${params.platform}) response:`,
-        res.data,
-      );
 
       return {
         provider: 'META',
@@ -217,7 +213,6 @@ export class MetaClient {
         raw: res.data,
       };
     } catch (e) {
-      console.log(e);
       throw this.wrapMetaError(e, 'replyToComment');
     }
   }
@@ -266,7 +261,6 @@ export class MetaClient {
       });
 
       const data = res.data;
-      console.log(data)
 
       // 3. Normalize the response for your Rooli Database
       if (params.platform === 'INSTAGRAM') {
@@ -286,7 +280,6 @@ export class MetaClient {
         };
       }
     } catch (e) {
-      console.log(e)
       console.log(`Failed to fetch ${params.platform} profile for sender ${params.senderId}`);
       throw this.wrapMetaError(e, 'fetchContactProfile');
     }

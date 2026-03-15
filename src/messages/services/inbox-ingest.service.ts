@@ -17,15 +17,17 @@ export class InboxIngestService {
     private readonly prisma: PrismaService,
     private readonly events: DomainEventsService,
     private readonly metaClient: MetaClient,
-    private readonly encryptionService : EncryptionService
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async ingestInboundMessage(evt: NormalizedInboundMessage) {
+
     const occurredAt =
       evt.occurredAt ?? evt.message.providerTimestamp ?? new Date();
     const snippet = (evt.snippet ?? evt.message.content ?? '').slice(0, 140);
 
-    const { resolvedUsername, resolvedAvatarUrl } = await this.findSocialContact(evt);
+    const { resolvedUsername, resolvedAvatarUrl } =
+      await this.findSocialContact(evt);
 
     return this.prisma.$transaction(async (tx) => {
       // 1) upsert contact (workspace-scoped)
@@ -45,7 +47,7 @@ export class InboxIngestService {
           workspaceId: evt.workspaceId,
           platform: evt.contact.platform as any,
           externalId: evt.contact.externalId,
-         username: resolvedUsername || 'Unknown User',
+          username: resolvedUsername || 'Unknown User',
           avatarUrl: resolvedAvatarUrl ?? null,
         },
       });
@@ -81,13 +83,12 @@ export class InboxIngestService {
         where: {
           conversationId_providerMessageId: {
             conversationId: conversation.id,
-            providerMessageId: evt.message.externalId, 
+            providerMessageId: evt.message.externalId,
           },
         },
-        select: { id: true }
+        select: { id: true },
       });
       const isNew = !existingMessage;
-
 
       // 3) idempotent message insert (unique [conversationId, externalId])
       // If webhook duplicates, this will throw unique constraint; catch outside or use upsert-like pattern.
@@ -176,7 +177,7 @@ export class InboxIngestService {
             externalCommentId: payload.externalCommentId,
           },
         },
-        select: { id: true }
+        select: { id: true },
       });
       const isNew = !existingComment;
 
@@ -242,12 +243,13 @@ export class InboxIngestService {
 
   private async findSocialContact(evt: any) {
     if (evt.accessToken) {
-       evt.accessToken = await this.encryptionService.decrypt(evt.accessToken);
+      evt.accessToken = await this.encryptionService.decrypt(evt.accessToken);
     }
 
     let resolvedUsername = evt.contact.username;
     let resolvedAvatarUrl = evt.contact.avatarUrl;
 
+    // 1. Fetch the existing contact AND their updatedAt timestamp
     const existingContact = await this.prisma.socialContact.findUnique({
       where: {
         workspaceId_platform_externalId: {
@@ -256,30 +258,59 @@ export class InboxIngestService {
           externalId: evt.contact.externalId,
         },
       },
-      select: { username: true, avatarUrl: true },
+      select: { username: true, avatarUrl: true, updatedAt: true },
     });
 
-    if (!existingContact && (evt.contact.platform === 'FACEBOOK' || evt.contact.platform === 'INSTAGRAM')) {
+    // 2. Determine if we NEED to hit Meta
+    // Fetch if they don't exist OR if their data is older than 24 hours
+    const isStale = existingContact
+      ? new Date().getTime() - existingContact.updatedAt.getTime() >
+        24 * 60 * 60 * 1000 // 24 hours
+      : true;
+
+    if (
+      isStale &&
+      (evt.contact.platform === 'FACEBOOK' ||
+        evt.contact.platform === 'INSTAGRAM')
+    ) {
       try {
         if (!evt.accessToken) throw new Error('Missing accessToken');
 
+        // Fetch FRESH data from Meta!
         const metaProfile = await this.metaClient.fetchContactProfile({
           senderId: evt.contact.externalId,
           platform: evt.contact.platform,
-          accessToken: evt.accessToken, 
+          accessToken: evt.accessToken,
         });
 
-        resolvedUsername = metaProfile.username || metaProfile.name || 'Unknown User';
+        resolvedUsername =
+          metaProfile.username || metaProfile.name || 'Unknown User';
         resolvedAvatarUrl = metaProfile.avatarUrl;
+
+        this.logger.log(
+          `Fetched fresh Meta profile for ${evt.contact.externalId}`,
+        );
       } catch (error) {
-        this.logger.error(`Failed to fetch Meta profile for ${evt.contact.externalId}`, error);
-        resolvedUsername = 'Unknown User'; 
+        this.logger.error(
+          `Failed to fetch fresh Meta profile for ${evt.contact.externalId}`,
+          error,
+        );
+
+        // If Meta fails, fall back to our existing DB data so we don't break the webhook
+        if (existingContact) {
+          resolvedUsername = existingContact.username;
+          resolvedAvatarUrl = existingContact.avatarUrl;
+        } else {
+          resolvedUsername = 'Unknown User';
+        }
       }
     } else if (existingContact) {
-      resolvedUsername = resolvedUsername || existingContact.username;
-      resolvedAvatarUrl = resolvedAvatarUrl || existingContact.avatarUrl;
+      // If it's NOT stale (e.g., they messaged us an hour ago), just use the DB cache
+      resolvedUsername = existingContact.username;
+      resolvedAvatarUrl = existingContact.avatarUrl;
     }
 
+    // RETURN the data so ingestInboundMessage can use it
     return { resolvedUsername, resolvedAvatarUrl };
   }
 }

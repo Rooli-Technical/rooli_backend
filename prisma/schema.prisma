@@ -8,17 +8,16 @@ datasource db {
 }
 
 model User {
-  id                   String   @id @default(cuid())
-  email                String   @unique
+  id                   String     @id @default(cuid())
+  email                String     @unique
   password             String? // Optional for OAuth users
   firstName            String?
   lastName             String?
-  avatarId  String?    @unique
-  avatar    MediaFile? @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
-  userType             UserType @default(INDIVIDUAL)
-  timezone             String?  @default("Africa/Lagos")
-  isOnboardingComplete Boolean  @default(false)
-
+  avatarId             String?    @unique
+  avatar               MediaFile? @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+  userType             UserType   @default(INDIVIDUAL)
+  timezone             String?    @default("Africa/Lagos")
+  isOnboardingComplete Boolean    @default(false)
 
   lastVerificationEmailSentAt DateTime?
 
@@ -30,7 +29,7 @@ model User {
   isEmailVerified Boolean @default(false)
   refreshToken    String?
 
-  passwordResetOtp        String?   // Stores the hashed OTP
+  passwordResetOtp        String? // Stores the hashed OTP
   passwordResetOtpExpires DateTime?
 
   // Security
@@ -58,11 +57,10 @@ model User {
   auditLogs          AuditLog[]
   favoriteTemplates  UserFavoriteTemplate[]
 
-
   comments Comment[]
 
-  assignedTickets   Ticket[]              @relation("TicketAssignee")    
-  ticketComments    TicketComment[]
+  assignedTickets Ticket[]        @relation("TicketAssignee")
+  ticketComments  TicketComment[]
 
   @@index([email, deletedAt])
   @@index([createdAt])
@@ -88,7 +86,7 @@ model Organization {
   status           OrganizationStatus @default(PENDING_PAYMENT)
   totalCreditsUsed Int                @default(0)
 
- members   OrganizationMember[]
+  members   OrganizationMember[]
   roles     Role[]
   invites   Invitation[]
   auditLogs AuditLog[]
@@ -102,7 +100,7 @@ model Organization {
   PostingSchedule PostingSchedule[]
   ContentTemplate ContentTemplate[]
 
- aigeneration   AiGeneration[]
+  aigeneration AiGeneration[]
 
   subscriptionGateway SubscriptionGateway @default(PAYSTACK)
 
@@ -139,29 +137,29 @@ model Workspace {
   agencyClientContact String? // "Jane Doe (jane@coke.com)"
   agencyClientColor   String? // "#FF0000" (To color-code the dashboard card)
 
-
   queueSlots QueueSlot[]
   campaigns  Campaign[]
 
-aigeneration   AiGeneration[]
- brandKit BrandKit?
+  aigeneration AiGeneration[]
+  brandKit     BrandKit?
 
-members        WorkspaceMember[]
-invitations     Invitation[]
-notifications Notification[]
+  members       WorkspaceMember[]
+  invitations   Invitation[]
+  notifications Notification[]
 
-comments  Comment[]
+  comments Comment[]
 
-ticketCounter Int @default(0)
-tickets  Ticket[]
+  ticketCounter Int      @default(0)
+  tickets       Ticket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([organizationId, slug]) 
+  @@unique([organizationId, slug])
 }
+
 model OrganizationMember {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
   userId         String
   roleId         String
@@ -170,7 +168,6 @@ model OrganizationMember {
   invitedByUserId String?
   joinedAt        DateTime @default(now())
 
-
   lastActiveAt DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -178,7 +175,7 @@ model OrganizationMember {
   role         Role         @relation(fields: [roleId], references: [id])
 
   workspaceMemberships WorkspaceMember[]
-  auditLogsAsActor AuditLog[]
+  auditLogsAsActor     AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -190,23 +187,23 @@ model OrganizationMember {
 model WorkspaceMember {
   id          String @id @default(cuid())
   workspaceId String
-  
-  memberId    String  
-  
-  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  member      OrganizationMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  roleId      String?
-  role        Role?    @relation("WorkspaceRole", fields: [roleId], references: [id])
+  memberId String
 
-  assignedConversations InboxConversation[] @relation("ConversationAssignee")
-  readStates           ConversationReadState[]
+  workspace Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  member    OrganizationMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  roleId String?
+  role   Role?   @relation("WorkspaceRole", fields: [roleId], references: [id])
+
+  assignedConversations InboxConversation[]     @relation("ConversationAssignee")
+  readStates            ConversationReadState[]
 
   notifications Notification[]
 
-  submittedTickets  Ticket[]  @relation("TicketRequester")
+  submittedTickets Ticket[] @relation("TicketRequester")
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([workspaceId, memberId])
   @@index([memberId])
@@ -214,28 +211,27 @@ model WorkspaceMember {
 }
 
 model Invitation {
-  id    String @id @default(cuid())
-  email String
-  token String @unique 
+  id             String @id @default(cuid())
+  email          String
+  token          String @unique
   organizationId String
 
   roleId String
 
+  workspaceId String? // null = org-wide invite
 
-  workspaceId         String? // null = org-wide invite
+  inviterId String
+  inviter   User   @relation("UserSentInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
 
-  inviterId      String
-  inviter        User             @relation("UserSentInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  role           Role             @relation(fields: [roleId], references: [id])
-  workspace           Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  status InvitationStatus @default(PENDING)
 
-  status         InvitationStatus @default(PENDING)
-
-  acceptedAt     DateTime?
-  revokedAt      DateTime?
-  declinedAt     DateTime?
+  acceptedAt DateTime?
+  revokedAt  DateTime?
+  declinedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -246,7 +242,7 @@ model Invitation {
 }
 
 model SocialConnection {
-  id             String   @id @default(cuid())
+  id             String           @id @default(cuid())
   organizationId String
   platform       Platform // FACEBOOK, LINKEDIN, TWITTER
   status         ConnectionStatus @default(CONNECTED)
@@ -276,10 +272,10 @@ model SocialProfile {
   workspaceId        String
   socialConnectionId String // Link back to the parent login
 
-  platform   Platform
+  platform Platform
 
   facebookPageId String?
-  
+
   platformId String // The Page ID / IG Business ID
   name       String // "Nike Official"
   username   String? // "@nike"
@@ -287,7 +283,7 @@ model SocialProfile {
 
   followerCount Int @default(0)
 
-  status         ConnectionStatus @default(CONNECTED)
+  status ConnectionStatus @default(CONNECTED)
 
   // PAGE CREDENTIALS (The "Room Key")
   // Specific token to post to THIS page. 
@@ -311,13 +307,13 @@ model SocialProfile {
 
   isActive Boolean @default(true)
 
- inboxConversations InboxConversation[]
- comments  Comment[]
+  inboxConversations InboxConversation[]
+  comments           Comment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([platform, platformId]) 
+  @@unique([platform, platformId])
   @@index([workspaceId])
 }
 
@@ -375,19 +371,16 @@ model Post {
   parentPost   Post?   @relation("PostThread", fields: [parentPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   childPosts   Post[]  @relation("PostThread")
 
-
   destinations PostDestination[]
   campaignId   String?
   campaign     Campaign?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   approvals    PostApproval[]
-  
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   author    User?     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   isAiGenerated Boolean @default(false)
   aiPrompt      String? @db.Text
-
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -422,7 +415,7 @@ model PostDestination {
 
   postAnalyticsSnapshots PostAnalyticsSnapshot[]
 
-    comments  Comment[]
+  comments Comment[]
 
   @@unique([postId, socialProfileId])
   @@index([status])
@@ -470,7 +463,7 @@ model MediaFile {
   workspaceId String
   userId      String
   folderId    String?
-  
+
   userAvatar User? @relation("UserAvatar")
 
   filename     String
@@ -493,7 +486,7 @@ model MediaFile {
 
   postUsage PostMedia[] // Relation to posts
 
-  brandKit    BrandKit? @relation("BrandKitLogo")
+  brandKit BrandKit? @relation("BrandKitLogo")
 
   folder    MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -502,8 +495,8 @@ model MediaFile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ticketId        String?
-  ticket          Ticket?        @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  ticketId String?
+  ticket   Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
 
   ticketCommentId String?
   ticketComment   TicketComment? @relation(fields: [ticketCommentId], references: [id], onDelete: SetNull)
@@ -698,18 +691,17 @@ model Transaction {
   updatedAt DateTime @updatedAt
 }
 
-
 model BrandKit {
   id          String  @id @default(cuid())
- workspaceId String @unique 
+  workspaceId String  @unique
   name        String  @default("Our Brand")
   handle      String?
 
   // Visual identity - flexible JSON structure
   // Changed: logoUrl becomes logoId
-  logoId      String? @unique // Unique if one media file is only one logo
-  logo        MediaFile? @relation("BrandKitLogo", fields: [logoId], references: [id], onDelete: SetNull)
-  colors  Json? // { primary: "#1E40AF", secondary: "#F59E0B", ... }
+  logoId String?    @unique // Unique if one media file is only one logo
+  logo   MediaFile? @relation("BrandKitLogo", fields: [logoId], references: [id], onDelete: SetNull)
+  colors Json? // { primary: "#1E40AF", secondary: "#F59E0B", ... }
 
   // Brand voice
   brandVoice String? @db.VarChar(500)
@@ -729,40 +721,39 @@ model BrandKit {
 }
 
 model AiGeneration {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
 
   organizationId String
   workspaceId    String
 
   // Use enums (cleaner than strings)
-  type           AiType       // TEXT | IMAGE
-  feature        AiFeature
+  type    AiType // TEXT | IMAGE
+  feature AiFeature
 
-  provider       AiProvider
-  model          String
+  provider AiProvider
+  model    String
 
   // Inputs/outputs (optional but extremely useful)
-  prompt         String?  @db.Text
-  input          Json?
-  output         Json?
+  prompt String? @db.Text
+  input  Json?
+  output Json?
 
   // Usage/cost
-  inputTokens    Int?
-  outputTokens   Int?
-  costUsd        Float?
-  creditCost       Int? 
+  inputTokens  Int?
+  outputTokens Int?
+  costUsd      Float?
+  creditCost   Int?
 
   // Link to other domain objects
-  brandKitId     String?
-  postId         String?
+  brandKitId String?
+  postId     String?
 
-  metadata       Json?
+  metadata Json?
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
   @@index([workspaceId, createdAt])
@@ -770,40 +761,38 @@ model AiGeneration {
   @@index([brandKitId])
 }
 
-
 model InboxConversation {
-  id              String   @id @default(cuid())
-  workspaceId     String
-  
+  id          String @id @default(cuid())
+  workspaceId String
+
   // Which social profile owns this conversation?
   socialProfileId String
   socialProfile   SocialProfile @relation(fields: [socialProfileId], references: [id])
 
-  
   // The ID of the thread on the external platform
-  externalId      String 
+  externalId String
 
   // The person we are talking to
-  contactId       String
-  contact         SocialContact @relation(fields: [contactId], references: [id])
+  contactId String
+  contact   SocialContact @relation(fields: [contactId], references: [id])
 
   // Workflow States
-  status           ConversationStatus   @default(UNASSIGNED)
-  priority         ConversationPriority @default(NORMAL)
-  
+  status   ConversationStatus   @default(UNASSIGNED)
+  priority ConversationPriority @default(NORMAL)
+
   // Assignment (Linked to your Org/Workspace Member)
   assignedMemberId String?
   assignedMember   WorkspaceMember? @relation("ConversationAssignee", fields: [assignedMemberId], references: [id])
 
   // Optional but great for UI clutter
-  archivedAt       DateTime?
-  snoozedUntil     DateTime?
+  archivedAt    DateTime?
+  snoozedUntil  DateTime?
   // Metadata for the UI list
-  lastMessageAt   DateTime
-  snippet         String?  // Preview of the last message
-  
-  messages        InboxMessage[]
-  readStates      ConversationReadState[]
+  lastMessageAt DateTime
+  snippet       String? // Preview of the last message
+
+  messages   InboxMessage[]
+  readStates ConversationReadState[]
 
   // Thread IDs are only guaranteed unique per connected account/page
   @@unique([socialProfileId, externalId])
@@ -812,169 +801,171 @@ model InboxConversation {
 }
 
 model InboxMessage {
-  id              String   @id @default(cuid())
-  conversationId  String
-  conversation    InboxConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   InboxConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   // 1. The Internal ID (Always required)
-  clientMessageId   String   
-  
+  clientMessageId String
+
   // 2. The External ID (Optional, filled in when Meta gives it to us)
   providerMessageId String?
 
-  content         String   @db.Text
-  direction       MessageDirection
-  
-  // Attachments (Images/Videos)
-  attachments     InboxMessageAttachment[]
+  content   String           @db.Text
+  direction MessageDirection
 
-  deliveryStatus    DeliveryStatus? // Nullable, as inbound messages don't need this
-  
+  // Attachments (Images/Videos)
+  attachments InboxMessageAttachment[]
+
+  deliveryStatus DeliveryStatus? // Nullable, as inbound messages don't need this
+
   // Error Debugging
-  errorCode         String?         // e.g., "OAuthException", "RateLimit"
-  errorMessage      String?         @db.Text
-  
+  errorCode    String? // e.g., "OAuthException", "RateLimit"
+  errorMessage String? @db.Text
+
   // When the platform actually processed it (differs from your DB createdAt)
   providerTimestamp DateTime?
 
-  createdAt       DateTime @default(now())
-  senderName      String?  // Snapshot of name at time of sending
+  createdAt  DateTime @default(now())
+  senderName String? // Snapshot of name at time of sending
 
   @@unique([conversationId, providerMessageId])
 }
 
 model SocialContact {
-  id              String   @id @default(cuid())
-  workspaceId     String
-  
-  platform        Platform
-  externalId      String   // Their User ID on Instagram/LinkedIn
-  
-  username        String
-  avatarUrl       String?
-  
-  conversations   InboxConversation[]
+  id          String @id @default(cuid())
+  workspaceId String
 
- @@unique([workspaceId, platform, externalId])
+  platform   Platform
+  externalId String // Their User ID on Instagram/LinkedIn
+
+  username  String
+  avatarUrl String?
+
+  conversations InboxConversation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@unique([workspaceId, platform, externalId])
 }
 
 model InboxMessageAttachment {
-  id              String   @id @default(cuid())
-  messageId       String
-  message         InboxMessage @relation(fields:[messageId], references:[id], onDelete: Cascade)
+  id        String       @id @default(cuid())
+  messageId String
+  message   InboxMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
-  type            AttachmentType // Enum: IMAGE, VIDEO, AUDIO, DOCUMENT, STICKER
-  url             String   @db.Text // Original CDN URL
-  
+  type AttachmentType // Enum: IMAGE, VIDEO, AUDIO, DOCUMENT, STICKER
+  url  String         @db.Text // Original CDN URL
+
   // Storage for your own S3/Cloudfront mirror (when the original expires)
-  proxyUrl        String?  @db.Text 
-  thumbnailUrl    String?  @db.Text 
-  
-  mimeType        String?  // e.g., 'image/jpeg'
-  fileSizeBytes   Int?
-  
+  proxyUrl     String? @db.Text
+  thumbnailUrl String? @db.Text
+
+  mimeType      String? // e.g., 'image/jpeg'
+  fileSizeBytes Int?
+
   // For any platform-specific weirdness (like Instagram Story Reply contexts)
-  meta            Json?    
+  meta Json?
 
   @@index([messageId])
 }
 
 model ConversationReadState {
-  id             String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   conversationId String
   conversation   InboxConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
-  memberId       String
-  member         WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // When did this specific agent last look at this thread?
-  lastReadAt     DateTime @default(now())
+  lastReadAt DateTime @default(now())
 
   // One read state per agent per conversation
   @@unique([conversationId, memberId])
 }
 
 model Notification {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   // Who receives it (use User or WorkspaceMember depending on your design)
-  memberId      String
-  member        WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  type          NotificationType
+  type NotificationType
 
   // Display content
-  title         String
-  body          String?      @db.Text
+  title String
+  body  String? @db.Text
 
   // Structured payload (postId, conversationId, etc.)
-  data          Json?
+  data Json?
 
   // Optional deep-link target (frontend convenience)
-  link          String?
+  link String?
 
   // Read tracking
-  readAt        DateTime?
+  readAt DateTime?
 
-  createdAt     DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   dedupeKey String?
 
+  @@unique([memberId, dedupeKey])
   @@index([workspaceId, createdAt])
   @@index([memberId, readAt])
-  @@unique([memberId, dedupeKey])
 }
 
-
 model Comment {
-  id                String        @id @default(cuid())
-  workspaceId       String
-  profileId         String
-  
-  externalPostId    String        
-  externalCommentId String        
-  
-  platform          Platform     
-  direction         Direction     @default(INBOUND)
-  status            CommentStatus @default(VISIBLE)
-  
+  id          String @id @default(cuid())
+  workspaceId String
+  profileId   String
+
+  externalPostId    String
+  externalCommentId String
+
+  platform  Platform
+  direction Direction     @default(INBOUND)
+  status    CommentStatus @default(VISIBLE)
+
   // 4. Safer Sender Tracking
-  senderExternalId  String        // The raw ID from the network
-  senderPlatformId  String?       // Page-scoped user ID (PSID) 
-  senderName        String?       
-  senderAvatarUrl   String?       @db.Text
-  
-  content           String        @db.Text
-  mediaUrl          String?       @db.Text
-  
-  parentId          String?
-  parent            Comment?      @relation("CommentToComment", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  replies           Comment[]     @relation("CommentToComment")
+  senderExternalId String // The raw ID from the network
+  senderPlatformId String? // Page-scoped user ID (PSID) 
+  senderName       String?
+  senderAvatarUrl  String? @db.Text
 
-  createdAt         DateTime      @default(now()) 
-  updatedAt         DateTime      @updatedAt
+  content  String  @db.Text
+  mediaUrl String? @db.Text
 
-  isResolved        Boolean       @default(false)
-  resolvedAt        DateTime?
-  
+  parentId String?
+  parent   Comment?  @relation("CommentToComment", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies  Comment[] @relation("CommentToComment")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  isResolved Boolean   @default(false)
+  resolvedAt DateTime?
+
   // 2. THE UPGRADE: Relate the resolver to your User model
-  resolvedById      String?
-  resolvedBy        User?         @relation(fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedById String?
+  resolvedBy   User?   @relation(fields: [resolvedById], references: [id], onDelete: SetNull)
 
-  postDestinationId String?       // Optional: Null if the post wasn't published via Rooli
+  postDestinationId String? // Optional: Null if the post wasn't published via Rooli
   postDestination   PostDestination? @relation(fields: [postDestinationId], references: [id], onDelete: Cascade)
 
   // Relationships
-  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  profile           SocialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profile   SocialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  @@unique([platform, externalCommentId]) 
-  @@index([workspaceId, isResolved, createdAt(sort: Desc)]) 
-  @@index([externalPostId, createdAt(sort: Desc)]) 
+  @@unique([platform, externalCommentId])
+  @@index([workspaceId, isResolved, createdAt(sort: Desc)])
+  @@index([externalPostId, createdAt(sort: Desc)])
   @@index([parentId])
 }
 
@@ -991,16 +982,15 @@ model PlatformRateLimitLog {
   @@index([platform, socialAccountId, windowStart, windowEnd])
 }
 
-
 // ==========================================
 // 📊 POST ANALYTICS (OMNICHANNEL BASE)
 // ==========================================
 model PostAnalyticsSnapshot {
-  id                String   @id @default(cuid())
+  id                String @id @default(cuid())
   postDestinationId String
-  
-  day               DateTime @db.Date // Normalized day (e.g., 2026-03-04)
-  fetchedAt         DateTime @default(now())
+
+  day       DateTime @db.Date // Normalized day (e.g., 2026-03-04)
+  fetchedAt DateTime @default(now())
 
   // --- THE OMNICHANNEL CORE ---
   // Only metrics shared across ALL platforms go here.
@@ -1018,7 +1008,7 @@ model PostAnalyticsSnapshot {
   facebookStats  FacebookPostStats?
   instagramStats InstagramPostStats?
 
-  @@unique([postDestinationId, day]) 
+  @@unique([postDestinationId, day])
   @@index([postDestinationId, day])
 }
 
@@ -1026,8 +1016,8 @@ model PostAnalyticsSnapshot {
 // 🐦 TWITTER POST STATS
 // ==========================================
 model TwitterPostStats {
-  id         String @id @default(cuid())
-  snapshotId String @unique
+  id         String                @id @default(cuid())
+  snapshotId String                @unique
   snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   retweets   Int @default(0)
@@ -1036,29 +1026,28 @@ model TwitterPostStats {
   videoViews Int @default(0)
 }
 
-
 // ==========================================
 // 💼 LINKEDIN POST STATS
 // ==========================================
 model LinkedInPostStats {
-  id         String @id @default(cuid())
-  snapshotId String @unique
+  id         String                @id @default(cuid())
+  snapshotId String                @unique
   snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   // Shared metrics (Available to both Personal & Org)
-  reposts    Int @default(0)
-  
+  reposts Int @default(0)
+
   // Organization Only (Make these optional/nullable)
-  clicks     Int? 
-  videoViews Int? 
+  clicks     Int?
+  videoViews Int?
 }
 
 // ==========================================
 // 📘 FACEBOOK POST STATS
 // ==========================================
 model FacebookPostStats {
-  id         String @id @default(cuid())
-  snapshotId String @unique
+  id         String                @id @default(cuid())
+  snapshotId String                @unique
   snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   shares     Int @default(0)
@@ -1071,8 +1060,8 @@ model FacebookPostStats {
 // 📸 INSTAGRAM POST STATS
 // ==========================================
 model InstagramPostStats {
-  id         String @id @default(cuid())
-  snapshotId String @unique
+  id         String                @id @default(cuid())
+  snapshotId String                @unique
   snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   saves      Int @default(0)
@@ -1097,24 +1086,24 @@ model AccountAnalytics {
   followersLost   Int @default(0)
 
   // Reach & Traffic
-  impressions     Int @default(0) 
-  reach           Int @default(0) 
-  profileViews    Int @default(0)
-  clicks          Int @default(0) // Aggregated clicks across the profile
-  
+  impressions  Int @default(0)
+  reach        Int @default(0)
+  profileViews Int @default(0)
+  clicks       Int @default(0) // Aggregated clicks across the profile
+
   // Overall Engagement
   engagementCount Int @default(0) // Sum of all interactions that day
 
-  socialProfile   SocialProfile @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
+  socialProfile SocialProfile @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
 
   // --- PLATFORM SPECIFIC RELATIONS ---
-  twitterStats    TwitterAccountStats?
-  linkedInStats   LinkedInAccountStats?
-  facebookStats   FacebookAccountStats?
-  instagramStats  InstagramAccountStats?
+  twitterStats   TwitterAccountStats?
+  linkedInStats  LinkedInAccountStats?
+  facebookStats  FacebookAccountStats?
+  instagramStats InstagramAccountStats?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([socialProfileId, date])
   @@index([socialProfileId, date])
@@ -1125,63 +1114,63 @@ model AccountAnalytics {
 // 🐦 TWITTER ACCOUNT STATS
 // ==========================================
 model TwitterAccountStats {
-  id               String @id @default(cuid())
-  accountStatsId   String @unique
+  id               String           @id @default(cuid())
+  accountStatsId   String           @unique
   accountAnalytics AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
 
-  mentions         Int @default(0)
-  tweetCount       Int @default(0) // Number of tweets sent that day
+  mentions   Int @default(0)
+  tweetCount Int @default(0) // Number of tweets sent that day
 }
 
 // ==========================================
 // 💼 LINKEDIN ACCOUNT STATS
 // ==========================================
 model LinkedInAccountStats {
-  id                String @id @default(cuid())
-  accountStatsId    String @unique
-  accountAnalytics  AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
+  id               String           @id @default(cuid())
+  accountStatsId   String           @unique
+  accountAnalytics AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
 
   // We should track the type of LinkedIn entity this snapshot belongs to 
   // just in case we need to filter analytics at the DB level later.
-  isOrganization    Boolean @default(false)
+  isOrganization Boolean @default(false)
 
   // Organization Only Metrics (Must be nullable)
   customButtonClicks Int?
   uniqueVisitors     Int?
   pageViews          Int? // Differentiates from the omnichannel "profileViews" if needed
-  
+
   // LinkedIn demographics (Industry, Seniority, Company Size, etc.)
   // Only available for Organization Pages with >300 followers usually.
-  demographics       Json? 
-  
+  demographics Json?
+
   // Personal Profile Only Metrics
   // (If you ever get access to them via API or scraping, otherwise leave null)
-  searchAppearances  Int? 
+  searchAppearances Int?
 }
 
 // ==========================================
 // 📘 FACEBOOK ACCOUNT STATS
 // ==========================================
 model FacebookAccountStats {
-  id               String @id @default(cuid())
-  accountStatsId   String @unique
+  id               String           @id @default(cuid())
+  accountStatsId   String           @unique
   accountAnalytics AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
 
-  pageLikes        Int @default(0)
-  pageFollows      Int @default(0)
-  videoViews       Int @default(0)
+  pageLikes   Int @default(0)
+  pageFollows Int @default(0)
+  videoViews  Int @default(0)
 
   // FB demographics (age, gender, locale)
-  demographics     Json? 
+  demographics Json?
 }
 
 // ==========================================
 // 📸 INSTAGRAM ACCOUNT STATS
 // ==========================================
 model InstagramAccountStats {
-  id                String @id @default(cuid())
-  accountStatsId    String @unique
-  accountAnalytics  AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
+  id               String           @id @default(cuid())
+  accountStatsId   String           @unique
+  accountAnalytics AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
 
   websiteClicks     Int @default(0)
   emailContacts     Int @default(0)
@@ -1189,7 +1178,7 @@ model InstagramAccountStats {
   phoneCallClicks   Int @default(0)
 
   // IG demographics (age, gender, city, country)
-  demographics      Json? 
+  demographics Json?
 }
 
 // ========================
@@ -1219,26 +1208,25 @@ model WebhookLog {
 }
 
 model Role {
-  id             String   @id @default(cuid())
-  scope          RoleScope
+  id    String    @id @default(cuid())
+  scope RoleScope
 
   // System roles: organizationId = null
   // Org roles: organizationId = some org id
   organizationId String?
 
   name        String
-  slug        String  
+  slug        String
   description String?
 
-  isSystem    Boolean  @default(false)
-  isDefault   Boolean  @default(false)
+  isSystem  Boolean @default(false)
+  isDefault Boolean @default(false)
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   permissions         RolePermission[]
   organizationMembers OrganizationMember[]
   invitations         Invitation[]
-
 
   workspaceMembersWithRole WorkspaceMember[] @relation("WorkspaceRole")
 
@@ -1303,19 +1291,19 @@ model AuditLog {
   id             String @id @default(cuid())
   organizationId String
 
-  actorUserId    String?
-  actorMemberId  String? // better than userId-only for org context
+  actorUserId   String?
+  actorMemberId String? // better than userId-only for org context
 
-  action         AuditAction
-  resourceType   AuditResourceType
-  resourceId     String?
-  details        Json?
+  action       AuditAction
+  resourceType AuditResourceType
+  resourceId   String?
+  details      Json?
 
-  ipAddress      String?
-  userAgent      String?
+  ipAddress String?
+  userAgent String?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  actorUser      User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser    User?               @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
   actorMember  OrganizationMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
@@ -1329,16 +1317,16 @@ model AuditLog {
 /// ===============================
 
 model PostApproval {
-  id          String @id @default(cuid())
-  postId      String
+  id     String @id @default(cuid())
+  postId String
 
   requesterId String
   approverId  String?
 
-  status      ApprovalStatus @default(PENDING)
-  notes       String? @db.Text
+  status ApprovalStatus @default(PENDING)
+  notes  String?        @db.Text
 
-  requestedAt DateTime @default(now())
+  requestedAt DateTime  @default(now())
   reviewedAt  DateTime?
 
   post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -1349,7 +1337,6 @@ model PostApproval {
   @@index([requesterId])
   @@index([approverId])
 }
-
 
 model PostingSchedule {
   id             String         @id @default(cuid())
@@ -1369,71 +1356,70 @@ model PostingSchedule {
   @@index([isActive, platform])
 }
 
-
 model Ticket {
-  id               String         @id @default(cuid())
-  workspaceId      String
-  
-  // Custom ticket number (e.g., Ticket #1042)
-  ticketNumber     Int            
+  id          String @id @default(cuid())
+  workspaceId String
 
-  title            String
-  description      String         @db.Text
-  status           TicketStatus   @default(OPEN)
-  category         TicketCategory @default(OTHER)
-  priority         TicketPriority @default(MEDIUM)
+  // Custom ticket number (e.g., Ticket #1042)
+  ticketNumber Int
+
+  title       String
+  description String         @db.Text
+  status      TicketStatus   @default(OPEN)
+  category    TicketCategory @default(OTHER)
+  priority    TicketPriority @default(MEDIUM)
 
   // 1. THE REQUESTER: The Rooli user who needs help
   // We link this to WorkspaceMember so you know exactly which workspace they belong to.
-  requesterId      String
-  requester        WorkspaceMember @relation("TicketRequester", fields: [requesterId], references: [id])
+  requesterId String
+  requester   WorkspaceMember @relation("TicketRequester", fields: [requesterId], references: [id])
 
   // 2. THE ASSIGNEE: The Rooli Admin/Support Agent fixing the issue
   // We link this directly to the User model, assuming your support agents are global users with an "ADMIN" role.
-  assigneeId       String?
-  assignee         User?           @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  assigneeId String?
+  assignee   User?   @relation("TicketAssignee", fields: [assigneeId], references: [id])
 
   // --- RELATIONS ---
-  workspace        Workspace       @relation(fields: [workspaceId], references: [id])
-  mediaFiles       MediaFile[]     // Reusing your media files instead of custom attachments
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id])
+  mediaFiles MediaFile[] // Reusing your media files instead of custom attachments
 
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  closedAt         DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime?
 
-  comments         TicketComment[]
+  comments TicketComment[]
 
   @@index([workspaceId, status])
   @@index([assigneeId, status])
 }
 
 model TicketComment {
-  id             String   @id @default(cuid())
-  ticketId       String
-  
-  // Who wrote this comment? (We link directly to the User model)
-  authorUserId   String
-  author         User     @relation(fields: [authorUserId], references: [id])
-  
-  // Is this comment from the customer or from Rooli Support?
-  isFromSupport  Boolean  @default(false) 
-  
-  // Can the customer see this, or is it a secret note for other Rooli admins?
-  isInternal     Boolean  @default(false) 
-  
-  content        String   @db.Text
-  
-  // --- RELATIONS ---
-  ticket         Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  mediaFiles     MediaFile[] 
+  id       String @id @default(cuid())
+  ticketId String
 
-  createdAt      DateTime @default(now())
+  // Who wrote this comment? (We link directly to the User model)
+  authorUserId String
+  author       User   @relation(fields: [authorUserId], references: [id])
+
+  // Is this comment from the customer or from Rooli Support?
+  isFromSupport Boolean @default(false)
+
+  // Can the customer see this, or is it a secret note for other Rooli admins?
+  isInternal Boolean @default(false)
+
+  content String @db.Text
+
+  // --- RELATIONS ---
+  ticket     Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  mediaFiles MediaFile[]
+
+  createdAt DateTime @default(now())
 
   @@index([ticketId])
 }
 
 enum ConnectionStatus {
-  CONNECTED 
+  CONNECTED
   EXPIRED
   DISCONNECTED
 }
@@ -1463,7 +1449,7 @@ enum PostStatus {
   DRAFT
   PENDING_APPROVAL
   SCHEDULED
-  PUBLISHING 
+  PUBLISHING
   PUBLISHED
   FAILED
   PARTIAL
@@ -1483,7 +1469,6 @@ enum CampaignStatus {
   COMPLETED
   ARCHIVED
 }
-
 
 enum TemplateCategory {
   SALES
@@ -1660,6 +1645,7 @@ enum GenerationStatus {
   APPROVED
   REJECTED
 }
+
 enum TemplateStatus {
   DRAFT
   ACTIVE
@@ -1698,8 +1684,8 @@ enum AiFeature {
   HASHTAGS
   CALENDAR
   IMAGE
-  REPURPOSE   
-  AUDIT    
+  REPURPOSE
+  AUDIT
   REPLY
   BULK
   HOLIDAY_POST
@@ -1786,9 +1772,8 @@ enum ApprovalStatus {
   REJECTED
 }
 
-
 enum MessageDirection {
-  INBOUND  // They wrote to us
+  INBOUND // They wrote to us
   OUTBOUND // We replied
 }
 
@@ -1803,9 +1788,9 @@ enum AttachmentType {
 
 enum ConversationStatus {
   UNASSIGNED
-  OPEN        // Actively being worked on
-  PENDING     // Waiting on the customer to reply
-  CLOSED      // Resolved
+  OPEN // Actively being worked on
+  PENDING // Waiting on the customer to reply
+  CLOSED // Resolved
 }
 
 enum ConversationPriority {
@@ -1816,12 +1801,12 @@ enum ConversationPriority {
 }
 
 enum DeliveryStatus {
-  QUEUED     // Sitting in your Redis queue
+  QUEUED // Sitting in your Redis queue
   SENDING
-  SENT       // Passed to Meta/LinkedIn successfully
-  DELIVERED  // Platform confirmed receipt
-  READ       // Customer actually saw it
-  FAILED     // API threw an error
+  SENT // Passed to Meta/LinkedIn successfully
+  DELIVERED // Platform confirmed receipt
+  READ // Customer actually saw it
+  FAILED // API threw an error
 }
 
 enum NotificationType {
@@ -1836,8 +1821,8 @@ enum NotificationType {
 }
 
 enum Direction {
-  INBOUND   // From the audience
-  OUTBOUND  // Sent by the Page/Agent
+  INBOUND // From the audience
+  OUTBOUND // Sent by the Page/Agent
 }
 
 enum CommentStatus {
@@ -1847,7 +1832,6 @@ enum CommentStatus {
   DELETED
   FAILED
 }
-
 
 enum PermissionScope {
   SYSTEM
@@ -1860,8 +1844,6 @@ enum RoleScope {
   ORGANIZATION
   WORKSPACE
 }
-
-
 
 enum NotificationPriority {
   LOW
