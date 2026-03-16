@@ -49,9 +49,25 @@ export class InboundWebhooksProcessor extends WorkerHost {
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
           
+          const commentPayload = {
+            workspaceId: resolved.workspaceId!,
+            socialProfileId: resolved.socialProfileId!,
+            platform: resolved.platform as any,
+            externalPostId: resolved.meta?.postId,             // Extracted from meta
+            externalCommentId: resolved.message.externalId,    // Extracted from message
+            externalParentId: resolved.meta?.parentId || null,
+            senderExternalId: resolved.contact.externalId,     // Extracted from contact
+            senderName: resolved.message.senderName || resolved.contact.username || 'Unknown User',
+            senderAvatarUrl: resolved.contact.avatarUrl || null,
+            content: resolved.message.content,                 // Extracted from message
+            timestamp: resolved.occurredAt,                    // Extracted from root
+          };
+
+          // Pass the freshly mapped payload INSTEAD of using 'as unknown as'
+          const result = await this.ingest.ingestInboundComment(commentPayload);
           
          // 1. Capture the result WITHOUT destructuring it immediately
-          const result = await this.ingest.ingestInboundComment(resolved as unknown as InboundCommentPayload);
+          //const result = await this.ingest.ingestInboundComment(resolved as unknown as InboundCommentPayload);
 
 
           if (!result) {

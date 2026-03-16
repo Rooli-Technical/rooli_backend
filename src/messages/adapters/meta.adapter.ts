@@ -109,95 +109,228 @@ export class MetaAdapter implements SocialAdapter {
     };
   }
 
+  // normalizeComment(input: any): NormalizedInboundMessage | null {
+  //   console.log(input)
+  //   const change = input?.change ?? input;
+  //   const rawEntry = input?.rawEntry;
+
+  //   const field = change?.field;
+  //   if (field !== 'feed') return null;
+
+  //   const value = change?.value ?? {};
+  //   const verb = value?.verb; // add / edit / remove
+  //   if (verb && verb !== 'add' && verb !== 'edited') {
+  //     // ignore deletes/removes for now
+  //     return null;
+  //   }
+
+  //   // Common fields on feed changes:
+  //   // - post_id
+  //   // - comment_id
+  //   // - from / sender_name
+  //   // - message (comment text)
+  //   const postId: string | undefined = value?.post_id;
+  //   const commentId: string | undefined =
+  //     value?.comment_id ?? value?.comment_id?.toString();
+  //   const fromId: string | undefined = value?.from?.id ?? value?.sender_id; // varies
+  //   const fromName: string | undefined =
+  //     value?.from?.name ?? value?.sender_name;
+  //   const messageText: string = (
+  //     value?.message ??
+  //     value?.text ??
+  //     ''
+  //   ).toString();
+  //   const createdTime = value?.created_time
+  //     ? new Date(Number(value.created_time) * 1000)
+  //     : new Date();
+
+  //   const ownerExternalId =
+  //     rawEntry?.id ?? value?.page_id ?? value?.instagram_business_account_id;
+  //   const platform: NormalizedPlatform = inferMetaPlatform(input?.objectType) ?? 'FACEBOOK';
+
+  //   if (!commentId || !postId || !fromId) {
+  //     // Some feed events aren't comment creates. Ignore.
+  //     return null;
+  //   }
+
+  //   // const conversationExternalId = buildSyntheticThreadId({
+  //   //   ownerExternalId: ownerExternalId ?? 'unknown_owner',
+  //   //   contactExternalId: fromId,
+  //   //   kind: `post:${postId}`,
+  //   // });
+
+  //   const conversationExternalId = buildSyntheticThreadId(
+  //     ownerExternalId,
+  //     fromId,
+  //     'meta:comment',
+  //   );
+
+  //   return {
+  //     platform,
+  //     type: 'POST_COMMENT',
+  //     conversationExternalId,
+  //     contact: {
+  //       platform,
+  //       externalId: fromId,
+  //       username: fromName ?? `meta_${fromId.slice(0, 8)}`,
+  //       avatarUrl: value.profile_picture || null,
+  //     },
+  //     message: {
+  //       externalId: commentId,
+  //       content: messageText,
+  //       direction: 'INBOUND',
+  //       senderName: fromName ?? null,
+  //       providerTimestamp: createdTime,
+  //       attachments: undefined,
+  //       meta: {
+  //         postId,
+  //         commentId,
+  //         verb,
+  //         item: value?.item,
+  //       },
+  //     },
+  //     snippet: messageText.slice(0, 140),
+  //     occurredAt: createdTime,
+  //     meta: {
+  //       ownerExternalId,
+  //       rawEventType: 'meta.comment',
+  //       postId,
+  //       commentId,
+  //     },
+  //     raw: undefined,
+  //   };
+  // }
+
   normalizeComment(input: any): NormalizedInboundMessage | null {
-    const change = input?.change ?? input;
-    const rawEntry = input?.rawEntry;
-
-    const field = change?.field;
-    if (field !== 'feed') return null;
-
+    const { change, rawEntry, objectType } = input;
     const value = change?.value ?? {};
-    const verb = value?.verb; // add / edit / remove
-    if (verb && verb !== 'add' && verb !== 'edited') {
-      // ignore deletes/removes for now
-      return null;
-    }
+    const field = change?.field;
 
-    // Common fields on feed changes:
-    // - post_id
-    // - comment_id
-    // - from / sender_name
-    // - message (comment text)
-    const postId: string | undefined = value?.post_id;
-    const commentId: string | undefined =
-      value?.comment_id ?? value?.comment_id?.toString();
-    const fromId: string | undefined = value?.from?.id ?? value?.sender_id; // varies
-    const fromName: string | undefined =
-      value?.from?.name ?? value?.sender_name;
-    const messageText: string = (
-      value?.message ??
-      value?.text ??
-      ''
-    ).toString();
-    const createdTime = value?.created_time
-      ? new Date(Number(value.created_time) * 1000)
-      : new Date();
+    // Reject anything that isn't a feed event or an Instagram comment
+    if (field !== 'feed' && field !== 'comments') return null;
 
-    const ownerExternalId =
-      rawEntry?.id ?? value?.page_id ?? value?.instagram_business_account_id;
-    const platform: NormalizedPlatform = inferMetaPlatform(input?.objectType) ?? 'FACEBOOK';
+    // Best-effort platform inference
+    const platform: NormalizedPlatform = inferMetaPlatform(objectType) ?? 'FACEBOOK';
 
-    if (!commentId || !postId || !fromId) {
-      // Some feed events aren't comment creates. Ignore.
-      return null;
-    }
+    // ==========================================
+    // 1. INSTAGRAM COMMENTS
+    // ==========================================
+    if (platform === 'INSTAGRAM' && field === 'comments') {
+      const igMessageText: string = value?.text?.toString() ?? '';
+      if (!igMessageText) return null; // Ignore non-text events (likes, etc.)
 
-    // const conversationExternalId = buildSyntheticThreadId({
-    //   ownerExternalId: ownerExternalId ?? 'unknown_owner',
-    //   contactExternalId: fromId,
-    //   kind: `post:${postId}`,
-    // });
+      const igFromId = value?.from?.id;
+      const igFromUsername = value?.from?.username ?? `meta_${igFromId?.slice(0, 8)}`;
+      const igPostId = value?.media?.id;
+      const igCommentId = value?.id;
+      const igOwnerExternalId = rawEntry?.id; // The Business Account ID receiving the comment
 
-    const conversationExternalId = buildSyntheticThreadId(
-      ownerExternalId,
-      fromId,
-      'meta:comment',
-    );
+      if (!igCommentId || !igPostId || !igFromId) return null;
 
-    return {
-      platform,
-      type: 'POST_COMMENT',
-      conversationExternalId,
-      contact: {
+      const conversationExternalId = buildSyntheticThreadId(
+        igOwnerExternalId,
+        igFromId,
+        'meta:comment',
+      );
+
+      return {
         platform,
-        externalId: fromId,
-        username: fromName ?? `meta_${fromId.slice(0, 8)}`,
-        avatarUrl: value.profile_picture || null,
-      },
-      message: {
-        externalId: commentId,
-        content: messageText,
-        direction: 'INBOUND',
-        senderName: fromName ?? null,
-        providerTimestamp: createdTime,
-        attachments: undefined,
-        meta: {
-          postId,
-          commentId,
-          verb,
-          item: value?.item,
+        type: 'POST_COMMENT',
+        conversationExternalId,
+        contact: {
+          platform,
+          externalId: igFromId,
+          username: igFromUsername,
+          avatarUrl: null, // IG webhooks don't send avatar URLs on comments
         },
-      },
-      snippet: messageText.slice(0, 140),
-      occurredAt: createdTime,
-      meta: {
-        ownerExternalId,
-        rawEventType: 'meta.comment',
-        postId,
-        commentId,
-      },
-      raw: undefined,
-    };
+        message: {
+          externalId: igCommentId,
+          content: igMessageText,
+          direction: 'INBOUND',
+          senderName: igFromUsername, // Fallback to username for name
+          providerTimestamp: new Date(), // IG webhooks don't send timestamp on comments, fallback to now
+          attachments: undefined,
+          meta: {
+            postId: igPostId,
+            commentId: igCommentId,
+          },
+        },
+        snippet: igMessageText.slice(0, 140),
+        occurredAt: new Date(),
+        meta: {
+          ownerExternalId: igOwnerExternalId,
+          rawEventType: 'meta.comment',
+          postId: igPostId,
+          commentId: igCommentId,
+        },
+        raw: undefined,
+      };
+    }
+
+    // ==========================================
+    // 2. FACEBOOK COMMENTS
+    // ==========================================
+    if (platform === 'FACEBOOK' && field === 'feed') {
+      const verb = value?.verb; 
+      if (verb && verb !== 'add' && verb !== 'edited') return null;
+
+      const fbPostId = value?.post_id;
+      const fbCommentId = value?.comment_id?.toString();
+      const fbFromId = value?.from?.id ?? value?.sender_id;
+      const fbFromName = value?.from?.name ?? value?.sender_name;
+      const fbMessageText: string = (value?.message ?? value?.text ?? '').toString();
+      
+      const createdTime = value?.created_time
+        ? new Date(Number(value.created_time) * 1000)
+        : new Date();
+
+      const fbOwnerExternalId = rawEntry?.id ?? value?.page_id;
+
+      if (!fbCommentId || !fbPostId || !fbFromId) return null;
+
+      const conversationExternalId = buildSyntheticThreadId(
+        fbOwnerExternalId,
+        fbFromId,
+        'meta:comment',
+      );
+
+      return {
+        platform,
+        type: 'POST_COMMENT',
+        conversationExternalId,
+        contact: {
+          platform,
+          externalId: fbFromId,
+          username: fbFromName ?? `meta_${fbFromId.slice(0, 8)}`,
+          avatarUrl: value?.profile_picture || null,
+        },
+        message: {
+          externalId: fbCommentId,
+          content: fbMessageText,
+          direction: 'INBOUND',
+          senderName: fbFromName ?? null,
+          providerTimestamp: createdTime,
+          attachments: undefined,
+          meta: {
+            postId: fbPostId,
+            commentId: fbCommentId,
+            verb,
+            item: value?.item,
+          },
+        },
+        snippet: fbMessageText.slice(0, 140),
+        occurredAt: createdTime,
+        meta: {
+          ownerExternalId: fbOwnerExternalId,
+          rawEventType: 'meta.comment',
+          postId: fbPostId,
+          commentId: fbCommentId,
+        },
+        raw: undefined,
+      };
+    }
+
+    return null;
   }
 
   private extractMetaMessageAttachments(msg: any): NormalizedAttachment[] {

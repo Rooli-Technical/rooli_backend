@@ -102,6 +102,7 @@ export class WebhookController {
     const objectType = payload?.object;
     const entries = payload?.entry ?? [];
 
+
     const log = await this.prisma.webhookLog.create({
       data: {
         provider: 'META',
@@ -139,13 +140,14 @@ export class WebhookController {
           // B. Feed / Comments (FB & IG)
           if (change.field === 'feed' || change.field === 'comments') {
             const changeId =
-              change?.value?.comment_id ??
+              change?.value?.id ??           // <-- Catches Instagram Comments
+              change?.value?.comment_id ??   // <-- Catches Facebook Comments
               change?.value?.post_id ??
-              `${entry?.id ?? 'na'}-${change?.value?.item ?? 'feed'}-${change?.value?.verb ?? 'unknown'}-${change?.value?.created_time ?? Date.now()}`;
+              `${entry?.id ?? 'na'}-${change.field}-${Date.now()}`;
 
             await this.inboxQueue.add(
               'meta-inbound-comment',
-              { entryId: entry.id, change, rawEntry: entry },
+              { entryId: entry.id, change, rawEntry: entry, objectType },
               {
                 jobId: `meta-feed-${changeId}`.replace(/:/g, '-'),
                 attempts: 5,
