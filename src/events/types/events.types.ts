@@ -86,22 +86,31 @@ export type DomainEventPayloadMap = {
 
   'publishing.post.published': {
     workspaceId: string;
+    postId: string;
     postDestinationId: string;
-    platform?: string;
+    platform: string;
+    profileName: string;
+    snippet: string;
   };
 
   'publishing.post.failed': {
     workspaceId: string;
+    postId: string;
     postDestinationId: string;
-    platform?: string;
-    reason?: string;
+    platform: string;
+    profileName: string;
+    snippet: string;
+    reason: string;
   };
 
   'publishing.post.declined': {
     workspaceId: string;
     postId: string;
-    platform?: string;
-    reason?: string;
+    postDestinationId?: string;
+    platform: string;
+    profileName: string;
+    snippet: string;
+    reason: string;
   };
 
   'notification.created': {

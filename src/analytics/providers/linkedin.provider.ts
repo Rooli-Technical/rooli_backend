@@ -577,7 +577,6 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
               paramsSerializer: customSerializer,
             }),
           );
-            console.dir(data, { depth: null });
           return data?.elements?.[0]?.count ?? 0;
         };
 

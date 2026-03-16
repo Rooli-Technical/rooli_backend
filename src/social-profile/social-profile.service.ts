@@ -104,6 +104,7 @@ async addProfilesToWorkspace(
       );
     }
 
+
     // 6. Upsert using GLOBAL identity key
     const profile =
       await this.prisma.socialProfile.upsert({
@@ -123,6 +124,7 @@ async addProfilesToWorkspace(
           ),
           facebookPageId: pageData.facebookPageId || null,
           status: ConnectionStatus.CONNECTED,
+          webhookRoutingUserId: pageData.user_id,
         },
         create: {
           workspaceId,
@@ -141,6 +143,7 @@ async addProfilesToWorkspace(
           ),
           facebookPageId: pageData.facebookPageId || null,
           status: ConnectionStatus.CONNECTED,
+          webhookRoutingUserId: pageData.user_id,
         },
       });
 

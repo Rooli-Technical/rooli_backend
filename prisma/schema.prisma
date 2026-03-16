@@ -307,6 +307,8 @@ model SocialProfile {
 
   isActive Boolean @default(true)
 
+  webhookRoutingUserId   String?
+
   inboxConversations InboxConversation[]
   comments           Comment[]
 

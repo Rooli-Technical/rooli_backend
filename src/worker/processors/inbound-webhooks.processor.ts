@@ -137,7 +137,10 @@ export class InboundWebhooksProcessor extends WorkerHost {
     const profile = await this.prisma.socialProfile.findFirst({
       where: {
         platform,
-        platformId: ownerExternalId,
+        OR: [
+          { platformId: ownerExternalId },       // Catches Facebook Pages
+          { webhookRoutingUserId: ownerExternalId }  // Catches Standalone Instagram DMs
+        ]
       },
       select: { id: true, workspaceId: true, accessToken: true, },
     });

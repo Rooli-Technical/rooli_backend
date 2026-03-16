@@ -96,7 +96,7 @@ export class WebhookController {
    * - Guard verifies x-hub-signature-256 using raw body + META_APP_SECRET.
    * - We immediately enqueue each sub-event as its own job with a stable jobId.
    */
-  @Post('meta')
+@Post('meta')
   @UseGuards(MetaWebhookGuard)
   async handle(@Body() payload: any) {
     const objectType = payload?.object;
@@ -113,62 +113,60 @@ export class WebhookController {
     });
 
     for (const entry of entries) {
-      // 1) Messaging events (DMs)
+      // ==========================================
+      // 1. STANDARD MESSAGING (FB Pages & Linked IG)
+      // ==========================================
       if (Array.isArray(entry.messaging)) {
         for (const m of entry.messaging) {
-          const mid = m?.message?.mid; // stable Meta message id for dedupe
-          const fallback = `${entry?.id ?? 'na'}-${m?.timestamp ?? Date.now()}-${m?.sender?.id ?? 'na'}`;
-          const jobId = `meta-dm-${mid ?? fallback}`.replace(/:/g, '-');
-
-          await this.inboxQueue.add(
-            'meta-inbound-message',
-            { entryId: entry.id, messaging: m, rawEntry: entry, objectType },
-            {
-              jobId,
-              attempts: 5,
-              backoff: { type: 'exponential', delay: 1500 },
-              removeOnComplete: true,
-            },
-          );
+          await this.queueMessage(entry, m, objectType);
         }
         continue;
       }
 
-      // 2) Feed events (comments, etc.)
+      // ==========================================
+      // 2. CHANGES ARRAY (Standalone IG & Feeds)
+      // ==========================================
       if (Array.isArray(entry.changes)) {
         for (const change of entry.changes) {
-          if (change?.field !== 'feed') continue;
+          
+          // A. Standalone IG Direct Messages
+          if (change.field === 'messages') {
+            const m = change.value; // The value object perfectly mirrors the old 'messaging' object
+            await this.queueMessage(entry, m, objectType);
+            continue;
+          }
 
-          // Try to build a stable id for job dedupe
-          const changeId =
-            change?.value?.comment_id ??
-            change?.value?.post_id ??
-            `${entry?.id ?? 'na'}-${change?.value?.item ?? 'feed'}-${change?.value?.verb ?? 'unknown'}-${change?.value?.created_time ?? Date.now()}`;
+          // B. Feed / Comments (FB & IG)
+          if (change.field === 'feed' || change.field === 'comments') {
+            const changeId =
+              change?.value?.comment_id ??
+              change?.value?.post_id ??
+              `${entry?.id ?? 'na'}-${change?.value?.item ?? 'feed'}-${change?.value?.verb ?? 'unknown'}-${change?.value?.created_time ?? Date.now()}`;
 
-          await this.inboxQueue.add(
-            'meta-inbound-comment',
-            { entryId: entry.id, change, rawEntry: entry },
-            {
-              jobId: `meta-feed-${changeId}`.replace(/:/g, '-'),
-              attempts: 5,
-              backoff: { type: 'exponential', delay: 1500 },
-              removeOnComplete: true,
-            },
-          );
+            await this.inboxQueue.add(
+              'meta-inbound-comment',
+              { entryId: entry.id, change, rawEntry: entry },
+              {
+                jobId: `meta-feed-${changeId}`.replace(/:/g, '-'),
+                attempts: 5,
+                backoff: { type: 'exponential', delay: 1500 },
+                removeOnComplete: true,
+              },
+            );
+            continue;
+          }
         }
         continue;
       }
 
-      // 3) Everything else (permission changes, deauth, etc.) -> system queue
+      // ==========================================
+      // 3. SYSTEM EVENTS
+      // ==========================================
       await this.webhooksQueue.add(
         'meta-system-event',
         { entry },
         {
-          jobId:
-            `meta-system-${entry?.id ?? cryptoRandomId()}-${Date.now()}`.replace(
-              /:/g,
-              '-',
-            ),
+          jobId: `meta-system-${entry?.id ?? cryptoRandomId()}-${Date.now()}`.replace(/:/g, '-'),
           attempts: 5,
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: true,
@@ -177,8 +175,27 @@ export class WebhookController {
       );
     }
 
-    // Always respond fast
     return { status: 'success' };
+  }
+
+  // Extracted into a helper method to keep your controller clean since we call it twice
+  private async queueMessage(entry: any, m: any, objectType: string) {
+    const mid = m?.message?.mid; 
+    const fallback = `${entry?.id ?? 'na'}-${m?.timestamp ?? Date.now()}-${m?.sender?.id ?? 'na'}`;
+    const jobId = `meta-dm-${mid ?? fallback}`.replace(/:/g, '-');
+    
+    this.logger.log(`Adding DM to queue: ${jobId}`);
+    
+    await this.inboxQueue.add(
+      'meta-inbound-message',
+      { entryId: entry.id, messaging: m, rawEntry: entry, objectType }, // Pass 'm' as 'messaging' for the adapter
+      {
+        jobId,
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 1500 },
+        removeOnComplete: true,
+      },
+    );
   }
 
   // @Get('linkedin')

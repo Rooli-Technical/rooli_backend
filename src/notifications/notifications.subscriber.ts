@@ -66,7 +66,14 @@ export class NotificationsSubscriber {
           id: true,
           workspaceId: true,
           assignedMemberId: true,
-          contact: { select: { username: true, platform: true } },
+          socialProfileId: true,
+          snippet: true,
+          contact: {
+            select: { username: true, platform: true, avatarUrl: true },
+          },
+          socialProfile: {
+            select: { name: true, picture: true },
+          },
         },
       });
       if (!convo) return;
@@ -92,6 +99,11 @@ export class NotificationsSubscriber {
           conversationId: convo.id,
           messageId: evt.messageId,
           platform: convo.contact.platform,
+          socialProfileId: convo.socialProfileId,
+          socialProfileName: convo.socialProfile?.name,
+          senderName: convo.contact.username,
+          senderAvatar: convo.contact.avatarUrl,
+          snippet: convo.snippet,
         } as Prisma.InputJsonValue,
         // dedupeKey prevents spam if webhook retries cause multiple emits
         // (If you added @@unique([memberId, dedupeKey]) then set skipDuplicates true)
@@ -99,7 +111,9 @@ export class NotificationsSubscriber {
         skipDuplicates: true,
       });
     } catch (e: any) {
-      this.logger.warn(`onInboxMessageCreated failed: ${e?.message ?? String(e)}`);
+      this.logger.warn(
+        `onInboxMessageCreated failed: ${e?.message ?? String(e)}`,
+      );
     }
   }
 
@@ -160,7 +174,9 @@ export class NotificationsSubscriber {
         skipDuplicates: true,
       });
     } catch (e: any) {
-      this.logger.warn(`onInboxMessageStatusUpdated failed: ${e?.message ?? String(e)}`);
+      this.logger.warn(
+        `onInboxMessageStatusUpdated failed: ${e?.message ?? String(e)}`,
+      );
     }
   }
 
@@ -179,7 +195,11 @@ export class NotificationsSubscriber {
     try {
       const convo = await this.prisma.inboxConversation.findFirst({
         where: { id: evt.conversationId, workspaceId: evt.workspaceId },
-        select: { id: true, workspaceId: true, contact: { select: { username: true } } },
+        select: {
+          id: true,
+          workspaceId: true,
+          contact: { select: { username: true } },
+        },
       });
       if (!convo) return;
 
@@ -194,7 +214,9 @@ export class NotificationsSubscriber {
         dedupeKey: `inbox:assigned:${convo.id}:${evt.assignedMemberId}`,
       });
     } catch (e: any) {
-      this.logger.warn(`onConversationAssigned failed: ${e?.message ?? String(e)}`);
+      this.logger.warn(
+        `onConversationAssigned failed: ${e?.message ?? String(e)}`,
+      );
     }
   }
 
@@ -211,16 +233,23 @@ export class NotificationsSubscriber {
   async onPostPublished(evt: {
     workspaceId: string;
     postId: string;
-    platform?: string;
-    actorMemberId?: string;
+    postDestinationId: string;
+    platform: string;
+    profileName: string;
+    snippet: string;
   }) {
     await this.notifyPostEvent({
       workspaceId: evt.workspaceId,
       postId: evt.postId,
       type: NotificationType.POST_PUBLISHED,
-      title: `Post published`,
-      body: evt.platform ? `Published on ${evt.platform}` : `Your post was published`,
-      dedupeKey: `post:published:${evt.postId}`,
+      title: `Published to ${evt.profileName}`,
+      body: `Your ${evt.platform} post is live.`,
+      dedupeKey: `post:published:${evt.postDestinationId}`,
+      meta: {
+        platform: evt.platform,
+        profileName: evt.profileName,
+        snippet: evt.snippet,
+      } 
     });
   }
 
@@ -228,37 +257,46 @@ export class NotificationsSubscriber {
   async onPostFailed(evt: {
     workspaceId: string;
     postId: string;
-    platform?: string;
-    reason?: string;
+    postDestinationId: string;
+    platform: string;
+    profileName: string;
+    snippet: string;
+    reason: string;
     actorMemberId?: string;
   }) {
     await this.notifyPostEvent({
       workspaceId: evt.workspaceId,
       postId: evt.postId,
       type: NotificationType.POST_FAILED,
-      title: `Post failed`,
-      body: evt.reason?.slice(0, 240) ?? (evt.platform ? `Failed on ${evt.platform}` : `Publishing failed`),
-      dedupeKey: `post:failed:${evt.postId}`,
+      title: `Failed to publish to ${evt.profileName}`,
+      body: evt.reason.slice(0, 100),
+      dedupeKey: `post:failed:${evt.postDestinationId}`,
+      meta: {
+        platform: evt.platform,
+        profileName: evt.profileName,
+        snippet: evt.snippet,
+        reason: evt.reason,
+      },
     });
   }
 
-  @OnEvent('publishing.post.declined')
-  async onPostDeclined(evt: {
-    workspaceId: string;
-    postId: string;
-    platform?: string;
-    reason?: string;
-    actorMemberId?: string;
-  }) {
-    await this.notifyPostEvent({
-      workspaceId: evt.workspaceId,
-      postId: evt.postId,
-      type: NotificationType.POST_DECLINED,
-      title: `Post declined`,
-      body: evt.reason?.slice(0, 240) ?? `The platform declined your post`,
-      dedupeKey: `post:declined:${evt.postId}`,
-    });
-  }
+  // @OnEvent('publishing.post.declined')
+  // async onPostDeclined(evt: {
+  //   workspaceId: string;
+  //   postId: string;
+  //   platform?: string;
+  //   reason?: string;
+  //   actorMemberId?: string;
+  // }) {
+  //   await this.notifyPostEvent({
+  //     workspaceId: evt.workspaceId,
+  //     postId: evt.postId,
+  //     type: NotificationType.POST_DECLINED,
+  //     title: `Post declined`,
+  //     body: evt.reason?.slice(0, 240) ?? `The platform declined your post`,
+  //     dedupeKey: `post:declined:${evt.postId}`,
+  //   });
+  // }
 
   /**
    * Helper for publishing events.
@@ -278,6 +316,12 @@ export class NotificationsSubscriber {
     title: string;
     body: string;
     dedupeKey: string;
+    meta: {
+      platform: string;
+      profileName: string;
+      snippet: string;
+      reason?: string;
+    };
   }) {
     try {
       // Adjust this to your real model name/fields.
@@ -289,7 +333,6 @@ export class NotificationsSubscriber {
         where: { id: params.postId, workspaceId: params.workspaceId },
         select: { id: true, workspaceId: true, authorId: true },
       });
-   
 
       if (!post) return;
 
@@ -306,18 +349,18 @@ export class NotificationsSubscriber {
           select: { id: true },
         });
 
-      if (member) {
-        recipients = [member.id];
+        if (member) {
+          recipients = [member.id];
+        }
       }
-    }
 
-    // 2. Fallback: If no author member found, notify everyone in the workspace
-    if (recipients.length === 0) {
-      recipients = await this.listWorkspaceMemberIds(post.workspaceId);
-    }
+      // 2. Fallback: If no author member found, notify everyone in the workspace
+      if (recipients.length === 0) {
+        recipients = await this.listWorkspaceMemberIds(post.workspaceId);
+      }
 
-    // 3. Final Guard: Don't call createMany if recipients is empty
-    if (recipients.length === 0) return;
+      // 3. Final Guard: Don't call createMany if recipients is empty
+      if (recipients.length === 0) return;
 
       await this.notifications.createMany({
         workspaceId: post.workspaceId,
@@ -326,7 +369,13 @@ export class NotificationsSubscriber {
         title: params.title,
         body: params.body,
         link: `/publishing/posts/${post.id}`,
-        data: { postId: post.id } as Prisma.InputJsonValue,
+        data: {
+          postId: post.id,
+          platform: params.meta.platform,
+          profileName: params.meta.profileName,
+          snippet: params.meta.snippet,
+          failureReason: params.meta.reason || null,
+        } as Prisma.InputJsonValue,
         dedupeKey: params.dedupeKey,
         skipDuplicates: true,
       });
@@ -349,18 +398,33 @@ export class NotificationsSubscriber {
       // 1. Fetch the comment and post info to make a nice notification text
       const comment = await this.prisma.comment.findUnique({
         where: { id: evt.commentId },
-        select: { senderName: true, platform: true }
+        select: {
+          senderName: true,
+          platform: true,
+          content: true,
+          senderAvatarUrl: true,
+          profileId: true,
+          profile: {
+            select: { name: true },
+          },
+        },
       });
       if (!comment) return;
 
       // 2. Decide who gets it (For MVP, let's just send to all workspace members)
-      const recipientMemberIds = await this.listWorkspaceMemberIds(evt.workspaceId);
+      const recipientMemberIds = await this.listWorkspaceMemberIds(
+        evt.workspaceId,
+      );
       if (!recipientMemberIds.length) return;
 
       const title = `New comment`;
-      const body = `${comment.senderName} commented on your ${comment.platform} post.`;
+      const safeSnippet = comment.content
+        ? comment.content.substring(0, 60) +
+          (comment.content.length > 60 ? '...' : '')
+        : 'sent an attachment';
+      const body = `${comment.senderName}: ${safeSnippet}`;
 
-      // 3. Save to Database! 
+      // 3. Save to Database!
       await this.notifications.createMany({
         workspaceId: evt.workspaceId,
         memberIds: recipientMemberIds,
@@ -372,12 +436,19 @@ export class NotificationsSubscriber {
           postDestinationId: evt.postDestinationId,
           commentId: evt.commentId,
           platform: comment.platform,
+          socialProfileId: comment.profileId,
+          socialProfileName: comment.profile?.name,
+          senderName: comment.senderName,
+          senderAvatar: comment.senderAvatarUrl,
+          snippet: safeSnippet,
         } as Prisma.InputJsonValue,
         dedupeKey: `inbox:new_comment:${evt.commentId}`,
         skipDuplicates: true,
       });
     } catch (e: any) {
-      this.logger.warn(`onInboxCommentCreated failed: ${e?.message ?? String(e)}`);
+      this.logger.warn(
+        `onInboxCommentCreated failed: ${e?.message ?? String(e)}`,
+      );
     }
   }
 
@@ -397,7 +468,7 @@ export class NotificationsSubscriber {
       // Find the user who created the ticket
       const ticket = await this.prisma.ticket.findUnique({
         where: { id: evt.ticketId },
-        select: { requesterId: true }
+        select: { requesterId: true },
       });
       if (!ticket) return;
 
@@ -429,7 +500,7 @@ export class NotificationsSubscriber {
 
       const ticket = await this.prisma.ticket.findUnique({
         where: { id: evt.ticketId },
-        select: { ticketNumber: true, requesterId: true }
+        select: { ticketNumber: true, requesterId: true },
       });
       if (!ticket) return;
 
@@ -444,7 +515,9 @@ export class NotificationsSubscriber {
         dedupeKey: `ticket:reply:${evt.ticketId}:${Date.now()}`,
       });
     } catch (e: any) {
-      this.logger.warn(`onTicketCommentAdded failed: ${e?.message ?? String(e)}`);
+      this.logger.warn(
+        `onTicketCommentAdded failed: ${e?.message ?? String(e)}`,
+      );
     }
   }
 

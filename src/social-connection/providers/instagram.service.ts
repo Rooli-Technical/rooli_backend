@@ -69,7 +69,7 @@ export class InstagramService {
       const { data: userProfile } = await lastValueFrom(
         this.httpService.get(`${this.GRAPH_HOST}/me`, {
           params: {
-            fields: 'id,username,account_type,name,profile_picture_url',
+            fields: 'id,user_id,username,account_type,name,profile_picture_url',
             access_token: longTokenData.access_token,
           },
         }),
@@ -89,6 +89,7 @@ export class InstagramService {
         expiresAt: new Date(Date.now() + (longTokenData.expires_in * 1000)),
         accountType: userProfile.account_type, 
         scopes: [], // IG doesn't return scopes in token response usually
+        user_id: userProfile.user_id,
 
       };
 
@@ -105,10 +106,11 @@ export class InstagramService {
         this.httpService.get(`${this.GRAPH_HOST}/me`, {
           params: {
             access_token: accessToken,
-            fields: 'id,username,name,profile_picture_url,account_type',
+            fields: 'id,user_id,username,name,profile_picture_url,account_type',
           },
         }),
       );
+
 
       const validTypes = ['BUSINESS', 'CREATOR', 'MEDIA_CREATOR'];
       
@@ -125,6 +127,7 @@ export class InstagramService {
           type: 'PAGE', 
           picture: data.profile_picture_url,
           accessToken: accessToken, 
+          user_id: data.user_id,
         },
       ];
     } catch (error: any) {
