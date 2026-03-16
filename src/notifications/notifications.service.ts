@@ -45,7 +45,6 @@ export class NotificationsService {
    * If you did NOT add dedupeKey uniqueness, set `skipDuplicates` to false.
    */
   async createMany(input: CreateManyNotificationsInput) {
-
     const now = new Date();
 
     const skipDuplicates = input.skipDuplicates ?? false;

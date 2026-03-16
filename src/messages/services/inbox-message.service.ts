@@ -1,10 +1,14 @@
-import { DomainEventsService } from "@/events/domain-events.service";
-import { PrismaService } from "@/prisma/prisma.service";
-import { Prisma } from "@generated/client";
-import { InjectQueue } from "@nestjs/bullmq";
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
-import { Queue } from "bullmq";
-
+import { DomainEventsService } from '@/events/domain-events.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { Prisma } from '@generated/client';
+import { InjectQueue } from '@nestjs/bullmq';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { Queue } from 'bullmq';
 
 type ListConversationsQuery = {
   search?: string;
@@ -17,15 +21,18 @@ type ListConversationsQuery = {
 
 @Injectable()
 export class InboxService {
-  constructor(private readonly prisma: PrismaService, private readonly events: DomainEventsService,
-      @InjectQueue('outbound-messages') private readonly outboundQueue: Queue,) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: DomainEventsService,
+    @InjectQueue('outbound-messages') private readonly outboundQueue: Queue,
+  ) {}
 
   /**
    * Inbox list for UI.
    * - fast: uses indexes on (workspaceId,lastMessageAt) and optional filters
    * - cursor paging by lastMessageAt + id (stable ordering)
    */
-async listConversations(params: {
+  async listConversations(params: {
     workspaceId: string;
     memberId: string; // current agent (WorkspaceMember id) for read state join
     query?: ListConversationsQuery;
@@ -48,7 +55,11 @@ async listConversations(params: {
         ? {
             OR: [
               { snippet: { contains: query.search, mode: 'insensitive' } },
-              { contact: { username: { contains: query.search, mode: 'insensitive' } } },
+              {
+                contact: {
+                  username: { contains: query.search, mode: 'insensitive' },
+                },
+              },
             ],
           }
         : {}),
@@ -71,10 +82,21 @@ async listConversations(params: {
       orderBy,
       include: {
         contact: true,
-        assignedMember: { select: { id: true } },
+        assignedMember: {
+          select: {
+            id: true,
+            member: {
+              select: {
+                user: {
+                  select: { firstName: true, lastName: true, avatar: true },
+                },
+              },
+            },
+          },
+        },
         // 🚨 ADD THIS: Fetch the brand's page info!
-        socialProfile: { 
-          select: { name: true, picture: true, platform: true } 
+        socialProfile: {
+          select: { name: true, picture: true, platform: true },
         },
         readStates: {
           where: { memberId },
@@ -87,7 +109,9 @@ async listConversations(params: {
     const items = rows.map((c) => {
       const lastReadAt = c.readStates[0]?.lastReadAt ?? null;
       // Safety check in case lastMessageAt is null
-      const isRead = !!lastReadAt && (c.lastMessageAt ? lastReadAt >= c.lastMessageAt : true);
+      const isRead =
+        !!lastReadAt &&
+        (c.lastMessageAt ? lastReadAt >= c.lastMessageAt : true);
 
       return {
         id: c.id,
@@ -100,7 +124,7 @@ async listConversations(params: {
         snoozedUntil: c.snoozedUntil,
         lastMessageAt: c.lastMessageAt,
         snippet: c.snippet,
-        
+
         // 🚨 NEW: Pass the brand's page info to the frontend
         socialProfileId: c.socialProfileId,
         socialProfileName: c.socialProfile?.name ?? 'Unknown Page',
@@ -119,21 +143,33 @@ async listConversations(params: {
       };
     });
 
-    const nextCursor = items.length === take ? items[items.length - 1].id : null;
+    const nextCursor =
+      items.length === take ? items[items.length - 1].id : null;
 
     return { items, nextCursor };
   }
 
-  async getConversation(params: { workspaceId: string; conversationId: string }) {
+  async getConversation(params: {
+    workspaceId: string;
+    conversationId: string;
+  }) {
     const c = await this.prisma.inboxConversation.findFirst({
       where: { id: params.conversationId, workspaceId: params.workspaceId },
       include: {
         contact: true,
         assignedMember: { select: { id: true } },
+        socialProfile: {
+          select: { name: true, picture: true, platform: true },
+        },
       },
     });
     if (!c) throw new NotFoundException('Conversation not found');
-    return c;
+    return {
+      ...c,
+      socialProfileName: c.socialProfile?.name ?? 'Unknown Page',
+      socialProfilePicture: c.socialProfile?.picture ?? null,
+      platform: c.socialProfile?.platform ?? c.contact.platform,
+    };
   }
 
   async listMessages(params: {
@@ -160,7 +196,20 @@ async listConversations(params: {
       skip,
       cursor,
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-      include: { attachments: true },
+      include: {
+        attachments: true,
+        authorMember: {
+          select: {
+            member: {
+              select: {
+                user: {
+                  select: { firstName: true, lastName: true, avatar: true },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     const nextCursor = rows.length === take ? rows[rows.length - 1].id : null;
@@ -178,7 +227,9 @@ async listConversations(params: {
       snoozedUntil?: string | null;
     };
   }) {
-      const _snoozedUntil = params.patch.snoozedUntil ? new Date(params.patch.snoozedUntil) : null;
+    const _snoozedUntil = params.patch.snoozedUntil
+      ? new Date(params.patch.snoozedUntil)
+      : null;
     // tenant check
     const existing = await this.prisma.inboxConversation.findFirst({
       where: { id: params.conversationId, workspaceId: params.workspaceId },
@@ -191,9 +242,10 @@ async listConversations(params: {
     if (params.patch.status) data.status = params.patch.status as any;
     if (params.patch.priority) data.priority = params.patch.priority as any;
     if (params.patch.assignedMemberId !== undefined) {
-  data.assignedMember = params.patch.assignedMemberId
-    ? { connect: { id: params.patch.assignedMemberId } }
-    : { disconnect: true };}
+      data.assignedMember = params.patch.assignedMemberId
+        ? { connect: { id: params.patch.assignedMemberId } }
+        : { disconnect: true };
+    }
     if (params.patch.archived !== undefined)
       data.archivedAt = params.patch.archived ? new Date() : null;
     if (params.patch.snoozedUntil !== undefined)
@@ -240,7 +292,7 @@ async listConversations(params: {
     return { ok: true };
   }
 
-    /**
+  /**
    * Agent reply:
    * - create OUTBOUND message with deliveryStatus=QUEUED
    * - enqueue job (jobId = outbound:<messageId>) so retries don't double-send
@@ -261,108 +313,120 @@ async listConversations(params: {
       meta?: any;
     }>;
   }) {
-    try{
-    const convo = await this.prisma.inboxConversation.findFirst({
-      where: { id: params.conversationId, workspaceId: params.workspaceId },
-      include: { contact: true },
-    });
-    if (!convo) throw new NotFoundException('Conversation not found');
-
-
-    const now = new Date();
-
-    const created = await this.prisma.$transaction(async (tx) => {
-      const msg = await tx.inboxMessage.create({
-        data: {
-          conversationId: convo.id,
-          clientMessageId: `msg_${now.getTime()}_${Math.random().toString(36).slice(2)}`,
-          providerMessageId: null,
-          content: params.content,
-          direction: 'OUTBOUND' as any,
-          deliveryStatus: 'QUEUED' as any,
-          senderName: null,
-          providerTimestamp: null,
-          attachments: params.attachments?.length
-            ? {
-                create: params.attachments.map((a) => ({
-                  type: a.type as any,
-                  url: a.url,
-                  proxyUrl: a.proxyUrl ?? null,
-                  thumbnailUrl: a.thumbnailUrl ?? null,
-                  mimeType: a.mimeType ?? null,
-                  fileSizeBytes: a.fileSizeBytes ?? null,
-                  meta: a.meta ?? undefined,
-                })),
-              }
-            : undefined,
-        },
-        include: { attachments: true },
-      });
-
-      await tx.inboxConversation.update({
-        where: { id: convo.id },
-        data: {
-          lastMessageAt: now,
-          snippet: (params.content ?? '').slice(0, 140),
+    try {
+      const convo = await this.prisma.inboxConversation.findFirst({
+        where: { id: params.conversationId, workspaceId: params.workspaceId },
+        include: {
+          contact: true,
+          socialProfile: { select: { name: true, picture: true } },
         },
       });
+      if (!convo) throw new NotFoundException('Conversation not found');
 
-      // Mark agent read at send time (optional but nice)
-      await tx.conversationReadState.upsert({
-        where: {
-          conversationId_memberId: {
+      const now = new Date();
+
+      const created = await this.prisma.$transaction(async (tx) => {
+        const msg = await tx.inboxMessage.create({
+          data: {
+            conversationId: convo.id,
+            authorMemberId: params.memberId,
+            clientMessageId: `msg_${now.getTime()}_${Math.random().toString(36).slice(2)}`,
+            providerMessageId: null,
+            content: params.content,
+            direction: 'OUTBOUND' as any,
+            deliveryStatus: 'QUEUED' as any,
+            senderName: null,
+            providerTimestamp: null,
+            attachments: params.attachments?.length
+              ? {
+                  create: params.attachments.map((a) => ({
+                    type: a.type as any,
+                    url: a.url,
+                    proxyUrl: a.proxyUrl ?? null,
+                    thumbnailUrl: a.thumbnailUrl ?? null,
+                    mimeType: a.mimeType ?? null,
+                    fileSizeBytes: a.fileSizeBytes ?? null,
+                    meta: a.meta ?? undefined,
+                  })),
+                }
+              : undefined,
+          },
+          include: { attachments: true },
+        });
+
+        await tx.inboxConversation.update({
+          where: { id: convo.id },
+          data: {
+            lastMessageAt: now,
+            snippet: (params.content ?? '').slice(0, 140),
+          },
+        });
+
+        // Mark agent read at send time (optional but nice)
+        await tx.conversationReadState.upsert({
+          where: {
+            conversationId_memberId: {
+              conversationId: convo.id,
+              memberId: params.memberId,
+            },
+          },
+          update: { lastReadAt: now },
+          create: {
             conversationId: convo.id,
             memberId: params.memberId,
+            lastReadAt: now,
           },
-        },
-        update: { lastReadAt: now },
-        create: {
-          conversationId: convo.id,
-          memberId: params.memberId,
-          lastReadAt: now,
-        },
+        });
+
+        return msg;
       });
 
-      return msg;
-    });
+      await this.outboundQueue.add(
+        'send-outbound-message',
+        { messageId: created.id, memberId: params.memberId },
+        {
+          jobId: `outbound-${created.id}`,
+          attempts: 1,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: true,
+          removeOnFail: { age: 7 * 24 * 3600 },
+        },
+      );
 
-    await this.outboundQueue.add(
-      'send-outbound-message',
-      { messageId: created.id, memberId: params.memberId },
-      {
-        jobId: `outbound-${created.id}`,
-        attempts: 1,
-        backoff: { type: 'exponential', delay: 2000 },
-        removeOnComplete: true,
-        removeOnFail: { age: 7 * 24 * 3600 },
-      },
-    );
+      // UI can show message bubble instantly
+      this.events.emit('inbox.message.created', {
+        workspaceId: params.workspaceId,
+        conversationId: params.conversationId,
+        messageId: created.id,
+        direction: 'OUTBOUND',
+        platform: convo.contact.platform,
+        content: params.content,
+        senderName: convo.socialProfile?.name || 'You',
+        senderAvatar: convo.socialProfile?.picture || null,
+        socialProfileId: convo.socialProfileId,
+        createdAt: now,
+      });
+      this.events.emit('inbox.conversation.updated', {
+        workspaceId: params.workspaceId,
+        conversationId: params.conversationId,
+        lastMessageAt: now,
+        snippet: (params.content ?? '').slice(0, 140),
+        platform: convo.contact.platform,
+        contactName: convo.contact.username || 'Unknown User',
+        contactAvatar: convo.contact.avatarUrl || null,
+        isUnread: false,
+      });
+      this.events.emit('inbox.message.status.updated', {
+        workspaceId: params.workspaceId,
+        conversationId: params.conversationId,
+        messageId: created.id,
+        deliveryStatus: 'QUEUED',
+      });
 
-    // UI can show message bubble instantly
-    this.events.emit('inbox.message.created', {
-      workspaceId: params.workspaceId,
-      conversationId: params.conversationId,
-      messageId: created.id,
-      direction: 'OUTBOUND',
-    });
-    this.events.emit('inbox.conversation.updated', {
-      workspaceId: params.workspaceId,
-      conversationId: params.conversationId,
-      lastMessageAt: now,
-      snippet: (params.content ?? '').slice(0, 140),
-    });
-    this.events.emit('inbox.message.status.updated', {
-      workspaceId: params.workspaceId,
-      conversationId: params.conversationId,
-      messageId: created.id,
-      deliveryStatus: 'QUEUED',
-    });
-
-    return created;
-  } catch (error) {
-    console.error( error);
-    throw error
-  }
+      return created;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 }
-

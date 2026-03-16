@@ -20,12 +20,14 @@ export class InboxCommentsService {
     @InjectQueue('outbound-messages') private readonly outboundQueue: Queue,
   ) {}
 
-
   /**
    * MICRO VIEW: The Center Chat Window
    * Fetches threaded comments for a specific post.
    */
-async listCommentsForPost(params: { workspaceId: string; platformPostId: string }) {
+  async listCommentsForPost(params: {
+    workspaceId: string;
+    platformPostId: string;
+  }) {
     const { workspaceId, platformPostId } = params;
 
     const topLevelComments = await this.prisma.comment.findMany({
@@ -38,15 +40,16 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
       include: {
         // Automatically fetch the nested replies for each comment!
         replies: {
-          orderBy: { createdAt: 'asc' }, 
+          orderBy: { createdAt: 'asc' },
         },
         // Optionally fetch the original post data if it was published via Rooli
         postDestination: {
           select: {
             contentOverride: true,
-            post: { select: { content: true } }
-          }
-        }
+            post: { select: { content: true } },
+            profile: { select: { name: true, picture: true, platform: true } },
+          },
+        },
       },
     });
 
@@ -56,13 +59,17 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
 
     // 2. Derive the Post information safely (handles both Organic and Rooli posts)
     const referenceComment = topLevelComments[0];
+    const profile = referenceComment.postDestination?.profile;
+
     const postInfo = {
       externalPostId: referenceComment.externalPostId,
       platform: referenceComment.platform,
-      content: 
-        referenceComment.postDestination?.contentOverride || 
-        referenceComment.postDestination?.post?.content || 
+      content:
+        referenceComment.postDestination?.contentOverride ||
+        referenceComment.postDestination?.post?.content ||
         'Organic Post (Content unavailable)',
+      socialProfileName: profile?.name || 'You',
+      socialProfilePicture: profile?.picture || null,
     };
 
     // 3. Normalize the data into a clean structure for the frontend chat window
@@ -71,14 +78,16 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
       externalCommentId: c.externalCommentId,
       content: c.content,
       senderName: c.senderName,
+      senderAvatarUrl: c.senderAvatarUrl,
       direction: c.direction, // Tells the UI to render it on the Left (INBOUND) or Right (OUTBOUND)
-      status: c.status,       // VISIBLE, QUEUED, or FAILED
+      status: c.status, // VISIBLE, QUEUED, or FAILED
       createdAt: c.createdAt,
       replies: c.replies.map((reply) => ({
         id: reply.id,
         externalCommentId: reply.externalCommentId,
         content: reply.content,
         senderName: reply.senderName,
+        senderAvatarUrl: reply.senderAvatarUrl,
         direction: reply.direction,
         status: reply.status,
         createdAt: reply.createdAt,
@@ -101,12 +110,13 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
     workspaceId: string;
     parentCommentId: string; // The internal DB ID of the comment they are replying to
     content: string;
+    memberId: string;
   }) {
     try {
       // 1. Verify the parent comment exists
       const parentComment = await this.prisma.comment.findFirst({
         where: { id: params.parentCommentId, workspaceId: params.workspaceId },
-        include: {  profile: true },
+        include: { profile: true },
       });
       if (!parentComment)
         throw new NotFoundException('Parent comment not found');
@@ -117,6 +127,7 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
       const createdComment = await this.prisma.comment.create({
         data: {
           workspaceId: params.workspaceId,
+          authorMemberId: params.memberId,
           profileId: parentComment.profileId,
           postDestinationId: parentComment.postDestinationId,
           parentId: parentComment.id,
@@ -153,6 +164,13 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
         postDestinationId: parentComment.postDestinationId,
         commentId: createdComment.id,
         direction: 'OUTBOUND',
+        platform: parentComment.platform,
+        content: params.content,
+        senderName: parentComment.profile.name || 'You', // The brand's name
+        senderAvatar: parentComment.profile.picture || null, // The brand's logo
+        socialProfileId: parentComment.profileId,
+        externalPostId: parentComment.externalPostId,
+        createdAt: now,
       });
 
       return createdComment;
@@ -166,7 +184,7 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
     // 1. Find the failed comment
     const failedComment = await this.prisma.comment.findUnique({
       where: { id: commentId, workspaceId, status: 'FAILED' },
-      include: { parent: true }
+      include: { parent: true },
     });
 
     if (!failedComment || !failedComment.parent) {
@@ -176,7 +194,7 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
     // 2. Flip it back to QUEUED instantly
     await this.prisma.comment.update({
       where: { id: commentId },
-      data: { status: 'QUEUED' }
+      data: { status: 'QUEUED' },
     });
 
     // 3. Emit event to change the UI back to the "grey clock"
@@ -189,12 +207,12 @@ async listCommentsForPost(params: { workspaceId: string; platformPostId: string 
     // 4. Throw it back into the queue!
     await this.outboundQueue.add(
       'send-outbound-comment',
-      { 
+      {
         commentId: failedComment.id,
       },
       {
         jobId: `retry-outbound-comment-${failedComment.id}-${Date.now()}`,
-        attempts: 1, 
+        attempts: 1,
         removeOnComplete: true,
       },
     );

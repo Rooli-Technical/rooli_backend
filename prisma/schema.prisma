@@ -201,6 +201,10 @@ model WorkspaceMember {
 
   notifications Notification[]
 
+  comments Comment[]
+  messages InboxMessage[]
+
+
   submittedTickets Ticket[] @relation("TicketRequester")
 
   createdAt DateTime @default(now())
@@ -831,6 +835,9 @@ model InboxMessage {
   createdAt  DateTime @default(now())
   senderName String? // Snapshot of name at time of sending
 
+  authorMemberId String?
+  authorMember   WorkspaceMember? @relation(fields: [authorMemberId], references: [id])
+
   @@unique([conversationId, providerMessageId])
 }
 
@@ -964,6 +971,9 @@ model Comment {
   // Relationships
   workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   profile   SocialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  authorMemberId String?
+  authorMember   WorkspaceMember? @relation(fields: [authorMemberId], references: [id])
 
   @@unique([platform, externalCommentId])
   @@index([workspaceId, isResolved, createdAt(sort: Desc)])

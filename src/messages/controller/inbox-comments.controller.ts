@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { InboxCommentsService } from '../services/inbox-comments.service';
 import { SendCommentReplyDto } from '../dtos/send-comment.dto';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 @ApiTags('Comments')
 @ApiBearerAuth()
@@ -34,11 +35,13 @@ export class InboxCommentsController {
     @Param('workspaceId') workspaceId: string,
     @Param('commentId') parentCommentId: string,
     @Body() body: SendCommentReplyDto,
+    @CurrentUser() user: any,
   ) {
     return this.inboxService.sendCommentReply({
       workspaceId,
       parentCommentId,
       content: body.content,
+      memberId: user.userId,
     });
   }
 
