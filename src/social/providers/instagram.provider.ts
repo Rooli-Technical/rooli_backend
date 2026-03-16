@@ -87,7 +87,7 @@ export class InstagramProvider implements ISocialProvider {
           accessToken,
           content,
           mediaFiles[0].url,
-          'VIDEO',
+          'REELS',
           true,
           mediaFiles[0].coverUrl,
         );
@@ -193,11 +193,14 @@ export class InstagramProvider implements ISocialProvider {
       } else if (targetType === 'STORIES') {
         body.media_type = 'STORIES';
       } else if (isVideo) {
-        body.media_type = 'VIDEO';
+        // Standalone videos MUST be REELS. 
+        // Videos inside a Carousel MUST be VIDEO.
+        body.media_type = isCarouselItem ? 'VIDEO' : 'REELS';
       } else {
         // For standard images, usually we don't send media_type,
         // or we send 'IMAGE' only if required by specific version.
         // v19.0+ infers it from image_url usually, but let's be explicit if needed.
+        body.media_type = 'IMAGE';
       }
 
       // 3. Carousel Flag
