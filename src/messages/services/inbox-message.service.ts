@@ -25,7 +25,7 @@ export class InboxService {
    * - fast: uses indexes on (workspaceId,lastMessageAt) and optional filters
    * - cursor paging by lastMessageAt + id (stable ordering)
    */
-  async listConversations(params: {
+async listConversations(params: {
     workspaceId: string;
     memberId: string; // current agent (WorkspaceMember id) for read state join
     query?: ListConversationsQuery;
@@ -60,8 +60,6 @@ export class InboxService {
       { id: 'desc' },
     ];
 
-    // Cursor (simple): use conversation id cursor (works, but not perfect for lastMessageAt ordering)
-    // If you want perfect cursor, store a composite cursor field. This is acceptable for MVP.
     const cursor = query?.cursor ? { id: query.cursor } : undefined;
     const skip = cursor ? 1 : 0;
 
@@ -74,6 +72,10 @@ export class InboxService {
       include: {
         contact: true,
         assignedMember: { select: { id: true } },
+        // 🚨 ADD THIS: Fetch the brand's page info!
+        socialProfile: { 
+          select: { name: true, picture: true, platform: true } 
+        },
         readStates: {
           where: { memberId },
           select: { lastReadAt: true },
@@ -83,13 +85,13 @@ export class InboxService {
     });
 
     const items = rows.map((c) => {
-     const lastReadAt = c.readStates[0]?.lastReadAt ?? null;
-      const isRead = !!lastReadAt && lastReadAt >= c.lastMessageAt;
+      const lastReadAt = c.readStates[0]?.lastReadAt ?? null;
+      // Safety check in case lastMessageAt is null
+      const isRead = !!lastReadAt && (c.lastMessageAt ? lastReadAt >= c.lastMessageAt : true);
 
       return {
         id: c.id,
         workspaceId: c.workspaceId,
-        socialProfileId: c.socialProfileId,
         externalId: c.externalId,
         status: c.status,
         priority: c.priority,
@@ -98,6 +100,13 @@ export class InboxService {
         snoozedUntil: c.snoozedUntil,
         lastMessageAt: c.lastMessageAt,
         snippet: c.snippet,
+        
+        // 🚨 NEW: Pass the brand's page info to the frontend
+        socialProfileId: c.socialProfileId,
+        socialProfileName: c.socialProfile?.name ?? 'Unknown Page',
+        socialProfilePicture: c.socialProfile?.picture ?? null,
+        platform: c.socialProfile?.platform ?? c.contact.platform,
+
         contact: {
           id: c.contact.id,
           username: c.contact.username,

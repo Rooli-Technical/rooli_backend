@@ -1363,7 +1363,7 @@ model Ticket {
   workspaceId String
 
   // Custom ticket number (e.g., Ticket #1042)
-  ticketNumber Int
+  ticketNumber Int @unique @default(autoincrement())
 
   title       String
   description String         @db.Text
@@ -1382,7 +1382,7 @@ model Ticket {
   assignee   User?   @relation("TicketAssignee", fields: [assigneeId], references: [id])
 
   // --- RELATIONS ---
-  workspace  Workspace   @relation(fields: [workspaceId], references: [id])
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   mediaFiles MediaFile[] // Reusing your media files instead of custom attachments
 
   createdAt DateTime  @default(now())
