@@ -58,6 +58,12 @@ export type DomainEventPayloadMap = {
     conversationId: string;
     messageId: string;
     direction: 'INBOUND' | 'OUTBOUND';
+    platform?: string;
+    content?: string;
+    senderName?: string;
+    senderAvatar?: string | null;
+    socialProfileId?: string;
+    createdAt?: Date;
   };
 
   'inbox.conversation.updated': {
@@ -65,6 +71,10 @@ export type DomainEventPayloadMap = {
     conversationId: string;
     lastMessageAt?: Date | string;
     snippet?: string | null;
+    platform?: string;
+    contactName?: string;
+    contactAvatar?: string | null;
+    isUnread?: boolean;
   };
 
   'inbox.message.status.updated': {
@@ -137,6 +147,13 @@ export type DomainEventPayloadMap = {
     postDestinationId: string;
     commentId: string;
     direction: 'INBOUND' | 'OUTBOUND';
+    platform?: string;
+    content?: string;
+    senderName?: string;
+    senderAvatar?: string | null;
+    socialProfileId?: string;
+    externalPostId?: string;
+    createdAt?: Date | string;
   };
 
   'inbox.comment.sent': {

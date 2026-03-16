@@ -138,6 +138,12 @@ export class InboxIngestService {
           conversationId: conversation.id,
           messageId: message.id,
           direction: message.direction,
+          platform: evt.contact.platform,
+          content: message.content,
+          senderName: resolvedUsername || 'Unknown User',
+          senderAvatar: resolvedAvatarUrl,
+          socialProfileId: evt.socialProfileId,
+          createdAt: message.createdAt,
         });
 
         this.events.emit('inbox.conversation.updated', {
@@ -145,6 +151,10 @@ export class InboxIngestService {
           conversationId: conversation.id,
           lastMessageAt: conversation.lastMessageAt,
           snippet: conversation.snippet,
+          platform: evt.contact.platform,
+          contactName: resolvedUsername || 'Unknown User',
+          contactAvatar: resolvedAvatarUrl,
+          isUnread: true,
         });
       }
 
@@ -232,6 +242,13 @@ export class InboxIngestService {
           postDestinationId: destination.id,
           commentId: comment.id,
           direction: comment.direction,
+          platform: payload.platform,
+          content: payload.content,
+          senderName: payload.senderName || 'Unknown User',
+          senderAvatar: payload.senderAvatarUrl,
+          socialProfileId: payload.socialProfileId,
+          externalPostId: payload.externalPostId,
+          createdAt: payload.timestamp,
         });
       }
 
