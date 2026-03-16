@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
 import { Prisma } from '@generated/client';
 import { NotificationType } from '@generated/enums';
+import { DomainEventPayloadMap } from '@/events/types/events.types';
 
 /**
  * NotificationsSubscriber
@@ -457,50 +458,14 @@ export class NotificationsSubscriber {
     }
   }
 
+// ============================================================================
+  // TICKET EVENTS (The "Red Bell" Database Notifications)
   // ============================================================================
-  // TICKET EVENTS
-  // ============================================================================
 
-  @OnEvent('ticket.assigned')
-  async onTicketAssigned(evt: {
-    workspaceId: string;
-    ticketId: string;
-    ticketNumber: number;
-    assigneeId: string;
-    assigneeName: string;
-  }) {
+  @OnEvent('ticket.comment.added', { async: true })
+  async onTicketCommentAdded(evt: DomainEventPayloadMap['ticket.comment.added']) {
     try {
-      // Find the user who created the ticket
-      const ticket = await this.prisma.ticket.findUnique({
-        where: { id: evt.ticketId },
-        select: { requesterId: true },
-      });
-      if (!ticket) return;
-
-      await this.notifications.create({
-        workspaceId: evt.workspaceId,
-        memberId: ticket.requesterId, // Notify the user who asked for help!
-        type: NotificationType.SYSTEM_ALERT, // Or create TICKET_ASSIGNED
-        title: `Ticket #${evt.ticketNumber} Assigned`,
-        body: `${evt.assigneeName} from Rooli Support is now reviewing your ticket.`,
-        link: `/support/tickets/${evt.ticketId}`,
-        data: { ticketId: evt.ticketId } as Prisma.InputJsonValue,
-        dedupeKey: `ticket:assigned:${evt.ticketId}:${evt.assigneeId}`,
-      });
-    } catch (e: any) {
-      this.logger.warn(`onTicketAssigned failed: ${e?.message ?? String(e)}`);
-    }
-  }
-
-  @OnEvent('ticket.comment.added')
-  async onTicketCommentAdded(evt: {
-    workspaceId: string;
-    ticketId: string;
-    isFromSupport: boolean;
-    isInternal: boolean;
-  }) {
-    try {
-      // We only want to notify the user if Rooli Support replied publicly!
+      // Rule: Only notify the customer if Rooli Support replied publicly!
       if (!evt.isFromSupport || evt.isInternal) return;
 
       const ticket = await this.prisma.ticket.findUnique({
@@ -511,18 +476,43 @@ export class NotificationsSubscriber {
 
       await this.notifications.create({
         workspaceId: evt.workspaceId,
-        memberId: ticket.requesterId,
-        type: NotificationType.SYSTEM_ALERT, // Or create TICKET_REPLY
+        memberId: ticket.requesterId, // The WorkspaceMember who opened the ticket
+        type: NotificationType.SYSTEM_ALERT, 
         title: `Rooli Support Replied`,
         body: `You have a new reply on Ticket #${ticket.ticketNumber}.`,
         link: `/support/tickets/${evt.ticketId}`,
         data: { ticketId: evt.ticketId } as Prisma.InputJsonValue,
-        dedupeKey: `ticket:reply:${evt.ticketId}:${Date.now()}`,
+        dedupeKey: `ticket:reply:${evt.ticketId}:${evt.id}`, // Use comment ID to prevent dupes
       });
     } catch (e: any) {
-      this.logger.warn(
-        `onTicketCommentAdded failed: ${e?.message ?? String(e)}`,
-      );
+      this.logger.warn(`onTicketCommentAdded failed: ${e?.message ?? String(e)}`);
+    }
+  }
+
+  @OnEvent('ticket.updated', { async: true })
+  async onTicketUpdated(evt: DomainEventPayloadMap['ticket.updated']) {
+    try {
+      // Rule: Only notify the customer if the ticket was CLOSED
+      if (evt.status !== 'CLOSED') return;
+
+      const ticket = await this.prisma.ticket.findUnique({
+        where: { id: evt.ticketId },
+        select: { ticketNumber: true, requesterId: true },
+      });
+      if (!ticket) return;
+
+      await this.notifications.create({
+        workspaceId: evt.workspaceId,
+        memberId: ticket.requesterId,
+        type: NotificationType.SYSTEM_ALERT,
+        title: `Ticket Closed`,
+        body: `Ticket #${ticket.ticketNumber} has been closed by support.`,
+        link: `/support/tickets/${evt.ticketId}`,
+        data: { ticketId: evt.ticketId } as Prisma.InputJsonValue,
+        dedupeKey: `ticket:closed:${evt.ticketId}`,
+      });
+    } catch (e: any) {
+      this.logger.warn(`onTicketUpdated failed: ${e?.message ?? String(e)}`);
     }
   }
 
