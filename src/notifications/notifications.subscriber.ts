@@ -264,18 +264,22 @@ export class NotificationsSubscriber {
     reason: string;
     actorMemberId?: string;
   }) {
+
+    const friendlyErrorMessage = `We encountered an issue while publishing to ${evt.platform}. Please check your account connection and try again.`;
+
     await this.notifyPostEvent({
       workspaceId: evt.workspaceId,
       postId: evt.postId,
       type: NotificationType.POST_FAILED,
       title: `Failed to publish to ${evt.profileName}`,
-      body: evt.reason.slice(0, 100),
+      body: friendlyErrorMessage,
       dedupeKey: `post:failed:${evt.postDestinationId}`,
       meta: {
         platform: evt.platform,
         profileName: evt.profileName,
         snippet: evt.snippet,
         reason: evt.reason,
+        friendlyErrorMessage,
       },
     });
   }
@@ -321,6 +325,7 @@ export class NotificationsSubscriber {
       profileName: string;
       snippet: string;
       reason?: string;
+      friendlyErrorMessage?: string;
     };
   }) {
     try {
