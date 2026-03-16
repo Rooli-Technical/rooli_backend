@@ -159,13 +159,14 @@ export class InboxService {
         contact: true,
         assignedMember: { select: { id: true } },
         socialProfile: {
-          select: { name: true, picture: true, platform: true },
+          select: { id: true, name: true, picture: true, platform: true },
         },
       },
     });
     if (!c) throw new NotFoundException('Conversation not found');
     return {
       ...c,
+      socialProfileId: c.socialProfile?.id,
       socialProfileName: c.socialProfile?.name ?? 'Unknown Page',
       socialProfilePicture: c.socialProfile?.picture ?? null,
       platform: c.socialProfile?.platform ?? c.contact.platform,
