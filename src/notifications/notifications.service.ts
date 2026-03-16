@@ -78,6 +78,7 @@ export class NotificationsService {
         title: record.title,
         body: record.body,
         link: record.link,
+        data: record.data,
         createdAt: record.createdAt,
       },
     });
