@@ -86,6 +86,22 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
 
   }
 
+  @Get('calendar/:workspaceId')
+  @ApiOperation({ 
+    summary: 'Get high-level dashboard metrics for the calendar',
+    description: 'Returns counts for scheduled posts this week, drafts, published posts this month, and connected accounts.' 
+  })
+  @ApiParam({ 
+    name: 'workspaceId', 
+    description: 'The UUID of the workspace to fetch metrics for',
+    example: '123e4567-e89b-12d3-a456-426614174000'
+  })
+ 
+  @ApiResponse({ status: 404, description: 'Workspace not found.' })
+  async getCalendarMetrics(@Param('workspaceId') workspaceId: string) {
+    return await this.service.getCalendarMetrics(workspaceId);
+  }
+
   @Get('account/:profileId')
   @ApiOperation({ summary: 'Get account performance history (followers, views, etc.)' })
   @ApiQuery({ name: 'days', required: false, description: 'Lookback window (default 30)' })

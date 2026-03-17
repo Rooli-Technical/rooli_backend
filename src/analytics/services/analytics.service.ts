@@ -249,6 +249,80 @@ async getProfileDashboard(
   };
 }
 
+async getCalendarMetrics(workspaceId: string) {
+    const now = new Date();
+
+    // --- Date Math: This Week (Sunday to Saturday) ---
+    // Note: If you want weeks to start on Monday, change `now.getDay()` logic slightly!
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // --- Date Math: This Month ---
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Run all 4 queries simultaneously for a lightning-fast dashboard load
+    const [
+      scheduledThisWeek,
+      draftPosts,
+      publishedThisMonth,
+      platformsConnected,
+    ] = await Promise.all([
+      
+      // 1. Scheduled posts THIS WEEK
+      this.prisma.post.count({
+        where: {
+          workspaceId,
+          status: 'SCHEDULED', // Or whatever your enum is
+          scheduledAt: {
+            gte: startOfWeek,
+            lte: endOfWeek,
+          },
+        },
+      }),
+
+      // 2. Total active Drafts (No date filter needed, drafts are timeless)
+      this.prisma.post.count({
+        where: {
+          workspaceId,
+          status: 'DRAFT',
+        },
+      }),
+
+      // 3. Published posts THIS MONTH
+      // We use 'scheduledAt' here so it perfectly matches the calendar grid dates
+      this.prisma.post.count({
+        where: {
+          workspaceId,
+          status: 'PUBLISHED',
+          scheduledAt: { 
+            gte: startOfMonth,
+            lte: endOfMonth,
+          },
+        },
+      }),
+
+      // 4. Total connected social platforms
+      this.prisma.socialProfile.count({
+        where: {
+          workspaceId,
+        },
+      }),
+    ]);
+
+    return {
+      scheduledThisWeek,
+      draftPosts,
+      publishedThisMonth,
+      platformsConnected,
+    };
+  }
+
   /**
    * Helper: Get the correct provider or throw error
    */
