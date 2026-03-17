@@ -9,6 +9,8 @@ import { WsAuthMiddleware } from './ws-auth.middleware';
 import { RealtimeEmitterService } from './realtime-emitter.service';
 import { RedisModule } from '@/redis/redis.module';
 import { NotificationsEventsSubscriber } from './subscribers/notifications-events.subscriber';
+import { ProfileConnectionSubscriber } from './subscribers/social-connection.subscriber';
+import { AnalyticsModule } from '@/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -17,7 +19,8 @@ import { NotificationsEventsSubscriber } from './subscribers/notifications-event
       secret: process.env.JWT_SECRET!,
       signOptions: { expiresIn: '7d' },
     }),
-    RedisModule
+    RedisModule,
+    AnalyticsModule
   ],
   providers: [
     PrismaService,
@@ -27,6 +30,7 @@ import { NotificationsEventsSubscriber } from './subscribers/notifications-event
     RealtimeEmitterService,
     NotificationsEventsSubscriber,
     WsAuthMiddleware,
+    ProfileConnectionSubscriber,
   ],
   exports: [DomainEventsService, RealtimeEmitterService,],
 })
