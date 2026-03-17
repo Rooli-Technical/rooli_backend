@@ -35,13 +35,13 @@ export class InboxCommentsController {
     @Param('workspaceId') workspaceId: string,
     @Param('commentId') parentCommentId: string,
     @Body() body: SendCommentReplyDto,
-    @CurrentUser() user: any,
+    @CurrentUser('workspaceMemberId') memberId: string,
   ) {
     return this.inboxService.sendCommentReply({
       workspaceId,
       parentCommentId,
       content: body.content,
-      memberId: user.userId,
+      memberId,
     });
   }
 
