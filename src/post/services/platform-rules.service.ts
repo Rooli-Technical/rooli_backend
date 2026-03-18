@@ -441,13 +441,6 @@ export class PlatformRulesService {
           );
         }
 
-        // Resolution: minimum 540x960
-        if (m.width < 540 || m.height < 960) {
-          throw new BadRequestException(
-            'Facebook Story video must be at least 540x960.',
-          );
-        }
-
         continue;
       }
 
