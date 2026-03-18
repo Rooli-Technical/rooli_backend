@@ -829,7 +829,7 @@ async getCalendarMetrics(workspaceId: string) {
       }),
     ]);
 
-    const [recentPosts, upcomingPosts] = await Promise.all([
+    const [rawRecentPosts, upcomingPosts] = await Promise.all([
       // RECENT: Already published, newest first
       this.prisma.post.findMany({
         where: {
@@ -845,6 +845,17 @@ async getCalendarMetrics(workspaceId: string) {
             select: {
               status: true,
               profile: { select: { platform: true } },
+              postAnalyticsSnapshots: {
+                orderBy: { day: 'desc' },
+                take: 1,
+                select: {
+                  likes: true,
+                  comments: true,
+                  impressions: true,
+                  reach: true,
+                  engagementCount: true,
+                },
+              },
             },
           },
         },
@@ -869,6 +880,38 @@ async getCalendarMetrics(workspaceId: string) {
         },
       }),
     ]);
+
+    // 3. Transform the Recent Posts to aggregate metrics across all destinations
+    const recentPosts = rawRecentPosts.map((post) => {
+      // Sum up the metrics from all linked platforms (Facebook, X, LinkedIn, etc.)
+      const aggregatedMetrics = post.destinations.reduce(
+        (acc, dest) => {
+          const latestSnapshot = dest.postAnalyticsSnapshots[0]; // The most recent day
+          
+          if (latestSnapshot) {
+            acc.likes += latestSnapshot.likes || 0;
+            acc.comments += latestSnapshot.comments || 0;
+            acc.impressions += latestSnapshot.impressions || 0;
+            acc.reach += latestSnapshot.reach || 0;
+            acc.engagementCount += latestSnapshot.engagementCount || 0;
+          }
+          return acc;
+        },
+        { likes: 0, comments: 0, impressions: 0, reach: 0, engagementCount: 0 } // Initial state
+      );
+
+      // We remove the raw nested snapshots from the final payload to keep the API response clean
+      const cleanedDestinations = post.destinations.map(dest => {
+        const { postAnalyticsSnapshots, ...rest } = dest;
+        return rest;
+      });
+
+      return {
+        ...post,
+        destinations: cleanedDestinations,
+        metrics: aggregatedMetrics, // The frontend can now just read post.metrics.likes
+      };
+    });
 
     return {
       kpis: {

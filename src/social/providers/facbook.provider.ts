@@ -5,110 +5,132 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import axios from 'axios';
-import { ISocialProvider, SocialCredentials } from '../interfaces/social-provider.interface';
+import {
+  ISocialProvider,
+  SocialCredentials,
+} from '../interfaces/social-provider.interface';
 
 @Injectable()
 export class FacebookProvider implements ISocialProvider {
   private readonly logger = new Logger(FacebookProvider.name);
   private readonly GRAPH_URL = 'https://graph.facebook.com/v23.0';
 
- async publish(
-  credentials: SocialCredentials,
-  content: string,
-  mediaFiles: { url: string; mimeType: string; metadata?: { width?: number; height?: number; durationSeconds?: number } }[],
-  metadata?: { pageId: string; postType?: 'FEED' | 'REEL' | 'STORY' },
-) {
-  const pageId = metadata?.pageId;
-  if (!pageId) throw new BadRequestException('Facebook requires a Page ID.');
+  async publish(
+    credentials: SocialCredentials,
+    content: string,
+    mediaFiles: {
+      url: string;
+      mimeType: string;
+      metadata?: { width?: number; height?: number; durationSeconds?: number };
+    }[],
+    metadata?: { pageId: string; postType?: 'FEED' | 'REEL' | 'STORY' },
+  ) {
+    const pageId = metadata?.pageId;
+    if (!pageId) throw new BadRequestException('Facebook requires a Page ID.');
 
-  const accessToken = credentials.accessToken;
-  const postType = metadata?.postType || 'FEED';
+    const accessToken = credentials.accessToken;
+    const postType = metadata?.postType || 'FEED';
 
-  this.logger.log(`Preparing Facebook ${postType} for Page ${pageId}...`);
+    this.logger.log(`Preparing Facebook ${postType} for Page ${pageId}...`);
 
-  const videoFiles = mediaFiles.filter(f => f.mimeType.startsWith('video/'));
-  const imageFiles = mediaFiles.filter(f => f.mimeType.startsWith('image/'));
+    const videoFiles = mediaFiles.filter((f) =>
+      f.mimeType.startsWith('video/'),
+    );
+    const imageFiles = mediaFiles.filter((f) =>
+      f.mimeType.startsWith('image/'),
+    );
 
-  // ===============================
-  // ROUTE 1: REELS (Video Only)
-  // ===============================
-  if (postType === 'REEL') {
-    if (videoFiles.length !== 1) {
-      throw new BadRequestException('Reels require exactly 1 video.');
-    }
-
-    const video = videoFiles[0];
-
-    // Optional: Metadata Validation
-    if (video.metadata) {
-      const { durationSeconds, width, height } = video.metadata;
-
-      if (durationSeconds && (durationSeconds < 3 || durationSeconds > 90)) {
-        throw new BadRequestException(`Reel duration must be between 3s and 90s. Current: ${durationSeconds}s`);
+    // ===============================
+    // ROUTE 1: REELS (Video Only)
+    // ===============================
+    if (postType === 'REEL') {
+      if (videoFiles.length !== 1) {
+        throw new BadRequestException('Reels require exactly 1 video.');
       }
 
-      if (width && height) {
-        const ratio = width / height;
-        if (ratio < 0.50 || ratio > 0.60) {
-          throw new BadRequestException('Reels must be vertical (approx. 9:16 aspect ratio). Please crop your video.');
+      const video = videoFiles[0];
+
+      // Optional: Metadata Validation
+      if (video.metadata) {
+        const { durationSeconds, width, height } = video.metadata;
+
+        if (durationSeconds && (durationSeconds < 3 || durationSeconds > 90)) {
+          throw new BadRequestException(
+            `Reel duration must be between 3s and 90s. Current: ${durationSeconds}s`,
+          );
+        }
+
+        if (width && height) {
+          const ratio = width / height;
+          if (ratio < 0.5 || ratio > 0.6) {
+            throw new BadRequestException(
+              'Reels must be vertical (approx. 9:16 aspect ratio). Please crop your video.',
+            );
+          }
         }
       }
+
+      return this.postReel(pageId, accessToken, content, video.url);
     }
 
-    return this.postReel(pageId, accessToken, content, video.url);
-  }
+    // ===============================
+    // ROUTE 2: STORIES (Photo or Video, Single Item)
+    // ===============================
+    if (postType === 'STORY') {
+      if (mediaFiles.length !== 1) {
+        throw new BadRequestException(
+          'Stories require exactly 1 media file (photo or video).',
+        );
+      }
 
-  // ===============================
-  // ROUTE 2: STORIES (Photo or Video, Single Item)
-  // ===============================
-  if (postType === 'STORY') {
-    if (mediaFiles.length !== 1) {
-      throw new BadRequestException('Stories require exactly 1 media file (photo or video).');
+      const file = mediaFiles[0];
+      if (file.mimeType.startsWith('video/')) {
+        return this.postVideoStory(pageId, accessToken, file.url);
+      } else {
+        return this.postPhotoStory(pageId, accessToken, file.url);
+      }
     }
 
-    const file = mediaFiles[0];
-    if (file.mimeType.startsWith('video/')) {
-      return this.postVideoStory(pageId, accessToken, file.url);
-    } else {
-      return this.postPhotoStory(pageId, accessToken, file.url);
+    // ===============================
+    // ROUTE 3: STANDARD FEED
+    // ===============================
+    if (videoFiles.length > 0 && imageFiles.length > 0) {
+      throw new BadRequestException('Feed posts cannot mix videos and images.');
     }
+
+    if (videoFiles.length > 1) {
+      throw new BadRequestException('Feed posts can have at most 1 video.');
+    }
+
+    // CASE A: Video Post
+    if (videoFiles.length === 1) {
+      return this.postVideo(pageId, accessToken, content, videoFiles[0].url);
+    }
+
+    // CASE B: Multiple Images (Carousel)
+    if (imageFiles.length > 1) {
+      return this.postMultiPhoto(pageId, accessToken, content, imageFiles);
+    }
+
+    // CASE C: Single Image
+    if (imageFiles.length === 1) {
+      return this.postSinglePhoto(
+        pageId,
+        accessToken,
+        content,
+        imageFiles[0].url,
+      );
+    }
+
+    // CASE D: Text Only
+    return this.postText(pageId, accessToken, content);
   }
 
-  // ===============================
-  // ROUTE 3: STANDARD FEED
-  // ===============================
-  if (videoFiles.length > 0 && imageFiles.length > 0) {
-    throw new BadRequestException('Feed posts cannot mix videos and images.');
-  }
-
-  if (videoFiles.length > 1) {
-    throw new BadRequestException('Feed posts can have at most 1 video.');
-  }
-
-  // CASE A: Video Post
-  if (videoFiles.length === 1) {
-    return this.postVideo(pageId, accessToken, content, videoFiles[0].url);
-  }
-
-  // CASE B: Multiple Images (Carousel)
-  if (imageFiles.length > 1) {
-    return this.postMultiPhoto(pageId, accessToken, content, imageFiles);
-  }
-
-  // CASE C: Single Image
-  if (imageFiles.length === 1) {
-    return this.postSinglePhoto(pageId, accessToken, content, imageFiles[0].url);
-  }
-
-  // CASE D: Text Only
-  return this.postText(pageId, accessToken, content);
-}
-
-async editContent(accessToken: string, id: string, newContent: string) {
+  async editContent(accessToken: string, id: string, newContent: string) {
     try {
       this.logger.log(`Editing Facebook content ${id}...`);
       const url = `${this.GRAPH_URL}/${id}`;
-      
+
       const response = await axios.post(url, {
         message: newContent,
         access_token: accessToken,
@@ -120,12 +142,11 @@ async editContent(accessToken: string, id: string, newContent: string) {
     }
   }
 
-
   async deleteContent(accessToken: string, id: string) {
     try {
       this.logger.log(`Deleting Facebook content ${id}...`);
       const url = `${this.GRAPH_URL}/${id}`;
-      
+
       const response = await axios.delete(url, {
         params: { access_token: accessToken },
       });
@@ -134,7 +155,6 @@ async editContent(accessToken: string, id: string, newContent: string) {
     } catch (error: any) {
       this.handleError(error);
     }
-
   }
 
   // ==================================================
@@ -163,7 +183,6 @@ async editContent(accessToken: string, id: string, newContent: string) {
       attached_media: attachments,
       access_token: token,
     });
-
 
     return this.formatResult(response.data.id, pageId);
   }
@@ -197,121 +216,136 @@ async editContent(accessToken: string, id: string, newContent: string) {
       access_token: token,
     });
 
-
     return this.formatResult(response.data.id, pageId);
   }
 
   // ==================================================
   // 🎬 REELS (Target: /video_reels)
   // ==================================================
- private async postReel(
-  pageId: string,
-  token: string,
-  caption: string,
-  videoUrl: string,
-) {
-  const reelsUrl = `${this.GRAPH_URL}/${pageId}/video_reels`;
+  private async postReel(
+    pageId: string,
+    token: string,
+    caption: string,
+    videoUrl: string,
+  ) {
+    const reelsUrl = `${this.GRAPH_URL}/${pageId}/video_reels`;
 
-  // 1) START
-  const startRes = await axios.post(reelsUrl, null, {
-    params: { upload_phase: 'start', access_token: token },
-  });
+    // 1) START
+    const startRes = await axios.post(reelsUrl, null, {
+      params: { upload_phase: 'start', access_token: token },
+    });
 
-  const { video_id, upload_url } = startRes.data;
+    const { video_id, upload_url } = startRes.data;
 
-  // 2) UPLOAD remote URL to rupload
-  await axios.post(upload_url, null, {
-    headers: {
-      Authorization: `OAuth ${token}`,
-      file_url: videoUrl,
-    },
-    maxBodyLength: Infinity,
-  });
+    // 2) UPLOAD remote URL to rupload
+    await axios.post(upload_url, null, {
+      headers: {
+        Authorization: `OAuth ${token}`,
+        file_url: videoUrl,
+      },
+      maxBodyLength: Infinity,
+    });
 
-  // 3) FINISH (publish)
-  const finishRes = await axios.post(reelsUrl, null, {
-    params: {
-      upload_phase: 'finish',
-      video_id,
-      video_state: 'PUBLISHED',
-      description: caption,
-      access_token: token,
-    },
-  });
+    // 3) FINISH (publish)
+    const finishRes = await axios.post(reelsUrl, null, {
+      params: {
+        upload_phase: 'finish',
+        video_id,
+        video_state: 'PUBLISHED',
+        description: caption,
+        access_token: token,
+      },
+    });
 
-  return {
-    platformPostId: finishRes.data.post_id ?? video_id, // post_id is best if returned
-    url: finishRes.data.post_id
-      ? `https://www.facebook.com/${finishRes.data.post_id}`
-      : `https://www.facebook.com/reel/${video_id}`,
-  };
-}
-
+    return {
+      platformPostId: finishRes.data.post_id ?? video_id, // post_id is best if returned
+      url: finishRes.data.post_id
+        ? `https://www.facebook.com/${finishRes.data.post_id}`
+        : `https://www.facebook.com/reel/${video_id}`,
+    };
+  }
 
   // ==================================================
   // 📖 STORIES (Target: /photo_stories or /video_stories)
   // ==================================================
-private async postPhotoStory(pageId: string, token: string, imageUrl: string) {
-  // Step 1: upload photo UNPUBLISHED to get photo_id
-  const uploadRes = await axios.post(`${this.GRAPH_URL}/${pageId}/photos`, null, {
-    params: {
-      url: imageUrl,
-      published: false,
-      access_token: token,
-    },
-  });
+  private async postPhotoStory(
+    pageId: string,
+    token: string,
+    imageUrl: string,
+  ) {
+    // Step 1: upload photo UNPUBLISHED to get photo_id
+    const uploadRes = await axios.post(
+      `${this.GRAPH_URL}/${pageId}/photos`,
+      null,
+      {
+        params: {
+          url: imageUrl,
+          published: false,
+          access_token: token,
+        },
+      },
+    );
 
-  const photoId = uploadRes.data.id;
-  if (!photoId) throw new Error(`Photo upload failed: ${JSON.stringify(uploadRes.data)}`);
+    const photoId = uploadRes.data.id;
+    if (!photoId)
+      throw new Error(`Photo upload failed: ${JSON.stringify(uploadRes.data)}`);
 
-  // Step 2: create story using photo_id
-  const storyRes = await axios.post(`${this.GRAPH_URL}/${pageId}/photo_stories`, null, {
-    params: {
-      photo_id: photoId,
-      access_token: token,
-    },
-  });
+    // Step 2: create story using photo_id
+    const storyRes = await axios.post(
+      `${this.GRAPH_URL}/${pageId}/photo_stories`,
+      null,
+      {
+        params: {
+          photo_id: photoId,
+          access_token: token,
+        },
+      },
+    );
 
-  return {
-    platformPostId: storyRes.data.post_id ?? storyRes.data.id ?? photoId,
-    url: `https://facebook.com/${pageId}`,
-  };
-}
-
-
-private async postVideoStory(pageId: string, token: string, videoUrl: string) {
-  const storiesUrl = `${this.GRAPH_URL}/${pageId}/video_stories`;
-
-  // 1) START
-  const startRes = await axios.post(storiesUrl, null, {
-    params: { upload_phase: 'start', access_token: token },
-  });
-
-  const { video_id, upload_url } = startRes.data;
-  if (!video_id || !upload_url) {
-    throw new Error(`Video story start failed: ${JSON.stringify(startRes.data)}`);
+    return {
+      platformPostId: storyRes.data.post_id ?? storyRes.data.id ?? photoId,
+      url: `https://facebook.com/${pageId}`,
+    };
   }
 
-  // 2) UPLOAD remote URL to rupload
-  await axios.post(upload_url, null, {
-    headers: {
-      Authorization: `OAuth ${token}`,
-      file_url: videoUrl,
-    },
-    maxBodyLength: Infinity,
-  });
+  private async postVideoStory(
+    pageId: string,
+    token: string,
+    videoUrl: string,
+  ) {
+    const storiesUrl = `${this.GRAPH_URL}/${pageId}/video_stories`;
 
-  // 3) FINISH (publish)
-  const finishRes = await axios.post(storiesUrl, null, {
-    params: { upload_phase: 'finish', video_id, access_token: token },
-  });
+    // 1) START
+    const startRes = await axios.post(storiesUrl, null, {
+      params: { upload_phase: 'start', access_token: token },
+    });
 
-  return {
-    platformPostId: finishRes.data.post_id ?? video_id,
-    url: `https://facebook.com/${pageId}`,
-  };
-}
+    const { video_id, upload_url } = startRes.data;
+    if (!video_id || !upload_url) {
+      throw new Error(
+        `Video story start failed: ${JSON.stringify(startRes.data)}`,
+      );
+    }
 
+    // 2) UPLOAD remote URL to rupload
+    await axios.post(upload_url, null, {
+      headers: {
+        Authorization: `OAuth ${token}`,
+        file_url: videoUrl,
+      },
+      maxBodyLength: Infinity,
+    });
+
+    // 3) FINISH (publish)
+    const finishRes = await axios.post(storiesUrl, null, {
+      params: { upload_phase: 'finish', video_id, access_token: token },
+    });
+
+    return {
+      platformPostId: finishRes.data.post_id ?? video_id,
+      url: `https://facebook.com/${pageId}`,
+    };
+  }
 
   // --------------------------------------------------
   // Helpers
@@ -334,7 +368,7 @@ private async postVideoStory(pageId: string, token: string, videoUrl: string) {
   private formatResult(postId: string, pageId: string) {
     // Facebook IDs can be "PageID_PostID" or just "PostID" depending on the endpoint
     const cleanId = postId.includes('_') ? postId : `${pageId}_${postId}`;
-    
+
     return {
       platformPostId: postId,
       // URL format: https://facebook.com/{PageID}/posts/{PostID}
@@ -343,15 +377,20 @@ private async postVideoStory(pageId: string, token: string, videoUrl: string) {
     };
   }
 
-  private async postVideo(pageId: string, token: string, caption: string, videoUrl: string) {
-      // Standard Feed Video
-      const url = `${this.GRAPH_URL}/${pageId}/videos`;
-      const response = await axios.post(url, {
-        description: caption,
-        file_url: videoUrl,
-        access_token: token,
-      });
-      return this.formatResult(response.data.id, pageId);
+  private async postVideo(
+    pageId: string,
+    token: string,
+    caption: string,
+    videoUrl: string,
+  ) {
+    // Standard Feed Video
+    const url = `${this.GRAPH_URL}/${pageId}/videos`;
+    const response = await axios.post(url, {
+      description: caption,
+      file_url: videoUrl,
+      access_token: token,
+    });
+    return this.formatResult(response.data.id, pageId);
   }
 
   private handleError(error: any) {
