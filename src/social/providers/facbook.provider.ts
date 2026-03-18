@@ -321,7 +321,6 @@ export class FacebookProvider implements ISocialProvider {
       },
     );
 
-    console.dir(storyRes.data, { depth: null });
 
     return {
       platformPostId: storyRes.data.post_id ?? storyRes.data.id ?? photoId,
@@ -362,7 +361,6 @@ export class FacebookProvider implements ISocialProvider {
       params: { upload_phase: 'finish', video_id, access_token: token },
     });
 
-    console.dir(finishRes.data, { depth: null });
 
     return {
       platformPostId: finishRes.data.post_id ?? video_id,

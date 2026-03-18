@@ -41,15 +41,29 @@ export class PostVerificationProcessor extends WorkerHost {
         }),
       );
 
+
       if (response.data.post_id) {
         const realPostId = `${pageId}_${response.data.post_id}`;
+        
+        // 🚨 Create the formatted version that formatResult() saved
+        const formattedMediaId = `${pageId}_${mediaId}`;
 
-        await this.prisma.postDestination.updateMany({
-          where: { platformPostId: mediaId },
+        
+        // 🚨 Update the where clause to look for BOTH variations
+        const updateResult = await this.prisma.postDestination.updateMany({
+          where: { 
+            platformPostId: { in: [mediaId, formattedMediaId] } 
+          },
           data: { platformPostId: realPostId },
         });
 
-        this.logger.log(`✅ Success: Swapped ${mediaId} for ${realPostId}`);
+        // Add a check so you actually know if it updated the DB!
+        if (updateResult.count > 0) {
+          this.logger.log(`✅ Success`);
+        } else {
+          this.logger.warn(`⚠️ API Success, but couldn't find ${formattedMediaId} in DB to update!`);
+        }
+
         return { success: true };
       } else {
         throw new Error('Video still processing, post_id not available yet.');

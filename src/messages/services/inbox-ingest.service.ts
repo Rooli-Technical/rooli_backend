@@ -165,7 +165,6 @@ export class InboxIngestService {
   async ingestInboundComment(payload: InboundCommentPayload) {
 
     try {
-      console.dir(payload, { depth: null });
       // 1. Find the Post via PostDestination (where the external ID actually lives)
       const destination = await this.prisma.postDestination.findFirst({
         where: {
