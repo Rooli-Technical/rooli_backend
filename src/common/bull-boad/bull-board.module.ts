@@ -41,6 +41,10 @@ import { ExpressAdapter } from '@bull-board/express';
       name: 'inbox-sync',
       adapter: BullMQAdapter,
     }),
+    BullBoardModule.forFeature({
+      name: 'post-verification',
+      adapter: BullMQAdapter,
+    }),
   ],
 })
 export class RooliBullBoardModule {}

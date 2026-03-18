@@ -9,11 +9,18 @@ import {
   ISocialProvider,
   SocialCredentials,
 } from '../interfaces/social-provider.interface';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class FacebookProvider implements ISocialProvider {
   private readonly logger = new Logger(FacebookProvider.name);
   private readonly GRAPH_URL = 'https://graph.facebook.com/v23.0';
+
+  constructor(
+    @InjectQueue('post-verification')
+    private readonly postVerificationQueue: Queue,
+  ) {}
 
   async publish(
     credentials: SocialCredentials,
@@ -257,12 +264,24 @@ export class FacebookProvider implements ISocialProvider {
       },
     });
 
-    return {
-      platformPostId: finishRes.data.post_id ?? video_id, // post_id is best if returned
-      url: finishRes.data.post_id
-        ? `https://www.facebook.com/${finishRes.data.post_id}`
-        : `https://www.facebook.com/reel/${video_id}`,
-    };
+    const finalPostId = finishRes.data.post_id;
+    
+    if (!finalPostId) {
+      this.logger.log(`Reel ${video_id} is processing. Queuing Post ID fetch...`);
+      await this.postVerificationQueue.add(
+        'fetch-real-post-id', 
+        { platform: 'FACEBOOK', mediaId: video_id, pageId, accessToken: token },
+        { 
+          delay: 60000, 
+          attempts: 5, 
+          backoff: { type: 'exponential', delay: 60000 },
+          removeOnComplete: true,
+        }
+      );
+    }
+
+    // Return what we have! (Our formatResult handles it cleanly)
+    return this.formatResult(finalPostId ?? video_id, pageId);
   }
 
   // ==================================================
@@ -301,6 +320,8 @@ export class FacebookProvider implements ISocialProvider {
         },
       },
     );
+
+    console.dir(storyRes.data, { depth: null });
 
     return {
       platformPostId: storyRes.data.post_id ?? storyRes.data.id ?? photoId,
@@ -341,6 +362,8 @@ export class FacebookProvider implements ISocialProvider {
       params: { upload_phase: 'finish', video_id, access_token: token },
     });
 
+    console.dir(finishRes.data, { depth: null });
+
     return {
       platformPostId: finishRes.data.post_id ?? video_id,
       url: `https://facebook.com/${pageId}`,
@@ -370,7 +393,7 @@ export class FacebookProvider implements ISocialProvider {
     const cleanId = postId.includes('_') ? postId : `${pageId}_${postId}`;
 
     return {
-      platformPostId: postId,
+      platformPostId: cleanId,
       // URL format: https://facebook.com/{PageID}/posts/{PostID}
       // Note: Videos sometimes have a different URL structure, but this usually redirects correctly.
       url: `https://facebook.com/${cleanId.replace('_', '/posts/')}`,
@@ -383,14 +406,39 @@ export class FacebookProvider implements ISocialProvider {
     caption: string,
     videoUrl: string,
   ) {
-    // Standard Feed Video
     const url = `${this.GRAPH_URL}/${pageId}/videos`;
+
+    // 1. Upload the video to Meta
     const response = await axios.post(url, {
       description: caption,
       file_url: videoUrl,
       access_token: token,
     });
-    return this.formatResult(response.data.id, pageId);
+
+    const videoId = response.data.id; 
+
+    // 2. Add to Queue with the 1-Minute Delay & Exponential Backoff
+    await this.postVerificationQueue.add(
+      'fetch-real-post-id',
+      {
+        platform: 'FACEBOOK',
+        mediaId: videoId,
+        pageId: pageId,
+        accessToken: token,
+      },
+      {
+        delay: 60000,
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 60000,
+        },
+        removeOnComplete: true,
+      },
+    );
+
+    // 3. Return the Media ID instantly so the user isn't kept waiting
+    return this.formatResult(videoId, pageId);
   }
 
   private handleError(error: any) {
