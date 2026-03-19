@@ -65,7 +65,7 @@ export class MetaClient {
     mode: MetaSendMode,
     req: MetaSendTextRequest,
   ): Promise<MetaSendResult> {
-    const baseUrl = 'https://graph.facebook.com/v23.0';
+    const baseUrl = this.resolveHost(req.accessToken);
     const endpoint = this.resolveSendEndpoint(mode, {
       pageId: req.pageId,
       igId: req.igId,
@@ -110,7 +110,7 @@ export class MetaClient {
     mode: MetaSendMode,
     req: MetaSendAttachmentRequest,
   ): Promise<MetaSendResult> {
-   const baseUrl = 'https://graph.facebook.com/v23.0';
+   const baseUrl = this.resolveHost(req.accessToken);
     const endpoint = this.resolveSendEndpoint(mode, { pageId: req.pageId, igId: req.igId });
     const url = `${baseUrl}${endpoint}`;
 
