@@ -246,6 +246,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
         firstValueFrom(
           this.http.get(`${this.baseUrl}/memberFollowersCount?q=me`, {
             headers: this.headers(token),
+            httpsAgent: this.httpsAgent,
           }),
         ),
         this.getMemberAccountTotals(token),
@@ -348,6 +349,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
             headers,
             params,
             paramsSerializer: linkedinBatchSerializer,
+            httpsAgent: this.httpsAgent,
           }),
         );
 
@@ -388,6 +390,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
         this.http.get(url, {
           headers,
           params: { q: 'me', queryType, aggregation, dateRange },
+          httpsAgent: this.httpsAgent,
         }),
       );
       const els: any[] = data?.elements ?? [];
@@ -413,6 +416,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
                 aggregation: 'TOTAL',
                 dateRange,
               },
+              httpsAgent: this.httpsAgent,
             }),
           );
           return data?.elements?.[0]?.count ?? 0;
@@ -575,6 +579,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
               },
               params,
               paramsSerializer: customSerializer,
+              httpsAgent: this.httpsAgent,
             }),
           );
           return data?.elements?.[0]?.count ?? 0;
