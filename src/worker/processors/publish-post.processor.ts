@@ -92,7 +92,9 @@ export class PublishPostProcessor extends WorkerHost {
         case 'INSTAGRAM':
           await this.publishInstagram(post, dest);
           break;
-
+        case 'TIKTOK':
+          await this.publishTikTok(post, dest);
+          break;
         default:
           throw new Error(`Unsupported platform: ${platform}`);
       }
@@ -284,6 +286,35 @@ export class PublishPostProcessor extends WorkerHost {
     const mediaPayload = post.media.map((m: any) => ({
       url: m.mediaFile.url,
       mimeType: m.mediaFile.mimeType,
+    }));
+
+    const res = await provider.publish(creds as any, text, mediaPayload, {
+      pageId: dest.profile.platformId,
+      postType: post.contentType,
+    });
+
+    await this.prisma.postDestination.update({
+      where: { id: dest.id },
+      data: {
+        status: 'SUCCESS',
+        platformPostId: res?.platformPostId ?? dest.platformPostId ?? null,
+        publishedAt: new Date(),
+        errorMessage: null,
+      },
+    });
+  }
+
+  private async publishTikTok(post: any, dest: any) {
+    const provider = this.socialFactory.getProvider('TIKTOK');
+    const creds = await this.resolveOAuth2Creds(dest);
+
+    const text = (dest.contentOverride || post.content || '').trim();
+
+    // TikTok strictly requires the size of the file for its chunked uploads!
+    const mediaPayload = post.media.map((m: any) => ({
+      url: m.mediaFile.url,
+      mimeType: m.mediaFile.mimeType,
+      sizeBytes: Number(m.mediaFile.size), // 👈 Convert Prisma BigInt to Number
     }));
 
     const res = await provider.publish(creds as any, text, mediaPayload, {
