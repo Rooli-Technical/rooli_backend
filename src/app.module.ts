@@ -40,6 +40,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PollingModule } from './polling/polling.module';
 import { SupportTicketModule } from './support-ticket/support-ticket.module';
 import Redis from 'ioredis';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -136,6 +137,7 @@ import Redis from 'ioredis';
     PollingModule,
 
     SupportTicketModule,
+    AdminModule
   ],
   controllers: [AppController],
   providers: [

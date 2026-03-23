@@ -159,6 +159,18 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     description: 'Number of days to include (clamped to max 365). Default 30.',
     example: 30,
   })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Start date (YYYY-MM-DD)',
+    example: '2022-01-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'End date (YYYY-MM-DD)',
+    example: '2022-01-01',
+  })
   async getWorkspaceDashboard(
     @Param('id') workspaceId: string,
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
