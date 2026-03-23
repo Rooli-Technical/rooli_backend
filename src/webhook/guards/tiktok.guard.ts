@@ -16,51 +16,70 @@ export class TikTokWebhookGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest();
-    
-    // TikTok sends the signature in this exact header
-    const signature = req.headers['x-tiktok-signature'];
 
-    if (!signature) {
-      this.logger.warn('TikTok Webhook failed: Missing X-Tiktok-Signature header');
+    const signatureHeader = req.headers['tiktok-signature'] as string;
+
+    if (!signatureHeader) {
+      this.logger.warn(
+        'TikTok Webhook failed: Missing tiktok-signature header',
+      );
       throw new UnauthorizedException('Missing signature');
     }
 
     const clientSecret = this.config.get<string>('TIKTOK_CLIENT_SECRET');
     if (!clientSecret) {
-      this.logger.error('TIKTOK_CLIENT_SECRET is missing in environment variables.');
+      this.logger.error(
+        'TIKTOK_CLIENT_SECRET is missing in environment variables.',
+      );
       throw new UnauthorizedException('Server configuration error');
     }
 
-    // 🚨 CRITICAL: You must use the RAW body buffer, not the parsed JSON object!
-    // NestJS attaches this to req.rawBody if configured correctly in main.ts
-    const rawBody = req.rawBody; 
+    const rawBody = req.rawBody;
 
     if (!rawBody) {
       this.logger.error(
-        'Raw body is missing! You must enable { rawBody: true } in your NestJS app configuration.',
+        'Raw body is missing! Ensure { rawBody: true } is enabled in main.ts.',
       );
       throw new UnauthorizedException('Missing raw body');
     }
 
-    // 1. Generate the HMAC-SHA256 hash using your TikTok Client Secret
+    // 2. FIX: Parse the "t=...,s=..." format
+    let signature = '';
+    let timestamp = '';
+
+    const parts = signatureHeader.split(',');
+    for (const part of parts) {
+      if (part.startsWith('t=')) timestamp = part.substring(2);
+      if (part.startsWith('s=')) signature = part.substring(2);
+    }
+
+    if (!signature || !timestamp) {
+      this.logger.warn(
+        `TikTok Webhook failed: Invalid signature format -> ${signatureHeader}`,
+      );
+      throw new UnauthorizedException('Invalid signature format');
+    }
+
+    // 3. FIX: TikTok requires hashing the timestamp and raw body together
+    // Format: timestamp + "." + rawBody
+const stringToSign = `${timestamp}.${rawBody.toString('utf8')}`;
+
+
+    // 4. Generate the HMAC-SHA256 hash using your TikTok Client Secret
     const expectedSignature = crypto
       .createHmac('sha256', clientSecret)
-      .update(rawBody)
+      .update(stringToSign)
       .digest('hex');
 
-    // 2. Safely compare the two hashes (prevents timing attacks)
-    const isAuthentic = crypto.timingSafeEqual(
-      Buffer.from(expectedSignature),
-      Buffer.from(signature as string),
-    );
-
-    if (!isAuthentic) {
+    // 5. Safely compare the two hashes
+    if (expectedSignature !== signature) {
       this.logger.warn(
         `TikTok Webhook failed: Signature mismatch. Expected ${expectedSignature}, got ${signature}`,
       );
       throw new UnauthorizedException('Invalid signature');
     }
 
+    this.logger.log('TikTok Webhook Signature Verified Successfully!');
     return true;
   }
 }

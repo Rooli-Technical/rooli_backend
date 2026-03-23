@@ -294,7 +294,7 @@ export class WebhookController {
     const eventType = payload?.event || 'unknown';
     const openId = payload?.user_openid || 'system-event';
 
-    this.logger.log(`[TikTok] Webhook received: ${eventType} for User: ${openId}`);
+    this.logger.log(`[TikTok] Webhook received: ${eventType}`);
 
     // 1. Log to Database
     const log = await this.prisma.webhookLog.create({
