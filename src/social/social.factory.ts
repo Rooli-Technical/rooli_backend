@@ -5,6 +5,7 @@ import { FacebookProvider } from './providers/facbook.provider';
 import { InstagramProvider } from './providers/instagram.provider';
 import { LinkedInProvider } from './providers/linkedin.provider';
 import { Platform } from '@generated/enums';
+import { TikTokProvider } from './providers/tiktok.provider';
 
 @Injectable()
 export class SocialFactory {
@@ -12,7 +13,9 @@ export class SocialFactory {
     private twitter: TwitterProvider,
     private linkedin: LinkedInProvider,
     private facebook: FacebookProvider,
-    private instagram: InstagramProvider
+    private instagram: InstagramProvider,
+    private tiktok: TikTokProvider,
+
   ) {}
 
   getProvider(platform: Platform): ISocialProvider {
@@ -25,6 +28,8 @@ export class SocialFactory {
         return this.facebook;
       case 'INSTAGRAM': 
         return this.instagram;
+      case 'TIKTOK':
+        return this.tiktok;
       default:
         throw new BadRequestException(`Platform ${platform} is not supported yet.`);
     }

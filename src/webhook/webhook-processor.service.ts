@@ -22,8 +22,10 @@ export class WebhooksProcessor extends WorkerHost {
     try {
       if (job.name === 'paystack-event') {
         await this.processPaystack(logId, data);
-      } else if (job.name === 'meta-event') {
-        //await this.processMeta(logId, data);
+      }else if (job.name === 'tiktok-publish-status') {
+        await this.processTikTokPublish(logId, data.payload);
+      } else if (job.name === 'tiktok-deauth') {
+        await this.processTikTokDeauth(logId, data.payload);
       }
     } catch (error) {
       this.logger.error(
@@ -113,49 +115,117 @@ export class WebhooksProcessor extends WorkerHost {
     }
   }
 
+// ==========================================
+  // TIKTOK LOGIC
   // ==========================================
-  // META LOGIC
-  // ==========================================
-  // private async processMeta(logId: string, payload: any) {
-  //   // Meta structure: entry -> [{ uid: '...', changes: [...] }]
-  //   const entry = payload.entry?.[0];
-  //   const uid = entry?.uid || entry?.id; // User ID or Page ID
-  //   let organizationId: string | null = null;
+  
+  private async processTikTokPublish(logId: string, payload: any) {
+    const event = payload.event; // 'post.publish.complete' or 'post.publish.failed'
+    
+    // 🚨 TikTok sends the content field as a stringified JSON string. We must parse it!
+    let content: any = {};
+    if (typeof payload.content === 'string') {
+      try {
+        content = JSON.parse(payload.content);
+      } catch (e) {
+        this.logger.error(`Failed to parse TikTok webhook content: ${payload.content}`);
+      }
+    } else {
+      content = payload.content || {};
+    }
 
-  //   if (uid) {
-  //     // 1. Find the Social Account to link back to Organization
-  //     const socialAccount = await this.prisma.socialAccount.findFirst({
-  //       where: { platformAccountId: uid, platform: 'META' },
-  //       include: { organization: true },
-  //     });
+    const publishId = content.publish_id;
+    const shareUrl = content.share_url; // Only present on success
 
-  //     if (socialAccount) {
-  //       organizationId = socialAccount.organizationId;
+    if (!publishId) {
+      this.logger.warn(`TikTok publish webhook missing publish_id: Log ${logId}`);
+      return;
+    }
 
-  //       // 2. Check for De-authorization (Permissions Revoked)
-  //       // If the payload indicates a revoke, we disable the account
-  //       // (Simplified check - usually you look deeper into 'changes')
-  //       if (payload.object === 'permissions') {
-  //         await this.prisma.socialAccount.update({
-  //           where: { id: socialAccount.id },
-  //           data: { isActive: false, errorMessage: 'User revoked permissions' },
-  //         });
-  //         this.logger.warn(
-  //           `Disabled Meta account ${socialAccount.id} due to revoke`,
-  //         );
-  //       }
-  //     }
-  //   }
+    // 1. Find the pending destination in the DB
+    const destination = await this.prisma.postDestination.findFirst({
+      where: { platformPostId: publishId },
+      include: { post: true }
+    });
 
-  //   // 3. Finalize Log
-  //   await this.prisma.webhookLog.update({
-  //     where: { id: logId },
-  //     data: {
-  //       status: 'PROCESSED',
-  //       organizationId: organizationId, // <--- LINKING HAPPENS HERE
-  //       resourceId: uid, // Update resource ID if we found a better one
-  //       processedAt: new Date(),
-  //     },
-  //   });
-  // }
+    if (destination) {
+      // 2. Update the status based on the TikTok event
+      if (event === 'post.publish.complete' || event === 'video.publish.completed') {
+        await this.prisma.postDestination.update({
+          where: { id: destination.id },
+          data: { 
+            status: 'SUCCESS',
+            platformUrl: shareUrl 
+          },
+        });
+        
+        // Bonus: Update the master post status to PUBLISHED if this was the only/last destination
+        await this.prisma.post.update({
+          where: { id: destination.postId },
+          data: { status: 'PUBLISHED' },
+        });
+
+        this.logger.log(`TikTok video ${publishId} is live! Status updated to SUCCESS.`);
+
+      } else if (event === 'post.publish.failed' || event === 'video.upload.failed') {
+        await this.prisma.postDestination.update({
+          where: { id: destination.id },
+          data: { 
+            status: 'FAILED',
+            errorMessage: 'TikTok rejected the video during final processing (Community Guidelines/Copyright).',
+          },
+        });
+        this.logger.warn(`TikTok video ${publishId} failed final processing.`);
+      }
+    } else {
+      this.logger.warn(`Could not find PostDestination for TikTok publish_id: ${publishId}`);
+    }
+
+    // 3. Mark Webhook Log as Processed
+    await this.prisma.webhookLog.update({
+      where: { id: logId },
+      data: { status: 'PROCESSED', processedAt: new Date() },
+    });
+  }
+
+  private async processTikTokDeauth(logId: string, payload: any) {
+    const openId = payload.user_openid;
+
+    if (!openId) {
+      this.logger.warn(`TikTok deauth webhook missing user_openid: Log ${logId}`);
+      return;
+    }
+
+    this.logger.log(`User ${openId} revoked TikTok access. Disconnecting...`);
+
+    // 1. Find the Social Connection using the platformUserId (openId)
+    const connection = await this.prisma.socialConnection.findFirst({
+      where: { platformUserId: openId, platform: 'TIKTOK' },
+    });
+
+    if (connection) {
+      // 2. Soft-delete/Disconnect the connection & cascade to profiles
+      await this.prisma.socialConnection.update({
+        where: { id: connection.id },
+        data: {
+          status: 'DISCONNECTED',
+          profiles: {
+            updateMany: {
+              where: { socialConnectionId: connection.id },
+              data: { status: 'DISCONNECTED' }
+            }
+          }
+        }
+      });
+      this.logger.log(`Successfully disconnected TikTok connection ${connection.id}.`);
+    } else {
+      this.logger.warn(`Could not find TikTok connection for user_openid: ${openId}`);
+    }
+
+    // 3. Mark Webhook Log as Processed
+    await this.prisma.webhookLog.update({
+      where: { id: logId },
+      data: { status: 'PROCESSED', processedAt: new Date() },
+    });
+  }
 }

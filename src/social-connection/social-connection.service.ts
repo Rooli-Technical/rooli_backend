@@ -18,6 +18,7 @@ import { LinkedInService } from './providers/linkedin.service';
 import { TwitterService } from './providers/twitter.service';
 import { RedisService } from '@/redis/redis.service';
 import { InstagramService } from './providers/instagram.service';
+import { TikTokService } from './providers/tiktok.service';
 
 @Injectable()
 export class SocialConnectionService {
@@ -31,6 +32,7 @@ export class SocialConnectionService {
     private readonly linkedin: LinkedInService,
     private readonly twitter: TwitterService,
     private readonly instagram: InstagramService,
+    private readonly tiktok: TikTokService,
     private readonly redisService: RedisService,
   ) {}
 
@@ -59,6 +61,8 @@ export class SocialConnectionService {
         return this.instagram.generateAuthUrl(state);
       case 'LINKEDIN':
         return this.linkedin.generateAuthUrl(state);
+      case 'TIKTOK':
+        return this.tiktok.generateAuthUrl(state);
       case 'TWITTER':
         // Twitter needs to talk to API first to get a token!
         return this.twitter.generateAuthLink(organizationId);
@@ -109,6 +113,8 @@ export class SocialConnectionService {
         authData = await this.instagram.exchangeCode(code);
       else if (platform === 'LINKEDIN')
         authData = await this.linkedin.exchangeCode(code);
+      else if (platform === 'TIKTOK')
+        authData = await this.tiktok.exchangeCode(code);
     }
 
     // 3. UPSERT CONNECTION
@@ -182,6 +188,9 @@ export class SocialConnectionService {
         case 'LINKEDIN':
           pages = await this.linkedin.getImportablePages(accessToken);
           break;
+        case 'TIKTOK':
+          pages = await this.tiktok.getAccount(accessToken);
+          break;
         case 'TWITTER':
           const accessSecret = connection.refreshToken
             ? await this.encryptionService.decrypt(connection.refreshToken)
@@ -230,6 +239,9 @@ async disconnect(connectionId: string, organizationId: string) {
         } else {
           this.logger.log(`Skipping token revocation for FB-connected IG connection to protect parent Facebook login.`);
         }
+        break;
+      case 'TIKTOK':
+        await this.tiktok.disconnect(token);
         break;
 
       default:
