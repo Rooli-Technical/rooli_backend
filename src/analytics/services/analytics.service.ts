@@ -511,7 +511,19 @@ async getCalendarMetrics(workspaceId: string) {
       startDate,
       endDate,
     );
-    const profileIds = await this.getActiveProfileIds(workspaceId);
+    // 🚨 Fetch the full profile objects instead of just IDs
+    const profiles = await this.prisma.socialProfile.findMany({
+      where: { workspaceId, isActive: true, status: ConnectionStatus.CONNECTED },
+      select: { 
+        id: true, 
+        platform: true, 
+        type: true, 
+        name: true,
+        username: true,
+      },
+    });
+
+    const profileIds = profiles.map((p) => p.id);
 
     if (profileIds.length === 0) return this.emptyResponse(start, end);
 
@@ -523,7 +535,12 @@ async getCalendarMetrics(workspaceId: string) {
       end,
     );
 
-    if (tier === PlanTier.CREATOR) return base;
+   const responsePayload = {
+      ...base,
+      connectedProfiles: profiles,
+    };
+
+    if (tier === PlanTier.CREATOR) return responsePayload;
 
     const business = await this.getWorkspaceBusiness(
       profileIds,
@@ -533,7 +550,7 @@ async getCalendarMetrics(workspaceId: string) {
       prevEnd,
     );
 
-    if (tier === PlanTier.BUSINESS) return { ...base, business };
+    if (tier === PlanTier.BUSINESS) return { ...responsePayload, business };
 
     const rocket = await this.getWorkspaceRocket(
       workspaceId,
@@ -542,7 +559,7 @@ async getCalendarMetrics(workspaceId: string) {
       end,
     );
 
-    return { ...base, business, rocket };
+    return { ...responsePayload, business, rocket };
   }
 
   private async getWorkspaceCreatorBase(
