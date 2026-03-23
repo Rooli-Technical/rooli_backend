@@ -1442,6 +1442,7 @@ enum SocialProfileType {
   LINKEDIN_PAGE
   LINKEDIN_PROFILE
   TWITTER_PROFILE
+  TIKTOK_PROFILE
 }
 
 enum UserType {
@@ -1557,6 +1558,7 @@ enum Platform {
   LINKEDIN
   FACEBOOK
   INSTAGRAM
+  TIKTOK
 }
 
 enum ScheduleJobStatus {
