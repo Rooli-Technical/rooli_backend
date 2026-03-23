@@ -31,6 +31,13 @@ export class PlatformRulesService {
   private readonly IG_HASHTAG_LIMIT = 30;
   private readonly IG_CAROUSEL_MAX = 10;
 
+  // -----------------------
+  // TikTok
+  // -----------------------
+  private readonly TIKTOK_CAPTION_LIMIT = 4000;
+  private readonly TIKTOK_MIN_DURATION_SEC = 3;
+  private readonly TIKTOK_MAX_DURATION_SEC = 600;
+
   /**
    * ✅ 2) Strict platform handling: no silent defaults
    * ✅ 3) Keep media typed and optional
@@ -63,6 +70,9 @@ export class PlatformRulesService {
           media,
           options?.igKind ?? 'FEED',
         );
+
+      case Platform.TIKTOK: 
+        return this.processTikTok(safeContent, media);
 
       default:
         // (Enum makes this unreachable, but keeps runtime safe)
@@ -505,6 +515,67 @@ private processFacebook(
         throw new BadRequestException(
           `LinkedIn image too large (${m.width}×${m.height}). ` +
             `Max allowed is ${this.LINKEDIN_MAX_IMAGE_DIMENSION}×${this.LINKEDIN_MAX_IMAGE_DIMENSION}px.`,
+        );
+      }
+    }
+
+    return { isValid: true, finalContent: content };
+  }
+
+  // ===========================================================================
+  // TikTok
+  // ===========================================================================
+  /**
+   * ✅ Enforces exactly 1 video.
+   * ✅ Enforces 4,000 character caption limit.
+   * ✅ Validates minimum and maximum duration limits.
+   */
+  private processTikTok(
+    content: string,
+    media: MediaItem[],
+  ): ValidationResult {
+    // 1. Caption Limit
+    if (content.length > this.TIKTOK_CAPTION_LIMIT) {
+      throw new BadRequestException(
+        `TikTok caption exceeds the ${this.TIKTOK_CAPTION_LIMIT} character limit.`,
+      );
+    }
+
+    // 2. Exact Media Count
+    if (media.length !== 1) {
+      throw new BadRequestException(
+        'TikTok posts must contain exactly 1 video.',
+      );
+    }
+
+    const video = media[0];
+
+    // 3. Media Type Check
+    if (!video.mimeType?.startsWith('video/')) {
+      throw new BadRequestException('TikTok only supports video files. Images and PDFs are not allowed.');
+    }
+
+    // 4. Video Metadata Check (Duration & Ratio)
+    if (video.duration != null) {
+      if (video.duration < this.TIKTOK_MIN_DURATION_SEC) {
+        throw new BadRequestException(
+          `TikTok videos must be at least ${this.TIKTOK_MIN_DURATION_SEC} seconds long.`,
+        );
+      }
+      if (video.duration > this.TIKTOK_MAX_DURATION_SEC) {
+        throw new BadRequestException(
+          `TikTok videos cannot exceed ${this.TIKTOK_MAX_DURATION_SEC / 60} minutes.`,
+        );
+      }
+    }
+
+    // TikTok allows horizontal videos, but vertical is strongly recommended. 
+    // We throw a soft warning or strict error here based on your preference. 
+    // I am throwing a strict error to match your FB Reels logic and enforce best practices.
+    if (video.width != null && video.height != null) {
+      if (video.width > video.height) {
+        throw new BadRequestException(
+          `TikTok videos should be vertical. Your video is ${video.width}x${video.height}. Please upload a vertical video (9:16 aspect ratio).`,
         );
       }
     }
