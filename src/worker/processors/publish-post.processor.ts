@@ -170,6 +170,7 @@ export class PublishPostProcessor extends WorkerHost {
       data: {
         platformPostId: first.platformPostId,
         publishedAt: new Date(),
+        platformUrl: first.url,
       },
     });
 
@@ -246,6 +247,7 @@ export class PublishPostProcessor extends WorkerHost {
         platformPostId: res?.platformPostId ?? dest.platformPostId ?? null,
         publishedAt: new Date(),
         errorMessage: null,
+        platformUrl: res?.url,
       },
     });
   }
@@ -273,6 +275,7 @@ export class PublishPostProcessor extends WorkerHost {
         platformPostId: res?.platformPostId ?? dest.platformPostId ?? null,
         publishedAt: new Date(),
         errorMessage: null,
+        platformUrl: res?.url,
       },
     });
   }
@@ -300,6 +303,7 @@ export class PublishPostProcessor extends WorkerHost {
         platformPostId: res?.platformPostId ?? dest.platformPostId ?? null,
         publishedAt: new Date(),
         errorMessage: null,
+        platformUrl: res?.url,
       },
     });
   }
@@ -329,6 +333,7 @@ export class PublishPostProcessor extends WorkerHost {
         platformPostId: res?.platformPostId ?? dest.platformPostId ?? null,
         publishedAt: new Date(),
         errorMessage: null,
+        platformUrl: res?.url,
       },
     });
   }
