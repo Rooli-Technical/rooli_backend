@@ -24,6 +24,7 @@ import { PaystackWebhookGuard } from './guards/paystack.guard';
 import { MetaWebhookGuard } from './guards/meta.guard';
 import { PrismaService } from '@/prisma/prisma.service';
 import { LinkedInWebhookGuard } from './guards/linkedin.guard';
+import { TikTokWebhookGuard } from './guards/tiktok.guard';
 
 @Controller('webhooks')
 @Public()
@@ -274,6 +275,63 @@ export class WebhookController {
     );
 
     // Always respond quickly to prevent LinkedIn from blocking your endpoint
+    return { status: 'success' };
+  }
+
+  // ==========================================
+  // 4. TIKTOK 
+  // ==========================================
+
+  /**
+   * TikTok webhook receiver.
+   * TikTok does NOT use a GET handshake. They only send POST requests
+   * secured by the X-Tiktok-Signature header.
+   */
+  @Post('tiktok')
+  @UseGuards(TikTokWebhookGuard) 
+  async handleTikTok(@Body() payload: any) {
+    // TikTok sends the event name in the "event" property
+    const eventType = payload?.event || 'unknown';
+    const openId = payload?.user_openid || 'system-event';
+
+    this.logger.log(`[TikTok] Webhook received: ${eventType} for User: ${openId}`);
+
+    // 1. Log to Database
+    const log = await this.prisma.webhookLog.create({
+      data: {
+        provider: 'TIKTOK',
+        eventType: eventType,
+        resourceId: openId, 
+        payload: payload,
+        status: 'PENDING',
+      },
+    });
+
+    // 2. Route based on the Event Type
+    if (eventType === 'post.publish.complete' || eventType === 'post.publish.failed') {
+      await this.webhooksQueue.add(
+        'tiktok-publish-status',
+        { logId: log.id, payload },
+        {
+          jobId: `tiktok-publish-${payload?.content?.publish_id || log.id}`,
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: true,
+        },
+      );
+    } else if (eventType === 'authorization.removed') {
+      await this.webhooksQueue.add(
+        'tiktok-deauth',
+        { logId: log.id, payload },
+        {
+          jobId: `tiktok-deauth-${openId}`,
+          attempts: 3,
+          removeOnComplete: true,
+        },
+      );
+    }
+
+    // 3. TikTok requires a 200 OK response within 3 seconds, or they will retry!
     return { status: 'success' };
   }
 }
