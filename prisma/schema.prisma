@@ -1019,6 +1019,7 @@ model PostAnalyticsSnapshot {
   linkedInStats  LinkedInPostStats?
   facebookStats  FacebookPostStats?
   instagramStats InstagramPostStats?
+  tiktokStats    TikTokPostStats?
 
   @@unique([postDestinationId, day])
   @@index([postDestinationId, day])
@@ -1082,6 +1083,19 @@ model InstagramPostStats {
   plays      Int @default(0) // For Reels
 }
 
+// ==========================================
+// 🎵 TIKTOK POST STATS
+// ==========================================
+model TikTokPostStats {
+  id         String                @id @default(cuid())
+  snapshotId String                @unique
+  snapshot   PostAnalyticsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  shares     Int     @default(0)
+  videoViews Int     @default(0)
+  title      String? @db.Text // Store the video title/caption if available
+}
+
 // Store daily aggregate data for the Account/Page itself
 // ==========================================
 // 📈 ACCOUNT ANALYTICS (OMNICHANNEL BASE)
@@ -1113,6 +1127,7 @@ model AccountAnalytics {
   linkedInStats  LinkedInAccountStats?
   facebookStats  FacebookAccountStats?
   instagramStats InstagramAccountStats?
+  tiktokStats    TikTokAccountStats?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1191,6 +1206,18 @@ model InstagramAccountStats {
 
   // IG demographics (age, gender, city, country)
   demographics Json?
+}
+
+// ==========================================
+// 🎵 TIKTOK ACCOUNT STATS
+// ==========================================
+model TikTokAccountStats {
+  id               String           @id @default(cuid())
+  accountStatsId   String           @unique
+  accountAnalytics AccountAnalytics @relation(fields: [accountStatsId], references: [id], onDelete: Cascade)
+
+  followingCount Int @default(0)
+  videoCount     Int @default(0)
 }
 
 // ========================
