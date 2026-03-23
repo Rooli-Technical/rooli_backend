@@ -11,6 +11,7 @@ import { AnalyticsNormalizerService } from './services/analytics-normalizer.serv
 import { AnalyticsRepository } from './services/analytics.repository';
 import { AnalyticsScheduler } from './scheduler/analytics.scheduler';
 import { BullModule } from '@nestjs/bullmq';
+import { TikTokAnalyticsProvider } from './providers/tiktok-anlytics.provider';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { BullModule } from '@nestjs/bullmq';
     TwitterAnalyticsProvider,
     LinkedInAnalyticsProvider,
     FacebookAnalyticsProvider,
+    TikTokAnalyticsProvider,
     InstagramAnalyticsProvider,
     AnalyticsService,
     AnalyticsNormalizerService,
