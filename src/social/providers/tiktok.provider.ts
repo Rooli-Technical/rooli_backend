@@ -17,59 +17,129 @@ export class TikTokProvider implements ISocialProvider {
     credentials: SocialCredentials,
     content: string, // This is the caption
     mediaFiles: {
-      url: string; // The URL of the video
+      url: string; // The URL of the video or image
       mimeType: string;
-      sizeBytes?: number; // Strongly recommended to pass file size from your frontend/DB
+      sizeBytes?: number; 
     }[],
     metadata?: { pageId: string; postType?: 'FEED' },
   ) {
     const accessToken = credentials.accessToken;
-
     this.logger.log(`Preparing TikTok Direct Post...`);
 
-    // 1. Validation
-    if (mediaFiles.length !== 1) {
-      throw new BadRequestException('TikTok requires exactly 1 video file.');
-    }
-
-    const video = mediaFiles[0];
-    if (!video.mimeType.startsWith('video/')) {
-      throw new BadRequestException('TikTok only supports video files.');
-    }
-
-
-    // 2. Download the video into memory (or stream it) so we can chunk it
-    const videoBuffer = await this.downloadVideo(video.url);
+    const videoFiles = mediaFiles.filter((m) => m.mimeType.startsWith('video/'));
+    const imageFiles = mediaFiles.filter((m) => m.mimeType.startsWith('image/'));
 
     try {
-      // STEP 1: Initialize the upload process
-      const { uploadId, uploadUrl } = await this.initializeUpload(
-        accessToken,
-        video.sizeBytes,
-      );
+      // ==========================================
+      // ROUTE A: PHOTO MODE (Carousel)
+      // ==========================================
+      if (imageFiles.length > 0) {
+        // Extract just the URLs for the TikTok API
+        const imageUrls = imageFiles.map((img) => img.url);
+        return await this.publishPhotos(accessToken, content, imageUrls);
+      }
 
-      // STEP 2: Upload the video chunks
-      await this.uploadChunks(uploadUrl, videoBuffer, video.sizeBytes);
+      // ==========================================
+      // ROUTE B: VIDEO POST (Chunked Upload)
+      // ==========================================
+      if (videoFiles.length > 0) {
+        const video = videoFiles[0];
 
-      // STEP 3: Publish the video to the feed
-      return await this.publishVideo(accessToken, uploadId, content);
-      
+        if (!video.sizeBytes) {
+          throw new InternalServerErrorException(
+            'Missing video size. TikTok requires the exact file size to initialize uploads.',
+          );
+        }
+
+        // 1. Download video to buffer for chunking
+        const videoBuffer = await this.downloadVideo(video.url);
+
+        // 2. Initialize upload & pass the caption!
+        const { uploadId, uploadUrl } = await this.initializeVideoUpload(
+          accessToken,
+          video.sizeBytes,
+          content,
+        );
+
+        // 3. Upload chunks
+        await this.uploadChunks(uploadUrl, videoBuffer, video.sizeBytes);
+
+        // 4. Return formatted result
+        return {
+          platformPostId: uploadId,
+          url: `https://www.tiktok.com/@tiktok`, // URL will be updated by your webhook later
+        };
+      }
+
     } catch (error: any) {
       this.handleError(error);
     }
   }
 
   // ==================================================
-  // STEP 1: INITIALIZE UPLOAD
+  // 📸 PHOTO UPLOAD (Pull from URL)
   // ==================================================
-  private async initializeUpload(accessToken: string, fileSizeBytes: number) {
-    this.logger.log(`Initializing TikTok upload (Size: ${fileSizeBytes})...`);
+  private async publishPhotos(accessToken: string, caption: string, imageUrls: string[]) {
+    this.logger.log(`Publishing TikTok Photo Carousel with ${imageUrls.length} images...`);
+    
+    // TikTok's newer content endpoint handles photo arrays directly
+    const url = `${this.API_URL}/post/publish/content/init/`;
+
+    const body = {
+      post_info: {
+        title: caption, // TikTok maps 'title' to the post caption
+        //privacy_level: 'PUBLIC_TO_EVERYONE',
+        privacy_level: 'SELF_ONLY',
+        disable_comment: false,
+        disable_duet: false,
+        disable_stitch: false,
+      },
+      source_info: {
+        source: 'PULL_FROM_URL',
+        photo_cover_index: 1, // 1-based index (1 means the first image is the cover)
+        photo_images: imageUrls,
+      },
+      media_type: 'PHOTO', // Explicitly tell TikTok this is a carousel
+    };
+
+    const response = await axios.post(url, body, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = response.data;
+    if (data.error?.code !== 'ok' && data.error?.code !== 0) {
+      throw new InternalServerErrorException(
+        `Photo Upload Failed: ${data.error?.message}`,
+      );
+    }
+
+    return {
+      platformPostId: data.data.publish_id,
+      url: `https://www.tiktok.com/@tiktok`,
+    };
+  }
+
+
+// ==================================================
+  // 🎬 VIDEO UPLOAD (Step 1: Init)
+  // ==================================================
+  private async initializeVideoUpload(accessToken: string, fileSizeBytes: number, caption: string) {
+    this.logger.log(`Initializing TikTok video upload (Size: ${fileSizeBytes})...`);
     
     const url = `${this.API_URL}/post/publish/video/init/`;
     
+    // 1. Pre-calculate chunk logic
+    const chunkSize = Math.min(fileSizeBytes, 10000000); // 10MB max per chunk
+    const totalChunkCount = Math.ceil(fileSizeBytes / chunkSize);
+
     const body = {
       post_info: {
-        privacy_level: 'PUBLIC_TO_EVERYONE', // Or MUTUAL_FOLLOW_FRIENDS, SELF_ONLY
+        title: caption || '', // 👈 Failsafe: ensures title is never 'undefined'
+        //privacy_level: 'PUBLIC_TO_EVERYONE', 
+        privacy_level: 'SELF_ONLY',
         disable_duet: false,
         disable_comment: false,
         disable_stitch: false,
@@ -77,7 +147,8 @@ export class TikTokProvider implements ISocialProvider {
       source_info: {
         source: 'FILE_UPLOAD',
         video_size: fileSizeBytes,
-        chunk_size: Math.min(fileSizeBytes, 10000000), // Max 10MB per chunk, we default to 10MB or the file size
+        chunk_size: chunkSize,
+        total_chunk_count: totalChunkCount, 
       },
     };
 
@@ -91,27 +162,21 @@ export class TikTokProvider implements ISocialProvider {
     const data = response.data;
     if (data.error?.code !== 'ok' && data.error?.code !== 0) {
       throw new InternalServerErrorException(
-        `Init Upload Failed: ${data.error?.message}`,
+        `Video Init Upload Failed: ${data.error?.message}`,
       );
     }
 
     return {
-      uploadId: data.data.publish_id, // We need this to publish later
-      uploadUrl: data.data.upload_url, // We PUT chunks to this URL
+      uploadId: data.data.publish_id, 
+      uploadUrl: data.data.upload_url, 
     };
   }
-
   // ==================================================
-  // STEP 2: UPLOAD CHUNKS
+  // 🎬 VIDEO UPLOAD (Step 2: Chunks)
   // ==================================================
   private async uploadChunks(uploadUrl: string, buffer: Buffer, totalSize: number) {
     this.logger.log(`Uploading video chunks to TikTok...`);
     
-    // TikTok expects a single PUT request with the file stream if the chunk size 
-    // configured in Step 1 is equal to or greater than the total file size.
-    // For simplicity in MVP, we set chunk_size to 10MB or totalSize.
-    // If the file is under 10MB, this acts as a single upload.
-
     const chunkSize = Math.min(totalSize, 10000000); 
     let start = 0;
     let end = chunkSize;
@@ -133,47 +198,23 @@ export class TikTokProvider implements ISocialProvider {
       end = Math.min(start + chunkSize, totalSize);
     }
     
-    this.logger.log('All chunks uploaded successfully.');
+    this.logger.log('All video chunks uploaded successfully.');
   }
-
-  // ==================================================
-  // STEP 3: PUBLISH POST
-  // ==================================================
-  private async publishVideo(accessToken: string, publishId: string, caption: string) {
-    this.logger.log(`Publishing video ${publishId} to TikTok feed...`);
-    
-    const url = `${this.API_URL}/post/publish/content/init/`;
-    // Note: TikTok API requires the caption to be passed in a specific format if it contains hashtags or mentions.
-    // For MVP, we pass it as a raw string.
-    
-    // TikTok actually uses a slightly different flow for Direct Post now.
-    // The init/ endpoint automatically publishes it once the video is fully processed on their end.
-    // We just return the publish_id. TikTok does not immediately return a URL.
-
-    return {
-      platformPostId: publishId,
-      url: `https://www.tiktok.com/@tiktok`, // TikTok API does not currently return the exact video URL at publish time
-    };
-  }
-
 
   // ==================================================
   // UNSUPPORTED ACTIONS
   // ==================================================
-  
   async editContent(accessToken: string, id: string, newContent: string) {
     throw new BadRequestException('TikTok API does not support editing captions.');
   }
 
   async deleteContent(accessToken: string, id: string) {
-    throw new BadRequestException('TikTok API does not support deleting videos.');
+    throw new BadRequestException('TikTok API does not support deleting posts.');
   }
 
   // ==================================================
   // HELPERS
   // ==================================================
-
-
   private async downloadVideo(url: string): Promise<Buffer> {
     const response = await axios.get(url, { responseType: 'arraybuffer' });
     return Buffer.from(response.data);
