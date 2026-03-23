@@ -82,24 +82,20 @@ async addProfilesToWorkspace(
       );
     }
 
-    // 5. Global ownership check (authoritative)
-    const existingGlobal =
-      await this.prisma.socialProfile.findUnique({
-        where: {
-          platform_platformId: {
-            platform: pageData.platform as Platform,
-            platformId: pageData.id,
-          },
-        },
-        select: { id: true, workspaceId: true },
-      });
+// 5. Global ownership check (The Bouncer)
+    // We only care if the page is currently ACTIVE in another workspace.
+    const activeGlobalProfile = await this.prisma.socialProfile.findFirst({
+      where: {
+        platform: pageData.platform as Platform,
+        platformId: pageData.id,
+        status: ConnectionStatus.CONNECTED, // Only look for active connections!
+      },
+      select: { workspaceId: true },
+    });
 
-    if (
-      existingGlobal &&
-      existingGlobal.workspaceId !== workspaceId
-    ) {
+    if (activeGlobalProfile && activeGlobalProfile.workspaceId !== workspaceId) {
       throw new ConflictException(
-        'This page is already connected to another workspace. ' +
+        'This page is already actively connected to another workspace. ' +
         'Only one workspace can own a page inbox at a time.',
       );
     }
@@ -109,10 +105,11 @@ async addProfilesToWorkspace(
     const profile =
       await this.prisma.socialProfile.upsert({
         where: {
-          platform_platformId: {
-            platform: pageData.platform as Platform,
-            platformId: pageData.id,
-          },
+         workspaceId_platform_platformId: { 
+          workspaceId: workspaceId,
+          platform: pageData.platform as Platform,
+          platformId: pageData.id,
+        },
         },
         update: {
           socialConnectionId: dto.connectionId,
@@ -125,6 +122,7 @@ async addProfilesToWorkspace(
           facebookPageId: pageData.facebookPageId || null,
           status: ConnectionStatus.CONNECTED,
           webhookRoutingUserId: pageData.user_id,
+          
         },
         create: {
           workspaceId,
