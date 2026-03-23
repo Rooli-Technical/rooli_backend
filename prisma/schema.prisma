@@ -319,7 +319,7 @@ model SocialProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([platform, platformId])
+  @@unique([workspaceId, platform, platformId])
   @@index([workspaceId])
 }
 

@@ -86,7 +86,8 @@ async addProfilesToWorkspace(
     const existingGlobal =
       await this.prisma.socialProfile.findUnique({
         where: {
-          platform_platformId: {
+          workspaceId_platform_platformId: {
+            workspaceId,
             platform: pageData.platform as Platform,
             platformId: pageData.id,
           },
@@ -109,7 +110,8 @@ async addProfilesToWorkspace(
     const profile =
       await this.prisma.socialProfile.upsert({
         where: {
-          platform_platformId: {
+          workspaceId_platform_platformId: {
+            workspaceId,
             platform: pageData.platform as Platform,
             platformId: pageData.id,
           },
