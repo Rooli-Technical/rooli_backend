@@ -579,6 +579,12 @@ private processFacebook(
     // ROUTE B: PHOTO MODE (Carousel)
     // ============================
     if (imageCount > 0) {
+      if (imageCount === 1) {
+      throw new BadRequestException(
+        'TikTok Photo Mode requires at least 2 images for a carousel. Please add another image or upload a video.',
+      );
+    }
+    
       if (imageCount > 35) {
         throw new BadRequestException('TikTok Photo Mode allows a maximum of 35 images.');
       }

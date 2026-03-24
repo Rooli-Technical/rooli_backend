@@ -41,6 +41,7 @@ import { PollingModule } from './polling/polling.module';
 import { SupportTicketModule } from './support-ticket/support-ticket.module';
 import Redis from 'ioredis';
 import { AdminModule } from './admin/admin.module';
+import { MediaProxyModule } from './media-proxy/media-proxy.module';
 
 @Module({
   imports: [
@@ -127,6 +128,8 @@ import { AdminModule } from './admin/admin.module';
     InboxModule,
     
     NotificationsModule,
+
+    MediaProxyModule,
 
     EventEmitterModule.forRoot({
       wildcard: false,

@@ -76,31 +76,43 @@ export class TikTokProvider implements ISocialProvider {
     }
   }
 
-  // ==================================================
-  // 📸 PHOTO UPLOAD (Pull from URL)
+
+
+ // ==================================================
+  // 📸 PHOTO UPLOAD (Pull from URL via Proxy)
   // ==================================================
   private async publishPhotos(accessToken: string, caption: string, imageUrls: string[]) {
-    this.logger.log(`Publishing TikTok Photo Carousel with ${imageUrls.length} images...`);
+    this.logger.log(`Publishing TikTok Photo with ${imageUrls.length} image(s)...`);
     
-    // TikTok's newer content endpoint handles photo arrays directly
     const url = `${this.API_URL}/post/publish/content/init/`;
+
+    // 🚨 THE BYPASS: Wrap the Cloudinary URLs in your verified Rooli domain
+    // (Make sure to change api.rooli.co to whatever your actual API URL is!)
+    const proxyBase = 'https://rooli.co/media/proxy?url=';
+    const verifiedUrls = imageUrls.map(imgUrl => `${proxyBase}${encodeURIComponent(imgUrl)}`);
+
+    const sourceInfo: any = {
+      source: 'PULL_FROM_URL',
+      photo_images: verifiedUrls, // 👈 Give TikTok the verified Proxy URLs!
+    };
+
+    if (imageUrls.length > 1) {
+      sourceInfo.photo_cover_index = 1; 
+    }
 
     const body = {
       post_info: {
-        title: caption, // TikTok maps 'title' to the post caption
-        //privacy_level: 'PUBLIC_TO_EVERYONE',
-        privacy_level: 'SELF_ONLY',
+        title: '', 
+        description: caption || '', 
+        privacy_level: 'SELF_ONLY', 
         disable_comment: false,
-        disable_duet: false,
-        disable_stitch: false,
       },
-      source_info: {
-        source: 'PULL_FROM_URL',
-        photo_cover_index: 1, // 1-based index (1 means the first image is the cover)
-        photo_images: imageUrls,
-      },
-      media_type: 'PHOTO', // Explicitly tell TikTok this is a carousel
+      source_info: sourceInfo, 
+      post_mode: 'DIRECT_POST',
+      media_type: 'PHOTO', 
     };
+
+    this.logger.debug(JSON.stringify(body, null, 2));
 
     const response = await axios.post(url, body, {
       headers: {
