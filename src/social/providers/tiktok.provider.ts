@@ -5,13 +5,16 @@ import {
   Logger,
 } from '@nestjs/common';
 import axios from 'axios';
-import { ISocialProvider, SocialCredentials } from '../interfaces/social-provider.interface';
-
+import {
+  ISocialProvider,
+  SocialCredentials,
+} from '../interfaces/social-provider.interface';
 
 @Injectable()
 export class TikTokProvider implements ISocialProvider {
   private readonly logger = new Logger(TikTokProvider.name);
   private readonly API_URL = 'https://open.tiktokapis.com/v2';
+  private readonly BASE_URL = 'https://rooli-backend.onrender.com/api/v1';
 
   async publish(
     credentials: SocialCredentials,
@@ -19,15 +22,19 @@ export class TikTokProvider implements ISocialProvider {
     mediaFiles: {
       url: string; // The URL of the video or image
       mimeType: string;
-      sizeBytes?: number; 
+      sizeBytes?: number;
     }[],
     metadata?: { pageId: string; postType?: 'FEED' },
   ) {
     const accessToken = credentials.accessToken;
     this.logger.log(`Preparing TikTok Direct Post...`);
 
-    const videoFiles = mediaFiles.filter((m) => m.mimeType.startsWith('video/'));
-    const imageFiles = mediaFiles.filter((m) => m.mimeType.startsWith('image/'));
+    const videoFiles = mediaFiles.filter((m) =>
+      m.mimeType.startsWith('video/'),
+    );
+    const imageFiles = mediaFiles.filter((m) =>
+      m.mimeType.startsWith('image/'),
+    );
 
     try {
       // ==========================================
@@ -70,79 +77,84 @@ export class TikTokProvider implements ISocialProvider {
           url: `https://www.tiktok.com/@tiktok`, // URL will be updated by your webhook later
         };
       }
-
     } catch (error: any) {
       this.handleError(error);
     }
   }
 
-
-
- // ==================================================
-  // 📸 PHOTO UPLOAD (Pull from URL via Proxy)
   // ==================================================
-  private async publishPhotos(accessToken: string, caption: string, imageUrls: string[]) {
-    this.logger.log(`Publishing TikTok Photo with ${imageUrls.length} image(s)...`);
-    
-    const url = `${this.API_URL}/post/publish/content/init/`;
+  // 📸 PHOTO UPLOAD (Binary FILE_UPLOAD Method)
+  // ==================================================
+private async publishPhotos(
+  accessToken: string,
+  caption: string,
+  imageUrls: string[],
+) {
+  this.logger.log(`Starting TikTok URL_PULL for ${imageUrls.length} image(s)...`);
 
-    // 🚨 THE BYPASS: Wrap the Cloudinary URLs in your verified Rooli domain
-    // (Make sure to change api.rooli.co to whatever your actual API URL is!)
-    const proxyBase = 'https://rooli.co/media/proxy?url=';
-    const verifiedUrls = imageUrls.map(imgUrl => `${proxyBase}${encodeURIComponent(imgUrl)}`);
+  // STEP 1: Convert to proxy URLs
+  const proxyUrls = this.buildProxyUrls(imageUrls);
 
-    const sourceInfo: any = {
-      source: 'PULL_FROM_URL',
-      photo_images: verifiedUrls, // 👈 Give TikTok the verified Proxy URLs!
-    };
+  const url = `${this.API_URL}/post/publish/content/init/`;
 
-    if (imageUrls.length > 1) {
-      sourceInfo.photo_cover_index = 1; 
-    }
+  const sourceInfo: any = {
+    source: 'PULL_FROM_URL',
+    photo_images: proxyUrls,
+  };
 
-    const body = {
-      post_info: {
-        title: '', 
-        description: caption || '', 
-        privacy_level: 'SELF_ONLY', 
-        disable_comment: false,
-      },
-      source_info: sourceInfo, 
-      post_mode: 'DIRECT_POST',
-      media_type: 'PHOTO', 
-    };
-
-    this.logger.debug(JSON.stringify(body, null, 2));
-
-    const response = await axios.post(url, body, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    const data = response.data;
-    if (data.error?.code !== 'ok' && data.error?.code !== 0) {
-      throw new InternalServerErrorException(
-        `Photo Upload Failed: ${data.error?.message}`,
-      );
-    }
-
-    return {
-      platformPostId: data.data.publish_id,
-      url: `https://www.tiktok.com/@tiktok`,
-    };
+  if (proxyUrls.length > 1) {
+    sourceInfo.photo_cover_index = 0;
   }
 
+  const initBody = {
+    post_info: {
+      title: '',
+      description: caption || '',
+      privacy_level: 'SELF_ONLY',
+      disable_comment: false,
+    },
+    source_info: sourceInfo,
+    post_mode: 'DIRECT_POST',
+    media_type: 'PHOTO',
+  };
 
-// ==================================================
+  const initResponse = await axios.post(url, initBody, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const initData = initResponse.data;
+
+  if (initData.error?.code !== 'ok' && initData.error?.code !== 0) {
+    throw new InternalServerErrorException(
+      `Photo Init Failed: ${initData.error?.message}`,
+    );
+  }
+
+  this.logger.log(`TikTok is now pulling images from your proxy...`);
+
+  return {
+    platformPostId: initData.data.publish_id,
+    url: `https://www.tiktok.com/@tiktok`,
+  };
+}
+
+  // ==================================================
   // 🎬 VIDEO UPLOAD (Step 1: Init)
   // ==================================================
-  private async initializeVideoUpload(accessToken: string, fileSizeBytes: number, caption: string) {
-    this.logger.log(`Initializing TikTok video upload (Size: ${fileSizeBytes})...`);
-    
+  private async initializeVideoUpload(
+    accessToken: string,
+    fileSizeBytes: number,
+    caption: string,
+  ) {
+    this.logger.log(
+      `Initializing TikTok video upload (Size: ${fileSizeBytes})...`,
+    );
+
     const url = `${this.API_URL}/post/publish/video/init/`;
-    
+
     // 1. Pre-calculate chunk logic
     const chunkSize = Math.min(fileSizeBytes, 10000000); // 10MB max per chunk
     const totalChunkCount = Math.ceil(fileSizeBytes / chunkSize);
@@ -150,7 +162,7 @@ export class TikTokProvider implements ISocialProvider {
     const body = {
       post_info: {
         title: caption || '', // 👈 Failsafe: ensures title is never 'undefined'
-        //privacy_level: 'PUBLIC_TO_EVERYONE', 
+        //privacy_level: 'PUBLIC_TO_EVERYONE',
         privacy_level: 'SELF_ONLY',
         disable_duet: false,
         disable_comment: false,
@@ -160,7 +172,7 @@ export class TikTokProvider implements ISocialProvider {
         source: 'FILE_UPLOAD',
         video_size: fileSizeBytes,
         chunk_size: chunkSize,
-        total_chunk_count: totalChunkCount, 
+        total_chunk_count: totalChunkCount,
       },
     };
 
@@ -179,23 +191,27 @@ export class TikTokProvider implements ISocialProvider {
     }
 
     return {
-      uploadId: data.data.publish_id, 
-      uploadUrl: data.data.upload_url, 
+      uploadId: data.data.publish_id,
+      uploadUrl: data.data.upload_url,
     };
   }
   // ==================================================
   // 🎬 VIDEO UPLOAD (Step 2: Chunks)
   // ==================================================
-  private async uploadChunks(uploadUrl: string, buffer: Buffer, totalSize: number) {
+  private async uploadChunks(
+    uploadUrl: string,
+    buffer: Buffer,
+    totalSize: number,
+  ) {
     this.logger.log(`Uploading video chunks to TikTok...`);
-    
-    const chunkSize = Math.min(totalSize, 10000000); 
+
+    const chunkSize = Math.min(totalSize, 10000000);
     let start = 0;
     let end = chunkSize;
 
     while (start < totalSize) {
       const chunk = buffer.subarray(start, end);
-      
+
       this.logger.debug(`Uploading bytes ${start}-${end - 1} of ${totalSize}`);
 
       await axios.put(uploadUrl, chunk, {
@@ -209,7 +225,7 @@ export class TikTokProvider implements ISocialProvider {
       start = end;
       end = Math.min(start + chunkSize, totalSize);
     }
-    
+
     this.logger.log('All video chunks uploaded successfully.');
   }
 
@@ -217,11 +233,15 @@ export class TikTokProvider implements ISocialProvider {
   // UNSUPPORTED ACTIONS
   // ==================================================
   async editContent(accessToken: string, id: string, newContent: string) {
-    throw new BadRequestException('TikTok API does not support editing captions.');
+    throw new BadRequestException(
+      'TikTok API does not support editing captions.',
+    );
   }
 
   async deleteContent(accessToken: string, id: string) {
-    throw new BadRequestException('TikTok API does not support deleting posts.');
+    throw new BadRequestException(
+      'TikTok API does not support deleting posts.',
+    );
   }
 
   // ==================================================
@@ -231,6 +251,12 @@ export class TikTokProvider implements ISocialProvider {
     const response = await axios.get(url, { responseType: 'arraybuffer' });
     return Buffer.from(response.data);
   }
+
+  private buildProxyUrls(imageUrls: string[]) {
+  return imageUrls.map((url) =>
+    `${this.BASE_URL}/tiktok/media?url=${encodeURIComponent(url)}`,
+  );
+}
 
   private handleError(error: any) {
     const tqError = error.response?.data?.error;
