@@ -55,11 +55,11 @@ export class SocialProfileService {
       (id) => !existingIds.has(id),
     ).length;
 
-    if (newProfilesCount > remaining) {
-      throw new ForbiddenException(
-        `You have ${remaining} slots left, but tried to add ${newProfilesCount} new profiles.`,
-      );
-    }
+    // if (newProfilesCount > remaining) {
+    //   throw new ForbiddenException(
+    //     `You have ${remaining} slots left, but tried to add ${newProfilesCount} new profiles.`,
+    //   );
+    // }
 
     const added: any[] = [];
 

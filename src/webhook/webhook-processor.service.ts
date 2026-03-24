@@ -16,16 +16,17 @@ export class WebhooksProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<{ logId: string; data: any }>) {
-    const { logId, data } = job.data;
+  async process(job: Job<{ logId: string; data: any; payload: any }>) {
+    console.dir(job.data, {depth: null})
+    const { logId, data, payload } = job.data;
 
     try {
       if (job.name === 'paystack-event') {
         await this.processPaystack(logId, data);
       }else if (job.name === 'tiktok-publish-status') {
-        await this.processTikTokPublish(logId, data.payload);
+        await this.processTikTokPublish(logId, payload);
       } else if (job.name === 'tiktok-deauth') {
-        await this.processTikTokDeauth(logId, data.payload);
+        await this.processTikTokDeauth(logId, payload);
       }
     } catch (error) {
       this.logger.error(

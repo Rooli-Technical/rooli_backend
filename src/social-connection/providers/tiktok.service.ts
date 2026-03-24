@@ -60,6 +60,7 @@ export class TikTokService {
         }),
       );
 
+
       // TikTok v2 wraps successful data or errors differently
       if (tokenData.error && tokenData.error !== '0') {
         throw new Error(tokenData.error_description || 'Token exchange failed');
@@ -77,7 +78,7 @@ export class TikTokService {
         }),
       );
 
-      if (userData.error?.code !== 0) {
+     if (userData.error?.code !== 'ok' && userData.error?.code !== 0) {
         throw new Error(userData.error?.message || 'Failed to fetch user info');
       }
 
@@ -86,6 +87,8 @@ export class TikTokService {
       return {
         providerUserId: user.open_id,
         providerUsername: user.username,
+        name: user.display_name,
+        picture: user.avatar_url,
         accessToken: accessToken,
         refreshToken: refreshToken,
         expiresAt,
@@ -109,8 +112,9 @@ export class TikTokService {
         }),
       );
 
-      if (data.error?.code !== 0) {
-        throw new Error(data.error?.message);
+      // 1. Same exact fix we used in exchangeCode!
+      if (data.error?.code !== 'ok' && data.error?.code !== 0) {
+        throw new Error(data.error?.message || 'TikTok API returned an unknown error');
       }
 
       const user = data.data.user;
