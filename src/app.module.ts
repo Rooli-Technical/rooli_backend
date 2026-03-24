@@ -129,8 +129,6 @@ import { MediaProxyModule } from './media-proxy/media-proxy.module';
     
     NotificationsModule,
 
-    MediaProxyModule,
-
     EventEmitterModule.forRoot({
       wildcard: false,
       delimiter: '.',
@@ -140,7 +138,8 @@ import { MediaProxyModule } from './media-proxy/media-proxy.module';
     PollingModule,
 
     SupportTicketModule,
-    AdminModule
+    AdminModule,
+    MediaProxyModule,
   ],
   controllers: [AppController],
   providers: [
