@@ -14,7 +14,7 @@ import {
 export class TikTokProvider implements ISocialProvider {
   private readonly logger = new Logger(TikTokProvider.name);
   private readonly API_URL = 'https://open.tiktokapis.com/v2';
-  private readonly BASE_URL = 'https://rooli-backend.onrender.com/api/v1';
+  private readonly BASE_URL = 'https://api.rooli.co/api/v1';
 
   async publish(
     credentials: SocialCredentials,

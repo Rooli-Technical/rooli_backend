@@ -1,8 +1,11 @@
 import { Controller, Get, Query, Res, BadRequestException, Logger } from '@nestjs/common';
 import { Response } from 'express';
 import axios from 'axios';
+import { Public } from '@/common/decorators/public.decorator';
+
 
 @Controller()
+@Public()
 export class MediaProxyController {
   private readonly logger = new Logger(MediaProxyController.name);
 
