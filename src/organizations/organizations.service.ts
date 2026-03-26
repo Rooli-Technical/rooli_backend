@@ -175,15 +175,14 @@ export class OrganizationsService {
       });
 
       // Deactivate all members
-     await tx.organization.update({
+     await tx.organizationMember.update({
         where: { id: orgId },
         data: { 
-          isActive: false, 
-          status: 'SUSPENDED' 
+          isActive: false,
         },
       });
       // Cancel any active subscriptions
-      //await this.cancelSubscription(orgId);
+      await this.billingService.cancelSubscription(orgId);
 
       return { success: true, message: 'Organization deleted successfully' };
     });
