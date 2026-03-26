@@ -10,6 +10,7 @@ import { LinkedInService } from '@/social-connection/providers/linkedin.service'
 import { TwitterService } from '@/social-connection/providers/twitter.service';
 import { InstagramService } from '@/social-connection/providers/instagram.service';
 import { EventsModule } from '@/events/events.module';
+import { TikTokService } from '@/social-connection/providers/tiktok.service';
 
 @Module({
   imports: [SocialConnectionModule, HttpModule, EventsModule],
@@ -22,6 +23,7 @@ import { EventsModule } from '@/events/events.module';
     LinkedInService,
     TwitterService,
     InstagramService,
+    TikTokService
   ],
 })
 export class SocialProfileModule {}

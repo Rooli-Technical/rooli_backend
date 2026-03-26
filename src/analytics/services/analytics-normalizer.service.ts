@@ -91,6 +91,7 @@ export class AnalyticsNormalizerService {
       case 'LINKEDIN': return 'linkedInStats';
       case 'FACEBOOK': return 'facebookStats';
       case 'INSTAGRAM': return 'instagramStats';
+      case 'TIKTOK': return 'tiktokStats';
       default: throw new Error(`Unsupported platform: ${platform}`);
     }
   }

@@ -945,6 +945,7 @@ async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?:
                 linkedInStats: true,
                 facebookStats: true,
                 instagramStats: true,
+                tiktokStats: true,
               }
             }
           }
@@ -973,6 +974,9 @@ async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?:
             break;
           case 'INSTAGRAM':
             resolvedShares = latestStats.instagramStats?.shares ?? 0;
+            break;
+          case 'TIKTOK':
+            resolvedShares = latestStats.tiktokStats?.shares ?? 0;
             break;
         }
       }

@@ -22,6 +22,7 @@ import { startOfDay } from 'date-fns/startOfDay';
 import { subDays } from 'date-fns/subDays';
 import { AnalyticsNormalizerService } from './analytics-normalizer.service';
 import { DateTime } from 'luxon';
+import { TikTokAnalyticsProvider } from '../providers/tiktok-anlytics.provider';
 
 @Injectable()
 export class AnalyticsService {
@@ -33,6 +34,7 @@ export class AnalyticsService {
     private readonly twitterProvider: TwitterAnalyticsProvider,
     private readonly facebookProvider: FacebookAnalyticsProvider,
     private readonly instagramProvider: InstagramAnalyticsProvider,
+    private readonly tiktokProvider: TikTokAnalyticsProvider,
     private readonly prisma: PrismaService,
     private readonly encryptionService: EncryptionService,
     private readonly repo: AnalyticsRepository,
@@ -44,6 +46,7 @@ export class AnalyticsService {
       ['TWITTER', twitterProvider],
       ['FACEBOOK', facebookProvider],
       ['INSTAGRAM', instagramProvider],
+      ['TIKTOK', tiktokProvider],
     ]);
   }
 

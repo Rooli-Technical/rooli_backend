@@ -48,13 +48,15 @@ export class PostVerificationProcessor extends WorkerHost {
         // 🚨 Create the formatted version that formatResult() saved
         const formattedMediaId = `${pageId}_${mediaId}`;
 
+        const finalUrl = `https://facebook.com/${pageId}/posts/${response.data.post_id}`;
+
         
         // 🚨 Update the where clause to look for BOTH variations
         const updateResult = await this.prisma.postDestination.updateMany({
           where: { 
             platformPostId: { in: [mediaId, formattedMediaId] } 
           },
-          data: { platformPostId: realPostId },
+          data: { platformPostId: realPostId, platformUrl: finalUrl },
         });
 
         // Add a check so you actually know if it updated the DB!
