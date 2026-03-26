@@ -15,6 +15,7 @@ import { AuditAction, AuditResourceType } from '@generated/enums';
 export const AUDIT_CONTEXT_KEY = 'audit_context';
 
 
+
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
   private readonly logger = new Logger(AuditInterceptor.name);
@@ -38,27 +39,34 @@ export class AuditInterceptor implements NestInterceptor {
 
     if (!user || !orgId) return next.handle();
 
-    const decoration = this.reflector.get(AUDIT_CONTEXT_KEY, context.getHandler());
+    // 🚨 FIX 1: Extract Workspace ID (Checks Headers, Params, then Body)
+    const workspaceId = 
+      req.headers['x-workspace-id'] || 
+      req.params?.workspaceId || 
+      req.body?.workspaceId || 
+      null;
 
+    const decoration = this.reflector.get(AUDIT_CONTEXT_KEY, context.getHandler());
     const action = decoration?.action ?? this.mapMethodToAction(method);
     const resourceType = decoration?.resource ?? this.guessResourceFromUrl(req.originalUrl || req.url);
 
     return next.handle().pipe(
       tap((data) => {
-        // only log successful responses
-        if (res.statusCode < 200 || res.statusCode >= 300) return;
+        // NestJS 'tap' only fires on success, but this is a good safety check
+        if (res.statusCode >= 400) return;
 
-        const resourceId = (data as any)?.id ?? (req as any).params?.id ?? undefined;
+        const resourceId = (data as any)?.id ?? req.params?.id ?? undefined;
 
         void this.auditService.log({
           organizationId: orgId,
-          actorUserId: (user as any).userId ?? (user as any).id,
+          workspaceId: workspaceId as string, 
+          actorUserId: user?.userId ?? user?.id,
           actorMemberId: (req as any).orgMember?.id,
           action,
           resourceType,
           resourceId,
           details: {
-            body: req.body,
+            body: this.sanitizeBody(req.body), 
             query: req.query,
             params: req.params,
           },
@@ -67,6 +75,23 @@ export class AuditInterceptor implements NestInterceptor {
         });
       }),
     );
+  }
+
+  // 🛡️ THE SANITIZER: Keeps passwords and tokens out of your audit logs
+  private sanitizeBody(body: any): any {
+    if (!body || typeof body !== 'object') return body;
+    
+    const sanitized = { ...body };
+    const sensitiveKeys = ['password', 'accessToken', 'refreshToken', 'token', 'secret', 'otp'];
+    
+    for (const key of Object.keys(sanitized)) {
+      if (sensitiveKeys.includes(key)) {
+        sanitized[key] = '***REDACTED***';
+      } else if (typeof sanitized[key] === 'object') {
+        sanitized[key] = this.sanitizeBody(sanitized[key]); 
+      }
+    }
+    return sanitized;
   }
 
   private mapMethodToAction(method: string): AuditAction {
@@ -88,8 +113,9 @@ export class AuditInterceptor implements NestInterceptor {
     if (path.includes('/billing')) return AuditResourceType.BILLING;
     if (path.includes('/invitations')) return AuditResourceType.INVITATION;
     if (path.includes('/roles')) return AuditResourceType.ROLE;
+    if (path.includes('/approvals')) return AuditResourceType.APPROVAL; 
+    if (path.includes('/comments')) return AuditResourceType.COMMENT;   
 
     return AuditResourceType.ORGANIZATION;
   }
-
 }
