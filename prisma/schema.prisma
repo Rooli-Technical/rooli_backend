@@ -172,6 +172,8 @@ model OrganizationMember {
 
   lastActiveAt DateTime?
 
+  isActive Boolean @default(true)
+
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation("UserOrganizationMemberships", fields: [userId], references: [id], onDelete: Cascade)
   role         Role         @relation(fields: [roleId], references: [id])
