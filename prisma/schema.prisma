@@ -152,6 +152,8 @@ model Workspace {
   ticketCounter Int      @default(0)
   tickets       Ticket[]
 
+  auditLogs AuditLog[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -204,6 +206,11 @@ model WorkspaceMember {
   comments Comment[]
   messages InboxMessage[]
 
+  profileAccesses ProfileAccess[]
+
+  internalComments InternalPostComment[]
+
+  assignedPosts Post[] @relation("PostAssignee")
 
   submittedTickets Ticket[] @relation("TicketRequester")
 
@@ -311,10 +318,12 @@ model SocialProfile {
 
   isActive Boolean @default(true)
 
-  webhookRoutingUserId   String?
+  webhookRoutingUserId String?
 
   inboxConversations InboxConversation[]
   comments           Comment[]
+
+  profileAccesses ProfileAccess[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -387,6 +396,15 @@ model Post {
 
   isAiGenerated Boolean @default(false)
   aiPrompt      String? @db.Text
+
+  // Who is currently responsible for this post? (e.g., The manager reviewing it)
+  assigneeId String?
+  assignee   WorkspaceMember? @relation("PostAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  // Kanban Board Priority Flag
+  isUrgent Boolean @default(false)
+
+  internalComments InternalPostComment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1279,6 +1297,57 @@ model Permission {
   @@index([scope])
 }
 
+// ==========================================
+// 🛡️ GRANULAR ACCESS CONTROL
+// ==========================================
+model ProfileAccess {
+  id                String @id @default(cuid())
+  workspaceMemberId String
+  socialProfileId   String
+
+  // Relations
+  workspaceMember WorkspaceMember @relation(fields: [workspaceMemberId], references: [id], onDelete: Cascade)
+  socialProfile   SocialProfile   @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  // A member can only have one access record per profile
+  @@unique([workspaceMemberId, socialProfileId])
+  @@index([workspaceMemberId])
+  @@index([socialProfileId])
+}
+
+// ==========================================
+// 💬 INTERNAL TEAM COLLABORATION
+// ==========================================
+model InternalPostComment {
+  id     String @id @default(cuid())
+  postId String
+
+  // Tie it to the WorkspaceMember, not just the User, for better org isolation
+  authorMemberId String
+
+  content String @db.Text
+
+  // 🔒 THE CLIENT TOGGLE
+  // If true, users with the "CLIENT" role cannot see this message.
+  isInternalNote Boolean @default(false)
+
+  // Store tagged users so you can trigger email/push notifications
+  // e.g., ["cuid_of_john", "cuid_of_sarah"]
+  mentions Json?
+
+  // Relations
+  post   Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author WorkspaceMember @relation(fields: [authorMemberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId, createdAt])
+  @@index([authorMemberId])
+}
+
 /// Optional: if you REALLY need exceptions later, do it explicitly (not JSON).
 /// Keep this model commented until you actually need it.
 // model MemberPermissionGrant {
@@ -1303,24 +1372,30 @@ model AuditLog {
   id             String @id @default(cuid())
   organizationId String
 
+// Who did it?
   actorUserId   String?
-  actorMemberId String? // better than userId-only for org context
+  actorMemberId String? 
+  actorUser    User?               @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorMember  OrganizationMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
 
-  action       AuditAction
-  resourceType AuditResourceType
-  resourceId   String?
-  details      Json?
+  // What did they do?
+  action       AuditAction       // e.g., "APPROVED_POST", "INVITED_USER", "DELETED_PROFILE"
+  resourceType AuditResourceType // e.g., "POST", "WORKSPACE_MEMBER", "SOCIAL_PROFILE"
+  resourceId   String?           // The ID of the post or user they affected
+  details      Json?             // Extra data (e.g., { "previousStatus": "DRAFT", "newStatus": "SCHEDULED" })
+
+  workspaceId    String?
+  workspace      Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
 
   ipAddress String?
   userAgent String?
 
   organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  actorUser    User?               @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
-  actorMember  OrganizationMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
-
   createdAt DateTime @default(now())
 
-  @@index([organizationId, createdAt])
+ @@index([organizationId, createdAt])
+  @@index([workspaceId, createdAt])
   @@index([action, resourceType])
 }
 
@@ -1776,6 +1851,9 @@ enum AuditResourceType {
   BILLING
   SOCIAL_ACCOUNT
   SETTINGS
+  APPROVAL
+  COMMENT
+  PROFILE_ACCESS
 }
 
 enum ApprovalStatus {
