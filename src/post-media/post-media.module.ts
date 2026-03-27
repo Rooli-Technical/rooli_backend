@@ -5,7 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CloudinaryProvider } from './cloudinary.provider';
 
 @Module({
-  imports: [ConfigModule], 
+  imports: [ConfigModule],
   controllers: [PostMediaController],
   providers: [PostMediaService, CloudinaryProvider],
   exports: [PostMediaService],

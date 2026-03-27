@@ -321,7 +321,7 @@ export class PlatformRulesService {
   // Facebook
   // ===========================================================================
 
-private processFacebook(
+  private processFacebook(
     content: string,
     media: MediaItem[],
     FbKind: 'POST' | 'STORY' | 'REEL',
@@ -330,7 +330,9 @@ private processFacebook(
 
     // 1. Prevent completely empty posts (No text AND no media)
     if (media.length === 0 && safeContent.length === 0) {
-      throw new BadRequestException('Facebook post must contain either text or media.');
+      throw new BadRequestException(
+        'Facebook post must contain either text or media.',
+      );
     }
 
     // 2. If it is a Text-Only post, it is perfectly valid!
@@ -342,9 +344,11 @@ private processFacebook(
     if (FbKind === 'POST' && media.length > 10) {
       throw new BadRequestException('Facebook Feed allows max 10 media items.');
     }
-    
+
     if ((FbKind === 'STORY' || FbKind === 'REEL') && media.length > 1) {
-      throw new BadRequestException(`Facebook ${FbKind === 'STORY' ? 'Stories' : 'Reels'} only support exactly 1 media item.`);
+      throw new BadRequestException(
+        `Facebook ${FbKind === 'STORY' ? 'Stories' : 'Reels'} only support exactly 1 media item.`,
+      );
     }
 
     // 4. Validate each media item
@@ -357,7 +361,9 @@ private processFacebook(
       const isVideo = m.mimeType.startsWith('video/');
 
       if (!isImage && !isVideo) {
-        throw new BadRequestException('Facebook media must be image/* or video/*.');
+        throw new BadRequestException(
+          'Facebook media must be image/* or video/*.',
+        );
       }
 
       if (m.size == null || Number.isNaN(m.size)) {
@@ -377,16 +383,24 @@ private processFacebook(
       if (FbKind === 'STORY') {
         if (isImage) {
           const allowedImageMimes = new Set([
-            'image/jpeg', 'image/jpg', 'image/bmp', 
-            'image/png', 'image/gif', 'image/tiff'
+            'image/jpeg',
+            'image/jpg',
+            'image/bmp',
+            'image/png',
+            'image/gif',
+            'image/tiff',
           ]);
 
           if (!allowedImageMimes.has(m.mimeType)) {
-            throw new BadRequestException('Facebook Story images must be jpeg/jpg, bmp, png, gif, or tiff.');
+            throw new BadRequestException(
+              'Facebook Story images must be jpeg/jpg, bmp, png, gif, or tiff.',
+            );
           }
 
           if (m.size > 10 * 1024 * 1024) {
-            throw new BadRequestException('Facebook Story image must not exceed 10MB.');
+            throw new BadRequestException(
+              'Facebook Story image must not exceed 10MB.',
+            );
           }
           continue;
         }
@@ -396,14 +410,18 @@ private processFacebook(
           throw new BadRequestException('Facebook Story video must be mp4.');
         }
         if (m.duration == null || m.width == null || m.height == null) {
-          throw new BadRequestException('Missing video metadata (duration, width, or height).');
+          throw new BadRequestException(
+            'Missing video metadata (duration, width, or height).',
+          );
         }
         if (m.duration < 3 || m.duration > 90) {
-          throw new BadRequestException('Facebook Story video must be between 3 and 90 seconds.');
+          throw new BadRequestException(
+            'Facebook Story video must be between 3 and 90 seconds.',
+          );
         }
         if (m.width < 540 || m.height < 960) {
           throw new BadRequestException(
-            `Stories must be vertical. Your video is ${m.width}x${m.height}. Please upload a video with a 9:16 aspect ratio (like 1080x1920).`
+            `Stories must be vertical. Your video is ${m.width}x${m.height}. Please upload a video with a 9:16 aspect ratio (like 1080x1920).`,
           );
         }
         continue;
@@ -420,16 +438,20 @@ private processFacebook(
           throw new BadRequestException('Facebook Reel video must be mp4.');
         }
         if (m.duration == null || m.width == null || m.height == null) {
-          throw new BadRequestException('Missing video metadata (duration, width, or height).');
+          throw new BadRequestException(
+            'Missing video metadata (duration, width, or height).',
+          );
         }
         if (m.duration < 3 || m.duration > 90) {
-          throw new BadRequestException('Facebook Reel must be 3 to 90 seconds.');
+          throw new BadRequestException(
+            'Facebook Reel must be 3 to 90 seconds.',
+          );
         }
         // It's usually a good idea to enforce vertical ratios for Reels here too!
         if (m.width > m.height) {
-            throw new BadRequestException(
-                `Reels must be vertical. Your video is ${m.width}x${m.height}. Please upload a vertical video.`
-            );
+          throw new BadRequestException(
+            `Reels must be vertical. Your video is ${m.width}x${m.height}. Please upload a vertical video.`,
+          );
         }
         continue;
       }

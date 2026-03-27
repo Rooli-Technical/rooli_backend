@@ -1,10 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsDateString, IsInt, IsOptional, Max, Min } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsDateString, IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class AdminUserListItemDto {
-
-
   @ApiProperty({ example: 'crtx', nullable: true })
   id: string | null;
 
@@ -26,13 +24,24 @@ export class AdminUserListItemDto {
   @ApiProperty({ example: true })
   isEmailVerified: boolean;
 
-  @ApiProperty({ example: null, nullable: true, description: 'Non-null = suspended' })
+  @ApiProperty({
+    example: null,
+    nullable: true,
+    description: 'Non-null = suspended',
+  })
   lockedUntil: string | null;
 
-  @ApiProperty({ example: null, nullable: true, description: 'Non-null = banned' })
+  @ApiProperty({
+    example: null,
+    nullable: true,
+    description: 'Non-null = banned',
+  })
   deletedAt: string | null;
 
-  @ApiProperty({ example: 4, description: 'Total workspaces across all orgs this user belongs to' })
+  @ApiProperty({
+    example: 4,
+    description: 'Total workspaces across all orgs this user belongs to',
+  })
   workspaceCount: number;
 }
 
@@ -80,21 +89,30 @@ export class ReactivateResponseDto {
 export class SuspendUserDto {
   @ApiPropertyOptional({
     example: '2026-12-31T23:59:59.999Z',
-    description: 'Optional — omit for indefinite suspension (defaults to 2099).',
+    description:
+      'Optional — omit for indefinite suspension (defaults to 2099).',
   })
   @IsOptional()
   @IsDateString()
   suspendUntil?: string;
 }
 export class PaginationDto {
-  @ApiPropertyOptional({ example: 1, description: 'Page number. Defaults to 1.', default: 1 })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Page number. Defaults to 1.',
+    default: 1,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number = 1;
- 
-  @ApiPropertyOptional({ example: 20, description: 'Items per page. Defaults to 20. Max 100.', default: 20 })
+
+  @ApiPropertyOptional({
+    example: 20,
+    description: 'Items per page. Defaults to 20. Max 100.',
+    default: 20,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

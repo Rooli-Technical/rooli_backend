@@ -15,7 +15,7 @@ export class SupportTicketService {
   async createTicket(
     workspaceId: string,
     requesterId: string,
-    data:CreateTicketDto,
+    data: CreateTicketDto,
   ) {
     const ticket = await this.prisma.$transaction(async (tx) => {
       const workspace = await tx.workspace.update({
@@ -41,27 +41,29 @@ export class SupportTicketService {
         },
         include: {
           requester: {
-        select: {
-          id: true,
-          member: {
             select: {
-              user: {
+              id: true,
+              member: {
                 select: {
-                  firstName: true,
-                  lastName: true,
-                  email: true,
+                  user: {
+                    select: {
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                    },
+                  },
                 },
               },
             },
           },
-        },
-      },
           mediaFiles: true,
         },
       });
     });
 
-    const requesterName = ticket.requester ? `${ticket.requester.member.user.firstName} ${ticket.requester.member.user.lastName}`.trim() : 'Unknown';
+    const requesterName = ticket.requester
+      ? `${ticket.requester.member.user.firstName} ${ticket.requester.member.user.lastName}`.trim()
+      : 'Unknown';
 
     this.domainEvents.emit('ticket.created', {
       workspaceId,
@@ -95,22 +97,24 @@ export class SupportTicketService {
         orderBy: { updatedAt: 'desc' },
         include: {
           requester: {
-        select: {
-          id: true,
-          member: {
             select: {
-              user: {
+              id: true,
+              member: {
                 select: {
-                  firstName: true,
-                  lastName: true,
-                  email: true,
+                  user: {
+                    select: {
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                    },
+                  },
                 },
               },
             },
           },
-        },
-      },
-          assignee: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+          assignee: {
+            select: { id: true, firstName: true, lastName: true, avatar: true },
+          },
         },
       }),
       this.prisma.ticket.count({ where }),
@@ -132,28 +136,37 @@ export class SupportTicketService {
       where: { id: ticketId, workspaceId },
       include: {
         requester: {
-        select: {
-          id: true,
-          member: {
-            select: {
-              user: {
-                select: {
-                  firstName: true,
-                  lastName: true,
-                  email: true,
+          select: {
+            id: true,
+            member: {
+              select: {
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
                 },
               },
             },
           },
         },
-      },
-        assignee: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+        assignee: {
+          select: { id: true, firstName: true, lastName: true, avatar: true },
+        },
         mediaFiles: true,
         comments: {
           where: { isInternal: false },
           orderBy: { createdAt: 'asc' },
           include: {
-            author: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+            author: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
             mediaFiles: true,
           },
         },
@@ -183,12 +196,16 @@ export class SupportTicketService {
           content: data.content,
           isFromSupport: data.isFromSupport,
           isInternal: false, // Hardcoded false for users
-          mediaFiles: data.mediaFileIds?.length ? {
-            connect: data.mediaFileIds.map(id => ({ id }))
-          } : undefined,
+          mediaFiles: data.mediaFileIds?.length
+            ? {
+                connect: data.mediaFileIds.map((id) => ({ id })),
+              }
+            : undefined,
         },
         include: {
-          author: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+          author: {
+            select: { id: true, firstName: true, lastName: true, avatar: true },
+          },
           mediaFiles: true,
         },
       });
@@ -227,7 +244,7 @@ export class SupportTicketService {
       },
     });
 
-   this.domainEvents.emit('ticket.updated', {
+    this.domainEvents.emit('ticket.updated', {
       workspaceId,
       ticketId: ticket.id,
       status: ticket.status,

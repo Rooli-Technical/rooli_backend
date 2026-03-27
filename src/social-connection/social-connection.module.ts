@@ -11,7 +11,14 @@ import { InstagramService } from './providers/instagram.service';
 @Module({
   imports: [HttpModule],
   controllers: [SocialConnectionController],
-  providers: [SocialConnectionService, EncryptionService, FacebookService, LinkedInService, TwitterService, InstagramService],
-  exports:[SocialConnectionService]
+  providers: [
+    SocialConnectionService,
+    EncryptionService,
+    FacebookService,
+    LinkedInService,
+    TwitterService,
+    InstagramService,
+  ],
+  exports: [SocialConnectionService],
 })
 export class SocialConnectionModule {}

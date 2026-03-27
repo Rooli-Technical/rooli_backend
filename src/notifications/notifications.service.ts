@@ -68,20 +68,20 @@ export class NotificationsService {
     // Emit lightweight events per member (don’t fetch all rows; not worth it).
     // Client can refetch list/unread count.
     for (const record of notifications) {
-    this.events.emit('notification.created' as any, {
-      workspaceId: record.workspaceId,
-      memberId: record.memberId,
-      notification: {
-        id: record.id, 
-        type: record.type,
-        title: record.title,
-        body: record.body,
-        link: record.link,
-        data: record.data,
-        createdAt: record.createdAt,
-      },
-    });
-  }
+      this.events.emit('notification.created' as any, {
+        workspaceId: record.workspaceId,
+        memberId: record.memberId,
+        notification: {
+          id: record.id,
+          type: record.type,
+          title: record.title,
+          body: record.body,
+          link: record.link,
+          data: record.data,
+          createdAt: record.createdAt,
+        },
+      });
+    }
 
     return { ok: true, createdAt: now };
   }

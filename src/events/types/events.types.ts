@@ -17,8 +17,7 @@ export type DomainEventName =
   | 'notification.created'
   | 'notification.read'
   | 'notification.read_all'
-  | 'system.social_profile.connected'
-  ;
+  | 'system.social_profile.connected';
 
 export type InboxMessageCreatedEvent = {
   workspaceId: string;
@@ -190,7 +189,7 @@ export type DomainEventPayloadMap = {
     isFromSupport: boolean;
     isInternal: boolean;
     createdAt: Date;
-    author: { id: string; name: string; };
+    author: { id: string; name: string };
     mediaFiles: any[];
   };
 

@@ -27,7 +27,11 @@ export class NotificationsEventsSubscriber {
     notification: any;
   }) {
     // Emit to member-specific room
-    this.emitterService.emitToMember(evt.memberId, 'notification.created', evt.notification);
+    this.emitterService.emitToMember(
+      evt.memberId,
+      'notification.created',
+      evt.notification,
+    );
 
     // Optional: also update workspace-wide counters, etc. (usually not needed)
     // this.gateway.emitToWorkspace(evt.workspaceId, 'notification.created', evt.notification);

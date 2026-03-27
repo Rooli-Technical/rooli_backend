@@ -23,7 +23,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-
   async validate(payload: JwtPayload) {
     // 1. Basic User Query (Always needed)
     // We separate the query construction because we can't filter memberships if orgId is null
@@ -96,9 +95,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const plan = sub?.plan;
 
     // A subscription is valid if status is 'active' AND it hasn't expired
-    const isSubscriptionValid = 
-      sub?.status === 'active' && 
-      new Date() < sub.currentPeriodEnd;
+    const isSubscriptionValid =
+      sub?.status === 'active' && new Date() < sub.currentPeriodEnd;
 
     return {
       userId: user.id,

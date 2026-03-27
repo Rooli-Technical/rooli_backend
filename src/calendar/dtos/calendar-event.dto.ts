@@ -38,5 +38,4 @@ export class CalendarEventDto {
     example: { postId: 'post_1', status: 'SCHEDULED' },
   })
   meta?: Record<string, any>;
-
 }

@@ -97,17 +97,17 @@ export class PublishPostProcessor extends WorkerHost {
           throw new Error(`Unsupported platform: ${platform}`);
       }
 
-      const textPreview = (dest.contentOverride || post.content || 'Media post')
-        .replace(/\n/g, ' ')
-        .substring(0, 60) + '...';
-
+      const textPreview =
+        (dest.contentOverride || post.content || 'Media post')
+          .replace(/\n/g, ' ')
+          .substring(0, 60) + '...';
 
       this.events.emit('publishing.post.published', {
         workspaceId: post.workspaceId,
         postId: post.id,
         postDestinationId: dest.id,
         platform: platform,
-        profileName: dest.profile.name, 
+        profileName: dest.profile.name,
         snippet: textPreview,
       });
     } catch (e: any) {
@@ -116,17 +116,17 @@ export class PublishPostProcessor extends WorkerHost {
         data: { status: 'FAILED', errorMessage: e?.message ?? 'Unknown error' },
       });
       // 3. EXTRACT RICH DATA
-      const textPreview = (dest.contentOverride || post.content || 'Media post')
-        .replace(/\n/g, ' ')
-        .substring(0, 60) + '...';
-
+      const textPreview =
+        (dest.contentOverride || post.content || 'Media post')
+          .replace(/\n/g, ' ')
+          .substring(0, 60) + '...';
 
       this.events.emit('publishing.post.failed', {
         workspaceId: post.workspaceId,
         postId: post.id,
         postDestinationId: dest.id,
         platform: platform,
-        profileName: dest.profile.name, 
+        profileName: dest.profile.name,
         snippet: textPreview,
         reason: e?.message ?? 'Unknown error',
       });

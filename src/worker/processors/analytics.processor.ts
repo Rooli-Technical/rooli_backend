@@ -79,7 +79,7 @@ export class AnalyticsProcessor extends WorkerHost {
       // 1. ADD PLATFORM ARGUMENT HERE
       const accountPayload = await this.normalizer.normalizeAccountStats(
         profile.id,
-        profile.platform, 
+        profile.platform,
         rawAccount,
       );
 
@@ -108,7 +108,7 @@ export class AnalyticsProcessor extends WorkerHost {
     profileId: string,
     platform: Platform,
     credentials: AuthCredentials,
-    pageId?: string, 
+    pageId?: string,
   ) {
     const postsToUpdate = await this.repo.getPostsForUpdate(profileId, 30);
 
@@ -132,7 +132,7 @@ export class AnalyticsProcessor extends WorkerHost {
         error.stack,
       );
       // Return early if we entirely failed to fetch posts so we don't crash
-      return; 
+      return;
     }
 
     const postMap = new Map(postsToUpdate.map((p) => [p.platformPostId, p]));
@@ -141,7 +141,7 @@ export class AnalyticsProcessor extends WorkerHost {
       try {
         // Extract the ID from the unified object
         const internalPost = postMap.get(rawPost.unified.postId);
-        
+
         if (internalPost) {
           // 3. ADD PLATFORM ARGUMENT HERE
           const snapshot = this.normalizer.normalizePostStats(

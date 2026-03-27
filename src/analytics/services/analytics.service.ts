@@ -91,40 +91,40 @@ export class AnalyticsService {
   /**
    * Fetch detailed analytics for a single social profile
    */
-async getProfileDashboard(
-  profileId: string,
-  days?: number,
-  startDate?: string,
-  endDate?: string,
-) {
-  const { start, end } = this.computePeriods(days, startDate, endDate);
+  async getProfileDashboard(
+    profileId: string,
+    days?: number,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const { start, end } = this.computePeriods(days, startDate, endDate);
 
-  // 1. Fetch the profile
-  const profile = await this.prisma.socialProfile.findUnique({
-    where: { id: profileId, status: ConnectionStatus.CONNECTED },
-    select: { platform: true, name: true, type: true },
-  });
+    // 1. Fetch the profile
+    const profile = await this.prisma.socialProfile.findUnique({
+      where: { id: profileId, status: ConnectionStatus.CONNECTED },
+      select: { platform: true, name: true, type: true },
+    });
 
-  if (!profile) throw new NotFoundException('Profile not found');
+    if (!profile) throw new NotFoundException('Profile not found');
 
-  // 2. Fetch account history + top posts in parallel — no reason to waterfall these
-  const [accountHistory, topPostIds] = await Promise.all([
-    this.prisma.accountAnalytics.findMany({
-      where: {
-        socialProfileId: profileId,
-        date: { gte: start, lte: end },
-      },
-      orderBy: { date: 'asc' },
-      include: {
-        twitterStats: true,
-        linkedInStats: true,
-        facebookStats: true,
-        instagramStats: true,
-      },
-    }),
+    // 2. Fetch account history + top posts in parallel — no reason to waterfall these
+    const [accountHistory, topPostIds] = await Promise.all([
+      this.prisma.accountAnalytics.findMany({
+        where: {
+          socialProfileId: profileId,
+          date: { gte: start, lte: end },
+        },
+        orderBy: { date: 'asc' },
+        include: {
+          twitterStats: true,
+          linkedInStats: true,
+          facebookStats: true,
+          instagramStats: true,
+        },
+      }),
 
-    // Raw query: DISTINCT ON gives us the best snapshot per post, sorted by engagement
-    this.prisma.$queryRaw<{ postDestinationId: string }[]>`
+      // Raw query: DISTINCT ON gives us the best snapshot per post, sorted by engagement
+      this.prisma.$queryRaw<{ postDestinationId: string }[]>`
       SELECT DISTINCT ON (s."postDestinationId")
         s."postDestinationId"
       FROM "PostAnalyticsSnapshot" s
@@ -135,121 +135,122 @@ async getProfileDashboard(
       ORDER BY s."postDestinationId", s."engagementCount" DESC NULLS LAST
       LIMIT 10
     `,
-  ]);
+    ]);
 
-  // 3. Calculate growth summary
-  const growthSummary = {
-    followerGrowth: 0,
-    followerPercent: 0,
-    totalImpressions: 0,
-    totalEngagement: 0,
-  };
+    // 3. Calculate growth summary
+    const growthSummary = {
+      followerGrowth: 0,
+      followerPercent: 0,
+      totalImpressions: 0,
+      totalEngagement: 0,
+    };
 
-  if (accountHistory.length > 0) {
-    const firstEntry = accountHistory[0];
-    const lastEntry = accountHistory[accountHistory.length - 1];
+    if (accountHistory.length > 0) {
+      const firstEntry = accountHistory[0];
+      const lastEntry = accountHistory[accountHistory.length - 1];
 
-    growthSummary.totalImpressions = accountHistory.reduce(
-      (sum, row) => sum + (row.impressions ?? 0),
-      0,
-    );
-    growthSummary.totalEngagement = accountHistory.reduce(
-      (sum, row) => sum + (row.engagementCount ?? 0),
-      0,
-    );
-
-    const initialFollowers = firstEntry.followersTotal ?? 0;
-    const currentFollowers = lastEntry.followersTotal ?? 0;
-    growthSummary.followerGrowth = currentFollowers - initialFollowers;
-
-    if (initialFollowers > 0) {
-      growthSummary.followerPercent = parseFloat(
-        ((growthSummary.followerGrowth / initialFollowers) * 100).toFixed(2),
+      growthSummary.totalImpressions = accountHistory.reduce(
+        (sum, row) => sum + (row.impressions ?? 0),
+        0,
       );
-    } else if (growthSummary.followerGrowth > 0) {
-      growthSummary.followerPercent = 100;
+      growthSummary.totalEngagement = accountHistory.reduce(
+        (sum, row) => sum + (row.engagementCount ?? 0),
+        0,
+      );
+
+      const initialFollowers = firstEntry.followersTotal ?? 0;
+      const currentFollowers = lastEntry.followersTotal ?? 0;
+      growthSummary.followerGrowth = currentFollowers - initialFollowers;
+
+      if (initialFollowers > 0) {
+        growthSummary.followerPercent = parseFloat(
+          ((growthSummary.followerGrowth / initialFollowers) * 100).toFixed(2),
+        );
+      } else if (growthSummary.followerGrowth > 0) {
+        growthSummary.followerPercent = 100;
+      }
     }
-  }
 
-  // 4. Hydrate the top posts via Prisma for full typing — raw query only gave us the IDs
-  const destinationIds = topPostIds.map((r) => r.postDestinationId);
+    // 4. Hydrate the top posts via Prisma for full typing — raw query only gave us the IDs
+    const destinationIds = topPostIds.map((r) => r.postDestinationId);
 
-  const topPosts = destinationIds.length > 0
-    ? await this.prisma.postAnalyticsSnapshot.findMany({
-        where: { postDestinationId: { in: destinationIds } },
-        orderBy: { engagementCount: 'desc' },
-        distinct: ['postDestinationId'],
-        include: {
-          twitterStats: true,
-          linkedInStats: true,
-          facebookStats: true,
-          instagramStats: true,
-          postDestination: {
-            select: {
-              platformPostId: true,
-              contentOverride: true,
-              createdAt: true,
-              publishedAt: true,
-              post: { select: { scheduledAt: true } },
+    const topPosts =
+      destinationIds.length > 0
+        ? await this.prisma.postAnalyticsSnapshot.findMany({
+            where: { postDestinationId: { in: destinationIds } },
+            orderBy: { engagementCount: 'desc' },
+            distinct: ['postDestinationId'],
+            include: {
+              twitterStats: true,
+              linkedInStats: true,
+              facebookStats: true,
+              instagramStats: true,
+              postDestination: {
+                select: {
+                  platformPostId: true,
+                  contentOverride: true,
+                  createdAt: true,
+                  publishedAt: true,
+                  post: { select: { scheduledAt: true } },
+                },
+              },
             },
-          },
+          })
+        : [];
+
+    // 5. Shape the top posts payload
+    const cleanTopPosts = topPosts.map((snapshot) => {
+      const dest = snapshot.postDestination;
+      const bestPublishedDate =
+        dest.publishedAt ?? dest.post?.scheduledAt ?? dest.createdAt;
+
+      return {
+        postId: dest.platformPostId,
+        content: dest.contentOverride,
+        publishedAt: bestPublishedDate,
+        base: {
+          likes: snapshot.likes ?? 0,
+          comments: snapshot.comments ?? 0,
+          impressions: snapshot.impressions ?? 0,
+          engagement: snapshot.engagementCount ?? 0,
         },
-      })
-    : [];
+        specific:
+          snapshot.twitterStats ??
+          snapshot.linkedInStats ??
+          snapshot.facebookStats ??
+          snapshot.instagramStats ??
+          {},
+      };
+    });
 
-  // 5. Shape the top posts payload
-  const cleanTopPosts = topPosts.map((snapshot) => {
-    const dest = snapshot.postDestination;
-    const bestPublishedDate =
-      dest.publishedAt ?? dest.post?.scheduledAt ?? dest.createdAt;
-
-    return {
-      postId: dest.platformPostId,
-      content: dest.contentOverride,
-      publishedAt: bestPublishedDate,
+    // 6. Shape the account history payload
+    const cleanAccountHistory = accountHistory.map((row) => ({
+      date: row.date,
       base: {
-        likes: snapshot.likes ?? 0,
-        comments: snapshot.comments ?? 0,
-        impressions: snapshot.impressions ?? 0,
-        engagement: snapshot.engagementCount ?? 0,
+        followers: row.followersTotal ?? 0,
+        impressions: row.impressions ?? 0,
+        engagement: row.engagementCount ?? 0,
       },
       specific:
-        snapshot.twitterStats ??
-        snapshot.linkedInStats ??
-        snapshot.facebookStats ??
-        snapshot.instagramStats ??
+        row.twitterStats ??
+        row.linkedInStats ??
+        row.facebookStats ??
+        row.instagramStats ??
         {},
+    }));
+
+    // 7. Return unified payload
+    return {
+      platform: profile.platform,
+      handle: profile.name,
+      period: { start, end },
+      summary: growthSummary,
+      accountHistory: cleanAccountHistory,
+      topPosts: cleanTopPosts,
     };
-  });
+  }
 
-  // 6. Shape the account history payload
-  const cleanAccountHistory = accountHistory.map((row) => ({
-    date: row.date,
-    base: {
-      followers: row.followersTotal ?? 0,
-      impressions: row.impressions ?? 0,
-      engagement: row.engagementCount ?? 0,
-    },
-    specific:
-      row.twitterStats ??
-      row.linkedInStats ??
-      row.facebookStats ??
-      row.instagramStats ??
-      {},
-  }));
-
-  // 7. Return unified payload
-  return {
-    platform: profile.platform,
-    handle: profile.name,
-    period: { start, end },
-    summary: growthSummary,
-    accountHistory: cleanAccountHistory,
-    topPosts: cleanTopPosts,
-  };
-}
-
-async getCalendarMetrics(workspaceId: string) {
+  async getCalendarMetrics(workspaceId: string) {
     const now = new Date();
 
     // --- Date Math: This Week (Sunday to Saturday) ---
@@ -264,7 +265,15 @@ async getCalendarMetrics(workspaceId: string) {
 
     // --- Date Math: This Month ---
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     // Run all 4 queries simultaneously for a lightning-fast dashboard load
     const [
@@ -273,7 +282,6 @@ async getCalendarMetrics(workspaceId: string) {
       publishedThisMonth,
       platformsConnected,
     ] = await Promise.all([
-      
       // 1. Scheduled posts THIS WEEK
       this.prisma.post.count({
         where: {
@@ -300,7 +308,7 @@ async getCalendarMetrics(workspaceId: string) {
         where: {
           workspaceId,
           status: 'PUBLISHED',
-          scheduledAt: { 
+          scheduledAt: {
             gte: startOfMonth,
             lte: endOfMonth,
           },
@@ -513,11 +521,15 @@ async getCalendarMetrics(workspaceId: string) {
     );
     // 🚨 Fetch the full profile objects instead of just IDs
     const profiles = await this.prisma.socialProfile.findMany({
-      where: { workspaceId, isActive: true, status: ConnectionStatus.CONNECTED },
-      select: { 
-        id: true, 
-        platform: true, 
-        type: true, 
+      where: {
+        workspaceId,
+        isActive: true,
+        status: ConnectionStatus.CONNECTED,
+      },
+      select: {
+        id: true,
+        platform: true,
+        type: true,
         name: true,
         username: true,
       },
@@ -535,7 +547,7 @@ async getCalendarMetrics(workspaceId: string) {
       end,
     );
 
-   const responsePayload = {
+    const responsePayload = {
       ...base,
       connectedProfiles: profiles,
     };
@@ -904,7 +916,7 @@ async getCalendarMetrics(workspaceId: string) {
       const aggregatedMetrics = post.destinations.reduce(
         (acc, dest) => {
           const latestSnapshot = dest.postAnalyticsSnapshots[0]; // The most recent day
-          
+
           if (latestSnapshot) {
             acc.likes += latestSnapshot.likes || 0;
             acc.comments += latestSnapshot.comments || 0;
@@ -914,11 +926,11 @@ async getCalendarMetrics(workspaceId: string) {
           }
           return acc;
         },
-        { likes: 0, comments: 0, impressions: 0, reach: 0, engagementCount: 0 } // Initial state
+        { likes: 0, comments: 0, impressions: 0, reach: 0, engagementCount: 0 }, // Initial state
       );
 
       // We remove the raw nested snapshots from the final payload to keep the API response clean
-      const cleanedDestinations = post.destinations.map(dest => {
+      const cleanedDestinations = post.destinations.map((dest) => {
         const { postAnalyticsSnapshots, ...rest } = dest;
         return rest;
       });
@@ -1229,7 +1241,11 @@ async getCalendarMetrics(workspaceId: string) {
 
   private async getActiveProfileIds(workspaceId: string): Promise<string[]> {
     const profiles = await this.prisma.socialProfile.findMany({
-      where: { workspaceId, isActive: true, status: ConnectionStatus.CONNECTED },
+      where: {
+        workspaceId,
+        isActive: true,
+        status: ConnectionStatus.CONNECTED,
+      },
       select: { id: true },
     });
     return profiles.map((p) => p.id);

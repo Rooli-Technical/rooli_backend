@@ -32,6 +32,11 @@ import { BullModule } from '@nestjs/bullmq';
     AnalyticsRepository,
     AnalyticsScheduler,
   ],
-  exports: [AnalyticsService, AnalyticsNormalizerService, AnalyticsRepository, BullModule],
+  exports: [
+    AnalyticsService,
+    AnalyticsNormalizerService,
+    AnalyticsRepository,
+    BullModule,
+  ],
 })
 export class AnalyticsModule {}

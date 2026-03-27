@@ -7,9 +7,7 @@ import { DomainEventsService } from '../domain-events.service';
 export class ProfileConnectionSubscriber {
   private readonly logger = new Logger(ProfileConnectionSubscriber.name);
 
-  constructor(
-    private readonly analyticsService: AnalyticsService,
-  ) {}
+  constructor(private readonly analyticsService: AnalyticsService) {}
 
   @OnEvent('system.social_profile.connected', { async: true })
   async handleNewProfileConnection(evt: {
@@ -23,7 +21,6 @@ export class ProfileConnectionSubscriber {
 
     try {
       await this.analyticsService.testFetch({ profileId: evt.profileId });
-
 
       this.logger.log(
         `Initial analytics sync complete for profile: ${evt.profileId}`,

@@ -20,5 +20,3 @@ export const PLATFORM_LIMITS = {
     insights: { limit: 500, window: 60 * 60 * 24 },
   },
 } as const;
-
-

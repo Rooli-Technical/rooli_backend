@@ -6,11 +6,10 @@ import { ExpressAdapter } from '@bull-board/express';
 
 @Module({
   imports: [
-
     WorkerModule,
 
     BullBoardModule.forRoot({
-     route: '/admin/queues', 
+      route: '/admin/queues',
       adapter: ExpressAdapter,
       // optional basic auth:
       // username: process.env.BULLBOARD_USER,
@@ -25,15 +24,15 @@ import { ExpressAdapter } from '@bull-board/express';
       name: 'publishing-queue',
       adapter: BullMQAdapter,
     }),
-  BullBoardModule.forFeature({
+    BullBoardModule.forFeature({
       name: 'analytics-queue',
       adapter: BullMQAdapter,
     }),
-  BullBoardModule.forFeature({
+    BullBoardModule.forFeature({
       name: 'inbox-webhooks',
       adapter: BullMQAdapter,
     }),
-  BullBoardModule.forFeature({
+    BullBoardModule.forFeature({
       name: 'outbound-messages',
       adapter: BullMQAdapter,
     }),

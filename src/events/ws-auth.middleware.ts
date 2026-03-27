@@ -44,16 +44,15 @@ export class WsAuthMiddleware {
         select: {
           id: true,
           workspaceId: true,
-
         },
       });
-// For now, pick "current" member as the one on the workspace you connect to.
-// If your UI connects per selected workspace, pass workspaceId in handshake query.
-const memberId = memberships[0]?.id;
+      // For now, pick "current" member as the one on the workspace you connect to.
+      // If your UI connects per selected workspace, pass workspaceId in handshake query.
+      const memberId = memberships[0]?.id;
 
       const user: WsAuthedUser = {
         userId,
-         memberId,
+        memberId,
         workspaceIds: memberships.map((m) => m.workspaceId),
       };
 
@@ -65,28 +64,29 @@ const memberId = memberships[0]?.id;
     }
   };
 
-private extractToken(client: Socket): string | null {
-  const authHeader = client.handshake.headers['authorization'];
-  
-  if (authHeader && typeof authHeader === 'string') {
-    const parts = authHeader.split(' ');
-    if (parts.length === 2) {
-      const [type, token] = parts;
-      if (type.toLowerCase() === 'bearer' && token) {
-        return token.trim();
+  private extractToken(client: Socket): string | null {
+    const authHeader = client.handshake.headers['authorization'];
+
+    if (authHeader && typeof authHeader === 'string') {
+      const parts = authHeader.split(' ');
+      if (parts.length === 2) {
+        const [type, token] = parts;
+        if (type.toLowerCase() === 'bearer' && token) {
+          return token.trim();
+        }
       }
     }
+
+    // 2) Fallback to Socket.io Auth object
+    const authObj = client.handshake.auth?.token;
+    if (authObj && typeof authObj === 'string') {
+      return authObj.trim();
+    }
+
+    const queryToken = client.handshake.query?.token;
+    if (typeof queryToken === 'string' && queryToken.trim())
+      return queryToken.trim();
+
+    return null;
   }
-
-  // 2) Fallback to Socket.io Auth object
-  const authObj = client.handshake.auth?.token;
-  if (authObj && typeof authObj === 'string') {
-    return authObj.trim();
-  }
-
-  const queryToken = client.handshake.query?.token;
-  if (typeof queryToken === 'string' && queryToken.trim()) return queryToken.trim();
-
-  return null;
-}
 }

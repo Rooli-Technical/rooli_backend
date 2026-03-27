@@ -59,12 +59,12 @@ import { AdminModule } from './admin/admin.module';
 
     BullModule.forRootAsync({
       // 1. We inject the existing client from your RedisModule
-      inject: ['REDIS_CLIENT'], 
+      inject: ['REDIS_CLIENT'],
       useFactory: (redisClient: Redis) => {
         return {
           // 2. Pass the actual instance, NOT a config object.
           // This forces BullMQ to share the existing socket.
-          connection: redisClient, 
+          connection: redisClient,
           defaultJobOptions: {
             removeOnComplete: true,
             attempts: 3,
@@ -86,7 +86,6 @@ import { AdminModule } from './admin/admin.module';
 
     // ApprovalsModule,
 
-
     RooliBullBoardModule,
 
     // AccessControlModule,
@@ -103,7 +102,6 @@ import { AdminModule } from './admin/admin.module';
 
     PostMediaModule,
 
-
     QueueModule,
 
     SocialModule,
@@ -119,13 +117,13 @@ import { AdminModule } from './admin/admin.module';
     CalendarModule,
 
     RbacModule,
-    
+
     UserModule,
-    
+
     AuditModule,
-    
+
     InboxModule,
-    
+
     NotificationsModule,
 
     EventEmitterModule.forRoot({
@@ -137,7 +135,7 @@ import { AdminModule } from './admin/admin.module';
     PollingModule,
 
     SupportTicketModule,
-    AdminModule
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

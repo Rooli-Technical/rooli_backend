@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { NormalizedPlatform, NormalizedInboundMessage } from '../types/adapter.types';
-
+import {
+  NormalizedPlatform,
+  NormalizedInboundMessage,
+} from '../types/adapter.types';
 
 @Injectable()
 export class LinkedInAdapter {
@@ -33,7 +35,7 @@ export class LinkedInAdapter {
     // Identify the specific comment and the post it belongs to
     const commentUrn: string | undefined = payload?.commentUrn;
     const postUrn: string | undefined = payload?.socialAction; // This is the post URN
-    
+
     if (!commentUrn || !postUrn) return null;
 
     // Sometimes LinkedIn webhooks omit the text, requiring a secondary fetch.
@@ -51,8 +53,8 @@ export class LinkedInAdapter {
       `linkedin:comment:${postUrn}`,
     );
 
-    const occurredAt = payload?.createdAt 
-      ? new Date(payload.createdAt) 
+    const occurredAt = payload?.createdAt
+      ? new Date(payload.createdAt)
       : new Date();
 
     return {
@@ -65,7 +67,9 @@ export class LinkedInAdapter {
         // LinkedIn webhooks do NOT include names/avatars for privacy reasons.
         // You must use a generic fallback here. Your IngestService or a background worker
         // will need to call the LinkedIn Profile API later to hydrate this if needed.
-        username: isFromUs ? 'Us' : `LinkedIn Member (${actorUrn.split(':').pop()})`,
+        username: isFromUs
+          ? 'Us'
+          : `LinkedIn Member (${actorUrn.split(':').pop()})`,
         avatarUrl: null,
       },
       message: {
@@ -95,12 +99,12 @@ export class LinkedInAdapter {
 
   /**
    * Normalizes LinkedIn DMs (Polled data, since LI has no DM webhooks).
-   * Note: The structure here depends entirely on the response from the 
+   * Note: The structure here depends entirely on the response from the
    * GET /conversations API endpoint.
    */
   normalizeDirectMessage(input: any): NormalizedInboundMessage | null {
     const message = input?.message ?? input;
-    
+
     // LinkedIn Conversations API structure:
     const messageId = message?.entityUrn;
     if (!messageId) return null;
@@ -108,9 +112,9 @@ export class LinkedInAdapter {
     const senderUrn = message?.sender;
     const conversationId = message?.conversationUrn; // LI provides actual thread IDs!
     const text = message?.eventContent?.messageEvent?.customContent?.text || '';
-    
+
     // You must pass the orgUrn in the input wrapper when you poll
-    const ownerExternalId = input?.ownerExternalId; 
+    const ownerExternalId = input?.ownerExternalId;
     if (!ownerExternalId || !senderUrn) return null;
 
     const isFromUs = senderUrn === ownerExternalId;

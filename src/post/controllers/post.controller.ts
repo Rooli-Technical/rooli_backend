@@ -133,37 +133,42 @@ export class PostController {
   }
 
   @Patch(':id/edit')
-  @ApiOperation({ 
-    summary: 'Edit a published post content', 
-    description: 'Updates the content of a post already published to external platforms. Currently supports Facebook only.' 
+  @ApiOperation({
+    summary: 'Edit a published post content',
+    description:
+      'Updates the content of a post already published to external platforms. Currently supports Facebook only.',
   })
   @ApiParam({ name: 'id', description: 'The internal Database ID of the post' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        newContent: { type: 'string', example: 'Updating my status with some fresh info!' }
+        newContent: {
+          type: 'string',
+          example: 'Updating my status with some fresh info!',
+        },
       },
-      required: ['newContent']
-    }
+      required: ['newContent'],
+    },
   })
   async editPost(
     @Param('id') postId: string,
     @Body('newContent') newContent: string,
-     @CurrentUser('workspaceId') workspaceId: string, 
+    @CurrentUser('workspaceId') workspaceId: string,
   ) {
     return this.postService.editPublishedPost(workspaceId, postId, newContent);
   }
 
   @Delete(':id/remote')
-  @ApiOperation({ 
-    summary: 'Delete a published post from platforms', 
-    description: 'Deletes the post from external social media platforms (Facebook) and marks it as deleted in the database.' 
+  @ApiOperation({
+    summary: 'Delete a published post from platforms',
+    description:
+      'Deletes the post from external social media platforms (Facebook) and marks it as deleted in the database.',
   })
   @ApiParam({ name: 'id', description: 'The internal Database ID of the post' })
   async deleteRemotePost(
     @Param('id') postId: string,
-     @CurrentUser('workspaceId') workspaceId: string, 
+    @CurrentUser('workspaceId') workspaceId: string,
   ) {
     return this.postService.deletePublishedPost(workspaceId, postId);
   }

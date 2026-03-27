@@ -1,8 +1,7 @@
-import { RealtimeEmitterService } from "@/events/realtime-emitter.service";
-import { PrismaService } from "@/prisma/prisma.service";
-import { TicketStatus, TicketCategory, TicketPriority } from "@generated/enums";
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
-
+import { RealtimeEmitterService } from '@/events/realtime-emitter.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { TicketStatus, TicketCategory, TicketPriority } from '@generated/enums';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class AdminTicketsService {
@@ -36,23 +35,23 @@ export class AdminTicketsService {
         { updatedAt: 'desc' }, // Then sort by most recently active
       ],
       include: {
-        workspace: { select: { id: true, name: true } }, 
-       requester: {
-        select: {
-          id: true,
-          member: {
-            select: {
-              user: {
-                select: {
-                  firstName: true,
-                  lastName: true,
-                  email: true,
+        workspace: { select: { id: true, name: true } },
+        requester: {
+          select: {
+            id: true,
+            member: {
+              select: {
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
                 },
               },
             },
           },
         },
-      },
         assignee: { select: { id: true, firstName: true, lastName: true } },
       },
     });
@@ -66,28 +65,37 @@ export class AdminTicketsService {
       where: { id: ticketId },
       include: {
         workspace: { select: { id: true, name: true } },
-       requester: {
-        select: {
-          id: true,
-          member: {
-            select: {
-              user: {
-                select: {
-                  firstName: true,
-                  lastName: true,
-                  email: true,
+        requester: {
+          select: {
+            id: true,
+            member: {
+              select: {
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
                 },
               },
             },
           },
         },
-      },
-        assignee: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+        assignee: {
+          select: { id: true, firstName: true, lastName: true, avatar: true },
+        },
         mediaFiles: true,
         comments: {
           orderBy: { createdAt: 'asc' },
           include: {
-            author: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+            author: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
             mediaFiles: true,
           },
         },
@@ -123,8 +131,13 @@ export class AdminTicketsService {
   // ============================================================================
   // 4. UPDATE TICKET STATUS (Resolve or escalate)
   // ============================================================================
-  async updateTicketStatus(ticketId: string, status: TicketStatus, priority?: TicketPriority) {
-    const isClosing = status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED;
+  async updateTicketStatus(
+    ticketId: string,
+    status: TicketStatus,
+    priority?: TicketPriority,
+  ) {
+    const isClosing =
+      status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED;
 
     const ticket = await this.prisma.ticket.update({
       where: { id: ticketId },
@@ -144,16 +157,20 @@ export class AdminTicketsService {
   // ============================================================================
   // 5. ADD SUPPORT COMMENT (Public Reply or Internal Note)
   // ============================================================================
-  async addAdminComment(ticketId: string, adminUserId: string, data: {
-    content: string;
-    isInternal: boolean; // TRUE for secret admin notes, FALSE to reply to the customer
-  }) {
+  async addAdminComment(
+    ticketId: string,
+    adminUserId: string,
+    data: {
+      content: string;
+      isInternal: boolean; // TRUE for secret admin notes, FALSE to reply to the customer
+    },
+  ) {
     // Fetch the ticket first so we know which workspace to broadcast to
     const ticket = await this.prisma.ticket.findUnique({
       where: { id: ticketId },
       select: { id: true, workspaceId: true },
     });
-    
+
     if (!ticket) throw new NotFoundException('Ticket not found');
 
     const comment = await this.prisma.$transaction(async (tx) => {
@@ -167,7 +184,9 @@ export class AdminTicketsService {
           isInternal: data.isInternal,
         },
         include: {
-          author: { select: { id: true, firstName: true, lastName: true ,avatar: true } },
+          author: {
+            select: { id: true, firstName: true, lastName: true, avatar: true },
+          },
         },
       });
 
@@ -182,7 +201,12 @@ export class AdminTicketsService {
 
     // 📢 Real-time Broadcast to the conversation room
     // The frontend must check `isInternal` before rendering it!
-    this.emitter.emitToConversation(ticket.workspaceId, ticketId, 'ticket.comment.added', comment);
+    this.emitter.emitToConversation(
+      ticket.workspaceId,
+      ticketId,
+      'ticket.comment.added',
+      comment,
+    );
 
     // Optional: Send a notification to the customer if it's NOT an internal note
     if (!data.isInternal) {
@@ -193,17 +217,23 @@ export class AdminTicketsService {
     return comment;
   }
 
-    async updateTicket(workspaceId: string, ticketId: string, data: {
-    status?: TicketStatus;
-    priority?: TicketPriority;
-    assigneeId?: string;
-  }) {
+  async updateTicket(
+    workspaceId: string,
+    ticketId: string,
+    data: {
+      status?: TicketStatus;
+      priority?: TicketPriority;
+      assigneeId?: string;
+    },
+  ) {
     let closedAtValue: Date | null | undefined = undefined;
 
     // REOPEN BUG FIXED: Clear closedAt if it moves back to OPEN/IN_PROGRESS
     if (data.status) {
-      const isClosing = data.status === TicketStatus.RESOLVED || data.status === TicketStatus.CLOSED;
-      closedAtValue = isClosing ? new Date() : null; 
+      const isClosing =
+        data.status === TicketStatus.RESOLVED ||
+        data.status === TicketStatus.CLOSED;
+      closedAtValue = isClosing ? new Date() : null;
     }
 
     const ticket = await this.prisma.ticket.update({
@@ -213,7 +243,9 @@ export class AdminTicketsService {
         closedAt: closedAtValue,
       },
       include: {
-        assignee: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+        assignee: {
+          select: { id: true, firstName: true, lastName: true, avatar: true },
+        },
       },
     });
 

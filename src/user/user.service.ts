@@ -20,7 +20,6 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: MailService,
-
   ) {}
 
   async findById(id: string): Promise<SafeUser | null> {
@@ -45,62 +44,62 @@ export class UserService {
     return safeUser;
   }
 
-async getUserWorkspaces(userId: string) {
-  // 1. Verify user exists
-  const user = await this.prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true }
-  });
-  if (!user) throw new NotFoundException('User not found');
+  async getUserWorkspaces(userId: string) {
+    // 1. Verify user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
 
-  // 2. Fetch Workspaces through the Membership chain
-  // We look for WorkspaceMembers where the "parent" OrganizationMember belongs to this User
-  const workspaces = await this.prisma.workspace.findMany({
-    where: {
-      members: {
-        some: {
-          member: {
-            userId: userId,
+    // 2. Fetch Workspaces through the Membership chain
+    // We look for WorkspaceMembers where the "parent" OrganizationMember belongs to this User
+    const workspaces = await this.prisma.workspace.findMany({
+      where: {
+        members: {
+          some: {
+            member: {
+              userId: userId,
+            },
           },
         },
       },
-    },
-    include: {
-      organization: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-        },
-      },
-      // Include the user's specific role in this workspace
-      members: {
-        where: {
-          member: {
-            userId: userId,
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
           },
         },
-        include: {
-          role: true,
+        // Include the user's specific role in this workspace
+        members: {
+          where: {
+            member: {
+              userId: userId,
+            },
+          },
+          include: {
+            role: true,
+          },
         },
       },
-    },
-    orderBy: {
-      updatedAt: 'desc',
-    },
-  });
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
 
-  // 3. Transform to a cleaner structure
-  return workspaces.map((workspace) => ({
-    id: workspace.id,
-    name: workspace.name,
-    slug: workspace.slug,
-    timezone: workspace.timezone,
-    organization: workspace.organization,
-    // Extract the single role object for the current user
-    userRole: workspace.members[0]?.role || null,
-  }));
-}
+    // 3. Transform to a cleaner structure
+    return workspaces.map((workspace) => ({
+      id: workspace.id,
+      name: workspace.name,
+      slug: workspace.slug,
+      timezone: workspace.timezone,
+      organization: workspace.organization,
+      // Extract the single role object for the current user
+      userRole: workspace.members[0]?.role || null,
+    }));
+  }
 
   async updateProfile(
     userId: string,
@@ -143,12 +142,17 @@ async getUserWorkspaces(userId: string) {
     });
 
     // 5. Send Email with the plain text OTP
-    await this.emailService.sendPasswordResetOtp(user.email,user.firstName ,otp).catch((err) =>
-      this.logger.error(`Failed to send change-password OTP to ${user.email}`, err),
-    );
+    await this.emailService
+      .sendPasswordResetOtp(user.email, user.firstName, otp)
+      .catch((err) =>
+        this.logger.error(
+          `Failed to send change-password OTP to ${user.email}`,
+          err,
+        ),
+      );
   }
 
-async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId, deletedAt: null },
     });
@@ -174,7 +178,9 @@ async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
         where: { id: userId },
         data: { passwordResetOtp: null, passwordResetOtpExpires: null },
       });
-      throw new BadRequestException('OTP has expired. Please request a new one.');
+      throw new BadRequestException(
+        'OTP has expired. Please request a new one.',
+      );
     }
 
     // 3. Verify OTP Match
@@ -193,9 +199,9 @@ async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
       data: {
         password: hashedPassword,
         lastPasswordChange: new Date(),
-        passwordResetOtp: null,        
-        passwordResetOtpExpires: null, 
-        refreshToken: null,            // Revoke sessions
+        passwordResetOtp: null,
+        passwordResetOtpExpires: null,
+        refreshToken: null, // Revoke sessions
         refreshTokenVersion: { increment: 1 },
       },
     });
@@ -232,10 +238,12 @@ async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-     avatar: user.avatar ? {
-      ...user.avatar,
-      size: user.avatar.size.toString(), 
-    } : null,
+      avatar: user.avatar
+        ? {
+            ...user.avatar,
+            size: user.avatar.size.toString(),
+          }
+        : null,
       userType: user.userType,
       isEmailVerified: user.isEmailVerified,
       lastActiveAt: user.lastActiveAt,

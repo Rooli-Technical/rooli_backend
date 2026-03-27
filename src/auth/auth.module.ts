@@ -26,24 +26,24 @@ import { BillingModule } from '@/billing/billing.module';
       }),
       inject: [ConfigService],
     }),
-ThrottlerModule.forRoot({
-  throttlers: [
-    {
-      ttl: 60,
-      limit: 20,
-    },
-  ],
-}),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60,
+          limit: 20,
+        },
+      ],
+    }),
   ],
   controllers: [AuthController],
-   providers: [
+  providers: [
     AuthService,
     PrismaService,
     MailService,
     JwtStrategy,
     JwtService,
-    GoogleStrategy
+    GoogleStrategy,
   ],
-  exports:[JwtService, AuthService]
+  exports: [JwtService, AuthService],
 })
 export class AuthModule {}

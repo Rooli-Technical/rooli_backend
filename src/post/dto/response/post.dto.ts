@@ -32,7 +32,16 @@ export class PostDto {
   @ApiProperty({ example: '2026-01-08T10:00:00.000Z' })
   scheduledAt: Date;
 
-  @ApiProperty({ type: [PostMediaDto], example: [{ mediaFileId: 'media_123', mediaFile: { id: 'file_123', url: 'https://example.com/image.png' }, order: 0 }] })
+  @ApiProperty({
+    type: [PostMediaDto],
+    example: [
+      {
+        mediaFileId: 'media_123',
+        mediaFile: { id: 'file_123', url: 'https://example.com/image.png' },
+        order: 0,
+      },
+    ],
+  })
   media: PostMediaDto[];
 
   @ApiProperty({ type: () => PostDto, nullable: true, example: null })

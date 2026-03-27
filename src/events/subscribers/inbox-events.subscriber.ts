@@ -22,7 +22,11 @@ export class InboxEventsSubscriber {
   @OnEvent('inbox.message.created', { async: false })
   onMessageCreated(evt: InboxMessageCreatedEvent) {
     // Workspace-wide: update list + badges
-    this.emitterService.emitToWorkspace(evt.workspaceId, 'inbox.message.created', evt);
+    this.emitterService.emitToWorkspace(
+      evt.workspaceId,
+      'inbox.message.created',
+      evt,
+    );
 
     // Conversation-specific: update open thread view
     this.emitterService.emitToConversation(
@@ -59,7 +63,11 @@ export class InboxEventsSubscriber {
 
   @OnEvent('inbox.comment.sent')
   handleInboxCommentSent(evt: InboxCommentReplyEvent) {
-    this.emitterService.emitToWorkspace(evt.workspaceId, 'inbox.comment.sent', evt);
+    this.emitterService.emitToWorkspace(
+      evt.workspaceId,
+      'inbox.comment.sent',
+      evt,
+    );
     this.emitterService.emitToConversation(
       evt.workspaceId,
       evt.postDestinationId,
@@ -76,9 +84,9 @@ export class InboxEventsSubscriber {
     direction: 'INBOUND' | 'OUTBOUND';
   }) {
     this.emitterService.emitToWorkspace(
-      payload.workspaceId, 
-      'inbox.comment.created', 
-      payload
+      payload.workspaceId,
+      'inbox.comment.created',
+      payload,
     );
   }
 
@@ -92,8 +100,7 @@ export class InboxEventsSubscriber {
     this.emitterService.emitToWorkspace(
       payload.workspaceId,
       'inbox.comment.updated',
-      payload
+      payload,
     );
   }
-
 }

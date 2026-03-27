@@ -26,7 +26,7 @@ export class OrganizationsService {
     private readonly billingService: BillingService,
   ) {}
 
- async createOrganization(userId: string, dto: CreateOrganizationDto) {
+  async createOrganization(userId: string, dto: CreateOrganizationDto) {
     // 1. Update User Type (Onboarding)
     if (dto.userType) {
       await this.prisma.user.update({
@@ -47,7 +47,6 @@ export class OrganizationsService {
 
     if (!user) throw new NotFoundException('User not found');
 
-   
     // 3. Prepare Slug (Respect DTO, Fallback to Name)
     let slug = dto.slug;
     if (!slug) {
@@ -79,7 +78,8 @@ export class OrganizationsService {
         });
 
         const ownerRole = await tx.role.findFirst({ where: { slug: 'owner' } });
-        if (!ownerRole) throw new InternalServerErrorException("Role 'owner' missing");
+        if (!ownerRole)
+          throw new InternalServerErrorException("Role 'owner' missing");
 
         await tx.organizationMember.create({
           data: {
@@ -89,7 +89,6 @@ export class OrganizationsService {
             invitedByUserId: userId,
           },
         });
-
 
         return org;
       });
@@ -105,16 +104,17 @@ export class OrganizationsService {
         organization,
         payment: paymentData,
       };
-
     } catch (err) {
       console.log(err);
       // COMPENSATING TRANSACTION:
-      // If payment failed (or any other error after DB creation), 
+      // If payment failed (or any other error after DB creation),
       // we should delete the 'Zombie' org so the user can retry with the same slug.
       if (organization?.id) {
-        await this.prisma.organization.delete({ where: { id: organization.id } }).catch(() => {});
+        await this.prisma.organization
+          .delete({ where: { id: organization.id } })
+          .catch(() => {});
       }
-      
+
       this.logger.error('Failed to create organization', err);
       throw err;
     }
@@ -175,11 +175,11 @@ export class OrganizationsService {
       });
 
       // Deactivate all members
-     await tx.organization.update({
+      await tx.organization.update({
         where: { id: orgId },
-        data: { 
-          isActive: false, 
-          status: 'SUSPENDED' 
+        data: {
+          isActive: false,
+          status: 'SUSPENDED',
         },
       });
       // Cancel any active subscriptions
@@ -190,74 +190,74 @@ export class OrganizationsService {
   }
 
   async listOrganizationMembers(params: {
-  organizationId: string;
-  query?: ListMembersQueryDto; 
-}) {
-  const { organizationId, query } = params;
+    organizationId: string;
+    query?: ListMembersQueryDto;
+  }) {
+    const { organizationId, query } = params;
 
-  // 1. Verify Organization exists
-  const organization = await this.prisma.organization.findUnique({
-    where: { id: organizationId },
-  });
-  if (!organization) throw new NotFoundException('Organization not found');
+    // 1. Verify Organization exists
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    if (!organization) throw new NotFoundException('Organization not found');
 
-  // 2. Pagination Logic
-  const take = Math.min(query?.limit ?? 20, 100);
-  const skip = ((query?.page ?? 1) - 1) * take;
+    // 2. Pagination Logic
+    const take = Math.min(query?.limit ?? 20, 100);
+    const skip = ((query?.page ?? 1) - 1) * take;
 
-  // 3. Search Filter (Email, First Name, Last Name)
-  const search = query?.search?.trim();
-  const where: Prisma.OrganizationMemberWhereInput = {
-    organizationId,
-    ...(search
-      ? {
+    // 3. Search Filter (Email, First Name, Last Name)
+    const search = query?.search?.trim();
+    const where: Prisma.OrganizationMemberWhereInput = {
+      organizationId,
+      ...(search
+        ? {
+            user: {
+              OR: [
+                { email: { contains: search, mode: 'insensitive' } },
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } },
+              ],
+            },
+          }
+        : {}),
+    };
+
+    // 4. Execute Fetch
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.organizationMember.findMany({
+        where,
+        take,
+        skip,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          role: true, // The Organization-level role (e.g., Owner, Admin, Member)
           user: {
-            OR: [
-              { email: { contains: search, mode: 'insensitive' } },
-              { firstName: { contains: search, mode: 'insensitive' } },
-              { lastName: { contains: search, mode: 'insensitive' } },
-            ],
-          },
-        }
-      : {}),
-  };
-
-  // 4. Execute Fetch
-  const [items, total] = await this.prisma.$transaction([
-    this.prisma.organizationMember.findMany({
-      where,
-      take,
-      skip,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        role: true, // The Organization-level role (e.g., Owner, Admin, Member)
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-            lastActiveAt: true,
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+              lastActiveAt: true,
+            },
           },
         },
+      }),
+      this.prisma.organizationMember.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        total,
+        page: query?.page ?? 1,
+        limit: take,
+        totalPages: Math.ceil(total / take),
       },
-    }),
-    this.prisma.organizationMember.count({ where }),
-  ]);
+    };
+  }
 
-  return {
-    items,
-    meta: {
-      total,
-      page: query?.page ?? 1,
-      limit: take,
-      totalPages: Math.ceil(total / take),
-    },
-  };
-}
-
-async updateRole(params: {
+  async updateRole(params: {
     organizationId: string;
     memberId: string; // Who is being promoted?
     roleId: string; // The new role
@@ -270,7 +270,9 @@ async updateRole(params: {
     });
 
     if (!newRole || newRole.scope !== RoleScope.ORGANIZATION) {
-      throw new BadRequestException('Invalid role. Must be an Organization role.');
+      throw new BadRequestException(
+        'Invalid role. Must be an Organization role.',
+      );
     }
 
     // 2. Validation: Prevent Demoting the Last Owner
@@ -306,10 +308,12 @@ async updateRole(params: {
     const { actorId, organizationId, memberId } = params;
 
     // 1. Prevent Suicide (Optional, but good UX)
-    // Most apps force you to leave via a separate "Leave Org" button, 
+    // Most apps force you to leave via a separate "Leave Org" button,
     // rather than "Removing yourself" from the list.
     if (actorId === memberId) {
-      throw new BadRequestException('You cannot remove yourself. Use "Leave Organization" instead.');
+      throw new BadRequestException(
+        'You cannot remove yourself. Use "Leave Organization" instead.',
+      );
     }
 
     // 2. Find Member
@@ -336,42 +340,45 @@ async updateRole(params: {
   }
 
   /**
- * Allows a user to voluntarily leave the organization.
- */
-async leave(userId: string, organizationId: string) {
-  // 1. Find the Member Record for this User
-  const member = await this.prisma.organizationMember.findUnique({
-    where: {
-      organizationId_userId: {
-        organizationId,
-        userId,
+   * Allows a user to voluntarily leave the organization.
+   */
+  async leave(userId: string, organizationId: string) {
+    // 1. Find the Member Record for this User
+    const member = await this.prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId,
+          userId,
+        },
       },
-    },
-    include: { role: true },
-  });
+      include: { role: true },
+    });
 
-  if (!member) {
-    throw new NotFoundException('You are not a member of this organization');
+    if (!member) {
+      throw new NotFoundException('You are not a member of this organization');
+    }
+
+    // 2. Safety Check: Are they the last captain?
+    if (member.role.slug === 'owner') {
+      await this.assertNotLastOrgOwner(organizationId, member.id);
+    }
+
+    // 3. Execution (Cascading Delete)
+    // This removes them from the Org AND all Workspaces automatically
+    // (Assuming onDelete: Cascade in schema)
+    await this.prisma.organizationMember.delete({
+      where: { id: member.id },
+    });
+
+    return { success: true };
   }
-
-  // 2. Safety Check: Are they the last captain?
-  if (member.role.slug === 'owner') {
-    await this.assertNotLastOrgOwner(organizationId, member.id);
-  }
-
-  // 3. Execution (Cascading Delete)
-  // This removes them from the Org AND all Workspaces automatically
-  // (Assuming onDelete: Cascade in schema)
-  await this.prisma.organizationMember.delete({
-    where: { id: member.id },
-  });
-
-  return { success: true };
-}
 
   // --- HELPERS ---
 
-  private async assertNotLastOrgOwner(organizationId: string, memberIdToRemove: string) {
+  private async assertNotLastOrgOwner(
+    organizationId: string,
+    memberIdToRemove: string,
+  ) {
     const ownerRole = await this.prisma.role.findFirst({
       where: { scope: RoleScope.ORGANIZATION, slug: 'owner' },
     });
@@ -388,11 +395,10 @@ async leave(userId: string, organizationId: string) {
 
     if (remainingOwners === 0) {
       throw new BadRequestException(
-        'Cannot remove or demote the last Organization Owner. Transfer ownership first.'
+        'Cannot remove or demote the last Organization Owner. Transfer ownership first.',
       );
     }
   }
-
 
   //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Run once a day
   async cleanupAbandonedOrganizations() {
@@ -403,8 +409,8 @@ async leave(userId: string, organizationId: string) {
     const abandoned = await this.prisma.organization.deleteMany({
       where: {
         status: 'PENDING_PAYMENT',
-        createdAt: { lt: cutoffDate } // Older than 48 hours
-      }
+        createdAt: { lt: cutoffDate }, // Older than 48 hours
+      },
     });
 
     if (abandoned.count > 0) {

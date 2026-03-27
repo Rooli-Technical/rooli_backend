@@ -8,12 +8,12 @@ export interface OAuthResult {
 }
 
 export interface SocialPageOption {
-  id: string;              // The Platform ID (e.g. FB Page ID)
-  name: string;            // "Nike Official"
+  id: string; // The Platform ID (e.g. FB Page ID)
+  name: string; // "Nike Official"
   picture?: string;
   platform: 'FACEBOOK' | 'INSTAGRAM' | 'LINKEDIN' | 'TWITTER' | 'TIKTOK';
   type: 'PAGE' | 'PROFILE' | 'GROUP';
-  accessToken?: string;    // The specific Page Token (if available immediately)
+  accessToken?: string; // The specific Page Token (if available immediately)
   username: string;
   facebookPageId?: string;
   user_id?: string;

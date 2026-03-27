@@ -22,10 +22,7 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
       inject: [ConfigService],
     }),
   ],
-  controllers: [
-    OrganizationsController,
-    InvitationsController,
-  ],
+  controllers: [OrganizationsController, InvitationsController],
   providers: [OrganizationsService, InvitationsService, JwtService],
 })
 export class OrganizationsModule {}

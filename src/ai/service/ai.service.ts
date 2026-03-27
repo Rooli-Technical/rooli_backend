@@ -124,7 +124,11 @@ export class AiService {
         limits.maxVariants,
       );
 
-      await this.quota.assertCanUse(workspaceId, AiFeature.VARIANTS, platformCount);
+      await this.quota.assertCanUse(
+        workspaceId,
+        AiFeature.VARIANTS,
+        platformCount,
+      );
 
       const { brandKit, brandKitId } = await this.resolveBrandKit(
         workspaceId,
@@ -732,7 +736,6 @@ export class AiService {
         inputTokens,
         outputTokens,
         costUsd,
-        
 
         brandKitId: args.brandKitId ?? undefined,
         postId: args.postId ?? undefined,
@@ -781,14 +784,17 @@ export class AiService {
     }
   }
 
-  private getFeatureCost(feature: AiFeature | string, count: number = 1): number {
-    const baseCost = AI_COSTS[feature] ?? 1; 
+  private getFeatureCost(
+    feature: AiFeature | string,
+    count: number = 1,
+  ): number {
+    const baseCost = AI_COSTS[feature] ?? 1;
 
     // For features like 'BULK', you might want to multiply cost by count
     // For single actions, count defaults to 1.
     if (feature === 'BULK' || feature === 'VARIANTS') {
-       // Example logic: Base cost + small fee per additional item
-       return baseCost + (count > 1 ? (count - 1) * 0.5 : 0);
+      // Example logic: Base cost + small fee per additional item
+      return baseCost + (count > 1 ? (count - 1) * 0.5 : 0);
     }
 
     return baseCost * count;

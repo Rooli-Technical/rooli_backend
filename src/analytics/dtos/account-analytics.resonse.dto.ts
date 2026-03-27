@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 class MetricAccessDto {
   @ApiProperty({ description: 'The actual value, or null if locked' })
@@ -20,9 +20,9 @@ export class AccountAnalyticsTieredResponseDto {
     reach: MetricAccessDto;
     engagementRate: MetricAccessDto;
     profileViews: MetricAccessDto;
-    
+
     // Growth % (Business+)
-    netGrowth: number; 
+    netGrowth: number;
     growthPercentage: number | null; // Null for Creator
   };
 
@@ -30,8 +30,11 @@ export class AccountAnalyticsTieredResponseDto {
   demographics?: any; // Locked for Creator
 
   // Comparison Data (Business+)
-  @ApiProperty({ required: false, description: 'Previous period data for comparison' })
-  previousPeriodSummary?: any | null; 
+  @ApiProperty({
+    required: false,
+    description: 'Previous period data for comparison',
+  })
+  previousPeriodSummary?: any | null;
 
   @ApiProperty({ type: 'array' })
   dailySeries: any[]; // The line chart data

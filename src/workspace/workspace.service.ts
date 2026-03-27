@@ -167,7 +167,7 @@ export class WorkspaceService {
     ]);
 
     return {
-     data: data.map((ws) => this.mapWorkspaceWithSafeUsers(ws)),
+      data: data.map((ws) => this.mapWorkspaceWithSafeUsers(ws)),
       meta: {
         total,
         page,
@@ -266,7 +266,7 @@ export class WorkspaceService {
       where: { id: workspaceId },
       select: { id: true, organizationId: true },
     });
-    
+
     if (!workspace) throw new NotFoundException('Workspace not found.');
 
     // 2. Count how many workspaces this Organization currently has
@@ -278,74 +278,74 @@ export class WorkspaceService {
     if (totalWorkspacesInOrg <= 1) {
       throw new BadRequestException(
         'You cannot delete the last workspace in your organization. ' +
-        'If you wish to close your account, please delete your Organization instead.'
+          'If you wish to close your account, please delete your Organization instead.',
       );
     }
 
     // 4. Delete the workspace!
-    await this.prisma.workspace.delete({ 
-      where: { id: workspaceId } 
+    await this.prisma.workspace.delete({
+      where: { id: workspaceId },
     });
 
     return { deleted: true, message: 'Workspace successfully deleted.' };
   }
 
-async switchWorkspace(userId: string, targetWorkspaceId: string) {
-  // 1. Verify membership and get the Member ID in one query
-  const membership = await this.prisma.workspaceMember.findFirst({
-    where: {
-      workspaceId: targetWorkspaceId,
-      member: { userId: userId }, // Reaching through OrganizationMember
-    },
-    include: {
-      workspace: {
-        select: {
-          organizationId: true,
-          organization: { select: { status: true } },
+  async switchWorkspace(userId: string, targetWorkspaceId: string) {
+    // 1. Verify membership and get the Member ID in one query
+    const membership = await this.prisma.workspaceMember.findFirst({
+      where: {
+        workspaceId: targetWorkspaceId,
+        member: { userId: userId }, // Reaching through OrganizationMember
+      },
+      include: {
+        workspace: {
+          select: {
+            organizationId: true,
+            organization: { select: { status: true } },
+          },
         },
       },
-    },
-  });
+    });
 
-  // 2. Security Checks
-  if (!membership) {
-    throw new ForbiddenException('You are not a member of this workspace');
+    // 2. Security Checks
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this workspace');
+    }
+
+    if (membership.workspace.organization.status === 'SUSPENDED') {
+      throw new ForbiddenException('Organization is suspended');
+    }
+
+    const { workspace } = membership;
+
+    // 3. Update "Sticky Session" (Last Active Workspace)
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastActiveWorkspaceId: targetWorkspaceId },
+      select: { id: true, email: true, refreshTokenVersion: true },
+    });
+
+    // 4. Generate New Tokens with the FULL context
+    const tokens = await this.authService.generateTokens(
+      user.id,
+      user.email,
+      workspace.organizationId,
+      targetWorkspaceId,
+      membership.id,
+      user.refreshTokenVersion,
+    );
+
+    // 5. Update the refresh token in the DB
+    await this.authService.updateRefreshToken(user.id, tokens.refreshToken);
+
+    return {
+      message: 'Workspace switched successfully',
+      activeWorkspaceId: targetWorkspaceId,
+      activeOrgId: workspace.organizationId,
+      activeMemberId: membership.id,
+      ...tokens,
+    };
   }
-  
-  if (membership.workspace.organization.status === 'SUSPENDED') {
-    throw new ForbiddenException('Organization is suspended');
-  }
-
-  const { workspace } = membership;
-
-  // 3. Update "Sticky Session" (Last Active Workspace)
-  const user = await this.prisma.user.update({
-    where: { id: userId },
-    data: { lastActiveWorkspaceId: targetWorkspaceId },
-    select: { id: true, email: true, refreshTokenVersion: true },
-  });
-
-  // 4. Generate New Tokens with the FULL context
-  const tokens = await this.authService.generateTokens(
-    user.id,
-    user.email,
-    workspace.organizationId,
-    targetWorkspaceId,
-    membership.id, 
-    user.refreshTokenVersion,
-  );
-
-  // 5. Update the refresh token in the DB
-  await this.authService.updateRefreshToken(user.id, tokens.refreshToken);
-
-  return {
-    message: 'Workspace switched successfully',
-    activeWorkspaceId: targetWorkspaceId,
-    activeOrgId: workspace.organizationId,
-    activeMemberId: membership.id,
-    ...tokens,
-  };
-}
 
   private normalizeSlug(input: string) {
     const s = input
@@ -458,23 +458,25 @@ async switchWorkspace(userId: string, targetWorkspaceId: string) {
   }
 
   private mapWorkspaceWithSafeUsers(workspace: any) {
-  if (!workspace.members) return workspace;
+    if (!workspace.members) return workspace;
 
-  return {
-    ...workspace,
-    members: workspace.members.map((wm: any) => ({
-      ...wm,
-      member: {
-        ...wm.member,
-        user: {
-          ...wm.member.user,
-          avatar: wm.member.user.avatar ? {
-            ...wm.member.user.avatar,
-            size: wm.member.user.avatar.size.toString(),
-          } : null,
+    return {
+      ...workspace,
+      members: workspace.members.map((wm: any) => ({
+        ...wm,
+        member: {
+          ...wm.member,
+          user: {
+            ...wm.member.user,
+            avatar: wm.member.user.avatar
+              ? {
+                  ...wm.member.user.avatar,
+                  size: wm.member.user.avatar.size.toString(),
+                }
+              : null,
+          },
         },
-      },
-    })),
-  };
-}
+      })),
+    };
+  }
 }

@@ -37,7 +37,7 @@ export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
   @Post()
-   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.CREATE)
+  @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.CREATE)
   @ApiOperation({
     summary: 'Create organization',
     description:
@@ -72,9 +72,10 @@ export class OrganizationsController {
   }
 
   @Get(':organizationId/members')
-  @ApiOperation({ 
-    summary: 'List organization members', 
-    description: 'Returns a paginated list of all members within a specific organization.' 
+  @ApiOperation({
+    summary: 'List organization members',
+    description:
+      'Returns a paginated list of all members within a specific organization.',
   })
   @ApiResponse({ status: 200, description: 'Members retrieved successfully.' })
   @ApiResponse({ status: 404, description: 'Organization not found.' })
@@ -138,10 +139,7 @@ export class OrganizationsController {
     @Param('id') orgId: string,
     @Body() dto: UpdateOrganizationDto,
   ) {
-    return this.organizationsService.updateOrganization(
-      orgId,
-      dto,
-    );
+    return this.organizationsService.updateOrganization(orgId, dto);
   }
 
   @Patch(':memberId/role')
@@ -167,9 +165,8 @@ export class OrganizationsController {
     @Param('memberId') memberId: string,
     @CurrentUser('userId') actorUserId: string,
   ) {
-
     return this.organizationsService.remove({
-      actorId: actorUserId, 
+      actorId: actorUserId,
       organizationId,
       memberId,
     });

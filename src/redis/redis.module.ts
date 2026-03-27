@@ -17,7 +17,7 @@ import Redis from 'ioredis';
         }
 
         const url = new URL(redisUrl);
-        
+
         // IMPORTANT: Render Internal URLs (redis://) do NOT use TLS.
         // External URLs (rediss://) DO use TLS.
         const isInternal = !redisUrl.startsWith('rediss://');
@@ -40,12 +40,12 @@ import Redis from 'ioredis';
       inject: ['REDIS_OPTIONS'],
       useFactory: (options) => {
         const logger = new Logger('RedisClient');
-        
+
         const client = new Redis({
           ...options,
           maxRetriesPerRequest: null, // Required for BullMQ
-          enableReadyCheck: true,      // Set to true to ensure stable connection before use
-          
+          enableReadyCheck: true, // Set to true to ensure stable connection before use
+
           // This prevents the "Connection Burst" that causes ECONNRESET
           retryStrategy: (times) => {
             const delay = Math.min(times * 100, 3000);
@@ -59,7 +59,7 @@ import Redis from 'ioredis';
         });
 
         client.on('error', (err: NodeJS.ErrnoException) => {
-          // Silent ECONNRESET logs to keep your terminal clean, 
+          // Silent ECONNRESET logs to keep your terminal clean,
           // ioredis handles the reconnect automatically.
           if (err.code === 'ECONNRESET') {
             logger.warn('Redis connection reset. Retrying...');

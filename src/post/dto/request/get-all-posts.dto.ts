@@ -4,12 +4,18 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class GetWorkspacePostsDto extends PaginationDto {
-  @ApiPropertyOptional({ enum: PostStatus, description: 'Filter by post status' })
+  @ApiPropertyOptional({
+    enum: PostStatus,
+    description: 'Filter by post status',
+  })
   @IsOptional()
   @IsEnum(PostStatus)
   status?: PostStatus;
 
-  @ApiPropertyOptional({ enum: ContentType, description: 'Filter by content type' })
+  @ApiPropertyOptional({
+    enum: ContentType,
+    description: 'Filter by content type',
+  })
   @IsOptional()
   @IsEnum(ContentType)
   contentType?: ContentType;

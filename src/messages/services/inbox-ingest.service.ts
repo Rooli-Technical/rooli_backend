@@ -21,7 +21,6 @@ export class InboxIngestService {
   ) {}
 
   async ingestInboundMessage(evt: NormalizedInboundMessage) {
-
     const occurredAt =
       evt.occurredAt ?? evt.message.providerTimestamp ?? new Date();
     const snippet = (evt.snippet ?? evt.message.content ?? '').slice(0, 140);
@@ -163,7 +162,6 @@ export class InboxIngestService {
   }
 
   async ingestInboundComment(payload: InboundCommentPayload) {
-
     try {
       // 1. Find the Post via PostDestination (where the external ID actually lives)
       const destination = await this.prisma.postDestination.findFirst({

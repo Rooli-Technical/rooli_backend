@@ -12,8 +12,6 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 
-
-
 @Processor('inbox-sync', { concurrency: 10 }) // Process 10 syncs simultaneously
 export class InboxSyncProcessor extends WorkerHost {
   private readonly logger = new Logger(InboxSyncProcessor.name);
@@ -31,9 +29,13 @@ export class InboxSyncProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<{ profileId: string; platform: Platform }>): Promise<void> {
+  async process(
+    job: Job<{ profileId: string; platform: Platform }>,
+  ): Promise<void> {
     const { profileId, platform } = job.data;
-    this.logger.debug(`Starting Inbox Sync for Profile: ${profileId} (${platform})`);
+    this.logger.debug(
+      `Starting Inbox Sync for Profile: ${profileId} (${platform})`,
+    );
 
     try {
       // 1. Fetch Profile & Credentials
@@ -46,7 +48,9 @@ export class InboxSyncProcessor extends WorkerHost {
         throw new Error(`Profile ${profileId} not found or missing token`);
       }
 
-      const accessToken = await this.encryptionService.decrypt(profile.accessToken);
+      const accessToken = await this.encryptionService.decrypt(
+        profile.accessToken,
+      );
 
       // 2. Route to the correct platform logic
       switch (platform) {
@@ -56,7 +60,7 @@ export class InboxSyncProcessor extends WorkerHost {
         case Platform.FACEBOOK:
           await this.syncMeta(profile, accessToken);
           break;
-          case Platform.INSTAGRAM:
+        case Platform.INSTAGRAM:
           await this.syncInstagram(profile, accessToken);
           break;
         default:
@@ -65,7 +69,9 @@ export class InboxSyncProcessor extends WorkerHost {
 
       this.logger.debug(`✅ Completed Inbox Sync for Profile: ${profileId}`);
     } catch (error: any) {
-      this.logger.error(`Inbox Sync failed for profile ${profileId}: ${error.message}`);
+      this.logger.error(
+        `Inbox Sync failed for profile ${profileId}: ${error.message}`,
+      );
       throw error; // Let BullMQ retry
     }
   }
@@ -78,7 +84,7 @@ export class InboxSyncProcessor extends WorkerHost {
     // (You will need to write getRecentComments inside LinkedInInboxProvider)
     const rawComments = await this.linkedInProvider.getRecentComments(
       profile.platformId,
-      accessToken
+      accessToken,
     );
 
     // 2. Normalize & Save each comment
@@ -86,7 +92,11 @@ export class InboxSyncProcessor extends WorkerHost {
       // Reuse the exact same Adapter we built for Webhooks!
       const normalized = this.linkedInAdapter.normalizeComment(raw);
       if (normalized) {
-        const payload = this.mapToCommentPayload(normalized, profile.workspaceId, profile.id);
+        const payload = this.mapToCommentPayload(
+          normalized,
+          profile.workspaceId,
+          profile.id,
+        );
         // Reuse the exact same IngestService we built for Webhooks!
         await this.ingest.ingestInboundComment(payload);
       }
@@ -104,14 +114,18 @@ export class InboxSyncProcessor extends WorkerHost {
     // 1. Fetch raw API data
     const rawComments = await this.metaProvider.getRecentComments(
       profile.platformId,
-      accessToken
+      accessToken,
     );
 
     // 2. Normalize & Save
     for (const raw of rawComments) {
       const normalized = this.metaAdapter.normalizeComment(raw);
       if (normalized) {
-        const payload = this.mapToCommentPayload(normalized, profile.workspaceId, profile.id);
+        const payload = this.mapToCommentPayload(
+          normalized,
+          profile.workspaceId,
+          profile.id,
+        );
         await this.ingest.ingestInboundComment(payload);
       }
     }
@@ -119,18 +133,29 @@ export class InboxSyncProcessor extends WorkerHost {
 
   private async syncInstagram(profile: any, accessToken: string) {
     // Comments
-    const rawComments = await this.instagramProvider.getRecentComments(profile.platformId, accessToken);
+    const rawComments = await this.instagramProvider.getRecentComments(
+      profile.platformId,
+      accessToken,
+    );
     for (const raw of rawComments) {
       // We still use the MetaAdapter here because it handles IG perfectly!
       const normalized = this.metaAdapter.normalizeComment(raw);
       if (normalized) {
-        const payload = this.mapToCommentPayload(normalized, profile.workspaceId, profile.id);
+        const payload = this.mapToCommentPayload(
+          normalized,
+          profile.workspaceId,
+          profile.id,
+        );
         await this.ingest.ingestInboundComment(payload);
       }
     }
 
     // DMs
-    const rawDms = await this.instagramProvider.getRecentDMs(profile.platformId, accessToken, profile.facebookPageId);
+    const rawDms = await this.instagramProvider.getRecentDMs(
+      profile.platformId,
+      accessToken,
+      profile.facebookPageId,
+    );
     for (const dm of rawDms) {
       const normalizedDm = this.metaAdapter.normalizeDirectMessage(dm);
       if (normalizedDm) {
@@ -144,9 +169,9 @@ export class InboxSyncProcessor extends WorkerHost {
   }
 
   private mapToCommentPayload(
-    normalized: any, 
-    workspaceId: string, 
-    socialProfileId: string
+    normalized: any,
+    workspaceId: string,
+    socialProfileId: string,
   ): InboundCommentPayload {
     return {
       workspaceId,
@@ -154,8 +179,12 @@ export class InboxSyncProcessor extends WorkerHost {
       platform: normalized.platform as Platform,
       externalCommentId: normalized.message.externalId,
       content: normalized.message.content,
-      timestamp: normalized.message.providerTimestamp || normalized.occurredAt || new Date(),
-      externalPostId: normalized.message.meta?.postId || normalized.meta?.postId,
+      timestamp:
+        normalized.message.providerTimestamp ||
+        normalized.occurredAt ||
+        new Date(),
+      externalPostId:
+        normalized.message.meta?.postId || normalized.meta?.postId,
       externalParentId: normalized.message.meta?.parentId || null,
       senderExternalId: normalized.contact.externalId,
       senderName: normalized.contact.username || 'Unknown User',
@@ -165,7 +194,7 @@ export class InboxSyncProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job, error: Error) {
-    console.log(error)
+    console.log(error);
     this.logger.error(`❌ Inbox Sync Job Failed [${job.id}]: ${error.message}`);
   }
 }

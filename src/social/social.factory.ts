@@ -12,7 +12,7 @@ export class SocialFactory {
     private twitter: TwitterProvider,
     private linkedin: LinkedInProvider,
     private facebook: FacebookProvider,
-    private instagram: InstagramProvider
+    private instagram: InstagramProvider,
   ) {}
 
   getProvider(platform: Platform): ISocialProvider {
@@ -21,12 +21,14 @@ export class SocialFactory {
         return this.twitter;
       case 'LINKEDIN':
         return this.linkedin;
-      case 'FACEBOOK': 
+      case 'FACEBOOK':
         return this.facebook;
-      case 'INSTAGRAM': 
+      case 'INSTAGRAM':
         return this.instagram;
       default:
-        throw new BadRequestException(`Platform ${platform} is not supported yet.`);
+        throw new BadRequestException(
+          `Platform ${platform} is not supported yet.`,
+        );
     }
   }
 }

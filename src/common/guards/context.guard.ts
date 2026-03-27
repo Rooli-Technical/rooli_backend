@@ -10,11 +10,13 @@ import { Reflector } from '@nestjs/core';
 
 @Injectable()
 export class ContextGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService, private readonly reflector: Reflector) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-
-     // 1. Allow endpoints marked as Public or specifically for Billing
+    // 1. Allow endpoints marked as Public or specifically for Billing
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
       context.getClass(),
@@ -77,9 +79,9 @@ export class ContextGuard implements CanActivate {
       request.currentRole = wsMember.role;
 
       // Optimization: Extract permissions names for easier checking
-     request.permissions = wsMember.role.permissions.map(
-  (p) => `${p.permission.resource}.${p.permission.action}`
-);
+      request.permissions = wsMember.role.permissions.map(
+        (p) => `${p.permission.resource}.${p.permission.action}`,
+      );
 
       return true;
     }
@@ -116,8 +118,8 @@ export class ContextGuard implements CanActivate {
       request.orgMember = orgMember;
       request.currentRole = orgMember.role;
       request.permissions = orgMember.role.permissions.map(
-  (p) => `${p.permission.resource}.${p.permission.action}`
-);
+        (p) => `${p.permission.resource}.${p.permission.action}`,
+      );
       return true;
     }
 
@@ -125,9 +127,9 @@ export class ContextGuard implements CanActivate {
   }
 
   private async updateLastActive(userId: string, workspaceId: string) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { lastActiveWorkspaceId: workspaceId },
-      });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastActiveWorkspaceId: workspaceId },
+    });
   }
 }

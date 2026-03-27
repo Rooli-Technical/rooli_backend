@@ -9,15 +9,12 @@ import { WorkerModule } from '@/worker/worker.module';
 @Module({
   imports: [
     BullModule.registerQueue({
-      name: 'webhooks', 
+      name: 'webhooks',
     }),
     BillingModule,
-    WorkerModule
+    WorkerModule,
   ],
   controllers: [WebhookController],
-  providers: [
-    WebhookService,
-    WebhooksProcessor,
-  ],
+  providers: [WebhookService, WebhooksProcessor],
 })
 export class WebhookModule {}

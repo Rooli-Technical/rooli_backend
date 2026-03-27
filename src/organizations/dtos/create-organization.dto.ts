@@ -31,8 +31,8 @@ export class CreateOrganizationDto {
     description: 'The plan ID to subscribe the organization to upon creation',
     example: 'plan_1234567890',
   })
-  @IsNotEmpty() 
-  @IsString() 
+  @IsNotEmpty()
+  @IsString()
   planId: string;
 
   @ApiPropertyOptional({
@@ -40,7 +40,7 @@ export class CreateOrganizationDto {
     example: 'INDIVIDUAL',
     enum: UserType,
   })
-  @IsOptional() 
+  @IsOptional()
   @IsEnum(UserType)
   userType?: UserType;
 
@@ -50,5 +50,5 @@ export class CreateOrganizationDto {
   })
   @IsOptional()
   @IsString()
-    slug?: string;
+  slug?: string;
 }

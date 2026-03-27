@@ -276,7 +276,6 @@ export class CalendarService {
           );
         });
 
-
         for (const h of holidayInRange) {
           events.push({
             id: `holiday_${country}_${h.date}_${this.slug(h.name)}`,

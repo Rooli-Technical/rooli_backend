@@ -1,7 +1,14 @@
-
 import { Platform } from '@generated/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class GenerateCaptionDto {
   @ApiProperty({ example: 'Announce our early access launch' })
@@ -18,9 +25,12 @@ export class GenerateCaptionDto {
   @IsString()
   brandKitId?: string;
 
-  @ApiPropertyOptional({ example: 'LINKEDIN', enum: ['LINKEDIN','INSTAGRAM','FACEBOOK','X'] })
+  @ApiPropertyOptional({
+    example: 'LINKEDIN',
+    enum: ['LINKEDIN', 'INSTAGRAM', 'FACEBOOK', 'X'],
+  })
   @IsOptional()
-  @IsEnum(['LINKEDIN','INSTAGRAM','FACEBOOK','X'] as any)
+  @IsEnum(['LINKEDIN', 'INSTAGRAM', 'FACEBOOK', 'X'] as any)
   platform?: Platform;
 
   @ApiPropertyOptional({ example: 180 })

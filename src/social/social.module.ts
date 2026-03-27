@@ -7,7 +7,6 @@ import { InstagramProvider } from './providers/instagram.provider';
 import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bullmq';
 
-
 @Module({
   imports: [
     HttpModule,

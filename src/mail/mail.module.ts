@@ -4,9 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 
 @Global()
 @Module({
-  imports: [ConfigModule], 
+  imports: [ConfigModule],
   providers: [MailService],
   exports: [MailService],
 })
 export class MailModule {}
-

@@ -53,52 +53,51 @@ export class WebhooksProcessor extends WorkerHost {
     let organizationId = payload.data?.metadata?.organizationId;
 
     try {
-    // 1. Idempotency Check (Prevent duplicates)
-    if (reference) {
-      const existingLog = await this.prisma.webhookLog.findFirst({
-        where: {
-          resourceId: reference,
-          status: 'PROCESSED',
-          id: { not: logId },
-        },
-      });
+      // 1. Idempotency Check (Prevent duplicates)
+      if (reference) {
+        const existingLog = await this.prisma.webhookLog.findFirst({
+          where: {
+            resourceId: reference,
+            status: 'PROCESSED',
+            id: { not: logId },
+          },
+        });
 
-      if (existingLog) {
-        this.logger.log(`Skipping duplicate event for ref: ${reference}`);
-        return;
-      }
-    }
-
-    // 2. Event Handling Switch
-    switch (event) {
-      case 'charge.success':
-        // RENEWAL or NEW SIGNUP: This is the most important one.
-        // It extends the currentPeriodEnd in the DB.
-        await this.billingService.activateSubscription(payload);
-        break;
-
-      case 'subscription.create':
-        
-        // SYNC: Saves the email_token and subscription_code
-        await this.billingService.saveSubscriptionDetails(payload);
-        break;
-
-      case 'invoice.payment_failed':
-      case 'subscription.not_renew': // Optional: Paystack event for stopped renewals
-      case 'subscription.disable':
-        // EXPIRATION: Determine which code to use
-        // Note: 'subscription.disable' sends code in data.code, others might be data.subscription_code
-        const subCode = data.subscription_code || data.code;
-        
-        if (subCode) {
-           await this.billingService.markAsExpired(subCode);
-           this.logger.warn(`Subscription marked past_due: ${subCode}`);
+        if (existingLog) {
+          this.logger.log(`Skipping duplicate event for ref: ${reference}`);
+          return;
         }
-        break;
+      }
 
-      default:
-        this.logger.log(`Unhandled Paystack event: ${event}`);
-    }
+      // 2. Event Handling Switch
+      switch (event) {
+        case 'charge.success':
+          // RENEWAL or NEW SIGNUP: This is the most important one.
+          // It extends the currentPeriodEnd in the DB.
+          await this.billingService.activateSubscription(payload);
+          break;
+
+        case 'subscription.create':
+          // SYNC: Saves the email_token and subscription_code
+          await this.billingService.saveSubscriptionDetails(payload);
+          break;
+
+        case 'invoice.payment_failed':
+        case 'subscription.not_renew': // Optional: Paystack event for stopped renewals
+        case 'subscription.disable':
+          // EXPIRATION: Determine which code to use
+          // Note: 'subscription.disable' sends code in data.code, others might be data.subscription_code
+          const subCode = data.subscription_code || data.code;
+
+          if (subCode) {
+            await this.billingService.markAsExpired(subCode);
+            this.logger.warn(`Subscription marked past_due: ${subCode}`);
+          }
+          break;
+
+        default:
+          this.logger.log(`Unhandled Paystack event: ${event}`);
+      }
 
       // Mark Log as Processed
       await this.prisma.webhookLog.update({

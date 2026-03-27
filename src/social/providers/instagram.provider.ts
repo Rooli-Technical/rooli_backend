@@ -166,7 +166,7 @@ export class InstagramProvider implements ISocialProvider {
     coverUrl?: string,
   ): Promise<string> {
     try {
-     const baseUrl = this.resolveHost(token);
+      const baseUrl = this.resolveHost(token);
       const url = `${baseUrl}/${igUserId}/media`;
 
       const body: any = {
@@ -193,7 +193,7 @@ export class InstagramProvider implements ISocialProvider {
       } else if (targetType === 'STORIES') {
         body.media_type = 'STORIES';
       } else if (isVideo) {
-        // Standalone videos MUST be REELS. 
+        // Standalone videos MUST be REELS.
         // Videos inside a Carousel MUST be VIDEO.
         body.media_type = isCarouselItem ? 'VIDEO' : 'REELS';
       } else {
@@ -213,7 +213,6 @@ export class InstagramProvider implements ISocialProvider {
       );
 
       const response = await axios.post(url, body);
-
 
       const containerId = response.data.id;
 
@@ -268,9 +267,8 @@ export class InstagramProvider implements ISocialProvider {
       `Creating Carousel Parent with ${childIds.length} items...`,
     );
 
-    const baseUrl = this.resolveHost(token); 
+    const baseUrl = this.resolveHost(token);
     const url = `${baseUrl}/${igUserId}/media`;
-
 
     const response = await axios.post(url, {
       media_type: 'CAROUSEL',
@@ -278,7 +276,6 @@ export class InstagramProvider implements ISocialProvider {
       caption: caption,
       access_token: token,
     });
-
 
     const parentContainerId = response.data.id;
 
@@ -299,8 +296,8 @@ export class InstagramProvider implements ISocialProvider {
     token: string,
     containerId: string,
   ) {
-   const baseUrl = this.resolveHost(token);
-    const publishUrl = `${baseUrl}/${igUserId}/media_publish`; 
+    const baseUrl = this.resolveHost(token);
+    const publishUrl = `${baseUrl}/${igUserId}/media_publish`;
 
     // Optional: wait for container readiness (helps reduce 9007)
     await this.waitForProcessing(containerId, token, 30, 2000);
@@ -320,7 +317,6 @@ export class InstagramProvider implements ISocialProvider {
         const info = await axios.get(`${baseUrl}/${mediaId}`, {
           params: { fields: 'permalink', access_token: token },
         });
-
 
         return { platformPostId: mediaId, url: info.data.permalink };
       } catch (e: any) {
@@ -402,7 +398,6 @@ export class InstagramProvider implements ISocialProvider {
     const msg = igError?.message || error.message;
     throw new InternalServerErrorException(`Instagram Failed: ${msg}`);
   }
-
 
   private resolveHost(token: string): string {
     // Native Instagram tokens usually start with IGQV or IGQW

@@ -13,7 +13,9 @@ export class DestinationBuilder {
     private prisma: PrismaService,
   ) {}
 
-  private buildOverrideMap(overrides?: { socialProfileId: string; content: string }[]) {
+  private buildOverrideMap(
+    overrides?: { socialProfileId: string; content: string }[],
+  ) {
     const map = new Map<string, string>();
     overrides?.forEach((o) => map.set(o.socialProfileId, o.content));
     return map;
@@ -40,15 +42,24 @@ export class DestinationBuilder {
    *     metadata?: { thread?: ThreadNode[] }
    *   }
    */
-  async preparePayloads(workspaceId: string, dto: CreatePostDto): Promise<any[]> {
+  async preparePayloads(
+    workspaceId: string,
+    dto: CreatePostDto,
+  ): Promise<any[]> {
     // 1) Fetch profiles
     const profiles = await this.prisma.socialProfile.findMany({
-      where: { id: { in: dto.socialProfileIds, }, workspaceId, status: ConnectionStatus.CONNECTED },
-      select: { id: true, platform: true, name: true,  },
+      where: {
+        id: { in: dto.socialProfileIds },
+        workspaceId,
+        status: ConnectionStatus.CONNECTED,
+      },
+      select: { id: true, platform: true, name: true },
     });
 
     if (profiles.length !== dto.socialProfileIds.length) {
-      throw new BadRequestException('One or more profiles do not belong to this workspace.');
+      throw new BadRequestException(
+        'One or more profiles do not belong to this workspace.',
+      );
     }
 
     // 2) Overrides
@@ -56,23 +67,36 @@ export class DestinationBuilder {
 
     // 3) Collect ALL media IDs (master + thread replies)
     const allMediaIds = new Set<string>(dto.mediaIds ?? []);
-    dto.threads?.forEach((t) => t.mediaIds?.forEach((id) => allMediaIds.add(id)));
+    dto.threads?.forEach((t) =>
+      t.mediaIds?.forEach((id) => allMediaIds.add(id)),
+    );
 
     // 4) Fetch media metadata and build lookup map
     const dbMedia = allMediaIds.size
       ? await this.prisma.mediaFile.findMany({
           where: { id: { in: Array.from(allMediaIds) } },
-          select: { id: true, url: true, width: true, height: true, mimeType: true, size: true, duration: true },
+          select: {
+            id: true,
+            url: true,
+            width: true,
+            height: true,
+            mimeType: true,
+            size: true,
+            duration: true,
+          },
         })
       : [];
 
-    const mediaMap = new Map(dbMedia.map((m) => [m.id, { ...m, size: Number(m.size) }]));
+    const mediaMap = new Map(
+      dbMedia.map((m) => [m.id, { ...m, size: Number(m.size) }]),
+    );
 
     // Helpers
     const resolveMedia = (ids?: string[]) =>
       (ids ?? []).map((id) => mediaMap.get(id)).filter(Boolean) as MediaItem[];
 
-    const hasExplicitThreads = Array.isArray(dto.threads) && dto.threads.length > 0;
+    const hasExplicitThreads =
+      Array.isArray(dto.threads) && dto.threads.length > 0;
 
     type ThreadNode = {
       content: string;
@@ -81,8 +105,8 @@ export class DestinationBuilder {
     };
 
     const explicitThread: ThreadNode[] = hasExplicitThreads
-      ? dto.threads!
-          .map((t) => ({
+      ? dto
+          .threads!.map((t) => ({
             content: (t?.content ?? '').trim(),
             mediaIds: t?.mediaIds ?? [],
             targetProfileIds: t?.targetProfileIds ?? [],
@@ -119,7 +143,9 @@ export class DestinationBuilder {
               try {
                 this.validateSingleTweetOrThrow(node.content, replyMedia);
               } catch (e: any) {
-                throw new BadRequestException(`Thread item #${i + 1}: ${e?.message ?? 'Invalid tweet.'}`);
+                throw new BadRequestException(
+                  `Thread item #${i + 1}: ${e?.message ?? 'Invalid tweet.'}`,
+                );
               }
             }
 
@@ -128,7 +154,9 @@ export class DestinationBuilder {
               platform: profile.platform,
               status: 'SCHEDULED',
               contentOverride: tweet1Content,
-              metadata: explicitThread.length ? { thread: explicitThread } : undefined,
+              metadata: explicitThread.length
+                ? { thread: explicitThread }
+                : undefined,
             });
             continue;
           }
@@ -140,11 +168,13 @@ export class DestinationBuilder {
             tweet1Media,
           );
 
-          const autoThread: ThreadNode[] = (result.threadChain ?? []).map((c) => ({
-            content: c,
-            mediaIds: [],         // autosplit replies never carry media
-            targetProfileIds: [], // applies to all selected twitter profiles
-          }));
+          const autoThread: ThreadNode[] = (result.threadChain ?? []).map(
+            (c) => ({
+              content: c,
+              mediaIds: [], // autosplit replies never carry media
+              targetProfileIds: [], // applies to all selected twitter profiles
+            }),
+          );
 
           payloads.push({
             socialProfileId: profile.id,
@@ -169,7 +199,7 @@ export class DestinationBuilder {
           contentToValidate,
           profile.platform as any,
           mediaForPlatform,
-          { igKind: dto.contentType as any, FbKind: dto.contentType as any }
+          { igKind: dto.contentType as any, FbKind: dto.contentType as any },
         );
 
         payloads.push({
@@ -177,10 +207,16 @@ export class DestinationBuilder {
           platform: profile.platform,
           status: 'SCHEDULED',
           contentOverride: result.finalContent,
-          metadata: result.threadChain?.length ? { thread: (result.threadChain ?? []).map((c) => ({ content: c })) } : undefined,
+          metadata: result.threadChain?.length
+            ? {
+                thread: (result.threadChain ?? []).map((c) => ({ content: c })),
+              }
+            : undefined,
         });
       } catch (err: any) {
-        errors.push(`[${profile.name}]: ${err?.message ?? 'Validation failed.'}`);
+        errors.push(
+          `[${profile.name}]: ${err?.message ?? 'Validation failed.'}`,
+        );
       }
     }
 
@@ -201,7 +237,10 @@ export class DestinationBuilder {
     if (!text) throw new BadRequestException('Tweet cannot be empty.');
 
     const parsed = twitter.parseTweet(text);
-    if (!parsed.valid) throw new BadRequestException('Tweet exceeds X limits (280 weighted chars).');
+    if (!parsed.valid)
+      throw new BadRequestException(
+        'Tweet exceeds X limits (280 weighted chars).',
+      );
 
     if ((media?.length ?? 0) > 4) {
       throw new BadRequestException('X allows max 4 media items per tweet.');

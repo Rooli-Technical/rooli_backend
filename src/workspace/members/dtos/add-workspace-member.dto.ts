@@ -1,10 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
-
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class AddWorkspaceMemberDto {
   @ApiProperty({ description: 'OrganizationMember ID' })
@@ -13,7 +8,8 @@ export class AddWorkspaceMemberDto {
   organizationMemberId: string;
 
   @ApiPropertyOptional({
-    description: 'Optional workspace override role ID. If omitted/null -> no override.',
+    description:
+      'Optional workspace override role ID. If omitted/null -> no override.',
     nullable: true,
   })
   @IsOptional()
@@ -21,4 +17,3 @@ export class AddWorkspaceMemberDto {
   @IsNotEmpty()
   roleId?: string | null;
 }
-

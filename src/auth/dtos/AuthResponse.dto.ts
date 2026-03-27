@@ -34,7 +34,6 @@ export class SafeUser {
   })
   avatar: string | null;
 
-
   @ApiProperty({
     example: true,
     description: 'Indicates whether the user’s email has been verified.',
@@ -51,10 +50,9 @@ export class SafeUser {
 
   @ApiProperty({
     example: 'INDIVIDUAL',
-    description: 'the user type'
+    description: 'the user type',
   })
-  userType: UserType
-
+  userType: UserType;
 }
 
 export class AuthResponse {
@@ -83,8 +81,8 @@ export class AuthResponse {
   requiresEmailVerification?: boolean;
 
   @ApiProperty({
-    example: "cmg...",
-    description: "the last active workspace of the user"
+    example: 'cmg...',
+    description: 'the last active workspace of the user',
   })
-  lastActiveWorkspaceId: string
+  lastActiveWorkspaceId: string;
 }

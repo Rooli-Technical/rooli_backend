@@ -34,7 +34,6 @@ export interface MediaItem {
   duration?: number;
 }
 
-
 export type ThreadNode = {
   content: string;
   mediaIds?: string[];

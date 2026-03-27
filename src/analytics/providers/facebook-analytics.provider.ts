@@ -16,18 +16,17 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
   private readonly logger = new Logger(FacebookAnalyticsProvider.name);
   private readonly baseUrl = 'https://graph.facebook.com/v23.0';
   private readonly BATCH_LIMIT = 50;
-  
 
   constructor(
     private readonly config: ConfigService,
     private readonly httpService: HttpService,
   ) {}
 
-    private httpsAgent = new https.Agent({
-      family: 4, // Force IPv4 (Disable IPv6)
-      keepAlive: true,
-      timeout: 30000,
-    });
+  private httpsAgent = new https.Agent({
+    family: 4, // Force IPv4 (Disable IPv6)
+    keepAlive: true,
+    timeout: 30000,
+  });
 
   /**
    * PAGE STATS
@@ -82,22 +81,23 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
         return values[values.length - 1]?.value ?? 0;
       };
 
-     return {
-    platformId: pageId,
-    fetchedAt: new Date(),
-    unified: {
-      followersTotal: pageRes.data.followers_count ?? pageRes.data.fan_count ?? 0,
-      impressions: getVal('page_media_view'),
-      reach: getVal('page_impressions_unique'),
-      profileViews: 0, 
-      clicks: getVal('page_total_actions'),
-      engagementCount: getVal('page_post_engagements'),
-    },
-    specific: {
-      demographics: demographicsData ?? {},
-      // You can add pageLikes, pageFollows if you extract them
-    }
-  };
+      return {
+        platformId: pageId,
+        fetchedAt: new Date(),
+        unified: {
+          followersTotal:
+            pageRes.data.followers_count ?? pageRes.data.fan_count ?? 0,
+          impressions: getVal('page_media_view'),
+          reach: getVal('page_impressions_unique'),
+          profileViews: 0,
+          clicks: getVal('page_total_actions'),
+          engagementCount: getVal('page_post_engagements'),
+        },
+        specific: {
+          demographics: demographicsData ?? {},
+          // You can add pageLikes, pageFollows if you extract them
+        },
+      };
     } catch (error: any) {
       const msg = error.response?.data?.error?.message || error.message;
       this.logger.error(`[Facebook Page Stats] Failed for ${pageId}: ${msg}`);
@@ -155,50 +155,63 @@ export class FacebookAnalyticsProvider implements IAnalyticsProvider {
    * Helper to fetch Demographics safely.
    * Returns null if page has <100 followers (API Restriction).
    */
- private async getDemographics(pageId: string, token: string) {
-  try {
-    const res = await firstValueFrom(
-      this.httpService.get(`${this.baseUrl}/${pageId}/insights`, {
-        params: {
-          access_token: token,
-          metric: 'page_fans_city,page_fans_gender_age,page_fans_country',
-          period: 'lifetime',
-        },
-        httpsAgent: this.httpsAgent,
-      }),
-    );
+  private async getDemographics(pageId: string, token: string) {
+    try {
+      const res = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/${pageId}/insights`, {
+          params: {
+            access_token: token,
+            metric: 'page_fans_city,page_fans_gender_age,page_fans_country',
+            period: 'lifetime',
+          },
+          httpsAgent: this.httpsAgent,
+        }),
+      );
 
-    const data = res.data?.data || [];
-    if (data.length === 0) return null;
+      const data = res.data?.data || [];
+      if (data.length === 0) return null;
 
-    return {
-      city: data.find((m: any) => m.name === 'page_fans_city')?.values?.[0]?.value || {},
-      country: data.find((m: any) => m.name === 'page_fans_country')?.values?.[0]?.value || {},
-      genderAge: data.find((m: any) => m.name === 'page_fans_gender_age')?.values?.[0]?.value || {},
-    };
-  } catch (e) {
-    return null; 
+      return {
+        city:
+          data.find((m: any) => m.name === 'page_fans_city')?.values?.[0]
+            ?.value || {},
+        country:
+          data.find((m: any) => m.name === 'page_fans_country')?.values?.[0]
+            ?.value || {},
+        genderAge:
+          data.find((m: any) => m.name === 'page_fans_gender_age')?.values?.[0]
+            ?.value || {},
+      };
+    } catch (e) {
+      return null;
+    }
   }
-}
 
- private mapPostData(post: any): FetchPostResult {
+  private mapPostData(post: any): FetchPostResult {
     const insights = post.insights?.data || [];
-    const getInsight = (name: string) => insights.find((i: any) => i.name === name)?.values?.[0]?.value || 0;
-    
+    const getInsight = (name: string) =>
+      insights.find((i: any) => i.name === name)?.values?.[0]?.value || 0;
+
     return {
       unified: {
         postId: post.id,
-        impressions: getInsight('post_media_view') || getInsight('post_impressions_unique'),
+        impressions:
+          getInsight('post_media_view') ||
+          getInsight('post_impressions_unique'),
         reach: getInsight('post_impressions_unique'),
         likes: post.reactions?.summary?.total_count || 0,
         comments: post.comments?.summary?.total_count || 0,
-        engagementCount: (post.reactions?.summary?.total_count || 0) + (post.comments?.summary?.total_count || 0) + (post.shares?.count || 0) + getInsight('post_clicks'),
+        engagementCount:
+          (post.reactions?.summary?.total_count || 0) +
+          (post.comments?.summary?.total_count || 0) +
+          (post.shares?.count || 0) +
+          getInsight('post_clicks'),
       },
       specific: {
         shares: post.shares?.count || 0,
         linkClicks: getInsight('post_clicks'),
         videoViews: 0, // Add if querying video metrics
-      }
+      },
     };
   }
   protected chunkArray<T>(array: T[], size: number): T[][] {

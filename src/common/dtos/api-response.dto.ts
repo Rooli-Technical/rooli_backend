@@ -10,7 +10,7 @@ export class ApiResponseDto<T> {
   @ApiProperty({ example: 'Operation successful', required: false })
   message?: string;
 
-@ApiProperty({ nullable: true }) 
+  @ApiProperty({ nullable: true })
   data: any;
 
   @ApiProperty({ example: '2026-01-07T12:00:00.000Z' })

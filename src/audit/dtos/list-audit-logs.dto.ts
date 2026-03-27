@@ -1,7 +1,7 @@
-import { PaginationDto } from "@/common/dtos/pagination.dto";
-import { AuditResourceType } from "@generated/enums";
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsEnum, IsString } from "class-validator";
+import { PaginationDto } from '@/common/dtos/pagination.dto';
+import { AuditResourceType } from '@generated/enums';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsEnum, IsString } from 'class-validator';
 
 export class ListAuditLogsDto extends PaginationDto {
   @ApiPropertyOptional({ enum: AuditResourceType })

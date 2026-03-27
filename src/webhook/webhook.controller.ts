@@ -96,17 +96,16 @@ export class WebhookController {
    * - Guard verifies x-hub-signature-256 using raw body + META_APP_SECRET.
    * - We immediately enqueue each sub-event as its own job with a stable jobId.
    */
-@Post('meta')
+  @Post('meta')
   @UseGuards(MetaWebhookGuard)
   async handle(@Body() payload: any) {
     const objectType = payload?.object;
     const entries = payload?.entry ?? [];
 
-
     const log = await this.prisma.webhookLog.create({
       data: {
         provider: 'META',
-        eventType: objectType, 
+        eventType: objectType,
         resourceId: entries[0]?.id || 'system-event',
         payload: payload,
         status: 'PENDING',
@@ -129,7 +128,6 @@ export class WebhookController {
       // ==========================================
       if (Array.isArray(entry.changes)) {
         for (const change of entry.changes) {
-          
           // A. Standalone IG Direct Messages
           if (change.field === 'messages') {
             const m = change.value; // The value object perfectly mirrors the old 'messaging' object
@@ -140,8 +138,8 @@ export class WebhookController {
           // B. Feed / Comments (FB & IG)
           if (change.field === 'feed' || change.field === 'comments') {
             const changeId =
-              change?.value?.id ??           // <-- Catches Instagram Comments
-              change?.value?.comment_id ??   // <-- Catches Facebook Comments
+              change?.value?.id ?? // <-- Catches Instagram Comments
+              change?.value?.comment_id ?? // <-- Catches Facebook Comments
               change?.value?.post_id ??
               `${entry?.id ?? 'na'}-${change.field}-${Date.now()}`;
 
@@ -168,7 +166,11 @@ export class WebhookController {
         'meta-system-event',
         { entry },
         {
-          jobId: `meta-system-${entry?.id ?? cryptoRandomId()}-${Date.now()}`.replace(/:/g, '-'),
+          jobId:
+            `meta-system-${entry?.id ?? cryptoRandomId()}-${Date.now()}`.replace(
+              /:/g,
+              '-',
+            ),
           attempts: 5,
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: true,
@@ -182,12 +184,12 @@ export class WebhookController {
 
   // Extracted into a helper method to keep your controller clean since we call it twice
   private async queueMessage(entry: any, m: any, objectType: string) {
-    const mid = m?.message?.mid; 
+    const mid = m?.message?.mid;
     const fallback = `${entry?.id ?? 'na'}-${m?.timestamp ?? Date.now()}-${m?.sender?.id ?? 'na'}`;
     const jobId = `meta-dm-${mid ?? fallback}`.replace(/:/g, '-');
-    
+
     this.logger.log(`Adding DM to queue: ${jobId}`);
-    
+
     await this.inboxQueue.add(
       'meta-inbound-message',
       { entryId: entry.id, messaging: m, rawEntry: entry, objectType }, // Pass 'm' as 'messaging' for the adapter
@@ -228,16 +230,22 @@ export class WebhookController {
   // }
 
   @Get('linkedin')
-  verifyLinkedIn(@Query('challengeCode') challengeCode: string, @Res() res: Response) {
+  verifyLinkedIn(
+    @Query('challengeCode') challengeCode: string,
+    @Res() res: Response,
+  ) {
     if (!challengeCode) {
       throw new BadRequestException('Missing challengeCode');
     }
 
     this.logger.log(`[LinkedIn] Handshake received: ${challengeCode}`);
 
-    // ✅ FIX: LinkedIn expects the challengeCode returned as PLAIN TEXT 
+    // ✅ FIX: LinkedIn expects the challengeCode returned as PLAIN TEXT
     // with a 200 OK status. Do not return JSON.
-    return res.status(200).set('Content-Type', 'text/plain').send(challengeCode);
+    return res
+      .status(200)
+      .set('Content-Type', 'text/plain')
+      .send(challengeCode);
   }
 
   /**
@@ -266,7 +274,7 @@ export class WebhookController {
       { payload },
       {
         jobId: `linkedin-webhook-${notificationId}`,
-        attempts: 5, 
+        attempts: 5,
         backoff: { type: 'exponential', delay: 1500 },
         removeOnComplete: true,
         removeOnFail: { age: 7 * 24 * 3600 },

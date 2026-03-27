@@ -1,6 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CampaignService } from './campaigns.service';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { CreateCampaignDto } from './dto/request/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/request/update-campaign.dto';
 import { CampaignStatus } from '@generated/enums';
@@ -18,7 +34,10 @@ export class CampaignController {
   @Post()
   @ApiOperation({ summary: 'Create campaign' })
   @ApiParam({ name: 'workspaceId', example: 'ws_123' })
-  create(@Param('workspaceId') workspaceId: string, @Body() dto: CreateCampaignDto) {
+  create(
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: CreateCampaignDto,
+  ) {
     return this.service.create(workspaceId, dto);
   }
 
@@ -26,13 +45,19 @@ export class CampaignController {
   @ApiOperation({ summary: 'List campaigns' })
   @ApiParam({ name: 'workspaceId', example: 'ws_123' })
   @ApiQuery({ name: 'status', required: false, enum: CampaignStatus })
-  list(@Param('workspaceId') workspaceId: string, @Query('status') status?: CampaignStatus) {
+  list(
+    @Param('workspaceId') workspaceId: string,
+    @Query('status') status?: CampaignStatus,
+  ) {
     return this.service.list(workspaceId, status);
   }
 
   @Get(':campaignId')
   @ApiOperation({ summary: 'Get campaign' })
-  get(@Param('workspaceId') workspaceId: string, @Param('campaignId') campaignId: string) {
+  get(
+    @Param('workspaceId') workspaceId: string,
+    @Param('campaignId') campaignId: string,
+  ) {
     return this.service.get(workspaceId, campaignId);
   }
 
@@ -48,7 +73,12 @@ export class CampaignController {
 
   @Delete(':campaignId')
   @ApiOperation({ summary: 'Delete campaign (detach posts or block if used)' })
-  @ApiQuery({ name: 'mode', required: false, enum: ['detach', 'block'], example: 'detach' })
+  @ApiQuery({
+    name: 'mode',
+    required: false,
+    enum: ['detach', 'block'],
+    example: 'detach',
+  })
   remove(
     @Param('workspaceId') workspaceId: string,
     @Param('campaignId') campaignId: string,
@@ -59,7 +89,10 @@ export class CampaignController {
 
   @Get(':campaignId/posts')
   @ApiOperation({ summary: 'List posts in campaign' })
-  listPosts(@Param('workspaceId') workspaceId: string, @Param('campaignId') campaignId: string) {
+  listPosts(
+    @Param('workspaceId') workspaceId: string,
+    @Param('campaignId') campaignId: string,
+  ) {
     return this.service.listPosts(workspaceId, campaignId);
   }
 

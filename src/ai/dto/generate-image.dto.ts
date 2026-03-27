@@ -12,7 +12,8 @@ export class GenerateImageDto {
   prompt: string;
 
   @ApiPropertyOptional({
-    description: 'The artistic style (e.g., photorealistic, 3D render, minimalist)',
+    description:
+      'The artistic style (e.g., photorealistic, 3D render, minimalist)',
     example: 'photorealistic digital art',
   })
   @IsString()

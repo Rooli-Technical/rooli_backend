@@ -6,16 +6,16 @@ export interface PlanFeatures {
   approvalWorkflow: boolean;
   prioritySupport: boolean;
   mediaLibrary: boolean;
-  
+
   // --- Module Access Flags ---
-  hasCampaigns?: boolean;  
+  hasCampaigns?: boolean;
   hasLabels?: boolean;
   bulkScheduling?: boolean;
   queueScheduling?: boolean;
   aiContentGeneration?: boolean;
-  aiAdvanced?: boolean,
+  aiAdvanced?: boolean;
   aiBulkGenerate?: boolean;
-  visualCalendar?: true
+  visualCalendar?: true;
 
   // --- Enterprise Extras ---
   dedicatedAccountManager?: boolean;

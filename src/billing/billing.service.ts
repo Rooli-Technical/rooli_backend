@@ -439,36 +439,36 @@ export class BillingService {
       `Found ${expiredSubs.length} expired subscriptions. Locking accounts...`,
     );
 
-     for (const sub of expiredSubs) {
-    await this.prisma.$transaction(async (tx) => {
-      // Guarded update: only flip if still ACTIVE (prevents double-processing issues)
-      const updated = await tx.subscription.updateMany({
-        where: { id: sub.id, status: 'active' },
-        data: { status: 'past_due', isActive: false },
+    for (const sub of expiredSubs) {
+      await this.prisma.$transaction(async (tx) => {
+        // Guarded update: only flip if still ACTIVE (prevents double-processing issues)
+        const updated = await tx.subscription.updateMany({
+          where: { id: sub.id, status: 'active' },
+          data: { status: 'past_due', isActive: false },
+        });
+
+        // If another instance already processed it, skip locking
+        if (updated.count === 0) return;
+
+        // Lock social profiles (only those currently active)
+        await tx.socialProfile.updateMany({
+          where: {
+            isActive: true,
+            workspace: { organizationId: sub.organizationId },
+          },
+          data: { isActive: false },
+        });
+
+        // Optional: lock org too (helps your other queries)
+        await tx.organization.update({
+          where: { id: sub.organizationId },
+          data: { isActive: false },
+        });
       });
 
-      // If another instance already processed it, skip locking
-      if (updated.count === 0) return;
-
-      // Lock social profiles (only those currently active)
-      await tx.socialProfile.updateMany({
-        where: {
-          isActive: true,
-          workspace: { organizationId: sub.organizationId },
-        },
-        data: { isActive: false },
-      });
-
-      // Optional: lock org too (helps your other queries)
-      await tx.organization.update({
-        where: { id: sub.organizationId },
-        data: { isActive: false },
-      });
-    });
-
-    this.logger.log(`🔒 Locked Organization: ${sub.organizationId}`);
+      this.logger.log(`🔒 Locked Organization: ${sub.organizationId}`);
+    }
   }
-}
 
   private inferCountry(ipCountry?: string, timeZone?: string) {
     if (timeZone === 'Africa/Lagos') return 'NG';

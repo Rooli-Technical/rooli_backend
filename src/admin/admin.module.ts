@@ -15,16 +15,20 @@ import { AdminOrganizationRepository } from './organization/admin-organization.r
 import { AdminOrganizationService } from './organization/admin-organization.service';
 import { AdminOrganizationController } from './organization/admin-organization.controller';
 import { AdminUserController } from './users/admin-user.controller';
+import { AdminSecurityController } from './security/admin-security.controller';
+import { AdminSecurityService } from './security/admin-security.service';
+import { AdminSecurityRepo } from './security/admin-security.repo';
 
 @Module({
   imports: [
-    AdminAuthModule,       // ← registers AdminJwtStrategy + AdminGoogleStrategy with Passport
+    AdminAuthModule, // ← registers AdminJwtStrategy + AdminGoogleStrategy with Passport
     SupportTicketModule,
   ],
   controllers: [
     AdminController,
     AdminOrganizationController,
-    AdminUserController
+    AdminUserController,
+    AdminSecurityController,
     // AdminAuthController is declared inside AdminAuthModule — remove it from here
   ],
   providers: [
@@ -35,6 +39,8 @@ import { AdminUserController } from './users/admin-user.controller';
     AdminUserService,
     AdminOrganizationRepository,
     AdminOrganizationService,
+    AdminSecurityService,
+    AdminSecurityRepo,
     // AdminAuthService is provided + exported by AdminAuthModule — remove it from here
   ],
 })

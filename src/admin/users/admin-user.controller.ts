@@ -25,9 +25,11 @@ import {
   SuspendResponseDto,
   SuspendUserDto,
 } from './admin.user.dto';
+import { AdminRoute } from '@/common/decorators/admin-route.decorator';
 
 @ApiTags('Admin-Users')
 @ApiBearerAuth()
+@AdminRoute()
 @UseGuards(AdminJwtGuard)
 @Controller('admin')
 export class AdminUserController {

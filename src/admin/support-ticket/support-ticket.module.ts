@@ -5,9 +5,7 @@ import { AdminTicketsService } from './support-ticket.service';
 import { EventsModule } from '@/events/events.module';
 
 @Module({
-  imports:[
-    EventsModule
-  ],
+  imports: [EventsModule],
   controllers: [SupportTicketController],
   providers: [AdminTicketsService],
 })

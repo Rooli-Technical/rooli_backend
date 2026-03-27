@@ -1,6 +1,15 @@
-import { Platform } from "@generated/enums";
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsInt, Min, Max, IsString, Matches, IsEnum, IsBoolean } from "class-validator";
+import { Platform } from '@generated/enums';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+  IsString,
+  Matches,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 
 export class UpdateQueueSlotDto {
   @ApiPropertyOptional({
@@ -22,7 +31,9 @@ export class UpdateQueueSlotDto {
   })
   @IsOptional()
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'time must be HH:mm (24h)' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'time must be HH:mm (24h)',
+  })
   time?: string;
 
   @ApiPropertyOptional({

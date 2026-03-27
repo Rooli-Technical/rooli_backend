@@ -20,7 +20,7 @@ import { AnalyticsModule } from '@/analytics/analytics.module';
       signOptions: { expiresIn: '7d' },
     }),
     RedisModule,
-    AnalyticsModule
+    AnalyticsModule,
   ],
   providers: [
     PrismaService,
@@ -32,6 +32,6 @@ import { AnalyticsModule } from '@/analytics/analytics.module';
     WsAuthMiddleware,
     ProfileConnectionSubscriber,
   ],
-  exports: [DomainEventsService, RealtimeEmitterService,],
+  exports: [DomainEventsService, RealtimeEmitterService],
 })
 export class EventsModule {}

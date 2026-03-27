@@ -9,8 +9,7 @@ export class PollingController {
 
   @Get(':profileId/feed')
   @ApiOperation({ summary: 'Fetch DMs and Comments for a specific profile' })
-  async getProfileInbox(
-    @Param('profileId') profileId: string){
+  async getProfileInbox(@Param('profileId') profileId: string) {
     return this.pollingService.fetchLiveData(profileId);
   }
 }
