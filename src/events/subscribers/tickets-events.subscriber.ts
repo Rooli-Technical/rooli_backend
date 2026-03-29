@@ -32,22 +32,24 @@ export class TicketEventsSubscriber {
     // await this.email.sendTicketReceivedEmail(...);
   }
 
-  @OnEvent('ticket.comment.added', { async: true })
-  async handleCommentAdded(
-    payload: DomainEventPayloadMap['ticket.comment.added'],
-  ) {
-    // 1. WEBSOCKETS: Update the chat thread instantly
-    this.realtimeEmitter.emitToWorkspace(
-      payload.workspaceId,
-      'ticket.comment.added',
-      payload,
-    );
+  // I commented this out  since the emit is meant to be to ticketId
 
-    // 2. EMAIL: If Admin replied to Customer (and it's not a private note)
-    if (payload.isFromSupport && !payload.isInternal) {
-      // await this.email.sendTicketReplyEmail(...)
-    }
-  }
+  // @OnEvent('ticket.comment.added', { async: true })
+  // async handleCommentAdded(
+  //   payload: DomainEventPayloadMap['ticket.comment.added'],
+  // ) {
+  //   // 1. WEBSOCKETS: Update the chat thread instantly
+  //   this.realtimeEmitter.emitToWorkspace(
+  //     payload.workspaceId,
+  //     'ticket.comment.added',
+  //     payload,
+  //   );
+
+  //   // 2. EMAIL: If Admin replied to Customer (and it's not a private note)
+  //   if (payload.isFromSupport && !payload.isInternal) {
+  //     // await this.email.sendTicketReplyEmail(...)
+  //   }
+  // }
 
   @OnEvent('ticket.updated', { async: true })
   async handleTicketUpdated(payload: DomainEventPayloadMap['ticket.updated']) {
@@ -57,5 +59,22 @@ export class TicketEventsSubscriber {
       'ticket.updated',
       payload,
     );
+  }
+
+  @OnEvent('ticket.comment.added', { async: true })
+  async handleTicketCommentAdded(
+    payload: DomainEventPayloadMap['ticket.comment.added'],
+  ) {
+    // 1. WEBSOCKETS: Update the chat thread instantly
+    this.realtimeEmitter.emitToTicketId(
+      payload.ticketId,
+      'ticket.comment.added',
+      payload,
+    );
+
+    // 2. EMAIL: If Admin replied to Customer (and it's not a private note)
+    if (payload.isFromSupport && !payload.isInternal) {
+      await this.email.sendSupportEmail(payload.email)
+    }
   }
 }

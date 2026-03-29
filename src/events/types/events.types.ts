@@ -191,6 +191,7 @@ export type DomainEventPayloadMap = {
     createdAt: Date;
     author: { id: string; name: string };
     mediaFiles: any[];
+    email?: string;
   };
 
   'ticket.updated': {

@@ -37,6 +37,22 @@ export class RealtimeEmitterService implements OnModuleInit {
     this.emitter.of('/events').to(room).emit(event, payload);
   }
 
+
+    emitToTicketId(ticketId: string, event: string, payload: any) {
+    if (!this.emitter) {
+      this.logger.error(
+        `❌ Emitter not initialized. Failed to broadcast ${event}`,
+      );
+      return;
+    }
+
+    const room = `ticket:${ticketId}`;
+    // Add this line:
+    this.logger.debug(`📡 [Worker -> Redis] Emitting ${event} to room ${room}`);
+
+    this.emitter.of('/events').to(room).emit(event, payload);
+  }
+
   emitToConversation(
     workspaceId: string,
     conversationId: string,

@@ -161,4 +161,25 @@ export class MailService {
       html,
     );
   }
+
+  async sendSupportEmail(email: string) {
+    const context = {
+      year: new Date().getFullYear(),
+      updateTime: new Date().toLocaleString('en-US', {
+        timeZone: 'UTC',
+        hour12: true,
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+    };
+
+    // Ensure you create a file named 'password-reset-otp.hbs'
+    const html = await this.compileTemplate('admin-support', context);
+
+    await this.sendZeptoMail(
+      email,
+      `You can confirm it your issue has been resolved, if not you can get back to us`,
+      html,
+    );
+  }
 }

@@ -23,10 +23,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     //   return true; // Bypass the normal User JWT Strategy completely
     // }
 
-    if (request.path.startsWith('/api/v1/admin')) {
-      console.log('Admin route detected by path — bypassing JwtAuthGuard');
-      return true;
-    }
+    // if (request.path.startsWith('/api/v1/admin')) {
+    //   console.log('Admin route detected by path — bypassing JwtAuthGuard');
+    //   return true;
+    // }
 
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
