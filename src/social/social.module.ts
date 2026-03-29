@@ -6,6 +6,7 @@ import { FacebookProvider } from './providers/facbook.provider';
 import { InstagramProvider } from './providers/instagram.provider';
 import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bullmq';
+import { TikTokProvider } from './providers/tiktok.provider';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { BullModule } from '@nestjs/bullmq';
     LinkedInProvider,
     FacebookProvider,
     InstagramProvider,
+    TikTokProvider,
   ],
   exports: [SocialFactory, FacebookProvider],
 })

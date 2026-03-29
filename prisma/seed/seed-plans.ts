@@ -79,7 +79,7 @@ export async function seedPlans() {
       name: 'Business Monthly',
       description: 'For growing businesses & small teams.',
       tier: PlanTier.BUSINESS,
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
 
       priceNgn: 14700,
       priceUsd: 10,
@@ -110,7 +110,7 @@ export async function seedPlans() {
     {
       name: 'Business Annual',
       description: 'Annual - For growing businesses.',
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
       tier: PlanTier.BUSINESS,
 
       priceNgn: 167580,
@@ -144,7 +144,7 @@ export async function seedPlans() {
     // // ======================
     {
       name: 'Rocket Monthly',
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
       description: 'For agencies & large teams.',
       tier: PlanTier.ROCKET,
 
@@ -184,7 +184,7 @@ export async function seedPlans() {
       name: 'Rocket Annual',
       description: 'Annual - For agencies & companies.',
       tier: PlanTier.ROCKET,
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
 
       priceNgn: 502740,
       priceUsd: 342,
@@ -234,7 +234,7 @@ export async function seedPlans() {
       
       interval: BillingInterval.MONTHLY, // Default to monthly for system calculation
 
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
       
       // "Custom" means you likely manually edit these per org, 
       // but these serve as the high defaults:

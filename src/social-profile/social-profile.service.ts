@@ -55,11 +55,19 @@ export class SocialProfileService {
       (id) => !existingIds.has(id),
     ).length;
 
+<<<<<<< HEAD
     if (newProfilesCount > remaining) {
       throw new ForbiddenException(
         `You have ${remaining} slots left, but tried to add ${newProfilesCount} new profiles.`,
       );
     }
+=======
+    // if (newProfilesCount > remaining) {
+    //   throw new ForbiddenException(
+    //     `You have ${remaining} slots left, but tried to add ${newProfilesCount} new profiles.`,
+    //   );
+    // }
+>>>>>>> 59ffd754948fe9b9abfab94337cf7f7045fcd061
 
     const added: any[] = [];
 
@@ -73,17 +81,30 @@ export class SocialProfileService {
         );
       }
 
+<<<<<<< HEAD
       // 5. Global ownership check (The Bouncer)
       // We only care if the page is currently ACTIVE in another workspace.
+=======
+      // 5. Global ownership check (authoritative)
+>>>>>>> 59ffd754948fe9b9abfab94337cf7f7045fcd061
       const activeGlobalProfile = await this.prisma.socialProfile.findFirst({
         where: {
           platform: pageData.platform as Platform,
           platformId: pageData.id,
+<<<<<<< HEAD
           status: ConnectionStatus.CONNECTED, // Only look for active connections!
         },
         select: { workspaceId: true },
       });
 
+=======
+          status: ConnectionStatus.CONNECTED, // Only block if another workspace has it actively CONNECTED
+        },
+        select: { id: true, workspaceId: true },
+      });
+
+      // If we found an active profile, and it does NOT belong to the current workspace, reject it.
+>>>>>>> 59ffd754948fe9b9abfab94337cf7f7045fcd061
       if (
         activeGlobalProfile &&
         activeGlobalProfile.workspaceId !== workspaceId
@@ -98,7 +119,11 @@ export class SocialProfileService {
       const profile = await this.prisma.socialProfile.upsert({
         where: {
           workspaceId_platform_platformId: {
+<<<<<<< HEAD
             workspaceId: workspaceId,
+=======
+            workspaceId,
+>>>>>>> 59ffd754948fe9b9abfab94337cf7f7045fcd061
             platform: pageData.platform as Platform,
             platformId: pageData.id,
           },

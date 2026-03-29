@@ -7,6 +7,7 @@ import { HttpModule } from '@nestjs/axios';
 import { LinkedInService } from './providers/linkedin.service';
 import { TwitterService } from './providers/twitter.service';
 import { InstagramService } from './providers/instagram.service';
+import { TikTokService } from './providers/tiktok.service';
 
 @Module({
   imports: [HttpModule],
@@ -18,6 +19,7 @@ import { InstagramService } from './providers/instagram.service';
     LinkedInService,
     TwitterService,
     InstagramService,
+    TikTokService,
   ],
   exports: [SocialConnectionService],
 })

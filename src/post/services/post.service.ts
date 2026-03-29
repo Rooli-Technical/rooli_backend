@@ -976,9 +976,10 @@ export class PostService {
                 linkedInStats: true,
                 facebookStats: true,
                 instagramStats: true,
-              },
-            },
-          },
+                tiktokStats: true,
+              }
+            }
+          }
         },
       },
     });
@@ -1006,6 +1007,9 @@ export class PostService {
             break;
           case 'INSTAGRAM':
             resolvedShares = latestStats.instagramStats?.shares ?? 0;
+            break;
+          case 'TIKTOK':
+            resolvedShares = latestStats.tiktokStats?.shares ?? 0;
             break;
         }
       }
