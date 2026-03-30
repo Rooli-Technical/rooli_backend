@@ -1,6 +1,5 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma } from '@generated/client';
-import { RoleScope } from '@generated/enums';
 import {
   BadRequestException,
   ForbiddenException,
@@ -15,11 +14,8 @@ import { ListMembersQueryDto } from './dtos/list-members.dto';
 export class WorkspaceMemberService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async addMember(params: {
-    workspaceId: string;
-    dto: AddWorkspaceMemberDto;
-  }) {
-    const {  workspaceId, dto } = params;
+  async addMember(params: { workspaceId: string; dto: AddWorkspaceMemberDto }) {
+    const { workspaceId, dto } = params;
 
     // 1) Load workspace + orgId
     const workspace = await this.prisma.workspace.findUnique({
@@ -51,29 +47,43 @@ export class WorkspaceMemberService {
     }
 
     // 5) Create workspace member (idempotent-ish)
-    try {
-      return await this.prisma.workspaceMember.create({
-        data: {
+    // 5) Create or Update workspace member (True Idempotency)
+    return await this.prisma.workspaceMember.upsert({
+      where: {
+        workspaceId_memberId: {
           workspaceId: workspace.id,
           memberId: targetOrgMember.id,
-          roleId: dto.roleId ?? null,
         },
-        include: {
-          member: {
-            include: {
-              user: { select: { id: true, email: true, firstName: true, lastName: true } },
+      },
+      update: {
+        // If they already exist, optionally update their role,
+        // or leave empty `{}` to do nothing.
+        roleId: dto.roleId ?? null,
+        isActive: true, // Reactivate them if they were previously soft-deleted!
+        deletedAt: null,
+      },
+      create: {
+        workspaceId: workspace.id,
+        memberId: targetOrgMember.id,
+        roleId: dto.roleId ?? null,
+      },
+      include: {
+        member: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
             },
           },
-          role: true,
-          workspace: { select: { id: true, name: true, slug: true } },
         },
-      });
-    } catch (e: any) {
-      if (e.code === 'P2002') {
-        throw new BadRequestException('User is already in this workspace');
-      }
-      throw e;
-    }
+        role: true,
+        workspace: { select: { id: true, name: true, slug: true } },
+      },
+    });
   }
 
   async removeMember(params: {
@@ -105,8 +115,12 @@ export class WorkspaceMemberService {
     }
 
     // 4. Execution
-    await this.prisma.workspaceMember.delete({
+    await this.prisma.workspaceMember.update({
       where: { id: workspaceMemberId },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+      },
     });
 
     return { success: true };
@@ -144,16 +158,28 @@ export class WorkspaceMemberService {
       );
     }
 
-    return this.prisma.workspaceMember.update({
+    const updatedMember = await this.prisma.workspaceMember.update({
       where: { id: workspaceMemberId },
       data: { roleId: dto.roleId },
       include: {
         member: {
-          include: { user: { select: { id: true, email: true, firstName: true, lastName: true, avatar: true } } },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
+          },
         },
         role: true,
       },
     });
+
+    return this.mapWorkspaceMemberResponse(updatedMember);
   }
 
   /**
@@ -177,6 +203,8 @@ export class WorkspaceMemberService {
     const search = query?.search?.trim();
     const where: Prisma.WorkspaceMemberWhereInput = {
       workspaceId,
+      isActive: true,
+      deletedAt: null,
       ...(search
         ? {
             OR: [
@@ -230,7 +258,7 @@ export class WorkspaceMemberService {
     ]);
 
     return {
-      items,
+      items: items.map(this.mapWorkspaceMemberResponse),
       meta: {
         total,
         page: query?.page ?? 1,
@@ -239,8 +267,6 @@ export class WorkspaceMemberService {
       },
     };
   }
-
-
 
   // -------------------------
   // Helpers
@@ -256,72 +282,80 @@ export class WorkspaceMemberService {
     roleId: string,
     organizationId: string,
   ) {
-    const role = await this.prisma.role.findUnique({
-      where: { id: roleId },
-      select: { id: true, scope: true, organizationId: true },
+    // Offload the validation entirely to the database engine
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id: roleId,
+        scope: 'WORKSPACE', // Must be workspace scoped
+        organizationId: { in: [null, organizationId] }, // Must be System (null) OR belong to this Org
+      },
+      select: { id: true },
     });
-    if (!role) throw new BadRequestException('Invalid role');
 
-    if (role.scope !== RoleScope.WORKSPACE) {
-      throw new BadRequestException('Role is not a workspace role');
-    }
-
-    // If role is org-scoped, ensure it matches this org
-    if (role.organizationId && role.organizationId !== organizationId) {
-      throw new ForbiddenException('Role belongs to another organization');
+    if (!role) {
+      throw new BadRequestException(
+        'Invalid workspace role. It must be a workspace-scoped role belonging to this organization.',
+      );
     }
   }
-
 
   /**
    * Prevents removing a member if they are the LAST person with "Owner" privileges.
    * Checks both Explicit Roles (Workspace Override) and Implicit Roles (Org Owner).
    */
-  private async assertNotLastOwner(
-    workspaceId: string,
-    memberToRemove: any,
-  ) {
-    // A. Check if the person we are removing is even an owner
+  private async assertNotLastOwner(workspaceId: string, memberToRemove: any) {
     const isExplicitOwner = memberToRemove.role?.slug === 'owner';
-    // They are an implicit owner if they have NO workspace role override,
-    // but their Org role is 'owner'.
     const isImplicitOwner =
       !memberToRemove.roleId && memberToRemove.member.role.slug === 'owner';
 
-    // If they aren't an owner, we don't care. Safe to delete.
-    if (!isExplicitOwner && !isImplicitOwner) {
-      return;
-    }
+    if (!isExplicitOwner && !isImplicitOwner) return; // Not an owner, safe to remove
 
-    // B. If we are here, we are removing a "Boss".
-    // We must verify at least ONE other Boss remains.
-
-    // Count 1: Other Explicit Workspace Owners
-    const otherExplicitOwners = await this.prisma.workspaceMember.count({
+    // Single query to count ALL remaining owners (Explicit OR Implicit)
+    const totalRemainingOwners = await this.prisma.workspaceMember.count({
       where: {
         workspaceId: workspaceId,
-        NOT: { id: memberToRemove.id }, // Exclude our target
-        role: { slug: 'owner' }, // Look for 'owner' slug
+        NOT: { id: memberToRemove.id }, // Exclude the target
+        deletedAt: null, // Ensure we only count active members
+        OR: [
+          { role: { slug: 'owner' } }, // Explicit Workspace Owners
+          {
+            roleId: null, // Inheriting...
+            member: { role: { slug: 'owner' } }, // ...the Org Owner role
+          },
+        ],
       },
     });
-
-    // Count 2: Other Implicit Owners
-    // (Org Owners who are in this workspace but haven't been given a specific role override)
-    const otherImplicitOwners = await this.prisma.workspaceMember.count({
-      where: {
-        workspaceId: workspaceId,
-        NOT: { id: memberToRemove.id }, // Exclude our target
-        roleId: null, // Must inherit
-        member: { role: { slug: 'owner' } }, // Inherits 'owner'
-      },
-    });
-
-    const totalRemainingOwners = otherExplicitOwners + otherImplicitOwners;
 
     if (totalRemainingOwners === 0) {
       throw new BadRequestException(
         'Cannot remove the last Owner. You must transfer ownership to another member first.',
       );
     }
+  }
+
+  private mapWorkspaceMemberResponse(wm: any) {
+    return {
+      id: wm.id,
+      workspaceId: wm.workspaceId,
+      role: wm.role
+        ? {
+            id: wm.role.id,
+            name: wm.role.name,
+            slug: wm.role.slug,
+          }
+        : null,
+      user: {
+        id: wm.member.user.id,
+        firstName: wm.member.user.firstName,
+        lastName: wm.member.user.lastName,
+        email: wm.member.user.email,
+        avatar: wm.member.user.avatar
+          ? {
+              url: wm.member.user.avatar.url,
+              size: wm.member.user.avatar.size?.toString(),
+            }
+          : null,
+      },
+    };
   }
 }

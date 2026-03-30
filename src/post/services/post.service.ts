@@ -954,51 +954,39 @@ async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?:
     });
 
     const items = posts.map((post) => {
-      // Assuming a 1-to-1 post-to-destination mapping for this list view
-      const primaryDest = post.destinations[0];
-      const latestStats = primaryDest?.postAnalyticsSnapshots[0];
-      const platform = primaryDest?.profile?.platform ?? 'UNKNOWN';
+      let totalLikes = 0, totalComments = 0, totalImpressions = 0, totalReach = 0, totalShares = 0;
+      
+      // Aggregate across ALL destinations (Facebook + LinkedIn + Twitter, etc.)
+      post.destinations.forEach((dest) => {
+        const stats = dest.postAnalyticsSnapshots[0];
+        if (!stats) return;
 
-      // 2. DYNAMICALLY RESOLVE "SHARES" BASED ON PLATFORM
-      let resolvedShares = 0;
-      if (latestStats) {
-        switch (platform) {
-          case 'TWITTER':
-            resolvedShares = (latestStats.twitterStats?.retweets ?? 0) + (latestStats.twitterStats?.quotes ?? 0);
-            break;
-          case 'LINKEDIN':
-            resolvedShares = latestStats.linkedInStats?.reposts ?? 0;
-            break;
-          case 'FACEBOOK':
-            resolvedShares = latestStats.facebookStats?.shares ?? 0;
-            break;
-          case 'INSTAGRAM':
-            resolvedShares = latestStats.instagramStats?.shares ?? 0;
-            break;
-          case 'TIKTOK':
-            resolvedShares = latestStats.tiktokStats?.shares ?? 0;
-            break;
-        }
-      }
+        totalLikes += stats.likes ?? 0;
+        totalComments += stats.comments ?? 0;
+        totalImpressions += stats.impressions ?? 0;
+        totalReach += stats.reach ?? 0;
+
+        const platform = dest.profile?.platform;
+        if (platform === 'TWITTER') totalShares += (stats.twitterStats?.retweets ?? 0) + (stats.twitterStats?.quotes ?? 0);
+        if (platform === 'LINKEDIN') totalShares += stats.linkedInStats?.reposts ?? 0;
+        if (platform === 'FACEBOOK') totalShares += stats.facebookStats?.shares ?? 0;
+        if (platform === 'INSTAGRAM') totalShares += stats.instagramStats?.shares ?? 0;
+        if (platform === 'TIKTOK') totalShares += stats.tiktokStats?.shares ?? 0;
+      });
 
       return {
         id: post.id,
-        platform,
-        externalPostId: primaryDest?.platformPostId ?? null,
         postContent: post.content, 
         createdAt: post.createdAt,
-        
-        // Base Omnichannel Metrics
-        likes: latestStats?.likes ?? 0,
-        totalComments: latestStats?.comments ?? 0,
-        impressions: latestStats?.impressions ?? 0,
-        reach: latestStats?.reach ?? 0,
-        
-        // Dynamically Resolved Metric
-        shares: resolvedShares,
+        status: post.status,
+        destinationsCount: post.destinations.length, // Helpful for the UI
+        likes: totalLikes,
+        totalComments: totalComments,
+        impressions: totalImpressions,
+        reach: totalReach,
+        shares: totalShares,
       };
     });
-
     const nextCursor = posts.length === take ? posts[posts.length - 1].id : null;
     return { items, nextCursor };
   }

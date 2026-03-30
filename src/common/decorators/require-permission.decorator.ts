@@ -1,4 +1,4 @@
-;import { PermissionResource, PermissionAction } from '@generated/enums';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
 import { SetMetadata } from '@nestjs/common';
 
 

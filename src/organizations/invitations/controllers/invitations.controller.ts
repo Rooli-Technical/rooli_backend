@@ -2,15 +2,13 @@ import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards 
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
-import { InvitationsService } from './invitations.service';
+import { InvitationsService } from '../invitations.service';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
-import { PermissionResource, PermissionAction } from '@generated/enums';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { CreateInviteDto } from './dtos/invite-member.dto';
-import { AcceptInviteDto } from './dtos/accept-invite.dto';
-import { Public } from '@/common/decorators/public.decorator';
+import { CreateInviteDto } from '../dtos/invite-member.dto';
+import { PermissionAction, PermissionResource } from '@/common/constants/rbac';
 
 
 @ApiTags('Invitations')
@@ -58,24 +56,4 @@ export class InvitationsController {
     return this.invitationsService.revokeInvitation(invitationId);
   }
 
-  @Public()
-  @Get(':token')
-  @ApiOperation({ summary: 'Get invitation details before accepting' })
-  @ApiResponse({ status: 200, description: 'Details of the organization, workspace, and role.' })
-  @ApiResponse({ status: 400, description: 'Token is invalid or expired.' })
-  async getDetails(@Param('token') token: string) {
-    return this.invitationsService.getInviteDetails(token);
-  }
-
-  @Public()
-  @Post(':token/accept')
-  @ApiOperation({ summary: 'Accept an invitation and create an account if needed' })
-  @ApiResponse({ status: 201, description: 'Returns auth tokens and user object.' })
-  @ApiResponse({ status: 400, description: 'Invalid token or missing required fields for new user.' })
-  async accept(
-    @Param('token') token: string,
-    @Body() dto: AcceptInviteDto,
-  ) {
-    return this.invitationsService.acceptInvite(token, dto);
-  }
 }
