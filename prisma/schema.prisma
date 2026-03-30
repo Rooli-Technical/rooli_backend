@@ -174,6 +174,7 @@ model OrganizationMember {
 
   isActive Boolean @default(true)
 
+
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation("UserOrganizationMemberships", fields: [userId], references: [id], onDelete: Cascade)
   role         Role         @relation(fields: [roleId], references: [id])
@@ -202,6 +203,9 @@ model WorkspaceMember {
 
   assignedConversations InboxConversation[]     @relation("ConversationAssignee")
   readStates            ConversationReadState[]
+
+  isActive  Boolean @default(true)
+  deletedAt DateTime?
 
   notifications Notification[]
 
@@ -1314,8 +1318,8 @@ model Permission {
   name        String
   description String?
   scope       PermissionScope
-  resource    PermissionResource
-  action      PermissionAction
+  resource   String
+  action      String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1809,44 +1813,7 @@ enum AiFeature {
   HOLIDAY_POST
 }
 
-enum PermissionResource {
-  ALL
-  SYSTEM
-  ORGANIZATION
-  MEMBERS
-  BILLING
-  SETTINGS
-  SUBSCRIPTION
-  INTEGRATION
 
-  POSTS
-  CONTENT
-  SCHEDULING
-  ANALYTICS
-  MESSAGE
-  COMMENT
-
-  INVITATIONS
-  AUDIT_LOGS
-
-  AI_CONTENT
-  AI_USAGE
-  TEMPLATE
-  CALENDAR
-  INBOX
-}
-
-enum PermissionAction {
-  ALL
-  CREATE
-  READ
-  UPDATE
-  DELETE
-  MANAGE
-  APPROVE
-  PUBLISH
-  EXPORT
-}
 
 enum InvitationStatus {
   PENDING
