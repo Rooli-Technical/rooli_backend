@@ -47,7 +47,10 @@ export class AddCommentDto {
   @IsNotEmpty()
   content: string;
 
-  @ApiProperty({ description: 'True if the comment is from a support agent' })
+  @ApiProperty({
+    description: 'True if the comment is from a support agent',
+    default: true,
+  })
   @IsBoolean()
   isFromSupport: boolean;
 

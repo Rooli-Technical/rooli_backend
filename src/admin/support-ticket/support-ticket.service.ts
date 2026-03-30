@@ -1,22 +1,38 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';;
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { TicketsRepository } from './support-ticket.repository';
-import { AddCommentDto, AssignTicketDto, CreateTicketDto, QueryTicketsDto, UpdateTicketDto } from './support-ticket.dto';
+import {
+  AddCommentDto,
+  AssignTicketDto,
+  CreateTicketDto,
+  QueryTicketsDto,
+  UpdateTicketDto,
+} from './support-ticket.dto';
 import { TicketStatus } from '@generated/enums';
 import { DomainEventsService } from '@/events/domain-events.service';
 import { PrismaService } from '@/prisma/prisma.service';
+import { emit } from 'process';
 
 @Injectable()
 export class TicketsService {
-  constructor(private readonly repo: TicketsRepository,
+  constructor(
+    private readonly repo: TicketsRepository,
     private readonly domainEvents: DomainEventsService,
     private readonly prisma: PrismaService,
-
   ) {}
 
   // Tickets ──────────────────────────────────────────────────────────────────
 
-  create(dto: CreateTicketDto) {
-    return this.repo.create(dto);
+  async create(requesterId: string, dto: CreateTicketDto) {
+    // return this.repo.create(requesterId,dto);
+    const member = await this.prisma.workspaceMember.findFirstOrThrow({
+      where: { workspaceId: dto.workspaceId },
+    });
+
+    return this.repo.create(member.id, dto);
   }
 
   async findAll(query: QueryTicketsDto) {
@@ -35,13 +51,50 @@ export class TicketsService {
 
   async findByTicketNumber(ticketNumber: number) {
     const ticket = await this.repo.findByTicketNumber(ticketNumber);
-    if (!ticket) throw new NotFoundException(`Ticket #${ticketNumber} not found`);
+    if (!ticket)
+      throw new NotFoundException(`Ticket #${ticketNumber} not found`);
     return ticket;
   }
 
   async update(id: string, dto: UpdateTicketDto) {
-    await this.findOne(id);
-    return this.repo.update(id, dto);
+    const res = await this.repo.update(id, dto);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: id },
+      include: {
+        requester: {
+          include: {
+            member: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const ticketOwner = ticket.requester?.member?.user;
+    const eventPayload = {
+      workspaceId: ticket.workspaceId,
+      ticketId: id,
+      status: res.status,
+      assigneeId: ticket.assigneeId,
+      priority: ticket.priority,
+      closedAt: ticket.closedAt,
+      email: ticketOwner?.email,
+    };
+
+    if (
+      (res.status === TicketStatus.CLOSED &&
+        dto.status === TicketStatus.CLOSED) ||
+      (res.status === TicketStatus.RESOLVED &&
+        dto.status === TicketStatus.RESOLVED)
+    ) {
+      eventPayload['closedAt'] = res.closedAt;
+      this.domainEvents.emit('ticket.updated', eventPayload);
+    }
+
+    return res;
   }
 
   async assign(id: string, dto: AssignTicketDto) {
@@ -66,40 +119,54 @@ export class TicketsService {
 
   // Comments ─────────────────────────────────────────────────────────────────
 
-  async addComment(ticketId: string, dto: AddCommentDto) {
+  async addComment(ticketId: string, dto: any) {
+    const comment = await this.repo.addComment(ticketId, dto);
 
-    await this.findOne(ticketId);
-    const comment =  await this.repo.addComment(ticketId, dto);
-    const getTicket = await this.prisma.ticket.findFirst({
-      where:{
-        id:comment.ticketId
-      }
-    })
-    const ticketOwner = await this.prisma.user.findFirst(({
-      where:{
-        id: getTicket.requesterId
-      }
-    }))
-    if(getTicket){
-
-      this.domainEvents.emit('ticket.comment.added', {
-        workspaceId:getTicket.workspaceId,
-        ticketId,
-        id: comment.id,
-        content: comment.content,
-        isFromSupport: comment.isFromSupport,
-        isInternal: comment.isInternal,
-        createdAt: comment.createdAt,
-        mediaFiles: comment.mediaFiles,
-        author: {
-          id: comment.author.id,
-          name: `${comment.author.firstName} ${comment.author.lastName}`.trim(),
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: comment.ticketId },
+      include: {
+        requester: {
+          include: {
+            member: {
+              include: {
+                user: true,
+              },
+            },
+          },
         },
-        email:ticketOwner?.email
-      });
-    }
+      },
+    });
 
-    return comment
+    const ticketOwner = ticket.requester?.member?.user;
+
+    const authorName =
+      `${comment.author.firstName} ${comment.author.lastName}`.trim();
+
+    const eventPayload = {
+      workspaceId: ticket.workspaceId,
+      ticketId,
+      id: comment.id,
+      content: comment.content,
+      isFromSupport: comment.isFromSupport,
+      isInternal: comment.isInternal,
+      createdAt: comment.createdAt,
+      mediaFiles: comment.mediaFiles,
+      author: {
+        id: comment.author.id,
+        name: authorName,
+      },
+    };
+    console.log('🔥 BEFORE EMIT');
+
+    this.domainEvents.emit('ticket.comment.added', eventPayload);
+
+    this.domainEvents.emit('ticket.comment.reply', {
+      ...eventPayload,
+      email: ticketOwner?.email,
+    });
+    console.log('🔥 AFTER EMIT');
+
+    return { commentId: comment.id };
   }
 
   async getComments(ticketId: string) {

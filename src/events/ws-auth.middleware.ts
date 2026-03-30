@@ -4,7 +4,6 @@ import { JwtService } from '@nestjs/jwt';
 
 import type { WsAuthedUser } from './events.gateway';
 import { PrismaService } from '@/prisma/prisma.service';
-
 /**
  * Socket.io middleware:
  * - Validates JWT from auth header OR query token

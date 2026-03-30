@@ -26,8 +26,6 @@ export class AdminJwtStrategy extends PassportStrategy(Strategy, 'admin-jwt') {
   }
 
   async validate(req: Request, payload: any) {
-    console.log(payload, 'Sesssion');
-
     const currentSession = await this.prisma.adminSession.findFirst({
       where: {
         id: payload?.sessionId,
@@ -55,7 +53,6 @@ export class AdminJwtStrategy extends PassportStrategy(Strategy, 'admin-jwt') {
     const rawIp =
       req.ip ?? req.headers['x-forwarded-for']?.toString().split(',')[0].trim();
     const requestIp = normalizeIp(rawIp);
-    console.log(rawIp, 'This is request IP', requestIp);
     const whitelist = await this.prisma.ipWhitelist.findMany({
       where: { adminId: user.id },
       select: { ipRange: true },

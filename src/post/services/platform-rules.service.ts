@@ -71,7 +71,7 @@ export class PlatformRulesService {
           options?.igKind ?? 'FEED',
         );
 
-      case Platform.TIKTOK: 
+      case Platform.TIKTOK:
         return this.processTikTok(safeContent, media);
 
       default:
@@ -544,14 +544,10 @@ export class PlatformRulesService {
     return { isValid: true, finalContent: content };
   }
 
-
-// ===========================================================================
+  // ===========================================================================
   // TikTok
   // ===========================================================================
-  private processTikTok(
-    content: string,
-    media: MediaItem[],
-  ): ValidationResult {
+  private processTikTok(content: string, media: MediaItem[]): ValidationResult {
     // 1. Caption Limit
     if (content.length > this.TIKTOK_CAPTION_LIMIT) {
       throw new BadRequestException(
@@ -561,15 +557,23 @@ export class PlatformRulesService {
 
     // 2. Prevent Empty Posts
     if (media.length === 0) {
-      throw new BadRequestException('TikTok posts require at least 1 video or 1 image.');
+      throw new BadRequestException(
+        'TikTok posts require at least 1 video or 1 image.',
+      );
     }
 
-    const videoCount = media.filter((m) => m.mimeType?.startsWith('video/')).length;
-    const imageCount = media.filter((m) => m.mimeType?.startsWith('image/')).length;
+    const videoCount = media.filter((m) =>
+      m.mimeType?.startsWith('video/'),
+    ).length;
+    const imageCount = media.filter((m) =>
+      m.mimeType?.startsWith('image/'),
+    ).length;
 
     // 3. Prevent Mixed Media
     if (videoCount > 0 && imageCount > 0) {
-      throw new BadRequestException('TikTok posts cannot mix videos and images.');
+      throw new BadRequestException(
+        'TikTok posts cannot mix videos and images.',
+      );
     }
 
     // 4. Prevent PDFs or other files
@@ -582,17 +586,23 @@ export class PlatformRulesService {
     // ============================
     if (videoCount > 0) {
       if (videoCount > 1) {
-        throw new BadRequestException('TikTok allows a maximum of 1 video per post.');
+        throw new BadRequestException(
+          'TikTok allows a maximum of 1 video per post.',
+        );
       }
 
       const video = media.find((m) => m.mimeType?.startsWith('video/'))!;
 
       if (video.duration != null) {
         if (video.duration < this.TIKTOK_MIN_DURATION_SEC) {
-          throw new BadRequestException(`TikTok videos must be at least ${this.TIKTOK_MIN_DURATION_SEC} seconds long.`);
+          throw new BadRequestException(
+            `TikTok videos must be at least ${this.TIKTOK_MIN_DURATION_SEC} seconds long.`,
+          );
         }
         if (video.duration > this.TIKTOK_MAX_DURATION_SEC) {
-          throw new BadRequestException(`TikTok videos cannot exceed ${this.TIKTOK_MAX_DURATION_SEC / 60} minutes.`);
+          throw new BadRequestException(
+            `TikTok videos cannot exceed ${this.TIKTOK_MAX_DURATION_SEC / 60} minutes.`,
+          );
         }
       }
     }
@@ -602,27 +612,35 @@ export class PlatformRulesService {
     // ============================
     if (imageCount > 0) {
       if (imageCount === 1) {
-      throw new BadRequestException(
-        'TikTok Photo Mode requires at least 2 images for a carousel. Please add another image or upload a video.',
-      );
-    }
-    
-      if (imageCount > 35) {
-        throw new BadRequestException('TikTok Photo Mode allows a maximum of 35 images.');
+        throw new BadRequestException(
+          'TikTok Photo Mode requires at least 2 images for a carousel. Please add another image or upload a video.',
+        );
       }
 
-      const allowedImageMimes = new Set(['image/jpeg', 'image/jpg', 'image/webp']);
+      if (imageCount > 35) {
+        throw new BadRequestException(
+          'TikTok Photo Mode allows a maximum of 35 images.',
+        );
+      }
+
+      const allowedImageMimes = new Set([
+        'image/jpeg',
+        'image/jpg',
+        'image/webp',
+      ]);
 
       for (const img of media) {
         if (!allowedImageMimes.has(img.mimeType || '')) {
           throw new BadRequestException(
-            `TikTok does not support ${img.mimeType}. Please use JPG, JPEG, or WEBP. (PNGs are not allowed).`
+            `TikTok does not support ${img.mimeType}. Please use JPG, JPEG, or WEBP. (PNGs are not allowed).`,
           );
         }
 
         // 20MB limit = 20 * 1024 * 1024 bytes
         if (img.size != null && img.size > 20971520) {
-          throw new BadRequestException('TikTok images must be 20MB or smaller.');
+          throw new BadRequestException(
+            'TikTok images must be 20MB or smaller.',
+          );
         }
       }
     }

@@ -15,7 +15,6 @@ export class SocialFactory {
     private facebook: FacebookProvider,
     private instagram: InstagramProvider,
     private tiktok: TikTokProvider,
-
   ) {}
 
   getProvider(platform: Platform): ISocialProvider {

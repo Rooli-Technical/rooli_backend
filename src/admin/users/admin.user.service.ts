@@ -66,4 +66,8 @@ export class AdminUserService {
 
     return this.adminUserRepository.reactivateUser(id);
   }
+
+  async getAdmins() {
+    return await this.adminUserRepository.getAdmins();
+  }
 }

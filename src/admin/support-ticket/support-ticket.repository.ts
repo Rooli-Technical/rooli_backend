@@ -18,15 +18,26 @@ import { PrismaService } from '@/prisma/prisma.service';
 
 const TICKET_INCLUDE = {
   requester: true,
-  assignee: true,
+  assignee: {
+    select: {
+      firstName: true,
+      lastName: true,
+    },
+  },
   workspace: true,
   comments: {
     orderBy: { createdAt: Prisma.SortOrder.asc },
-    include: { author: true },
+    include: {
+      author: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
   },
   mediaFiles: true,
 } satisfies Prisma.TicketInclude;
-
 // ─── Repository ───────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -35,7 +46,7 @@ export class TicketsRepository {
 
   // Tickets ──────────────────────────────────────────────────────────────────
 
-  create(dto: CreateTicketDto) {
+  create(requesterId: string, dto: CreateTicketDto) {
     return this.prisma.ticket.create({
       data: {
         title: dto.title,
@@ -43,7 +54,7 @@ export class TicketsRepository {
         priority: dto.priority,
         category: dto.category,
         workspace: { connect: { id: dto.workspaceId } },
-        requester: { connect: { id: dto.requesterId } },
+        requester: { connect: { id: requesterId } },
       },
       include: TICKET_INCLUDE,
     });
@@ -167,9 +178,14 @@ export class TicketsRepository {
         isInternal: dto.isInternal ?? false,
         ticket: { connect: { id: ticketId } },
         author: { connect: { id: dto.authorId } },
-        isFromSupport:true,
+        isFromSupport: true,
+        mediaFiles: dto.mediaFiles
+          ? {
+              connect: dto.mediaFiles.map((fileId: string) => ({ id: fileId })),
+            }
+          : undefined,
       },
-      include: { author: true,  mediaFiles: true },
+      include: { author: true, mediaFiles: true },
     });
   }
 
@@ -177,7 +193,14 @@ export class TicketsRepository {
     return this.prisma.ticketComment.findMany({
       where: { ticketId },
       orderBy: { createdAt: Prisma.SortOrder.asc },
-      include: { author: true },
+      include: {
+        author: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
     });
   }
 

@@ -11,6 +11,8 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -29,12 +31,17 @@ import {
 } from './support-ticket.dto';
 import { TicketsService } from './support-ticket.service';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { AdminJwtGuard } from '../guards/admin-jwt.guard';
+import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
+import { AdminRoute } from '@/common/decorators/admin-route.decorator';
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
 @ApiTags('Admin-Tickets')
 @ApiBearerAuth()
-@Controller('support/tickets')
+@AdminRoute()
+@UseGuards(AdminJwtGuard)
+@Controller('admin/support/tickets')
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
@@ -44,8 +51,11 @@ export class TicketsController {
   @ApiOperation({ summary: 'Create a support ticket' })
   @ApiResponse({ status: 201, description: 'Ticket created.' })
   @ApiResponse({ status: 400, description: 'Validation error.' })
-  create(@Body() dto: CreateTicketDto) {
-    return this.ticketsService.create(dto);
+  create(
+    @Body() dto: CreateTicketDto,
+    @CurrentUser('userId') requesterId: string,
+  ) {
+    return this.ticketsService.create(requesterId, dto);
   }
 
   @Get()
@@ -82,7 +92,9 @@ export class TicketsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a ticket (title, status, priority, assignee…)' })
+  @ApiOperation({
+    summary: 'Update a ticket (title, status, priority, assignee…)',
+  })
   @ApiParam({ name: 'id' })
   @ApiResponse({ status: 200, description: 'Ticket updated.' })
   @ApiResponse({ status: 404, description: 'Ticket not found.' })
@@ -93,7 +105,10 @@ export class TicketsController {
   @Patch(':id/assign')
   @ApiOperation({ summary: 'Assign ticket to a support agent' })
   @ApiParam({ name: 'id' })
-  @ApiResponse({ status: 200, description: 'Ticket assigned; status set to IN_PROGRESS.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Ticket assigned; status set to IN_PROGRESS.',
+  })
   @ApiResponse({ status: 400, description: 'Cannot assign a closed ticket.' })
   @ApiResponse({ status: 404, description: 'Ticket not found.' })
   assign(@Param('id') id: string, @Body() dto: AssignTicketDto) {
@@ -103,7 +118,10 @@ export class TicketsController {
   @Patch(':id/close')
   @ApiOperation({ summary: 'Close a ticket' })
   @ApiParam({ name: 'id' })
-  @ApiResponse({ status: 200, description: 'Ticket closed; closedAt recorded.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Ticket closed; closedAt recorded.',
+  })
   @ApiResponse({ status: 400, description: 'Ticket already closed.' })
   close(@Param('id') id: string) {
     return this.ticketsService.close(id);
@@ -126,19 +144,20 @@ export class TicketsController {
   @ApiParam({ name: 'id' })
   @ApiResponse({ status: 201, description: 'Comment added.' })
   @ApiResponse({ status: 404, description: 'Ticket not found.' })
-  addComment(@Param('id') id: string, @Body() dto: AddCommentDto,
+  addComment(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() dto: AddCommentDto,
 
- @CurrentUser('userId') requesterId: string
-) {
+    @CurrentUser('userId') requesterId: string,
+  ) {
     const newDto = {
-      isInternal : dto.isInternal,
+      isInternal: dto.isInternal,
       body: dto.body,
       mediaFiles: dto.mediaFileIds,
-      authorId: requesterId
-
-
-    }
-    return this.ticketsService.addComment(id, dto);
+      authorId: requesterId,
+    };
+    return this.ticketsService.addComment(id, newDto);
   }
 
   @Get(':id/comments')
@@ -150,13 +169,15 @@ export class TicketsController {
   }
 
   @Delete(':id/comments/:commentId')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a comment (admin only)' })
   @ApiParam({ name: 'id' })
   @ApiParam({ name: 'commentId' })
-  @ApiResponse({ status: 204, description: 'Comment deleted.' })
-  deleteComment(@Param('id') id: string, @Param('commentId') commentId: string) {
+  @ApiResponse({ status: 200, description: 'Comment deleted.' })
+  deleteComment(
+    @Param('id') id: string,
+    @Param('commentId') commentId: string,
+  ) {
     return this.ticketsService.deleteComment(id, commentId);
   }
 }
-

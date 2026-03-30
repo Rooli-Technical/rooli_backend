@@ -36,7 +36,7 @@ import { DomainEventsService } from '@/events/domain-events.service';
     AdminUserController,
     AdminSecurityController,
     AdminBillingController,
-    TicketsController
+    TicketsController,
     // AdminAuthController is declared inside AdminAuthModule — remove it from here
   ],
   providers: [
@@ -52,7 +52,7 @@ import { DomainEventsService } from '@/events/domain-events.service';
     AdminBillingService,
     TicketsService,
     TicketsRepository,
-    DomainEventsService
+    DomainEventsService,
     // AdminAuthService is provided + exported by AdminAuthModule — remove it from here
   ],
 })

@@ -287,7 +287,7 @@ export class WebhookController {
   }
 
   // ==========================================
-  // 4. TIKTOK 
+  // 4. TIKTOK
   // ==========================================
 
   /**
@@ -296,7 +296,7 @@ export class WebhookController {
    * secured by the X-Tiktok-Signature header.
    */
   @Post('tiktok')
-  @UseGuards(TikTokWebhookGuard) 
+  @UseGuards(TikTokWebhookGuard)
   async handleTikTok(@Body() payload: any) {
     // TikTok sends the event name in the "event" property
     const eventType = payload?.event || 'unknown';
@@ -309,14 +309,17 @@ export class WebhookController {
       data: {
         provider: 'TIKTOK',
         eventType: eventType,
-        resourceId: openId, 
+        resourceId: openId,
         payload: payload,
         status: 'PENDING',
       },
     });
 
     // 2. Route based on the Event Type
-    if (eventType === 'post.publish.complete' || eventType === 'post.publish.failed') {
+    if (
+      eventType === 'post.publish.complete' ||
+      eventType === 'post.publish.failed'
+    ) {
       await this.webhooksQueue.add(
         'tiktok-publish-status',
         { logId: log.id, payload },

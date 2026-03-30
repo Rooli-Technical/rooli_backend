@@ -17,7 +17,7 @@ export class WebhooksProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
-    private readonly encryptionService: EncryptionService
+    private readonly encryptionService: EncryptionService,
   ) {
     super();
   }
@@ -28,7 +28,7 @@ export class WebhooksProcessor extends WorkerHost {
     try {
       if (job.name === 'paystack-event') {
         await this.processPaystack(logId, data);
-      }else if (job.name === 'tiktok-publish-status') {
+      } else if (job.name === 'tiktok-publish-status') {
         await this.processTikTokPublish(logId, payload);
       } else if (job.name === 'tiktok-deauth') {
         await this.processTikTokDeauth(logId, payload);
@@ -120,20 +120,22 @@ export class WebhooksProcessor extends WorkerHost {
     }
   }
 
-// ==========================================
+  // ==========================================
   // TIKTOK LOGIC
   // ==========================================
-  
-private async processTikTokPublish(logId: string, payload: any) {
-    const event = payload.event; 
-    
+
+  private async processTikTokPublish(logId: string, payload: any) {
+    const event = payload.event;
+
     // 🚨 TikTok sends the content field as a stringified JSON string. We must parse it!
     let content: any = {};
     if (typeof payload.content === 'string') {
       try {
         content = JSON.parse(payload.content);
       } catch (e) {
-        this.logger.error(`Failed to parse TikTok webhook content: ${payload.content}`);
+        this.logger.error(
+          `Failed to parse TikTok webhook content: ${payload.content}`,
+        );
       }
     } else {
       content = payload.content || {};
@@ -142,34 +144,40 @@ private async processTikTokPublish(logId: string, payload: any) {
     const publishId = content.publish_id;
 
     if (!publishId) {
-      this.logger.warn(`TikTok publish webhook missing publish_id: Log ${logId}`);
+      this.logger.warn(
+        `TikTok publish webhook missing publish_id: Log ${logId}`,
+      );
       return;
     }
 
-    // 1. Find the pending destination in the DB 
+    // 1. Find the pending destination in the DB
     const destination = await this.prisma.postDestination.findFirst({
       where: { platformPostId: publishId },
-      include: { 
+      include: {
         post: true,
-        profile: {               
+        profile: {
           include: {
-            connection: true     
-          }
-        }
-      }
+            connection: true,
+          },
+        },
+      },
     });
 
     if (destination) {
       // 2. Update the status based on the TikTok event
-      if (event === 'post.publish.complete' || event === 'video.publish.completed') {
-        
+      if (
+        event === 'post.publish.complete' ||
+        event === 'video.publish.completed'
+      ) {
         let liveUrl = 'https://www.tiktok.com/@tiktok'; // Default fallback
-        
+
         // 🚨 FIX: Fetch the actual public URL from TikTok's API
         try {
-          const accessToken = await this.encryptionService.decrypt(destination.profile.accessToken);
+          const accessToken = await this.encryptionService.decrypt(
+            destination.profile.accessToken,
+          );
 
-         const statusResponse = await axios.post(
+          const statusResponse = await axios.post(
             'https://open.tiktokapis.com/v2/post/publish/status/fetch/',
             { publish_id: publishId },
             {
@@ -177,41 +185,49 @@ private async processTikTokPublish(logId: string, payload: any) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
               },
-              transformResponse: [(data) => {
-                if (!data) return data;
-                try {
-                  return JSONBig.parse(data); 
-                } catch (e) {
-                  return data;
-                }
-              }],
-            }
+              transformResponse: [
+                (data) => {
+                  if (!data) return data;
+                  try {
+                    return JSONBig.parse(data);
+                  } catch (e) {
+                    return data;
+                  }
+                },
+              ],
+            },
           );
 
-          const publicIds = statusResponse.data?.data?.publicaly_available_post_id || [];
-          
+          const publicIds =
+            statusResponse.data?.data?.publicaly_available_post_id || [];
+
           if (publicIds.length > 0) {
             const publicId = publicIds[0];
-            
+
             // 🚨 FIX: Grab the username from your SocialProfile model!
             // We remove the "@" just in case you saved it as "@username" in the DB
-            let rawUsername = destination.profile.username || destination.profile.connection.platformUsername || 'tiktok';
-            const cleanUsername = rawUsername.replace('@', ''); 
-            
+            let rawUsername =
+              destination.profile.username ||
+              destination.profile.connection.platformUsername ||
+              'tiktok';
+            const cleanUsername = rawUsername.replace('@', '');
+
             liveUrl = `https://www.tiktok.com/@${cleanUsername}/video/${publicId}`;
           }
         } catch (error: any) {
-          this.logger.error(`Failed to fetch live URL for TikTok post: ${error.message}`);
+          this.logger.error(
+            `Failed to fetch live URL for TikTok post: ${error.message}`,
+          );
         }
 
         await this.prisma.postDestination.update({
           where: { id: destination.id },
-          data: { 
+          data: {
             status: 'SUCCESS',
-            platformUrl: liveUrl 
+            platformUrl: liveUrl,
           },
         });
-        
+
         // Bonus: Update the master post status to PUBLISHED if this was the only/last destination
         await this.prisma.post.update({
           where: { id: destination.postId },
@@ -219,19 +235,24 @@ private async processTikTokPublish(logId: string, payload: any) {
         });
 
         this.logger.log(`TikTok video ${publishId} is live at ${liveUrl}!`);
-
-      } else if (event === 'post.publish.failed' || event === 'video.upload.failed') {
+      } else if (
+        event === 'post.publish.failed' ||
+        event === 'video.upload.failed'
+      ) {
         await this.prisma.postDestination.update({
           where: { id: destination.id },
-          data: { 
+          data: {
             status: 'FAILED',
-            errorMessage: 'TikTok rejected the video during final processing (Community Guidelines/Copyright).',
+            errorMessage:
+              'TikTok rejected the video during final processing (Community Guidelines/Copyright).',
           },
         });
         this.logger.warn(`TikTok video ${publishId} failed final processing.`);
       }
     } else {
-      this.logger.warn(`Could not find PostDestination for TikTok publish_id: ${publishId}`);
+      this.logger.warn(
+        `Could not find PostDestination for TikTok publish_id: ${publishId}`,
+      );
     }
 
     // 3. Mark Webhook Log as Processed
@@ -245,7 +266,9 @@ private async processTikTokPublish(logId: string, payload: any) {
     const openId = payload.user_openid;
 
     if (!openId) {
-      this.logger.warn(`TikTok deauth webhook missing user_openid: Log ${logId}`);
+      this.logger.warn(
+        `TikTok deauth webhook missing user_openid: Log ${logId}`,
+      );
       return;
     }
 
@@ -265,14 +288,18 @@ private async processTikTokPublish(logId: string, payload: any) {
           profiles: {
             updateMany: {
               where: { socialConnectionId: connection.id },
-              data: { status: 'DISCONNECTED' }
-            }
-          }
-        }
+              data: { status: 'DISCONNECTED' },
+            },
+          },
+        },
       });
-      this.logger.log(`Successfully disconnected TikTok connection ${connection.id}.`);
+      this.logger.log(
+        `Successfully disconnected TikTok connection ${connection.id}.`,
+      );
     } else {
-      this.logger.warn(`Could not find TikTok connection for user_openid: ${openId}`);
+      this.logger.warn(
+        `Could not find TikTok connection for user_openid: ${openId}`,
+      );
     }
 
     // 3. Mark Webhook Log as Processed

@@ -91,12 +91,18 @@ export class AnalyticsNormalizerService {
    */
   private getPlatformRelationKey(platform: Platform): string {
     switch (platform) {
-      case 'TWITTER': return 'twitterStats';
-      case 'LINKEDIN': return 'linkedInStats';
-      case 'FACEBOOK': return 'facebookStats';
-      case 'INSTAGRAM': return 'instagramStats';
-      case 'TIKTOK': return 'tiktokStats';
-      default: throw new Error(`Unsupported platform: ${platform}`);
+      case 'TWITTER':
+        return 'twitterStats';
+      case 'LINKEDIN':
+        return 'linkedInStats';
+      case 'FACEBOOK':
+        return 'facebookStats';
+      case 'INSTAGRAM':
+        return 'instagramStats';
+      case 'TIKTOK':
+        return 'tiktokStats';
+      default:
+        throw new Error(`Unsupported platform: ${platform}`);
     }
   }
 }

@@ -37,8 +37,7 @@ export class RealtimeEmitterService implements OnModuleInit {
     this.emitter.of('/events').to(room).emit(event, payload);
   }
 
-
-    emitToTicketId(ticketId: string, event: string, payload: any) {
+  emitToTicketId(ticketId: string, event: string, payload: any) {
     if (!this.emitter) {
       this.logger.error(
         `❌ Emitter not initialized. Failed to broadcast ${event}`,

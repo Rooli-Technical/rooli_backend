@@ -977,9 +977,9 @@ export class PostService {
                 facebookStats: true,
                 instagramStats: true,
                 tiktokStats: true,
-              }
-            }
-          }
+              },
+            },
+          },
         },
       },
     });

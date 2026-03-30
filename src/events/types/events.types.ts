@@ -13,6 +13,7 @@ export type DomainEventName =
   | 'publishing.post.declined'
   | 'ticket.created'
   | 'ticket.comment.added'
+  | 'ticket.comment.reply'
   | 'ticket.updated'
   | 'notification.created'
   | 'notification.read'
@@ -191,7 +192,19 @@ export type DomainEventPayloadMap = {
     createdAt: Date;
     author: { id: string; name: string };
     mediaFiles: any[];
-    email?: string;
+  };
+
+  'ticket.comment.reply': {
+    workspaceId: string;
+    ticketId: string;
+    id: string; // comment ID
+    content: string;
+    isFromSupport: boolean;
+    isInternal: boolean;
+    createdAt: Date;
+    author: { id: string; name: string };
+    mediaFiles: any[];
+    email: string; // Added email field for sending support email notifications
   };
 
   'ticket.updated': {
@@ -201,6 +214,7 @@ export type DomainEventPayloadMap = {
     priority?: string;
     assigneeId?: string;
     closedAt?: Date | null;
+    email?: string; // Added email field for sending support email notifications
   };
 
   'system.social_profile.connected': {

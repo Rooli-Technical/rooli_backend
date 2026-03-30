@@ -62,8 +62,7 @@ export class TikTokWebhookGuard implements CanActivate {
 
     // 3. FIX: TikTok requires hashing the timestamp and raw body together
     // Format: timestamp + "." + rawBody
-const stringToSign = `${timestamp}.${rawBody.toString('utf8')}`;
-
+    const stringToSign = `${timestamp}.${rawBody.toString('utf8')}`;
 
     // 4. Generate the HMAC-SHA256 hash using your TikTok Client Secret
     const expectedSignature = crypto

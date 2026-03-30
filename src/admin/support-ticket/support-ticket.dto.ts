@@ -47,14 +47,6 @@ export class CreateTicketDto {
   @IsEnum(TicketCategory)
   category?: TicketCategory;
 
-  @ApiProperty({
-    description: 'WorkspaceMember ID of the requester',
-    example: 'clx1234abcd',
-  })
-  @IsString()
-  @IsNotEmpty()
-  requesterId: string;
-
   @ApiProperty({ example: 'clxworkspace123' })
   @IsString()
   @IsNotEmpty()

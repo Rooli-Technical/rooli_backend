@@ -26,8 +26,8 @@ export class SupportTicketService {
 
       return tx.ticket.create({
         data: {
-          workspaceId,
-          requesterId,
+          workspaceId: workspaceId,
+          requesterId: requesterId,
           ticketNumber: workspace.ticketCounter,
           title: data.title,
           description: data.description,

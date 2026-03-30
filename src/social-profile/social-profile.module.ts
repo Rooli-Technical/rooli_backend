@@ -23,7 +23,7 @@ import { TikTokService } from '@/social-connection/providers/tiktok.service';
     LinkedInService,
     TwitterService,
     InstagramService,
-    TikTokService
+    TikTokService,
   ],
 })
 export class SocialProfileModule {}

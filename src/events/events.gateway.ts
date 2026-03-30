@@ -109,4 +109,13 @@ export class EventsGateway
   private roomMember(memberId: string) {
     return `member:${memberId}`;
   }
+
+  @SubscribeMessage('join:ticket')
+  handleJoinTicket(client: Socket, payload: { ticketId: string }) {
+    const room = `ticket:${payload.ticketId}`;
+    client.join(room);
+    this.logger.log(`✅ Client ${client.id} joined room: ${room}`);
+    this.logger.log(`📋 Client rooms: ${[...client.rooms].join(', ')}`);
+    return { joined: room }; // 👈 sends ack back to client
+  }
 }

@@ -16,10 +16,6 @@ import { EncryptionService } from '@/common/utility/encryption.service';
     WorkerModule,
   ],
   controllers: [WebhookController],
-  providers: [
-    WebhookService,
-    WebhooksProcessor,
-    EncryptionService
-  ],
+  providers: [WebhookService, WebhooksProcessor, EncryptionService],
 })
 export class WebhookModule {}

@@ -165,20 +165,26 @@ export class MailService {
   async sendSupportEmail(email: string) {
     const context = {
       year: new Date().getFullYear(),
-      updateTime: new Date().toLocaleString('en-US', {
-        timeZone: 'UTC',
-        hour12: true,
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }),
     };
-
     // Ensure you create a file named 'password-reset-otp.hbs'
     const html = await this.compileTemplate('admin-support', context);
-
     await this.sendZeptoMail(
       email,
-      `You can confirm it your issue has been resolved, if not you can get back to us`,
+      `Message from Rooli Admin regarding your support ticket`,
+      html,
+    );
+  }
+
+  async sendSupportEmail2(email: string, status: string) {
+    const context = {
+      status: status,
+      year: new Date().getFullYear(),
+    };
+    // Ensure you create a file named 'password-reset-otp.hbs'
+    const html = await this.compileTemplate('admin-ticket-update', context);
+    await this.sendZeptoMail(
+      email,
+      `Ticket Update from Rooli Admin regarding your support ticket`,
       html,
     );
   }

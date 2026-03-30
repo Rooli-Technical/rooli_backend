@@ -152,4 +152,21 @@ export class AdminUserRepository {
       select: { id: true, email: true, deletedAt: true, lockedUntil: true },
     });
   }
+
+  async getAdmins() {
+    const admins = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { userType: 'SUPER_ADMIN' },
+          // { userType: 'WORKSPACE_ADMIN' },
+        ],
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+    return admins;
+  }
 }

@@ -1,7 +1,6 @@
-import { PrismaService } from "@/prisma/prisma.service";
-import { BillingInterval, PlanTier } from "@generated/enums";
-import { Injectable } from "@nestjs/common";
-
+import { PrismaService } from '@/prisma/prisma.service';
+import { BillingInterval, PlanTier } from '@generated/enums';
+import { Injectable } from '@nestjs/common';
 
 export interface UpdatePlanInput {
   priceNgn?: number;
@@ -34,7 +33,7 @@ export interface GetPaymentsInput {
   limit?: number;
 }
 
-export type OverrideType = "extend_trial" | "custom_end_date";
+export type OverrideType = 'extend_trial' | 'custom_end_date';
 
 export interface ManualOverrideInput {
   organizationId: string;
@@ -80,13 +79,13 @@ export class AdminBillingService {
 
   async getPlans() {
     return this.prisma.plan.findMany({
-      orderBy: { priceNgn: "asc" }
+      orderBy: { priceNgn: 'asc' },
     });
   }
 
   async getPlanById(planId: string) {
     return this.prisma.plan.findUniqueOrThrow({
-      where: { id: planId }
+      where: { id: planId },
     });
   }
 
@@ -118,7 +117,7 @@ export class AdminBillingService {
 
     let newPeriodEnd: Date;
 
-    if (input.overrideType === "extend_trial") {
+    if (input.overrideType === 'extend_trial') {
       const base =
         subscription.currentPeriodEnd > new Date()
           ? subscription.currentPeriodEnd
@@ -126,10 +125,12 @@ export class AdminBillingService {
       newPeriodEnd = new Date(base.getTime() + ONE_WEEK_MS);
     } else {
       if (!input.customEndDate) {
-        throw new Error("customEndDate is required for custom_end_date override");
+        throw new Error(
+          'customEndDate is required for custom_end_date override',
+        );
       }
       if (input.customEndDate <= new Date()) {
-        throw new Error("customEndDate must be in the future");
+        throw new Error('customEndDate must be in the future');
       }
       newPeriodEnd = input.customEndDate;
     }
@@ -138,7 +139,7 @@ export class AdminBillingService {
       where: { id: subscription.id },
       data: {
         currentPeriodEnd: newPeriodEnd,
-        status: "active",
+        status: 'active',
         isActive: true,
         cancelAtPeriodEnd: false,
       },
@@ -159,27 +160,27 @@ export class AdminBillingService {
 
     const mrr = activeSubsWithPlan.reduce(
       (sum, sub) => sum + Number(sub.plan.priceNgn),
-      0
+      0,
     );
     const arr = mrr * 12;
 
     const [canceledThisMonth, totalActiveLastMonth, flagged] =
       await Promise.all([
         this.prisma.subscription.count({
-          where: { status: "canceled", updatedAt: { gte: startOfMonth } },
+          where: { status: 'canceled', updatedAt: { gte: startOfMonth } },
         }),
         this.prisma.subscription.count({
           where: { isActive: true, createdAt: { lt: startOfMonth } },
         }),
         this.prisma.transaction.count({
-          where: { status: { in: ["failed", "abandoned", "incomplete"] } },
+          where: { status: { in: ['failed', 'abandoned', 'incomplete'] } },
         }),
       ]);
 
     const churnRate =
       totalActiveLastMonth > 0
         ? parseFloat(
-            ((canceledThisMonth / totalActiveLastMonth) * 100).toFixed(1)
+            ((canceledThisMonth / totalActiveLastMonth) * 100).toFixed(1),
           )
         : 0;
 
@@ -188,7 +189,11 @@ export class AdminBillingService {
 
   // ─── PAYMENT HISTORY ───────────────────────────────────────────────────────
 
-  async getPaymentHistory({ search, page = 1, limit = 20 }: GetPaymentsInput = {}) {
+  async getPaymentHistory({
+    search,
+    page = 1,
+    limit = 20,
+  }: GetPaymentsInput = {}) {
     const skip = (page - 1) * limit;
 
     const where = search
@@ -196,10 +201,10 @@ export class AdminBillingService {
           OR: [
             {
               organization: {
-                name: { contains: search, mode: "insensitive" as const },
+                name: { contains: search, mode: 'insensitive' as const },
               },
             },
-            { txRef: { contains: search, mode: "insensitive" as const } },
+            { txRef: { contains: search, mode: 'insensitive' as const } },
           ],
         }
       : {};
@@ -210,7 +215,7 @@ export class AdminBillingService {
         include: {
           organization: { select: { id: true, name: true, slug: true } },
         },
-        orderBy: { paymentDate: "desc" },
+        orderBy: { paymentDate: 'desc' },
         skip,
         take: limit,
       }),
@@ -228,13 +233,13 @@ export class AdminBillingService {
     });
 
     const subMap = Object.fromEntries(
-      subscriptions.map((s) => [s.organizationId, s.plan])
+      subscriptions.map((s) => [s.organizationId, s.plan]),
     );
 
     const enriched = transactions.map((tx) => ({
       ...tx,
-      planName: subMap[tx.organizationId]?.name ?? "Unknown",
-      planTier: subMap[tx.organizationId]?.tier ?? "Unknown",
+      planName: subMap[tx.organizationId]?.name ?? 'Unknown',
+      planTier: subMap[tx.organizationId]?.tier ?? 'Unknown',
     }));
 
     return {
@@ -256,10 +261,10 @@ export class AdminBillingService {
       data: {
         organizationId: input.organizationId,
         amount: input.amount,
-        currency: input.currency ?? "NGN",
-        status: "successful",
+        currency: input.currency ?? 'NGN',
+        status: 'successful',
         txRef: input.txRef,
-        provider: "MANUAL",
+        provider: 'MANUAL',
         providerTxId: input.txRef,
         invoiceUrl: input.invoiceUrl,
       },

@@ -26,7 +26,6 @@ export class AdminSessionDto {
   @Expose()
   ip: string;
 
-
   @ApiProperty({ example: true })
   @Expose()
   isActive: boolean;

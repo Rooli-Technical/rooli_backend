@@ -49,7 +49,6 @@ export class PostVerificationProcessor extends WorkerHost {
 
         const finalUrl = `https://facebook.com/${pageId}/posts/${response.data.post_id}`;
 
-        
         // 🚨 Update the where clause to look for BOTH variations
         const updateResult = await this.prisma.postDestination.updateMany({
           where: {
