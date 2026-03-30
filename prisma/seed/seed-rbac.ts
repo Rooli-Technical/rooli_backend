@@ -1,42 +1,47 @@
-import { PrismaClient } from '../../generated/prisma/client';
-import {
-  RoleScope,
-  PermissionScope,
-  PermissionResource,
-  PermissionAction,
-} from '../../generated/prisma/enums';
+import { RoleScope } from '../../generated/prisma/enums';
+import { PermissionAction, PermissionResource, PermissionScope } from '../../src/common/constants/rbac';
 import { prisma, hasColumn } from './utils';
 
 // --- CONFIGURATION ---
 const SCOPE_RESOURCES: Record<PermissionScope, PermissionResource[]> = {
-  [PermissionScope.SYSTEM]: [PermissionResource.SYSTEM],
+  [PermissionScope.SYSTEM]: [
+    PermissionResource.SYSTEM_USERS,
+    PermissionResource.SYSTEM_ORGANIZATIONS,
+    PermissionResource.SYSTEM_BILLING,
+  ],
   [PermissionScope.ORGANIZATION]: [
     PermissionResource.ORGANIZATION,
-    PermissionResource.MEMBERS,
-    PermissionResource.BILLING,
-    PermissionResource.SETTINGS,
+    PermissionResource.ORG_MEMBERS,
+    PermissionResource.ORG_BILLING,
+    PermissionResource.ORG_SETTINGS,
     PermissionResource.SUBSCRIPTION,
     PermissionResource.INTEGRATION,
     PermissionResource.INVITATIONS,
     PermissionResource.AUDIT_LOGS,
   ],
   [PermissionScope.WORKSPACE]: [
-    PermissionResource.MEMBERS,
+    PermissionResource.WORKSPACE,
+    PermissionResource.WORKSPACE_SETTINGS,
+    PermissionResource.WORKSPACE_MEMBERS,
+    PermissionResource.PROFILE_ACCESS,
+    PermissionResource.SOCIAL_PROFILE,
     PermissionResource.POSTS,
+    PermissionResource.APPROVAL,
+    PermissionResource.CAMPAIGN,
     PermissionResource.CONTENT,
     PermissionResource.SCHEDULING,
     PermissionResource.ANALYTICS,
-    PermissionResource.MESSAGE,
+    PermissionResource.INBOX,
     PermissionResource.COMMENT,
+    PermissionResource.INTERNAL_COMMENT,
     PermissionResource.AI_CONTENT,
     PermissionResource.AI_USAGE,
     PermissionResource.TEMPLATE,
-    PermissionResource.CALENDAR,
-    PermissionResource.INBOX,
+    PermissionResource.NOTIFICATION,
   ],
 };
 
-const ALL_ACTIONS = Object.values(PermissionAction);
+export const ALL_ACTIONS = Object.values(PermissionAction) as PermissionAction[];
 
 export async function seedRBAC() {
   console.log('🌱 Starting RBAC Seed...');
@@ -54,18 +59,19 @@ export async function seedRBAC() {
   // -----------------------------------------------------
   console.log('... Seeding Permissions (bulk createMany)');
 
-  const permissionRows = Object.values(PermissionScope).flatMap((scope) => {
-    const resources = SCOPE_RESOURCES[scope] ?? [];
-    return resources.flatMap((resource) =>
-      ALL_ACTIONS.map((action) => ({
-        scope,
-        resource,
-        action,
-        name: `${scope}.${resource}.${action}`,
-        description: `Allow ${action} on ${resource} in ${scope}`,
-      })),
-    );
-  });
+ // Iterate over the Scope values and cast them properly
+const permissionRows = (Object.values(PermissionScope) as PermissionScope[]).flatMap((scope) => {
+  const resources = SCOPE_RESOURCES[scope] ?? [];
+  return resources.flatMap((resource) =>
+    ALL_ACTIONS.map((action) => ({
+      scope,
+      resource,
+      action,
+      name: `${scope.toLowerCase()}.${resource.toLowerCase()}.${action.toLowerCase()}`,
+      description: `Allow ${action} on ${resource} in ${scope}`,
+    })),
+  );
+});
 
   await prisma.permission.createMany({
     data: permissionRows,
@@ -157,6 +163,20 @@ const wsViewer = await upsertSystemRole({
   name: 'Viewer',
   description: 'Read-only access to content and analytics',
 });
+
+const wsContributor = await upsertSystemRole({
+    scope: RoleScope.WORKSPACE,
+    slug: 'contributor',
+    name: 'Contributor',
+    description: 'Can draft content and leave internal comments. Must submit for approval.',
+  });
+
+  const wsClient = await upsertSystemRole({
+    scope: RoleScope.WORKSPACE,
+    slug: 'client',
+    name: 'Client',
+    description: 'Read-only access to specific dashboards. Can approve or reject content.',
+  });
   // -----------------------------------------------------
   // 4) ASSIGN PERMISSIONS (bulk createMany)
   // -----------------------------------------------------
@@ -168,17 +188,18 @@ const wsViewer = await upsertSystemRole({
   // Org Owner: all ORG permissions
   await assign(orgOwner.id, await permIds({ scope: PermissionScope.ORGANIZATION }));
 
+
   // Org Admin: manage core org resources
   await assign(
     orgAdmin.id,
     await permIds({
       scope: PermissionScope.ORGANIZATION,
       resources: [
-        PermissionResource.BILLING,
-        PermissionResource.MEMBERS,
+        PermissionResource.ORG_BILLING,
+        PermissionResource.ORG_MEMBERS,
         PermissionResource.INVITATIONS,
         PermissionResource.INTEGRATION,
-        PermissionResource.SETTINGS,
+        PermissionResource.ORG_SETTINGS,
         PermissionResource.AUDIT_LOGS,
       ],
       actions: [
@@ -196,7 +217,7 @@ const wsViewer = await upsertSystemRole({
     orgMember.id,
     await permIds({
       scope: PermissionScope.ORGANIZATION,
-      resources: [PermissionResource.ORGANIZATION, PermissionResource.MEMBERS],
+      resources: [PermissionResource.ORGANIZATION, PermissionResource.ORG_MEMBERS],
       actions: [PermissionAction.READ],
     }),
   );
@@ -213,9 +234,8 @@ const wsViewer = await upsertSystemRole({
         PermissionResource.POSTS,
         PermissionResource.CONTENT,
         PermissionResource.SCHEDULING,
-        PermissionResource.CALENDAR,
         PermissionResource.TEMPLATE,
-        PermissionResource.MESSAGE,
+        PermissionResource.INBOX,
         PermissionResource.COMMENT,
         PermissionResource.AI_CONTENT,
       ],
@@ -223,8 +243,21 @@ const wsViewer = await upsertSystemRole({
         PermissionAction.CREATE,
         PermissionAction.READ,
         PermissionAction.UPDATE,
-        PermissionAction.DELETE,
         PermissionAction.PUBLISH,
+      ],
+    }),
+  );
+
+  // Editors can also manage the Approval Workflow for Contributors
+  await assign(
+    wsEditor.id,
+    await permIds({
+      scope: PermissionScope.WORKSPACE,
+      resources: [PermissionResource.APPROVAL],
+      actions: [
+        PermissionAction.APPROVE, 
+        PermissionAction.REJECT, 
+        PermissionAction.READ
       ],
     }),
   );
@@ -238,10 +271,63 @@ const wsViewer = await upsertSystemRole({
         PermissionResource.POSTS,
         PermissionResource.CONTENT,
         PermissionResource.ANALYTICS,
-        PermissionResource.CALENDAR,
         PermissionResource.SCHEDULING,
       ],
       actions: [PermissionAction.READ],
+    }),
+  );
+
+  // Workspace Contributor: Can draft, cannot publish.
+  await assign(
+    wsContributor.id,
+    await permIds({
+      scope: PermissionScope.WORKSPACE,
+      resources: [
+        PermissionResource.POSTS,
+        PermissionResource.CONTENT,
+        PermissionResource.SCHEDULING,
+        PermissionResource.INTERNAL_COMMENT,
+      ],
+      actions: [
+        PermissionAction.CREATE,
+        PermissionAction.READ,
+        PermissionAction.UPDATE,
+      ],
+    }),
+  );
+  // Contributors submit to the Approval queue
+  await assign(
+    wsContributor.id,
+    await permIds({
+      scope: PermissionScope.WORKSPACE,
+      resources: [PermissionResource.APPROVAL],
+      actions: [PermissionAction.CREATE, PermissionAction.READ],
+    }),
+  );
+
+  // Workspace Client: Can only read analytics/calendar and approve/reject posts
+  await assign(
+    wsClient.id,
+    await permIds({
+      scope: PermissionScope.WORKSPACE,
+      resources: [
+        PermissionResource.POSTS,
+        PermissionResource.SCHEDULING,
+        PermissionResource.ANALYTICS,
+      ],
+      actions: [PermissionAction.READ],
+    }),
+  );
+  await assign(
+    wsClient.id,
+    await permIds({
+      scope: PermissionScope.WORKSPACE,
+      resources: [PermissionResource.APPROVAL],
+      actions: [
+        PermissionAction.APPROVE, 
+        PermissionAction.REJECT, 
+        PermissionAction.READ
+      ],
     }),
   );
 
