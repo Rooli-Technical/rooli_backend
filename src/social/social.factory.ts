@@ -15,7 +15,6 @@ export class SocialFactory {
     private facebook: FacebookProvider,
     private instagram: InstagramProvider,
     private tiktok: TikTokProvider,
-
   ) {}
 
   getProvider(platform: Platform): ISocialProvider {
@@ -24,14 +23,16 @@ export class SocialFactory {
         return this.twitter;
       case 'LINKEDIN':
         return this.linkedin;
-      case 'FACEBOOK': 
+      case 'FACEBOOK':
         return this.facebook;
-      case 'INSTAGRAM': 
+      case 'INSTAGRAM':
         return this.instagram;
       case 'TIKTOK':
         return this.tiktok;
       default:
-        throw new BadRequestException(`Platform ${platform} is not supported yet.`);
+        throw new BadRequestException(
+          `Platform ${platform} is not supported yet.`,
+        );
     }
   }
 }

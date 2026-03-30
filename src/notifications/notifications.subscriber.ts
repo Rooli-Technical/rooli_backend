@@ -250,7 +250,7 @@ export class NotificationsSubscriber {
         platform: evt.platform,
         profileName: evt.profileName,
         snippet: evt.snippet,
-      } 
+      },
     });
   }
 
@@ -265,7 +265,6 @@ export class NotificationsSubscriber {
     reason: string;
     actorMemberId?: string;
   }) {
-
     const friendlyErrorMessage = `We encountered an issue while publishing to ${evt.platform}. Please check your account connection and try again.`;
 
     await this.notifyPostEvent({
@@ -458,12 +457,14 @@ export class NotificationsSubscriber {
     }
   }
 
-// ============================================================================
+  // ============================================================================
   // TICKET EVENTS (The "Red Bell" Database Notifications)
   // ============================================================================
 
   @OnEvent('ticket.comment.added', { async: true })
-  async onTicketCommentAdded(evt: DomainEventPayloadMap['ticket.comment.added']) {
+  async onTicketCommentAdded(
+    evt: DomainEventPayloadMap['ticket.comment.added'],
+  ) {
     try {
       // Rule: Only notify the customer if Rooli Support replied publicly!
       if (!evt.isFromSupport || evt.isInternal) return;
@@ -477,7 +478,7 @@ export class NotificationsSubscriber {
       await this.notifications.create({
         workspaceId: evt.workspaceId,
         memberId: ticket.requesterId, // The WorkspaceMember who opened the ticket
-        type: NotificationType.SYSTEM_ALERT, 
+        type: NotificationType.SYSTEM_ALERT,
         title: `Rooli Support Replied`,
         body: `You have a new reply on Ticket #${ticket.ticketNumber}.`,
         link: `/support/tickets/${evt.ticketId}`,
@@ -485,7 +486,9 @@ export class NotificationsSubscriber {
         dedupeKey: `ticket:reply:${evt.ticketId}:${evt.id}`, // Use comment ID to prevent dupes
       });
     } catch (e: any) {
-      this.logger.warn(`onTicketCommentAdded failed: ${e?.message ?? String(e)}`);
+      this.logger.warn(
+        `onTicketCommentAdded failed: ${e?.message ?? String(e)}`,
+      );
     }
   }
 

@@ -11,16 +11,22 @@ import { RedisModule } from '@/redis/redis.module';
 import { NotificationsEventsSubscriber } from './subscribers/notifications-events.subscriber';
 import { ProfileConnectionSubscriber } from './subscribers/social-connection.subscriber';
 import { AnalyticsModule } from '@/analytics/analytics.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TicketEventsSubscriber } from './subscribers/tickets-events.subscriber';
 
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET!,
-      signOptions: { expiresIn: '7d' },
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '7d' },
+      }),
+      inject: [ConfigService],
     }),
     RedisModule,
-    AnalyticsModule
+    AnalyticsModule,
   ],
   providers: [
     PrismaService,
@@ -31,7 +37,8 @@ import { AnalyticsModule } from '@/analytics/analytics.module';
     NotificationsEventsSubscriber,
     WsAuthMiddleware,
     ProfileConnectionSubscriber,
+    TicketEventsSubscriber,
   ],
-  exports: [DomainEventsService, RealtimeEmitterService,],
+  exports: [DomainEventsService, RealtimeEmitterService],
 })
 export class EventsModule {}

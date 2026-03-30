@@ -51,9 +51,6 @@ export class InboxCommentsController {
     @Param('workspaceId') workspaceId: string,
     @Param('commentId') parentCommentId: string,
   ) {
-    return this.inboxService.retryCommentReply(
-      workspaceId,
-      parentCommentId,
-    );
+    return this.inboxService.retryCommentReply(workspaceId, parentCommentId);
   }
 }

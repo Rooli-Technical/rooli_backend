@@ -13,19 +13,22 @@ export class InstagramInboxProvider {
     if (token.trim().startsWith('IG')) {
       return 'https://graph.instagram.com/v23.0'; // Direct IG Login
     }
-    return 'https://graph.facebook.com/v23.0';    // Connected via FB Page
+    return 'https://graph.facebook.com/v23.0'; // Connected via FB Page
   }
 
   /**
    * Fetches recent Instagram comments (Supports both EA and IG tokens)
    */
-  async getRecentComments(igUserId: string, accessToken: string): Promise<any[]> {
+  async getRecentComments(
+    igUserId: string,
+    accessToken: string,
+  ): Promise<any[]> {
     try {
       const baseUrl = this.resolveHost(accessToken);
-      
+
       // Instagram uses /media, NOT /feed!
       const url = `${baseUrl}/${igUserId}/media`;
-      
+
       const { data } = await firstValueFrom(
         this.httpService.get(url, {
           params: {
@@ -34,13 +37,12 @@ export class InstagramInboxProvider {
             limit: 5,
             access_token: accessToken,
           },
-        })
+        }),
       );
 
       const posts = data?.data || [];
 
-      
-      return posts.flatMap((post) => 
+      return posts.flatMap((post) =>
         (post.comments?.data || []).map((comment) => ({
           change: {
             field: 'feed', // Webhooks still call it 'feed' generically
@@ -51,21 +53,25 @@ export class InstagramInboxProvider {
               comment_id: comment.id,
               from: {
                 id: comment.from?.id,
-                name: comment.from?.username 
+                name: comment.from?.username,
               },
               // Map IG's 'text' to 'message' so your MetaAdapter doesn't break
-              message: comment.text, 
+              message: comment.text,
               // IG uses 'timestamp', FB uses 'created_time'
-              created_time: Math.floor(new Date(comment.timestamp).getTime() / 1000),
+              created_time: Math.floor(
+                new Date(comment.timestamp).getTime() / 1000,
+              ),
               parent_id: comment.parent_id,
             },
           },
           rawEntry: { id: igUserId },
           objectType: 'instagram', // Tells the adapter this is IG
-        }))
+        })),
       );
     } catch (error: any) {
-      this.logger.error(`Failed to fetch IG comments for ${igUserId}: ${error.response?.data?.error?.message || error.message}`);
+      this.logger.error(
+        `Failed to fetch IG comments for ${igUserId}: ${error.response?.data?.error?.message || error.message}`,
+      );
       return [];
     }
   }
@@ -73,7 +79,11 @@ export class InstagramInboxProvider {
   /**
    * Fetches recent Instagram DMs
    */
-  async getRecentDMs(igUserId: string, accessToken: string, pageId?: string): Promise<any[]> {
+  async getRecentDMs(
+    igUserId: string,
+    accessToken: string,
+    pageId?: string,
+  ): Promise<any[]> {
     try {
       const isFbToken = accessToken.trim().startsWith('EA');
       const baseUrl = this.resolveHost(accessToken);
@@ -81,42 +91,45 @@ export class InstagramInboxProvider {
       const targetId = isFbToken ? pageId : igUserId;
 
       if (isFbToken && !pageId) {
-        this.logger.warn(`IG Profile ${igUserId} uses an EA token but has no pageId. DM fetch will likely fail.`);
+        this.logger.warn(
+          `IG Profile ${igUserId} uses an EA token but has no pageId. DM fetch will likely fail.`,
+        );
       }
-      
+
       const url = `${baseUrl}/${targetId}/conversations`;
       const { data } = await firstValueFrom(
         this.httpService.get(url, {
           params: {
-            platform: 'instagram', 
+            platform: 'instagram',
             fields: 'id,messages{id,message,from,created_time}',
             limit: 5,
             access_token: accessToken,
           },
-        })
+        }),
       );
 
-
       const conversations = data?.data || [];
-      return conversations.flatMap((conv: any) => 
+      return conversations.flatMap((conv: any) =>
         (conv.messages?.data || []).map((msg: any) => ({
-            messaging: {
-              sender: { id: msg.from?.id },
-              recipient: { id: igUserId },
-              timestamp: new Date(msg.created_time).getTime(),
-              message: {
-                mid: msg.id,
-                text: msg.message,
-                is_echo: msg.from?.id === igUserId,
-              },
+          messaging: {
+            sender: { id: msg.from?.id },
+            recipient: { id: igUserId },
+            timestamp: new Date(msg.created_time).getTime(),
+            message: {
+              mid: msg.id,
+              text: msg.message,
+              is_echo: msg.from?.id === igUserId,
             },
-            rawEntry: { id: igUserId },
-            objectType: 'instagram',
+          },
+          rawEntry: { id: igUserId },
+          objectType: 'instagram',
         })),
       );
     } catch (error: any) {
-      console.log(error)
-      this.logger.error(`Failed to fetch IG DMs for ${igUserId}: ${error.response?.data?.error?.message || error.message}`);
+      console.log(error);
+      this.logger.error(
+        `Failed to fetch IG DMs for ${igUserId}: ${error.response?.data?.error?.message || error.message}`,
+      );
       return [];
     }
   }

@@ -27,7 +27,9 @@ class ColorsDto {
 }
 
 class GuidelinesDto {
-  @ApiPropertyOptional({ example: ['Use short sentences', 'Write for founders'] })
+  @ApiPropertyOptional({
+    example: ['Use short sentences', 'Write for founders'],
+  })
   @IsOptional()
   do?: string[];
 
@@ -48,17 +50,26 @@ class GuidelinesDto {
   @IsString()
   emojiStyle?: 'NONE' | 'LIGHT' | 'HEAVY';
 
-  @ApiPropertyOptional({ enum: ['NONE', 'QUESTION', 'DIRECT', 'SOFT'], example: 'QUESTION' })
+  @ApiPropertyOptional({
+    enum: ['NONE', 'QUESTION', 'DIRECT', 'SOFT'],
+    example: 'QUESTION',
+  })
   @IsOptional()
   @IsString()
   ctaStyle?: 'NONE' | 'QUESTION' | 'DIRECT' | 'SOFT';
 
-  @ApiPropertyOptional({ enum: ['SHORT_LINES', 'PARAGRAPHS', 'BULLETS'], example: 'SHORT_LINES' })
+  @ApiPropertyOptional({
+    enum: ['SHORT_LINES', 'PARAGRAPHS', 'BULLETS'],
+    example: 'SHORT_LINES',
+  })
   @IsOptional()
   @IsString()
   formatting?: 'SHORT_LINES' | 'PARAGRAPHS' | 'BULLETS';
 
-  @ApiPropertyOptional({ enum: ['ALLOW', 'DISALLOW', 'ALLOW_WITH_UTM'], example: 'ALLOW' })
+  @ApiPropertyOptional({
+    enum: ['ALLOW', 'DISALLOW', 'ALLOW_WITH_UTM'],
+    example: 'ALLOW',
+  })
   @IsOptional()
   @IsString()
   linkPolicy?: 'ALLOW' | 'DISALLOW' | 'ALLOW_WITH_UTM';
@@ -105,4 +116,3 @@ export class CreateBrandKitDto {
   @IsBoolean()
   isActive?: boolean;
 }
-

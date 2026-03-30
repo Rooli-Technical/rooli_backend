@@ -60,7 +60,11 @@ export class TwitterAdapter implements SocialAdapter {
 
     // Conversation key: X AAAPI doesn't give a conversation id in v1.1 style.
     // Make deterministic: owner + other user.
-    const conversationExternalId = buildSyntheticThreadId(ownerExternalId, senderId, 'x:dm');
+    const conversationExternalId = buildSyntheticThreadId(
+      ownerExternalId,
+      senderId,
+      'x:dm',
+    );
 
     // Optional: username enrichment: AAAPI payload often includes `users` object with profiles.
     // If controller passed raw payload, try to look it up.
@@ -194,7 +198,11 @@ export class TwitterAdapter implements SocialAdapter {
     return out.url || out.meta?.media_id ? [out] : [];
   }
 }
-function buildSyntheticThreadId(ownerId: string, contactId: string, prefix: string) {
+function buildSyntheticThreadId(
+  ownerId: string,
+  contactId: string,
+  prefix: string,
+) {
   // Sort the IDs so the thread ID is identical regardless of who sent the message
   const sorted = [ownerId, contactId].sort();
   return `${prefix}:${sorted[0]}:${sorted[1]}`;

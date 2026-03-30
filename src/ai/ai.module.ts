@@ -11,8 +11,17 @@ import { PostMediaModule } from '@/post-media/post-media.module';
 import { HuggingFaceProvider } from './providers/huggingface.provider';
 
 @Module({
-  imports:[PostMediaModule],
+  imports: [PostMediaModule],
   controllers: [AiController],
-  providers: [AiService, AiQuotaService, AiProviderFactory , GeminiProvider, OpenAiProvider, PromptBuilder, ScraperService, HuggingFaceProvider],
+  providers: [
+    AiService,
+    AiQuotaService,
+    AiProviderFactory,
+    GeminiProvider,
+    OpenAiProvider,
+    PromptBuilder,
+    ScraperService,
+    HuggingFaceProvider,
+  ],
 })
 export class AiModule {}

@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, BadRequestException, Res, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  BadRequestException,
+  Res,
+  Param,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import * as crypto from 'crypto';
@@ -29,7 +37,7 @@ export class MetaWebhooksController {
     });
 
     // You can also cascade delete SocialProfiles here if you want strict cleanup
-    
+
     return { success: true };
   }
 
@@ -41,7 +49,7 @@ export class MetaWebhooksController {
   @Post('delete-data')
   async requestDeletion(
     @Body('signed_request') signedRequest: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     const data = this.parseSignedRequest(signedRequest);
     const providerUserId = data.user_id;
@@ -56,7 +64,7 @@ export class MetaWebhooksController {
 
     // 3. Return the specific JSON format Meta requires
     const statusUrl = `${this.config.get('API_URL')}/api/v1/social-privacy/deletion-status/${confirmationCode}`;
-    
+
     return res.json({
       url: statusUrl,
       confirmation_code: confirmationCode,
@@ -90,7 +98,7 @@ export class MetaWebhooksController {
 
     // OPTIONAL: Verify Signature (Recommended for Prod)
     // You check if HMAC_SHA256(payload, APP_SECRET) matches encodedSig
-    
+
     return data;
   }
 }

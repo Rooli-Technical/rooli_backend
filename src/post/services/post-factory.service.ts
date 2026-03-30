@@ -1,8 +1,8 @@
-import { Prisma, User } from "@generated/client";
-import { PostStatus } from "@generated/enums";
-import { Injectable } from "@nestjs/common";
-import { CreatePostDto } from "../dto/request/create-post.dto";
-import { ThreadItemDto } from "../dto/request/thread-item.dto";
+import { Prisma, User } from '@generated/client';
+import { PostStatus } from '@generated/enums';
+import { Injectable } from '@nestjs/common';
+import { CreatePostDto } from '../dto/request/create-post.dto';
+import { ThreadItemDto } from '../dto/request/thread-item.dto';
 
 @Injectable()
 export class PostFactory {

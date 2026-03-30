@@ -4,13 +4,13 @@ import { seedPlans } from './seed-plans';
 import { seedRBAC } from './seed-rbac';
 
 async function main() {
-  // console.log('Seeding rbac...');
-  //  await seedRBAC();
+  console.log('Seeding rbac...');
+   await seedRBAC();
 
-  // console.log('Seeding users...');
-  // await seedUsers();
+  console.log('Seeding users...');
+  await seedUsers();
 
-  // console.log('Seeding plans...');
+  console.log('Seeding plans...');
   await seedPlans();
 
   console.log('✔ All seeders completed');

@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNotEmpty, IsString, IsArray, IsOptional } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, IsArray, IsOptional } from 'class-validator';
 
 export class ThreadItemDto {
   @ApiProperty({
@@ -21,7 +21,8 @@ export class ThreadItemDto {
 
   @ApiPropertyOptional({
     example: ['profile_twitter_123'],
-    description: 'If set, this thread item is posted only to these social profiles',
+    description:
+      'If set, this thread item is posted only to these social profiles',
   })
   @IsArray()
   @IsString({ each: true })

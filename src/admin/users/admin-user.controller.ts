@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Query,
@@ -25,9 +27,11 @@ import {
   SuspendResponseDto,
   SuspendUserDto,
 } from './admin.user.dto';
+import { AdminRoute } from '@/common/decorators/admin-route.decorator';
 
 @ApiTags('Admin-Users')
 @ApiBearerAuth()
+@AdminRoute()
 @UseGuards(AdminJwtGuard)
 @Controller('admin')
 export class AdminUserController {
@@ -129,5 +133,13 @@ export class AdminUserController {
   @ApiResponse({ status: 403, description: 'Forbidden. Admin only.' })
   async reactivateUser(@Param('id') id: string) {
     return this.adminUserService.reactivateUser(id);
+  }
+
+  @Get('fetch-admins')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Fetch all admins that can be assigned' })
+  @ApiResponse({ status: 200, description: 'All admins' })
+  getAllAdmins() {
+    return this.adminUserService.getAdmins();
   }
 }

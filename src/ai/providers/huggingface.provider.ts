@@ -1,18 +1,27 @@
-import { Injectable, InternalServerErrorException, ServiceUnavailableException, Logger, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  ServiceUnavailableException,
+  Logger,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { IAiProvider, TextGenOptions, TextGenResult } from '../interfaces/ai-provider.interface';
+import {
+  IAiProvider,
+  TextGenOptions,
+  TextGenResult,
+} from '../interfaces/ai-provider.interface';
 import { AiProvider } from '@generated/enums';
-
-
 
 @Injectable()
 export class HuggingFaceProvider implements IAiProvider {
   private readonly logger = new Logger(HuggingFaceProvider.name);
   private readonly client: OpenAI;
   private readonly apiKey: string;
-  
-  private readonly textModel = 'zai-org/GLM-4.6:novita'; 
+
+  private readonly textModel = 'zai-org/GLM-4.6:novita';
 
   constructor(private readonly config: ConfigService) {
     this.apiKey = this.config.get<string>('HF_API_KEY');
@@ -23,7 +32,7 @@ export class HuggingFaceProvider implements IAiProvider {
 
     this.client = new OpenAI({
       apiKey: this.apiKey,
-      baseURL: 'https://router.huggingface.co/v1', 
+      baseURL: 'https://router.huggingface.co/v1',
     });
   }
 
@@ -32,8 +41,8 @@ export class HuggingFaceProvider implements IAiProvider {
    */
   async generateText(options: TextGenOptions): Promise<TextGenResult> {
     try {
-      const model =  this.textModel;
-      
+      const model = this.textModel;
+
       const completion = await this.client.chat.completions.create({
         model: model,
         messages: [
@@ -63,7 +72,6 @@ export class HuggingFaceProvider implements IAiProvider {
           totalTokens: completion.usage?.total_tokens ?? 0,
         },
       };
-
     } catch (error: any) {
       this.handleError(error);
     }
@@ -73,7 +81,10 @@ export class HuggingFaceProvider implements IAiProvider {
    * 🎨 GENERATE IMAGE (Via Custom Fetch)
    * Adapted to return a Buffer so PostMediaService can upload it.
    */
-  async generateImage(prompt: string, model: string = 'stabilityai/stable-diffusion-xl-base-1.0'): Promise<Buffer> {
+  async generateImage(
+    prompt: string,
+    model: string = 'stabilityai/stable-diffusion-xl-base-1.0',
+  ): Promise<Buffer> {
     try {
       // ✅ Using your specific Router Endpoint
       const response = await fetch(
@@ -94,7 +105,9 @@ export class HuggingFaceProvider implements IAiProvider {
 
       if (!response.ok) {
         const text = await response.text();
-        throw new ServiceUnavailableException(`HF image generation failed: ${text}`);
+        throw new ServiceUnavailableException(
+          `HF image generation failed: ${text}`,
+        );
       }
 
       const result = await response.json();
@@ -105,7 +118,6 @@ export class HuggingFaceProvider implements IAiProvider {
       // ✅ CONVERSION: Base64 String -> Buffer
       // This allows CloudinaryService to upload it effortlessly
       return Buffer.from(imageBase64, 'base64');
-
     } catch (error: any) {
       this.logger.error(`❌ Image generation failed: ${error.message}`);
       throw new InternalServerErrorException('Image generation failed.');
@@ -118,12 +130,16 @@ export class HuggingFaceProvider implements IAiProvider {
 
     if (error.code === 'invalid_api_key' || error.status === 401) {
       throw new UnauthorizedException('Invalid Hugging Face API token');
-    } 
+    }
     if (error.status === 404) {
-      throw new NotFoundException(`Model not found or not accessible via Router`);
-    } 
+      throw new NotFoundException(
+        `Model not found or not accessible via Router`,
+      );
+    }
     if (error.status === 429) {
-      throw new ServiceUnavailableException('Rate limit exceeded for Hugging Face Router API');
+      throw new ServiceUnavailableException(
+        'Rate limit exceeded for Hugging Face Router API',
+      );
     }
 
     throw new InternalServerErrorException('AI Generation failed');

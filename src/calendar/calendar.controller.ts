@@ -1,22 +1,29 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { CalendarService } from './calendar.service';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { GetCalendarQueryDto } from './dtos/get-calendar.dto';
 import { RequireFeature } from '@/common/decorators/require-feature.decorator';
 import { FeatureGuard } from '@/common/guards/feature.guard';
-
-
 
 @ApiTags('Calendar')
 @ApiBearerAuth()
 @Controller('/workspaces/:workspaceId/calendar')
 @UseGuards(FeatureGuard)
-@RequireFeature('visualCalendar') 
+@RequireFeature('visualCalendar')
 export class CalendarController {
   constructor(private readonly calendarService: CalendarService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get calendar events (posts + campaigns + holidays/observances)' })
+  @ApiOperation({
+    summary: 'Get calendar events (posts + campaigns + holidays/observances)',
+  })
   @ApiParam({ name: 'workspaceId', example: 'ws_123' })
   @ApiQuery({ name: 'from', required: true, example: '2026-02-01' })
   @ApiQuery({ name: 'to', required: true, example: '2026-03-01' })
@@ -38,4 +45,3 @@ export class CalendarController {
     return this.calendarService.getCalendar(workspaceId, query);
   }
 }
-

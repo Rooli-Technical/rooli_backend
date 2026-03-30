@@ -23,7 +23,7 @@ export class LinkedInProvider implements ISocialProvider {
   private readonly API_BASE = 'https://api.linkedin.com';
   private readonly API_VERSION = '202601';
 
-    private readonly httpsAgent = new https.Agent({
+  private readonly httpsAgent = new https.Agent({
     family: 4, // FORCE IPv4
     keepAlive: true,
     timeout: 30000,
@@ -96,8 +96,6 @@ export class LinkedInProvider implements ISocialProvider {
         }
       }
 
-
-
       // --- C. PAYLOAD BUILDER ---
       const postBody: any = {
         author: authorUrn,
@@ -148,7 +146,8 @@ export class LinkedInProvider implements ISocialProvider {
       const response = await axios.post(
         `${this.API_BASE}/rest/posts`,
         postBody,
-        {httpsAgent: this.httpsAgent,
+        {
+          httpsAgent: this.httpsAgent,
           headers: {
             Authorization: `Bearer ${credentials.accessToken}`,
             'X-Restli-Protocol-Version': '2.0.0',
@@ -157,7 +156,6 @@ export class LinkedInProvider implements ISocialProvider {
           },
         },
       );
-
 
       const urn = response.headers['x-restli-id'] || response.data.id;
       return {
@@ -261,7 +259,6 @@ export class LinkedInProvider implements ISocialProvider {
       const uploadToken = initResp.data.value.uploadToken;
       const videoUrn = initResp.data.value.video;
       const partEtags: string[] = [];
-
 
       // 3. Upload Each Part
       for (const instruction of instructions) {
@@ -379,8 +376,6 @@ export class LinkedInProvider implements ISocialProvider {
     // 2. If it's a raw ID, assume it is a Person (Profile)
     return `urn:li:person:${id}`;
   }
-
-  
 
   private handleError(error: any) {
     console.log(error);

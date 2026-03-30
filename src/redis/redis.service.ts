@@ -9,7 +9,6 @@ export class RedisService {
     return this.client.get(key);
   }
 
-
   async set(key: string, value: string, ttlSeconds?: number): Promise<'OK'> {
     if (ttlSeconds) {
       return this.client.set(key, value, 'EX', ttlSeconds);
@@ -22,8 +21,8 @@ export class RedisService {
   }
 
   async decr(key: string): Promise<number> {
-  return this.client.decr(key);
-}
+    return this.client.decr(key);
+  }
 
   async del(key: string): Promise<number> {
     return this.client.del(key);

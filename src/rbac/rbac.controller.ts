@@ -1,6 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
-import {  RoleService } from './rbac.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
+import { RoleService } from './rbac.service';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { CreateRoleDto } from './dtos/create-role.dto';
 import { ListPermissionsQuery } from './dtos/list-permissions-query.dto';
@@ -15,12 +31,13 @@ export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
   @Get()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all roles with their assigned permissions',
-    description: 'Returns a list of roles categorized by scope (System, Organization, Workspace).' 
+    description:
+      'Returns a list of roles categorized by scope (System, Organization, Workspace).',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Returns list of roles.',
     schema: {
       example: [
@@ -31,16 +48,15 @@ export class RoleController {
           scope: 'WORKSPACE',
           permissions: [
             { resource: 'POSTS', action: 'CREATE' },
-            { resource: 'POSTS', action: 'PUBLISH' }
-          ]
-        }
-      ]
-    }
+            { resource: 'POSTS', action: 'PUBLISH' },
+          ],
+        },
+      ],
+    },
   })
   async getAllRoles() {
     return await this.roleService.getAllRolesWithPermissions();
   }
-
 
   @Get('permissions')
   @ApiOperation({ summary: 'List all available system permissions' })
@@ -61,7 +77,11 @@ export class RoleController {
     @CurrentUser('userId') userId: string,
     @Query() query: ListRolesQuery,
   ) {
-    return this.roleService.listOrganizationRoles({ userId, organizationId: orgId, query });
+    return this.roleService.listOrganizationRoles({
+      userId,
+      organizationId: orgId,
+      query,
+    });
   }
 
   @Post()
@@ -91,10 +111,15 @@ export class RoleController {
   async updateRole(
     @Param('orgId') orgId: string,
     @Param('roleId') roleId: string,
-   @CurrentUser('userId') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: UpdateRoleDto,
   ) {
-    return this.roleService.updateRole({ userId, organizationId: orgId, roleId, dto });
+    return this.roleService.updateRole({
+      userId,
+      organizationId: orgId,
+      roleId,
+      dto,
+    });
   }
 
   @Put(':roleId/permissions')
@@ -105,7 +130,12 @@ export class RoleController {
     @CurrentUser('userId') userId: string,
     @Body() dto: ReplaceRolePermissionsDto,
   ) {
-    return this.roleService.replaceRolePermissions({ userId, organizationId: orgId, roleId, dto });
+    return this.roleService.replaceRolePermissions({
+      userId,
+      organizationId: orgId,
+      roleId,
+      dto,
+    });
   }
 
   @Delete(':roleId')
@@ -115,17 +145,26 @@ export class RoleController {
     @Param('roleId') roleId: string,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.roleService.deleteRole({ userId, organizationId: orgId, roleId });
+    return this.roleService.deleteRole({
+      userId,
+      organizationId: orgId,
+      roleId,
+    });
   }
 
   @Get(':roleId/usage')
-  @ApiOperation({ summary: 'Check how many members are using this role before deletion' })
+  @ApiOperation({
+    summary: 'Check how many members are using this role before deletion',
+  })
   async getUsage(
     @Param('orgId') orgId: string,
     @Param('roleId') roleId: string,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.roleService.getRoleUsage({ userId, organizationId: orgId, roleId });
+    return this.roleService.getRoleUsage({
+      userId,
+      organizationId: orgId,
+      roleId,
+    });
   }
-
 }

@@ -8,8 +8,8 @@ import { ListAuditLogsDto } from './dtos/list-audit-logs.dto';
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
-   @Get()
-  @RequirePermission(PermissionResource.AUDIT_LOGS, PermissionAction.READ )
+  @Get()
+  @RequirePermission(PermissionResource.AUDIT_LOGS, PermissionAction.READ)
   list(
     @Param('organizationId') organizationId: string,
     @Query() query: ListAuditLogsDto,

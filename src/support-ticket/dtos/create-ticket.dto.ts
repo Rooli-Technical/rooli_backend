@@ -1,7 +1,13 @@
 import { TicketCategory, TicketPriority } from '@generated/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsArray, IsEnum } from 'class-validator';
-
+import {
+  IsString,
+  IsNotEmpty,
+  IsBoolean,
+  IsOptional,
+  IsArray,
+  IsEnum,
+} from 'class-validator';
 
 export class CreateTicketDto {
   @ApiProperty({ example: 'Cannot access dashboard' })
@@ -9,7 +15,9 @@ export class CreateTicketDto {
   @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ example: 'The screen goes white when I click the "Home" button.' })
+  @ApiProperty({
+    example: 'The screen goes white when I click the "Home" button.',
+  })
   @IsString()
   @IsNotEmpty()
   description: string;
@@ -23,7 +31,10 @@ export class CreateTicketDto {
   @IsEnum(TicketPriority)
   priority?: TicketPriority;
 
-  @ApiPropertyOptional({ type: [String], description: 'Array of uploaded file IDs' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Array of uploaded file IDs',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -36,7 +47,10 @@ export class AddCommentDto {
   @IsNotEmpty()
   content: string;
 
-  @ApiProperty({ description: 'True if the comment is from a support agent' })
+  @ApiProperty({
+    description: 'True if the comment is from a support agent',
+    default: true,
+  })
   @IsBoolean()
   isFromSupport: boolean;
 

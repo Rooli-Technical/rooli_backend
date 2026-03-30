@@ -1,15 +1,35 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 class StatCardDto {
   @ApiProperty({ example: 2000 })
   total: number;
 
-  @ApiProperty({ example: 12.5, description: 'Positive = growth, negative = decline vs equivalent previous period' })
+  @ApiProperty({
+    example: 12.5,
+    description:
+      'Positive = growth, negative = decline vs equivalent previous period',
+  })
   percentageChangeFromLastMonth: number;
 }
 
 class MonthlyPointDto {
-  @ApiProperty({ example: 'JUL', enum: ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'] })
+  @ApiProperty({
+    example: 'JUL',
+    enum: [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ],
+  })
   month: string;
 
   @ApiProperty({ example: 2025 })
@@ -20,13 +40,19 @@ class MonthlyPointDto {
 }
 
 class UserDistributionDto {
-  @ApiProperty({ example: 1200, description: 'Verified users active in the last 30 days' })
+  @ApiProperty({
+    example: 1200,
+    description: 'Verified users active in the last 30 days',
+  })
   active: number;
 
   @ApiProperty({ example: 600, description: 'Verified but dormant > 30 days' })
   inactive: number;
 
-  @ApiProperty({ example: 200, description: 'Users with an active account lock' })
+  @ApiProperty({
+    example: 200,
+    description: 'Users with an active account lock',
+  })
   suspended: number;
 }
 
@@ -45,10 +71,17 @@ class InfrastructureHealthDto {
 }
 
 class WorkspaceGrowthDto {
-  @ApiProperty({ example: 98.7, description: 'Webhook success rate as a percentage. Formula: PROCESSED / (PROCESSED + FAILED + PENDING) * 100. IGNORED webhooks are excluded.' })
+  @ApiProperty({
+    example: 98.7,
+    description:
+      'Webhook success rate as a percentage. Formula: PROCESSED / (PROCESSED + FAILED + PENDING) * 100. IGNORED webhooks are excluded.',
+  })
   webhookSuccessRate: number;
 
-  @ApiProperty({ example: 1560, description: 'Total non-IGNORED webhooks in the selected period' })
+  @ApiProperty({
+    example: 1560,
+    description: 'Total non-IGNORED webhooks in the selected period',
+  })
   webhookTotal: number;
 
   @ApiProperty({ example: 1540, description: 'Webhooks with status=PROCESSED' })
@@ -74,10 +107,16 @@ export class DashboardAnalyticsDto {
   @ApiProperty({ type: StatCardDto })
   monthlyRecurringRevenue: StatCardDto;
 
-  @ApiProperty({ type: [MonthlyPointDto], description: 'Users Growth bar chart' })
+  @ApiProperty({
+    type: [MonthlyPointDto],
+    description: 'Users Growth bar chart',
+  })
   usersGrowth: MonthlyPointDto[];
 
-  @ApiProperty({ type: [MonthlyPointDto], description: 'Monthly Revenue bar chart' })
+  @ApiProperty({
+    type: [MonthlyPointDto],
+    description: 'Monthly Revenue bar chart',
+  })
   monthlyRevenue: MonthlyPointDto[];
 
   @ApiProperty({ type: UserDistributionDto })
@@ -86,6 +125,10 @@ export class DashboardAnalyticsDto {
   @ApiProperty({ type: InfrastructureHealthDto })
   infrastructureHealth: InfrastructureHealthDto;
 
-  @ApiProperty({ type: WorkspaceGrowthDto, description: 'Workspace Growth panel — webhook health and connected accounts' })
+  @ApiProperty({
+    type: WorkspaceGrowthDto,
+    description:
+      'Workspace Growth panel — webhook health and connected accounts',
+  })
   workspaceGrowth: WorkspaceGrowthDto;
 }

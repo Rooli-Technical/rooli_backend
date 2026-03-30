@@ -12,7 +12,6 @@ import {
 export class MetaClient {
   private readonly http: AxiosInstance;
 
-
   constructor() {
     this.http = axios.create({
       timeout: 20_000,
@@ -110,8 +109,11 @@ export class MetaClient {
     mode: MetaSendMode,
     req: MetaSendAttachmentRequest,
   ): Promise<MetaSendResult> {
-   const baseUrl = this.resolveHost(req.accessToken);
-    const endpoint = this.resolveSendEndpoint(mode, { pageId: req.pageId, igId: req.igId });
+    const baseUrl = this.resolveHost(req.accessToken);
+    const endpoint = this.resolveSendEndpoint(mode, {
+      pageId: req.pageId,
+      igId: req.igId,
+    });
     const url = `${baseUrl}${endpoint}`;
 
     const body: any =
@@ -152,7 +154,6 @@ export class MetaClient {
     }
   }
 
-
   /**
    * Fetch comments live from Meta for a specific post/media.
    */
@@ -165,9 +166,10 @@ export class MetaClient {
     const url = `${baseUrl}/${params.externalPostId}/comments`;
 
     // FB and IG return slightly different fields
-    const fields = params.platform === 'INSTAGRAM' 
-      ? 'id,text,timestamp,from,replies{id,text,timestamp,from}' 
-      : 'id,message,created_time,from,comments{id,message,created_time,from}';
+    const fields =
+      params.platform === 'INSTAGRAM'
+        ? 'id,text,timestamp,from,replies{id,text,timestamp,from}'
+        : 'id,message,created_time,from,comments{id,message,created_time,from}';
 
     try {
       const res = await this.http.get(url, {
@@ -175,7 +177,7 @@ export class MetaClient {
           access_token: params.accessToken,
           fields,
           // Limit to 50 top-level comments for MVP
-          limit: 50, 
+          limit: 50,
         },
       });
 
@@ -206,7 +208,6 @@ export class MetaClient {
         { params: { access_token: params.accessToken } },
       );
 
-
       return {
         provider: 'META',
         id: res.data?.id, // This is the official ID we need to save!
@@ -225,19 +226,18 @@ export class MetaClient {
     senderId: string; // The PSID (Facebook) or IGSID (Instagram)
     platform: 'FACEBOOK' | 'INSTAGRAM';
     accessToken: string; // Either the IG token or the FB Page token
-  }): Promise<{ 
-    id: string; 
-    name?: string; 
-    firstName?: string; 
-    lastName?: string; 
-    username?: string; 
+  }): Promise<{
+    id: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    username?: string;
     avatarUrl?: string;
   }> {
-    
     // 1. Smart Routing based on the Token
     const isIgOnlyToken = params.accessToken.startsWith('IG');
-    const baseUrl = isIgOnlyToken 
-      ? 'https://graph.instagram.com/v23.0' 
+    const baseUrl = isIgOnlyToken
+      ? 'https://graph.instagram.com/v23.0'
       : 'https://graph.facebook.com/v23.0';
 
     // 2. Request the correct fields based on Platform/Token
@@ -280,7 +280,9 @@ export class MetaClient {
         };
       }
     } catch (e) {
-      console.log(`Failed to fetch ${params.platform} profile for sender ${params.senderId}`);
+      console.log(
+        `Failed to fetch ${params.platform} profile for sender ${params.senderId}`,
+      );
       throw this.wrapMetaError(e, 'fetchContactProfile');
     }
   }

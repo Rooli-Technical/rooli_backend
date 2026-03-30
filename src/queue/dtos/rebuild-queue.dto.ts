@@ -1,6 +1,14 @@
-import { Platform } from "@generated/enums";
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsEnum, IsISO8601, IsInt, Min, Max, IsArray } from "class-validator";
+import { Platform } from '@generated/enums';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsOptional,
+  IsEnum,
+  IsISO8601,
+  IsInt,
+  Min,
+  Max,
+  IsArray,
+} from 'class-validator';
 
 export enum PostStatusForQueue {
   DRAFT = 'DRAFT',
@@ -18,8 +26,7 @@ export class RebuildQueueDto {
   platform?: Platform;
 
   @ApiPropertyOptional({
-    description:
-      'Start point for rebuild in ISO-8601. If omitted, uses now.',
+    description: 'Start point for rebuild in ISO-8601. If omitted, uses now.',
     example: '2026-02-10T16:00:00+01:00',
   })
   @IsOptional()

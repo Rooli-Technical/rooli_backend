@@ -1,8 +1,8 @@
-import { PaginationDto } from "@/common/dtos/pagination.dto";
-import { PlanTier, PlanStatus } from "@generated/enums";
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { Transform } from "class-transformer";
-import { IsOptional, IsString, IsBoolean, IsEnum} from "class-validator";
+import { PaginationDto } from '@/common/dtos/pagination.dto';
+import { PlanTier, PlanStatus } from '@generated/enums';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { IsOptional, IsString, IsBoolean, IsEnum } from 'class-validator';
 
 export class GetAllOrganizationsDto extends PaginationDto {
   @ApiPropertyOptional({ description: 'Filter by organization name' })
@@ -21,9 +21,11 @@ export class GetAllOrganizationsDto extends PaginationDto {
   @IsEnum(PlanTier)
   planTier?: PlanTier;
 
-  @ApiPropertyOptional({ enum: PlanStatus, description: 'Filter by plan status' })
+  @ApiPropertyOptional({
+    enum: PlanStatus,
+    description: 'Filter by plan status',
+  })
   @IsOptional()
   @IsEnum(PlanStatus)
   planStatus?: PlanStatus;
-
 }

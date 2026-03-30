@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCampaignDto } from './dto/request/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/request/update-campaign.dto';
@@ -10,9 +14,9 @@ export class CampaignService {
 
   async create(workspaceId: string, dto: CreateCampaignDto) {
     if (dto.startDate && dto.endDate) {
-       if (new Date(dto.endDate) < new Date(dto.startDate)) {
-         throw new BadRequestException('End date cannot be before start date');
-       }
+      if (new Date(dto.endDate) < new Date(dto.startDate)) {
+        throw new BadRequestException('End date cannot be before start date');
+      }
     }
 
     const existing = await this.prisma.campaign.findFirst({
@@ -34,13 +38,22 @@ export class CampaignService {
     });
   }
 
-async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
+  async update(
+    workspaceId: string,
+    campaignId: string,
+    dto: UpdateCampaignDto,
+  ) {
     const campaign = await this.get(workspaceId, campaignId);
 
-    const newStart = dto.startDate ? new Date(dto.startDate) : campaign.startDate;
-    const newEnd = dto.endDate !== undefined 
-      ? (dto.endDate ? new Date(dto.endDate) : null) 
-      : campaign.endDate;
+    const newStart = dto.startDate
+      ? new Date(dto.startDate)
+      : campaign.startDate;
+    const newEnd =
+      dto.endDate !== undefined
+        ? dto.endDate
+          ? new Date(dto.endDate)
+          : null
+        : campaign.endDate;
 
     if (newEnd && newStart && newEnd < newStart) {
       throw new BadRequestException('End date cannot be before start date');
@@ -51,7 +64,8 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
         where: { workspaceId, name: dto.name, NOT: { id: campaignId } },
         select: { id: true },
       });
-      if (existing) throw new BadRequestException('Campaign name already exists');
+      if (existing)
+        throw new BadRequestException('Campaign name already exists');
     }
 
     return this.prisma.campaign.update({
@@ -61,29 +75,33 @@ async update(workspaceId: string, campaignId: string, dto: UpdateCampaignDto) {
         description: dto.description,
         color: dto.color,
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-        endDate: dto.endDate ? new Date(dto.endDate) : (dto.endDate === null ? null : undefined),
+        endDate: dto.endDate
+          ? new Date(dto.endDate)
+          : dto.endDate === null
+            ? null
+            : undefined,
         status: dto.status,
       },
     });
   }
 
-async getCampaignAnalytics(workspaceId: string, campaignId: string) {
+  async getCampaignAnalytics(workspaceId: string, campaignId: string) {
     // 1. Validate / Fetch Campaign
     await this.get(workspaceId, campaignId);
 
     // 2. Fetch Hierarchy (Now including the split tables!)
     const posts = await this.prisma.post.findMany({
-      where: { 
-        workspaceId, 
+      where: {
+        workspaceId,
         campaignId,
-        destinations: { some: { status: 'SUCCESS' } } 
+        destinations: { some: { status: 'SUCCESS' } },
       },
       include: {
         destinations: {
           where: { status: 'SUCCESS' },
           include: {
             // We need the platform to know which stats table to check
-            profile: { select: { platform: true } }, 
+            profile: { select: { platform: true } },
             postAnalyticsSnapshots: {
               orderBy: { day: 'desc' }, // 'day' is usually better than fetchedAt for snapshots
               take: 1,
@@ -93,7 +111,7 @@ async getCampaignAnalytics(workspaceId: string, campaignId: string) {
                 linkedInStats: true,
                 facebookStats: true,
                 instagramStats: true,
-              }
+              },
             },
           },
         },
@@ -109,7 +127,7 @@ async getCampaignAnalytics(workspaceId: string, campaignId: string) {
       totalComments: 0,
       totalShares: 0,
       totalClicks: 0,
-      totalEngagements: 0, 
+      totalEngagements: 0,
     };
 
     // 4. Aggregation
@@ -117,14 +135,14 @@ async getCampaignAnalytics(workspaceId: string, campaignId: string) {
       for (const dest of post.destinations) {
         const snapshot = dest.postAnalyticsSnapshots[0];
         const platform = dest.profile.platform;
-        
+
         if (snapshot) {
           // --- THE UNIFIED CORE ---
           stats.totalImpressions += snapshot.impressions || 0;
           stats.totalReach += snapshot.reach || 0;
           stats.totalLikes += snapshot.likes || 0;
           stats.totalComments += snapshot.comments || 0;
-          
+
           // We can just use our pre-calculated engagement count from the base table!
           stats.totalEngagements += snapshot.engagementCount || 0;
 
@@ -159,56 +177,63 @@ async getCampaignAnalytics(workspaceId: string, campaignId: string) {
     return stats;
   }
 
- async get(workspaceId: string, campaignId: string) {
-  const campaign = await this.prisma.campaign.findFirst({
-    where: { 
-      id: campaignId, 
-      workspaceId 
-    },
-    include: {
-      posts: {
-        include: {
-          media: {
-            select: {
-              mediaFile: {
-                select:{
-                  url: true,
-                  mimeType: true
-                }
-              }
-            }
+  async get(workspaceId: string, campaignId: string) {
+    const campaign = await this.prisma.campaign.findFirst({
+      where: {
+        id: campaignId,
+        workspaceId,
+      },
+      include: {
+        posts: {
+          include: {
+            media: {
+              select: {
+                mediaFile: {
+                  select: {
+                    url: true,
+                    mimeType: true,
+                  },
+                },
+              },
+            },
+            destinations: {
+              include: {
+                profile: {
+                  select: {
+                    platform: true,
+                    name: true,
+                  },
+                },
+              },
+            },
           },
-          destinations: {
-            include: {
-              profile: {
-                select: {
-                  platform: true,
-                  name: true,
-                }
-              }
-            }
-          }
+          orderBy: { createdAt: 'desc' },
         },
-        orderBy: { createdAt: 'desc' }
-      }
-    }
-  });
+      },
+    });
 
-  if (!campaign) throw new NotFoundException('Campaign not found');
-  return campaign;
-}
-    
+    if (!campaign) throw new NotFoundException('Campaign not found');
+    return campaign;
+  }
+
   async list(workspaceId: string, status?: string) {
     return await this.prisma.campaign.findMany({
-      where: { workspaceId, ...(status ? { status: status as any } : {}) } as any,
+      where: {
+        workspaceId,
+        ...(status ? { status: status as any } : {}),
+      } as any,
       orderBy: { createdAt: 'desc' },
       include: {
-          _count: { select: { posts: true } } 
-      }
+        _count: { select: { posts: true } },
+      },
     });
   }
-  
-  async delete(workspaceId: string, campaignId: string, mode: 'detach' | 'block' = 'detach') {
+
+  async delete(
+    workspaceId: string,
+    campaignId: string,
+    mode: 'detach' | 'block' = 'detach',
+  ) {
     await this.get(workspaceId, campaignId);
 
     const count = await this.prisma.post.count({
@@ -216,7 +241,9 @@ async getCampaignAnalytics(workspaceId: string, campaignId: string) {
     });
 
     if (count > 0 && mode === 'block') {
-      throw new BadRequestException('Cannot delete campaign: campaign has posts');
+      throw new BadRequestException(
+        'Cannot delete campaign: campaign has posts',
+      );
     }
 
     return await this.prisma.$transaction(async (tx) => {
@@ -243,5 +270,4 @@ async getCampaignAnalytics(workspaceId: string, campaignId: string) {
       } as any,
     });
   }
-
 }

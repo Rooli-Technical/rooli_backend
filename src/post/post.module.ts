@@ -11,12 +11,14 @@ import { SocialModule } from '@/social/social.module';
 import { EncryptionService } from '@/common/utility/encryption.service';
 
 @Module({
-  imports: [
-   WorkerModule,
-    QueueModule,
-    SocialModule
-  ],
+  imports: [WorkerModule, QueueModule, SocialModule],
   controllers: [PostController, PostApprovalController],
-  providers: [PostService, PostFactory, DestinationBuilder, PlatformRulesService,EncryptionService],
+  providers: [
+    PostService,
+    PostFactory,
+    DestinationBuilder,
+    PlatformRulesService,
+    EncryptionService,
+  ],
 })
 export class PostModule {}

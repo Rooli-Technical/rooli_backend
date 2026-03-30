@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 
@@ -15,12 +20,13 @@ export class LinkedInWebhookGuard implements CanActivate {
     }
 
     const clientSecret = this.config.get<string>('LINKEDIN_CLIENT_SECRET');
-    
-  
-    const rawBody = req.rawBody; 
+
+    const rawBody = req.rawBody;
 
     if (!rawBody) {
-      throw new UnauthorizedException('Raw body is required for webhook verification');
+      throw new UnauthorizedException(
+        'Raw body is required for webhook verification',
+      );
     }
 
     // LinkedIn computes the signature using HMAC SHA256

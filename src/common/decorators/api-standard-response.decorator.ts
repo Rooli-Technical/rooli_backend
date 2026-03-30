@@ -8,7 +8,7 @@ export const ApiStandardResponse = <TModel extends Type<any>>(
   return applyDecorators(
     // 1. Tell Swagger about the specific DTO (e.g., UserDto) and the Wrapper
     ApiExtraModels(ApiResponseDto, model),
-    
+
     // 2. Define the schema
     ApiOkResponse({
       description: 'Standard API Response',

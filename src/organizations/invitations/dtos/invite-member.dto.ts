@@ -1,5 +1,4 @@
-
-import { IsEmail, IsNotEmpty, IsOptional, IsString} from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateInviteDto {
@@ -12,7 +11,9 @@ export class CreateInviteDto {
   @IsString()
   roleId?: string;
 
-  @ApiPropertyOptional({ description: 'The Workspace CUID. If null, invites to Org wide.' })
+  @ApiPropertyOptional({
+    description: 'The Workspace CUID. If null, invites to Org wide.',
+  })
   @IsOptional()
   @IsString()
   workspaceId?: string;

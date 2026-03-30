@@ -34,6 +34,11 @@ import { TikTokAnalyticsProvider } from './providers/tiktok-anlytics.provider';
     AnalyticsRepository,
     AnalyticsScheduler,
   ],
-  exports: [AnalyticsService, AnalyticsNormalizerService, AnalyticsRepository, BullModule],
+  exports: [
+    AnalyticsService,
+    AnalyticsNormalizerService,
+    AnalyticsRepository,
+    BullModule,
+  ],
 })
 export class AnalyticsModule {}

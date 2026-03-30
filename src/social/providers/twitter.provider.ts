@@ -35,12 +35,10 @@ export class TwitterProvider implements ISocialProvider {
       accessSecret: credentials.accessSecret,
     });
 
-
     try {
       const mediaIds: string[] = [];
 
       if (mediaFiles.length > 0) {
-
         // Sequential is best for temporary file handling
         for (const file of mediaFiles) {
           const mediaId = await this.uploadMediaViaTempFile(
@@ -64,7 +62,6 @@ export class TwitterProvider implements ISocialProvider {
         };
       }
       const response = await client.v2.tweet(payload);
-
 
       return {
         platformPostId: response.data.id,
@@ -95,7 +92,6 @@ export class TwitterProvider implements ISocialProvider {
     );
 
     try {
-
       // 2. Download Stream -> Disk
       const response = await axios.get(url, {
         responseType: 'stream',
@@ -115,7 +111,6 @@ export class TwitterProvider implements ISocialProvider {
         type = 'tweet_gif';
       }
 
-
       console.log(
         `Uploading media file: ${tempFilePath} with mimeType: ${mimeType}`,
       );
@@ -128,10 +123,9 @@ export class TwitterProvider implements ISocialProvider {
         target: 'tweet',
       });
 
-
       return mediaId;
     } catch (error) {
-      console.log(error)
+      console.log(error);
       this.logger.error(`Media upload failed: ${url}`, error);
       throw error;
     } finally {

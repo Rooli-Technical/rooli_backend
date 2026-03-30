@@ -1,4 +1,4 @@
-import { Platform } from "@generated/enums";
+import { Platform } from '@generated/enums';
 
 export type NormalizedPlatform =
   | 'INSTAGRAM'
@@ -9,11 +9,20 @@ export type NormalizedPlatform =
   | 'WHATSAPP'
   | 'EMAIL';
 
-export type NormalizedConversationType = 'DIRECT_MESSAGE' | 'POST_COMMENT' | 'MENTION';
+export type NormalizedConversationType =
+  | 'DIRECT_MESSAGE'
+  | 'POST_COMMENT'
+  | 'MENTION';
 
 export type NormalizedMessageDirection = 'INBOUND' | 'OUTBOUND';
 
-export type NormalizedAttachmentType = 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT' | 'STICKER' | 'UNKNOWN';
+export type NormalizedAttachmentType =
+  | 'IMAGE'
+  | 'VIDEO'
+  | 'AUDIO'
+  | 'DOCUMENT'
+  | 'STICKER'
+  | 'UNKNOWN';
 
 export type NormalizedAttachment = {
   type: NormalizedAttachmentType;
@@ -79,7 +88,6 @@ export type NormalizedInboundMessage = {
 
   accessToken?: string;
 };
-
 
 export interface InboundCommentPayload {
   workspaceId: string;

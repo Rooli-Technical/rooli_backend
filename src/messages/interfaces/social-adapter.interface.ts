@@ -5,7 +5,10 @@
  * Adapters may return null when the event is irrelevant (echo messages, system events, etc.)
  */
 
-import { NormalizedInboundMessage, NormalizedPlatform } from "../types/adapter.types";
+import {
+  NormalizedInboundMessage,
+  NormalizedPlatform,
+} from '../types/adapter.types';
 
 export interface SocialAdapter {
   readonly platform: NormalizedPlatform;

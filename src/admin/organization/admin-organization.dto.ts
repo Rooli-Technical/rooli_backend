@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export class OrgPlanDto {
   @ApiProperty({ example: 'clx123plan' })
@@ -7,7 +7,10 @@ export class OrgPlanDto {
   @ApiProperty({ example: 'Enterprise' })
   name: string;
 
-  @ApiProperty({ example: 'ENTERPRISE', enum: ['CREATOR', 'BUSINESS', 'ROCKET', 'ENTERPRISE'] })
+  @ApiProperty({
+    example: 'ENTERPRISE',
+    enum: ['CREATOR', 'BUSINESS', 'ROCKET', 'ENTERPRISE'],
+  })
   tier: string;
 }
 
@@ -41,7 +44,10 @@ export class AdminOrgListItemDto {
   @ApiProperty({ example: 'USD' })
   currency: string;
 
-  @ApiProperty({ example: 'ACTIVE', enum: ['PENDING_PAYMENT', 'ACTIVE', 'SUSPENDED'] })
+  @ApiProperty({
+    example: 'ACTIVE',
+    enum: ['PENDING_PAYMENT', 'ACTIVE', 'SUSPENDED'],
+  })
   status: string;
 
   @ApiProperty({ example: true })
@@ -53,13 +59,19 @@ export class AdminOrgListItemDto {
   @ApiProperty({ type: OrgPlanDto, nullable: true })
   plan: OrgPlanDto | null;
 
-  @ApiProperty({ example: 45, description: 'Total number of members in the organization' })
+  @ApiProperty({
+    example: 45,
+    description: 'Total number of members in the organization',
+  })
   memberCount: number;
 
   @ApiProperty({ example: 12, description: 'Total number of workspaces' })
   workspaceCount: number;
 
-  @ApiProperty({ example: 24, description: 'Total number of social connections' })
+  @ApiProperty({
+    example: 24,
+    description: 'Total number of social connections',
+  })
   socialCount: number;
 
   @ApiProperty({ type: OrgOwnerDto, nullable: true })

@@ -40,7 +40,7 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 @ApiTags('Media Library')
 @Controller('workspaces/:workspaceId/media')
- @ApiBearerAuth()
+@ApiBearerAuth()
 @UseGuards(FeatureGuard)
 export class PostMediaController {
   constructor(private readonly mediaService: PostMediaService) {}
@@ -160,7 +160,7 @@ export class PostMediaController {
     @Param('workspaceId') wsId: string,
     @Param('fileId') fileId: string,
   ) {
-     await this.mediaService.deleteFile(wsId, fileId);
+    await this.mediaService.deleteFile(wsId, fileId);
     return {
       success: true,
       data: null,
@@ -169,18 +169,19 @@ export class PostMediaController {
   }
 
   @Patch('avatar')
-  @ApiOperation({ 
-    summary: 'Update user avatar', 
-    description: 'Uploads a new image, links it to the user profile, and deletes the previous avatar file.' 
+  @ApiOperation({
+    summary: 'Update user avatar',
+    description:
+      'Uploads a new image, links it to the user profile, and deletes the previous avatar file.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        workspaceId: { 
-          type: 'string', 
-          description: 'The workspace context for the media storage' 
+        workspaceId: {
+          type: 'string',
+          description: 'The workspace context for the media storage',
         },
         file: {
           type: 'string',
@@ -191,15 +192,20 @@ export class PostMediaController {
       required: ['file', 'workspaceId'],
     },
   })
-  @UseInterceptors(FileInterceptor('file', {
-    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
-    fileFilter: (req, file, cb) => {
-      if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
-        return cb(new BadRequestException('Only image files are allowed'), false);
-      }
-      cb(null, true);
-    },
-  }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+          return cb(
+            new BadRequestException('Only image files are allowed'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
   async updateAvatar(
     @CurrentUser('userId') userId: string,
     @Param('workspaceId') workspaceId: string,
@@ -211,7 +217,6 @@ export class PostMediaController {
 
     return this.mediaService.updateUserAvatar(userId, workspaceId, file);
   }
-
 
   @Post('folders')
   @RequireFeature('mediaLibrary')

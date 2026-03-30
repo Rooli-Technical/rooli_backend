@@ -2,7 +2,12 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
-import { IAnalyticsProvider, AuthCredentials, FetchAccountResult, FetchPostResult } from '../interfaces/analytics-provider.interface';
+import {
+  IAnalyticsProvider,
+  AuthCredentials,
+  FetchAccountResult,
+  FetchPostResult,
+} from '../interfaces/analytics-provider.interface';
 
 @Injectable()
 export class TikTokAnalyticsProvider implements IAnalyticsProvider {
@@ -19,7 +24,7 @@ export class TikTokAnalyticsProvider implements IAnalyticsProvider {
    * Fetches total followers, following, total lifetime likes, and video count.
    */
   async getAccountStats(
-    profileId: string, 
+    profileId: string,
     credentials: AuthCredentials,
   ): Promise<FetchAccountResult> {
     const token = credentials.accessToken;
@@ -30,7 +35,8 @@ export class TikTokAnalyticsProvider implements IAnalyticsProvider {
           headers: { Authorization: `Bearer ${token}` },
           params: {
             // Note: TikTok strictly requires these fields to be requested explicitly
-            fields: 'open_id,follower_count,following_count,likes_count,video_count',
+            fields:
+              'open_id,follower_count,following_count,likes_count,video_count',
           },
         }),
       );
@@ -94,14 +100,17 @@ export class TikTokAnalyticsProvider implements IAnalyticsProvider {
               },
               params: {
                 // Requesting the specific metrics
-                fields: 'id,title,like_count,comment_count,share_count,view_count',
+                fields:
+                  'id,title,like_count,comment_count,share_count,view_count',
               },
             },
           ),
         );
 
         if (data.error?.code !== 'ok' && data.error?.code !== 0) {
-          this.logger.error(`TikTok video query batch failed: ${data.error?.message}`);
+          this.logger.error(
+            `TikTok video query batch failed: ${data.error?.message}`,
+          );
           continue;
         }
 
@@ -132,8 +141,10 @@ export class TikTokAnalyticsProvider implements IAnalyticsProvider {
 
         results.push(...mapped);
       } catch (error: any) {
-         console.log(error);
-        this.logger.error(`[TikTok Post Stats] Batch chunk failed: ${error.message}`);
+        console.log(error);
+        this.logger.error(
+          `[TikTok Post Stats] Batch chunk failed: ${error.message}`,
+        );
       }
     }
 

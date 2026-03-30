@@ -1,6 +1,6 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsOptional, IsString, IsBoolean } from "class-validator";
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsBoolean } from 'class-validator';
 
 export class UpdateRoleDto {
   @ApiPropertyOptional({ example: 'Lead Developer' })
@@ -13,7 +13,7 @@ export class UpdateRoleDto {
   @IsString()
   description?: string | null;
 
- @ApiPropertyOptional()
+  @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
   @Type(() => Boolean)

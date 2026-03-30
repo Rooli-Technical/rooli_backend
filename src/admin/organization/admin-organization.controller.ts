@@ -19,8 +19,11 @@ import {
 } from '@nestjs/swagger';
 import { AdminJwtGuard } from '../guards/admin-jwt.guard';
 import { AdminOrganizationService } from './admin-organization.service';
-import { AdminOrgListResponseDto, DeleteOrgResponseDto, SuspendOrgResponseDto } from './admin-organization.dto';
-
+import {
+  AdminOrgListResponseDto,
+  DeleteOrgResponseDto,
+  SuspendOrgResponseDto,
+} from './admin-organization.dto';
 
 @ApiTags('Admin-Organization')
 @ApiBearerAuth()

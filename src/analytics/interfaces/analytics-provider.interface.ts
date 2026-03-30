@@ -1,4 +1,3 @@
-
 // ==========================================
 // UNIFIED CORE METRICS
 // ==========================================
@@ -23,7 +22,7 @@ export interface UnifiedPostMetrics {
 // ==========================================
 // PLATFORM SPECIFIC METRICS
 // ==========================================
-// We use a flexible specific object, but you can strictly type these 
+// We use a flexible specific object, but you can strictly type these
 // to match the Prisma tables perfectly if you prefer.
 export interface FetchAccountResult {
   platformId: string;
@@ -38,19 +37,21 @@ export interface FetchPostResult {
 }
 
 export interface IAnalyticsProvider {
-  getAccountStats(id: string, credentials: AuthCredentials): Promise<FetchAccountResult>;
-  
+  getAccountStats(
+    id: string,
+    credentials: AuthCredentials,
+  ): Promise<FetchAccountResult>;
+
   getPostStats(
-    postIds: string[], 
-    credentials: AuthCredentials, 
-    context?: Record<string, any>
+    postIds: string[],
+    credentials: AuthCredentials,
+    context?: Record<string, any>,
   ): Promise<FetchPostResult[]>;
 }
 export interface AuthCredentials {
   accessToken: string;
-  accessSecret?: string; 
+  accessSecret?: string;
 }
-
 
 export const LINKEDIN_MAPS: Record<string, Record<string, string>> = {
   seniority: {

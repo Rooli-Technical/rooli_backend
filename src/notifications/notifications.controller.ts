@@ -1,11 +1,4 @@
-
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { NotificationListDto } from './dtos/notification-list.dto';
@@ -20,15 +13,14 @@ export class NotificationsController {
   async list(
     @CurrentUser('workspaceMemberId') memberId: string,
     @CurrentUser('workspaceId') workspaceId: string,
-   @Query() query: NotificationListDto,
+    @Query() query: NotificationListDto,
   ) {
     return this.notifications.list({
       workspaceId,
       memberId,
-     ...query,
+      ...query,
     });
   }
-
 
   @Get('unread-count')
   async unreadCount(@CurrentUser() me) {
@@ -43,10 +35,7 @@ export class NotificationsController {
    * body: { ids: string[] }
    */
   @Post('mark-read')
-  async markRead(
-    @CurrentUser() me,
-    @Body() body: { ids: string[] },
-  ) {
+  async markRead(@CurrentUser() me, @Body() body: { ids: string[] }) {
     return this.notifications.markRead({
       workspaceId: me.workspaceId,
       memberId: me.workspaceMemberId,
@@ -62,4 +51,3 @@ export class NotificationsController {
     });
   }
 }
-

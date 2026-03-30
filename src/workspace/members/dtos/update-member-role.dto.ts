@@ -1,9 +1,10 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, IsNotEmpty } from "class-validator";
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, IsNotEmpty } from 'class-validator';
 
 export class UpdateWorkspaceMemberRoleDto {
   @ApiPropertyOptional({
-    description: 'Workspace role override. Set null to remove override (fallback to org role).',
+    description:
+      'Workspace role override. Set null to remove override (fallback to org role).',
     nullable: true,
     example: null,
   })

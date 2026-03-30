@@ -1,6 +1,25 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpStatus, Ip, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Ip,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { BillingService } from './billing.service';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+} from '@nestjs/swagger';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PlanDto } from './dto/plan-response.dto';
 import { Public } from '@/common/decorators/public.decorator';
@@ -10,10 +29,9 @@ import { PermissionResource, PermissionAction } from '@generated/enums';
 
 @ApiTags('Billing')
 @Controller('billing')
-@BypassSubscription() 
+@BypassSubscription()
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
-
 
   @Get('plans')
   @Public()
@@ -26,8 +44,10 @@ export class BillingController {
     description: 'List of available plans',
     type: [PlanDto],
   })
-  async getPlans(@Ip() ip: string, @Headers('x-timezone') clientTimezone?: string) {
-   
+  async getPlans(
+    @Ip() ip: string,
+    @Headers('x-timezone') clientTimezone?: string,
+  ) {
     return this.billingService.getAvailablePlans(ip, clientTimezone);
   }
 
@@ -35,14 +55,15 @@ export class BillingController {
   @Public()
   @ApiOperation({
     summary: 'Verify payment status',
-    description: 'Called by Frontend/Gateway callback to check transaction status.',
+    description:
+      'Called by Frontend/Gateway callback to check transaction status.',
   })
   async verifyPayment(@Query('reference') reference: string) {
     return this.billingService.verifyPayment(reference);
   }
 
   // ===========================================================================
-  // AUTHENTICATED ROUTES 
+  // AUTHENTICATED ROUTES
   // ===========================================================================
 
   @Get('subscription')
@@ -61,18 +82,21 @@ export class BillingController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Initialize new payment or upgrade',
-    description: 'Generates a payment link (Paystack) based on User IP currency.',
+    description:
+      'Generates a payment link (Paystack) based on User IP currency.',
   })
   @ApiBody({ type: CreatePaymentDto })
   @ApiResponse({
     status: 201,
     description: 'Payment initialized successfully',
-    schema: { example: { paymentUrl: 'https://checkout...', reference: '...' } }
+    schema: {
+      example: { paymentUrl: 'https://checkout...', reference: '...' },
+    },
   })
   async initializePayment(
     @Req() req: any,
     @Body() body: CreatePaymentDto,
-    @Ip() ip: string 
+    @Ip() ip: string,
   ) {
     return this.billingService.initializePayment(
       req.user.organizationId,

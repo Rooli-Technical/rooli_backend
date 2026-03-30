@@ -1,5 +1,15 @@
 // src/inbox/dto/list-inbox-conversations.dto.ts
-import { IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum InboxOrderBy {
@@ -45,9 +55,6 @@ export class ListInboxConversationsDto {
   orderBy: InboxOrderBy = InboxOrderBy.lastMessageAt;
 }
 
-
-
-
 export class SendAttachmentDto {
   @IsString()
   type!: string; // AttachmentType
@@ -68,7 +75,6 @@ export class SendMessageDto {
   @Type(() => SendAttachmentDto)
   attachments?: SendAttachmentDto[];
 }
-
 
 export class UpdateConversationDto {
   @IsOptional()

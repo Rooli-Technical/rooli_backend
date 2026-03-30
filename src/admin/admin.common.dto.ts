@@ -1,4 +1,3 @@
- 
 export interface PaginatedResult<T> {
   data: T[];
   meta: {
@@ -10,7 +9,7 @@ export interface PaginatedResult<T> {
     hasPreviousPage: boolean;
   };
 }
- 
+
 export function paginate<T>(
   data: T[],
   total: number,
@@ -30,4 +29,3 @@ export function paginate<T>(
     },
   };
 }
- 

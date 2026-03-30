@@ -1,5 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { AdminOrganizationRepository, AdminOrgListOptions } from './admin-organization.repository';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  AdminOrganizationRepository,
+  AdminOrgListOptions,
+} from './admin-organization.repository';
 
 @Injectable()
 export class AdminOrganizationService {
@@ -17,19 +24,22 @@ export class AdminOrganizationService {
   }) {
     const validStatuses = ['ACTIVE', 'SUSPENDED', 'PENDING_PAYMENT'];
 
-    if (options.status && !validStatuses.includes(options.status.toUpperCase())) {
+    if (
+      options.status &&
+      !validStatuses.includes(options.status.toUpperCase())
+    ) {
       throw new BadRequestException(
         `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
       );
     }
 
     const listOptions: AdminOrgListOptions = {
-      search:   options.search,
-      status:   options.status?.toUpperCase(),
-      page:     options.page,
-      limit:    options.limit,
+      search: options.search,
+      status: options.status?.toUpperCase(),
+      page: options.page,
+      limit: options.limit,
       dateFrom: options.dateFrom ? new Date(options.dateFrom) : undefined,
-      dateTo:   options.dateTo   ? new Date(options.dateTo)   : undefined,
+      dateTo: options.dateTo ? new Date(options.dateTo) : undefined,
     };
 
     return this.repo.listOrganizations(listOptions);

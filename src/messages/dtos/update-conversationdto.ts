@@ -1,5 +1,5 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString } from "class-validator";
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateConversationDto {
   @ApiPropertyOptional({ enum: ['OPEN', 'CLOSED', 'SNOOZED'] })
@@ -8,22 +8,22 @@ export class UpdateConversationDto {
   status?: string;
 
   @ApiPropertyOptional({ enum: ['LOW', 'NORMAL', 'HIGH', 'URGENT'] })
-   @IsOptional()
+  @IsOptional()
   @IsString()
   priority?: string;
 
   @ApiPropertyOptional({ description: 'ID of the agent to assign this to' })
-   @IsOptional()
+  @IsOptional()
   @IsString()
   assignedMemberId?: string | null;
 
   @ApiPropertyOptional({ description: 'Move to archive', type: Boolean })
-   @IsOptional()
+  @IsOptional()
   @IsString()
   archived?: boolean;
 
   @ApiPropertyOptional({ description: 'Snooze until specific date' })
-   @IsOptional()
+  @IsOptional()
   @IsString()
   snoozedUntil?: Date | null;
 }

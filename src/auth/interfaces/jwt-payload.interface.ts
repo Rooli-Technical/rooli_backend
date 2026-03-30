@@ -4,7 +4,7 @@ export interface JwtPayload {
   orgId: string;
   workspaceId: string;
   workspaceMemberId: string | null;
-  ver: number; 
+  ver: number;
   role?: string;
   iat?: number;
   exp?: number;

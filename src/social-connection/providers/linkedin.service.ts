@@ -116,60 +116,63 @@ export class LinkedInService {
   }
 
   async subscribeOrganizationToWebhook(
-  urn: string, // urn:li:person:AbCdEfG
-  organizationUrn: string, // urn:li:organization:123456
-  accessToken: string,
-): Promise<boolean> {
-  try {
-    const appId = this.config.get<string>('LINKEDIN_APP_ID');
-    const webhookUrl = this.config.get<string>('LINKEDIN_WEBHOOK_URL');
+    urn: string, // urn:li:person:AbCdEfG
+    organizationUrn: string, // urn:li:organization:123456
+    accessToken: string,
+  ): Promise<boolean> {
+    try {
+      const appId = this.config.get<string>('LINKEDIN_APP_ID');
+      const webhookUrl = this.config.get<string>('LINKEDIN_WEBHOOK_URL');
 
-    // 1. Extract just the IDs
-    const personId = urn.split(':').pop(); 
-    const orgId = organizationUrn.split(':').pop();
+      // 1. Extract just the IDs
+      const personId = urn.split(':').pop();
+      const orgId = organizationUrn.split(':').pop();
 
-    // 2. Construct the internal URNs 
-    // Note: The doc specifies 'urn:li:user' for the member part of this specific key
-    const devAppUrn = `urn:li:developerApplication:${appId}`;
-    const userUrn = `urn:li:user:${personId}`;
-    const entityUrn = `urn:li:organization:${orgId}`;
+      // 2. Construct the internal URNs
+      // Note: The doc specifies 'urn:li:user' for the member part of this specific key
+      const devAppUrn = `urn:li:developerApplication:${appId}`;
+      const userUrn = `urn:li:user:${personId}`;
+      const entityUrn = `urn:li:organization:${orgId}`;
 
-    // 3. Build the Resource Key
-    // We keep the parentheses and commas literal, but encode the URNs inside
-    const resourceKey = `(` +
-      `developerApplication:${encodeURIComponent(devAppUrn)},` +
-      `user:${encodeURIComponent(userUrn)},` +
-      `entity:${encodeURIComponent(entityUrn)},` +
-      `eventType:ORGANIZATION_SOCIAL_ACTION_NOTIFICATIONS` +
-      `)`;
+      // 3. Build the Resource Key
+      // We keep the parentheses and commas literal, but encode the URNs inside
+      const resourceKey =
+        `(` +
+        `developerApplication:${encodeURIComponent(devAppUrn)},` +
+        `user:${encodeURIComponent(userUrn)},` +
+        `entity:${encodeURIComponent(entityUrn)},` +
+        `eventType:ORGANIZATION_SOCIAL_ACTION_NOTIFICATIONS` +
+        `)`;
 
-    const url = `https://api.linkedin.com/rest/eventSubscriptions/${resourceKey}`;
+      const url = `https://api.linkedin.com/rest/eventSubscriptions/${resourceKey}`;
 
-    const res = await firstValueFrom(
-      this.httpService.put(
-        url,
-        { webhook: webhookUrl },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'LinkedIn-Version': '202601',
-            'X-Restli-Protocol-Version': '2.0.0',
-            'Content-Type': 'application/json',
+      const res = await firstValueFrom(
+        this.httpService.put(
+          url,
+          { webhook: webhookUrl },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'LinkedIn-Version': '202601',
+              'X-Restli-Protocol-Version': '2.0.0',
+              'Content-Type': 'application/json',
+            },
           },
-        },
-      ),
-    );
+        ),
+      );
 
-
-    this.logger.log(`✅ Subscribed ${organizationUrn} successfully.`);
-    return true;
-  } catch (error: any) {
-    console.log(error)
-    const errorData = error.response?.data;
-    console.error('LinkedIn Error Detail:', JSON.stringify(errorData, null, 2));
-    return false;
+      this.logger.log(`✅ Subscribed ${organizationUrn} successfully.`);
+      return true;
+    } catch (error: any) {
+      console.log(error);
+      const errorData = error.response?.data;
+      console.error(
+        'LinkedIn Error Detail:',
+        JSON.stringify(errorData, null, 2),
+      );
+      return false;
+    }
   }
-}
 
   // -----------------------------------------------------------------------
   // PRIVATE HELPERS
@@ -229,7 +232,6 @@ export class LinkedInService {
         `${this.API_URL}/organizationAcls` +
         `?q=roleAssignee&state=APPROVED` +
         `&projection=(elements*(role,state,organization~(id,localizedName,vanityName,logoV2(original~:playableStreams))))`;
-     
 
       const { data } = await lastValueFrom(
         this.httpService.get(aclsUrl, {

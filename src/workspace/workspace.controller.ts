@@ -1,7 +1,23 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { CreateWorkspaceDto } from './dtos/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dtos/update-workspace.dto';
 import { ListWorkspacesQueryDto } from './dtos/list-workspaces.dto';
@@ -11,7 +27,6 @@ import { ListWorkspacesQueryDto } from './dtos/list-workspaces.dto';
 @Controller('organizations/:orgId/workspaces')
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
-
 
   @Post()
   @ApiOperation({ summary: 'Create a new workspace' })
@@ -26,42 +41,37 @@ export class WorkspaceController {
     return this.workspaceService.createWorkspace(user.userId, orgId, dto);
   }
 
-
   @Get()
   @ApiOperation({
-    summary:
-      'Get all workspaces (Admins see all, members see assigned only)',
+    summary: 'Get all workspaces (Admins see all, members see assigned only)',
   })
   @ApiParam({ name: 'orgId', description: 'Organization ID' })
-
   async findAll(
     @CurrentUser() user: { userId: string },
     @Param('orgId') orgId: string,
     @Query() query: ListWorkspacesQueryDto,
   ) {
-    return this.workspaceService.listOrganizationWorkspaces(user.userId, orgId, query);
+    return this.workspaceService.listOrganizationWorkspaces(
+      user.userId,
+      orgId,
+      query,
+    );
   }
-
 
   @Get(':id')
   @ApiOperation({ summary: 'Get workspace by ID' })
   @ApiParam({ name: 'id', description: 'Workspace ID' })
   @ApiResponse({ status: 404, description: 'Workspace not found' })
-  async findOne(@Param('orgId') orgId: string,@Param('id') id: string) {
+  async findOne(@Param('orgId') orgId: string, @Param('id') id: string) {
     return this.workspaceService.getWorkspace(orgId, id);
   }
-
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update workspace details' })
   @ApiParam({ name: 'id', description: 'Workspace ID' })
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateWorkspaceDto,
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateWorkspaceDto) {
     return this.workspaceService.updateWorkspace(id, dto);
   }
-
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a workspace' })
@@ -69,7 +79,6 @@ export class WorkspaceController {
   async delete(@Param('id') id: string) {
     return this.workspaceService.deleteWorkspace(id);
   }
-
 
   @Post(':id/switch')
   @ApiOperation({
@@ -82,7 +91,6 @@ export class WorkspaceController {
   ) {
     return this.workspaceService.switchWorkspace(user.userId, workspaceId);
   }
-
 
   // @Post(':id/members')
   // @ApiOperation({ summary: 'Add member to workspace' })

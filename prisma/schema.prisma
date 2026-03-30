@@ -61,6 +61,8 @@ model User {
 
   assignedTickets Ticket[]        @relation("TicketAssignee")
   ticketComments  TicketComment[]
+  adminSessions   AdminSession[]  @relation("AdminSessions")
+  ipWhitelist     IpWhitelist[]   @relation("AdminIpWhitelist")
 
   @@index([email, deletedAt])
   @@index([createdAt])
@@ -204,7 +206,6 @@ model WorkspaceMember {
   comments Comment[]
   messages InboxMessage[]
 
-
   submittedTickets Ticket[] @relation("TicketRequester")
 
   createdAt DateTime @default(now())
@@ -311,7 +312,7 @@ model SocialProfile {
 
   isActive Boolean @default(true)
 
-  webhookRoutingUserId   String?
+  webhookRoutingUserId String?
 
   inboxConversations InboxConversation[]
   comments           Comment[]
@@ -1913,4 +1914,23 @@ enum TicketPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  adminId   String
+  ip        String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminSessions", fields: [adminId], references: [id])
+}
+
+model IpWhitelist {
+  id        String   @id @default(cuid())
+  adminId   String
+  ipRange   String
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminIpWhitelist", fields: [adminId], references: [id])
 }

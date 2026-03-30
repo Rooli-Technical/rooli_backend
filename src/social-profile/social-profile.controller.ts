@@ -28,7 +28,7 @@ export class SocialProfileController {
     name: 'workspaceId',
     example: 'ws_abc123',
   })
-@ApiStandardResponse(BulkAddProfilesResponseDto)
+  @ApiStandardResponse(BulkAddProfilesResponseDto)
   //@WorkspaceAuth({ resource: 'SOCIAL_ACCOUNT', action: 'CREATE' })
   async addProfile(
     @Param('workspaceId') workspaceId: string,
@@ -37,11 +37,10 @@ export class SocialProfileController {
     return this.profileService.addProfilesToWorkspace(workspaceId, body);
   }
 
-   @Get()
+  @Get()
   @ApiOperation({
     summary: 'List workspace social profiles',
-    description:
-      'Returns all social media profiles connected to a workspace.',
+    description: 'Returns all social media profiles connected to a workspace.',
   })
   @ApiParam({
     name: 'workspaceId',

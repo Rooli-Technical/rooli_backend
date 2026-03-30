@@ -4,8 +4,8 @@ export class PlanDto {
   price: number;
   currency: string;
   interval: string;
-  features: Record<string, any>; 
-  
+  features: Record<string, any>;
+
   constructor(partial: Partial<PlanDto>) {
     Object.assign(this, partial);
   }

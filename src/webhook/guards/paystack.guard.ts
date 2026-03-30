@@ -22,10 +22,12 @@ export class PaystackWebhookGuard implements CanActivate {
     const http = context.switchToHttp();
     const request = http.getRequest<RequestWithRawBody>();
     const signature = request.headers['x-paystack-signature'];
-    
+
     // Ensure we have the rawBody. If not, the configuration is still wrong.
     if (!request.rawBody) {
-      this.logger.error('Paystack webhook received without rawBody. Check main.ts configuration.');
+      this.logger.error(
+        'Paystack webhook received without rawBody. Check main.ts configuration.',
+      );
       return false;
     }
 
@@ -40,10 +42,11 @@ export class PaystackWebhookGuard implements CanActivate {
       if (hash === signature) {
         return true;
       }
-      
-      this.logger.warn(`Invalid Paystack Signature. Expected ${signature}, got ${hash}`);
+
+      this.logger.warn(
+        `Invalid Paystack Signature. Expected ${signature}, got ${hash}`,
+      );
       return false;
-      
     } catch (error) {
       this.logger.error('Error verifying Paystack signature', error);
       return false;

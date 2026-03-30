@@ -5,7 +5,6 @@ import { Queue } from 'bullmq';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ConnectionStatus } from '@generated/enums';
 
-
 @Injectable()
 export class InboxSyncScheduler {
   private readonly logger = new Logger(InboxSyncScheduler.name);
@@ -17,11 +16,11 @@ export class InboxSyncScheduler {
   ) {}
 
   /**
-   * Runs every 15 minutes to poll platforms that don't support webhooks 
+   * Runs every 15 minutes to poll platforms that don't support webhooks
    * (or as a fallback for missed webhooks).
    */
- // @Cron('0 */15 * * * *')
- //@Cron(CronExpression.EVERY_MINUTE) //every one minute
+  // @Cron('0 */15 * * * *')
+  //@Cron(CronExpression.EVERY_MINUTE) //every one minute
   async scheduleInboxSync() {
     this.logger.log('⏰ Starting 15-minute Inbox Sync Scheduler...');
 
@@ -82,6 +81,8 @@ export class InboxSyncScheduler {
       if (profiles.length < this.BATCH_SIZE) hasMore = false;
     }
 
-    this.logger.log(`✅ Finished Inbox Scheduling. Total profiles queued: ${totalScheduled}`);
+    this.logger.log(
+      `✅ Finished Inbox Scheduling. Total profiles queued: ${totalScheduled}`,
+    );
   }
 }

@@ -135,7 +135,7 @@ export class InvitationsService {
         roleName: invitation.role.name,
         token: invitation.token,
         isWorkspaceInvite: isWorkspace,
-        organizationId
+        organizationId,
       });
     } catch (error) {
       console.log('Failed to send invitation email. Please try again.');
@@ -276,7 +276,7 @@ export class InvitationsService {
             data: {
               workspaceId: invite.workspaceId,
               memberId: orgMember.id,
-              roleId: invite.roleId, 
+              roleId: invite.roleId,
             },
           });
           workspaceMemberId = newWsMember.id;
@@ -350,7 +350,7 @@ export class InvitationsService {
         roleName: updatedInvite.role.name,
         token: updatedInvite.token,
         isWorkspaceInvite: !!updatedInvite.workspaceId,
-        organizationId: invite.organizationId
+        organizationId: invite.organizationId,
       });
     } catch (error) {
       console.log('Failed to resend invitation email. Please try again.');
@@ -458,10 +458,12 @@ export class InvitationsService {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-     avatar: user.avatar ? {
-      ...user.avatar,
-      size: user.avatar.size.toString(), 
-    } : null,
+      avatar: user.avatar
+        ? {
+            ...user.avatar,
+            size: user.avatar.size.toString(),
+          }
+        : null,
       isEmailVerified: user.isEmailVerified,
       lastActiveAt: user.lastActiveAt,
       userType: user.userType,

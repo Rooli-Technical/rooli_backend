@@ -40,7 +40,11 @@ export class TwitterClient {
       { text: params.text },
     );
 
-    return { provider: 'X', messageId: (res as any)?.data?.id ?? (res as any)?.id, raw: res };
+    return {
+      provider: 'X',
+      messageId: (res as any)?.data?.id ?? (res as any)?.id,
+      raw: res,
+    };
   }
 
   /**
@@ -78,10 +82,7 @@ export class TwitterClient {
    * Enrichment: lookup user profile by id (username + avatar).
    * Works with either auth mode; bearer is fine for this in most cases.
    */
-  async lookupUser(params: {
-    auth: XAuth;
-    userId: string;
-  }): Promise<{
+  async lookupUser(params: { auth: XAuth; userId: string }): Promise<{
     id: string;
     username?: string;
     name?: string;

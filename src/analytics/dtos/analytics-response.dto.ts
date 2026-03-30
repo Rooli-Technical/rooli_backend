@@ -9,7 +9,7 @@ class GrowthMetrics {
 class EngagementMetrics {
   @ApiProperty() totalImpressions: number;
   @ApiProperty() totalEngagement: number; // Sum of likes+comments+shares
-  @ApiProperty() engagementRate: number;  // Calculated %
+  @ApiProperty() engagementRate: number; // Calculated %
 }
 
 export class AnalyticsResponseDto {

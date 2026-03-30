@@ -133,10 +133,11 @@ export class AuthController {
   })
   @ApiBody({ type: ResetPassword, description: 'Reset token and new password' })
   async resetPassword(
-    @Body() dto: ResetPassword, @Res() res
+    @Body() dto: ResetPassword,
+    @Res() res,
   ): Promise<{ message: string }> {
     await this.authService.resetPassword(dto);
-     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     return res.redirect(`${frontendUrl}/auth/change-password`);
   }
 
@@ -260,8 +261,11 @@ export class AuthController {
   }
 
   @Post('logout')
-   @ApiBearerAuth()
-    @AuditContext({ action: AuditAction.LOGOUT, resource: AuditResourceType.AUTH })
+  @ApiBearerAuth()
+  @AuditContext({
+    action: AuditAction.LOGOUT,
+    resource: AuditResourceType.AUTH,
+  })
   @ApiOperation({ summary: 'Logout the current user' })
   @ApiResponse({ status: 200, description: 'Logged out successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })

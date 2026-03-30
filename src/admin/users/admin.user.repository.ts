@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { paginate, PaginatedResult } from '../admin.common.dto';
+import { UserType } from '@generated/enums';
 
 export type UserStatusFilter = 'ALL' | 'ACTIVE' | 'SUSPENDED' | 'BANNED';
 
@@ -62,8 +63,17 @@ export class AdminUserRepository {
             },
           }
         : {};
-
-    const where = { ...statusWhere, ...searchWhere, ...dateWhere };
+    const userTypeFilter = {
+      userType: {
+        not: 'SUPER_ADMIN' as UserType,
+      },
+    };
+    const where = {
+      ...statusWhere,
+      ...searchWhere,
+      ...dateWhere,
+      ...userTypeFilter,
+    };
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -72,7 +82,7 @@ export class AdminUserRepository {
         take: limit,
         orderBy: { createdAt: 'desc' },
         select: {
-          id:true,
+          id: true,
           firstName: true,
           lastName: true,
           email: true,
@@ -141,5 +151,22 @@ export class AdminUserRepository {
       where: { id },
       select: { id: true, email: true, deletedAt: true, lockedUntil: true },
     });
+  }
+
+  async getAdmins() {
+    const admins = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { userType: 'SUPER_ADMIN' },
+          // { userType: 'WORKSPACE_ADMIN' },
+        ],
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+    return admins;
   }
 }

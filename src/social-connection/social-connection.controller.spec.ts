@@ -11,7 +11,9 @@ describe('SocialConnectionController', () => {
       providers: [SocialConnectionService],
     }).compile();
 
-    controller = module.get<SocialConnectionController>(SocialConnectionController);
+    controller = module.get<SocialConnectionController>(
+      SocialConnectionController,
+    );
   });
 
   it('should be defined', () => {

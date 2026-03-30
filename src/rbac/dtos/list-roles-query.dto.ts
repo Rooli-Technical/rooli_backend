@@ -1,8 +1,7 @@
-import { RoleScope } from "@generated/enums";
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { Transform } from "class-transformer";
-import { IsOptional, IsEnum, IsBoolean } from "class-validator";
-
+import { RoleScope } from '@generated/enums';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { IsOptional, IsEnum, IsBoolean } from 'class-validator';
 
 export class ListRolesQuery {
   @ApiPropertyOptional({ enum: RoleScope })

@@ -1,12 +1,25 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma } from '@generated/client';
-import { PermissionScope, PermissionResource, PermissionAction, RoleScope } from '@generated/enums';
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  PermissionScope,
+  PermissionResource,
+  PermissionAction,
+  RoleScope,
+} from '@generated/enums';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateRoleDto } from './dtos/create-role.dto';
 import { ListRolesQuery } from './dtos/list-roles-query.dto';
 import { ReplaceRolePermissionsDto } from './dtos/replace-role-permissions.dto';
 import { UpdateRoleDto } from './dtos/update-role.dto';
-import { ListPermissionsQuery, PermissionNameFormat } from './dtos/list-permissions-query.dto';
+import {
+  ListPermissionsQuery,
+  PermissionNameFormat,
+} from './dtos/list-permissions-query.dto';
 
 @Injectable()
 export class RoleService {
@@ -44,7 +57,6 @@ export class RoleService {
     }));
   }
 
-
   async listPermissions(query?: ListPermissionsQuery) {
     const where: Prisma.PermissionWhereInput = {
       ...(query?.scope ? { scope: query.scope } : {}),
@@ -71,9 +83,13 @@ export class RoleService {
    * Returns effective permissions for the current request context.
    * Use this for frontend feature gating.
    */
-  getMyPermissionsFromRequest(req: any, format: PermissionNameFormat = 'RESOURCE_ACTION') {
+  getMyPermissionsFromRequest(
+    req: any,
+    format: PermissionNameFormat = 'RESOURCE_ACTION',
+  ) {
     const permissions: string[] = req?.permissions ?? [];
-    const context: 'WORKSPACE' | 'ORGANIZATION' | undefined = req?.currentContext;
+    const context: 'WORKSPACE' | 'ORGANIZATION' | undefined =
+      req?.currentContext;
 
     if (format === 'RESOURCE_ACTION') return permissions;
 
@@ -82,7 +98,11 @@ export class RoleService {
     if (!context) return permissions;
 
     // If permissions already have scope prefix, do nothing.
-    if (permissions.some((p) => p.startsWith('WORKSPACE.') || p.startsWith('ORGANIZATION.'))) {
+    if (
+      permissions.some(
+        (p) => p.startsWith('WORKSPACE.') || p.startsWith('ORGANIZATION.'),
+      )
+    ) {
       return permissions;
     }
 
@@ -110,7 +130,9 @@ export class RoleService {
     const includeSystem = query?.includeSystem ?? true;
 
     const where: Prisma.RoleWhereInput = {
-      ...(scope ? { scope } : { scope: { in: [RoleScope.ORGANIZATION, RoleScope.WORKSPACE] } }),
+      ...(scope
+        ? { scope }
+        : { scope: { in: [RoleScope.ORGANIZATION, RoleScope.WORKSPACE] } }),
       OR: [
         { organizationId }, // org-specific roles
         ...(includeSystem ? [{ organizationId: null, isSystem: true }] : []), // system templates
@@ -135,7 +157,11 @@ export class RoleService {
     });
   }
 
-  async getRole(params: { userId: string; organizationId: string; roleId: string }) {
+  async getRole(params: {
+    userId: string;
+    organizationId: string;
+    roleId: string;
+  }) {
     const { userId, organizationId, roleId } = params;
 
     await this.assertOrgMemberOrThrow({ organizationId, userId });
@@ -152,7 +178,10 @@ export class RoleService {
     if (!role) throw new NotFoundException('Role not found');
 
     // role visible if system role OR belongs to org
-    if (!(role.organizationId === null && role.isSystem) && role.organizationId !== organizationId) {
+    if (
+      !(role.organizationId === null && role.isSystem) &&
+      role.organizationId !== organizationId
+    ) {
       throw new ForbiddenException('Role not accessible in this organization');
     }
 
@@ -189,11 +218,15 @@ export class RoleService {
       where: { organizationId, scope: dto.scope, slug },
       select: { id: true },
     });
-    if (existing) throw new BadRequestException(`Role slug "${slug}" already exists`);
+    if (existing)
+      throw new BadRequestException(`Role slug "${slug}" already exists`);
 
     // validate permission IDs belong to the right PermissionScope
     if (dto.permissionIds?.length) {
-      await this.assertPermissionIdsMatchRoleScope(dto.scope, dto.permissionIds);
+      await this.assertPermissionIdsMatchRoleScope(
+        dto.scope,
+        dto.permissionIds,
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -215,7 +248,13 @@ export class RoleService {
           isSystem: false,
           isDefault: dto.isDefault ?? false,
         },
-        select: { id: true, scope: true, organizationId: true, name: true, slug: true },
+        select: {
+          id: true,
+          scope: true,
+          organizationId: true,
+          name: true,
+          slug: true,
+        },
       });
 
       if (dto.permissionIds?.length) {
@@ -248,7 +287,13 @@ export class RoleService {
 
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
-      select: { id: true, organizationId: true, isSystem: true, scope: true, isDefault: true },
+      select: {
+        id: true,
+        organizationId: true,
+        isSystem: true,
+        scope: true,
+        isDefault: true,
+      },
     });
     if (!role) throw new NotFoundException('Role not found');
 
@@ -271,7 +316,9 @@ export class RoleService {
         where: { id: roleId },
         data: {
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
-          ...(dto.description !== undefined ? { description: dto.description } : {}),
+          ...(dto.description !== undefined
+            ? { description: dto.description }
+            : {}),
           ...(dto.isDefault !== undefined ? { isDefault: dto.isDefault } : {}),
         },
       });
@@ -337,7 +384,11 @@ export class RoleService {
    * - roles assigned as workspace overrides
    * You can add “transfer members to another role” later.
    */
-  async deleteRole(params: { userId: string; organizationId: string; roleId: string }) {
+  async deleteRole(params: {
+    userId: string;
+    organizationId: string;
+    roleId: string;
+  }) {
     const { userId, organizationId, roleId } = params;
 
     await this.assertOrgMemberOrThrow({ organizationId, userId });
@@ -395,7 +446,11 @@ export class RoleService {
   /**
    * Return how many members/overrides are using a role.
    */
-  async getRoleUsage(params: { userId: string; organizationId: string; roleId: string }) {
+  async getRoleUsage(params: {
+    userId: string;
+    organizationId: string;
+    roleId: string;
+  }) {
     const { userId, organizationId, roleId } = params;
 
     await this.assertOrgMemberOrThrow({ organizationId, userId });
@@ -406,7 +461,10 @@ export class RoleService {
     });
     if (!role) throw new NotFoundException('Role not found');
 
-    if (!(role.organizationId === null && role.isSystem) && role.organizationId !== organizationId) {
+    if (
+      !(role.organizationId === null && role.isSystem) &&
+      role.organizationId !== organizationId
+    ) {
       throw new ForbiddenException('Role not accessible in this organization');
     }
 
@@ -422,7 +480,10 @@ export class RoleService {
   // INTERNAL HELPERS
   // ============================================================
 
-  private async assertOrgMemberOrThrow(params: { organizationId: string; userId: string }) {
+  private async assertOrgMemberOrThrow(params: {
+    organizationId: string;
+    userId: string;
+  }) {
     const member = await this.prisma.organizationMember.findUnique({
       where: {
         organizationId_userId: {
@@ -433,9 +494,12 @@ export class RoleService {
       include: { organization: { select: { status: true } } },
     });
 
-    if (!member) throw new ForbiddenException('Not a member of this organization');
-    if ((member as any).deletedAt) throw new ForbiddenException('Membership inactive');
-    if (member.organization.status === 'SUSPENDED') throw new ForbiddenException('Organization is suspended');
+    if (!member)
+      throw new ForbiddenException('Not a member of this organization');
+    if ((member as any).deletedAt)
+      throw new ForbiddenException('Membership inactive');
+    if (member.organization.status === 'SUSPENDED')
+      throw new ForbiddenException('Organization is suspended');
 
     return member;
   }
@@ -446,7 +510,10 @@ export class RoleService {
    * RoleScope.WORKSPACE    -> PermissionScope.WORKSPACE
    * RoleScope.SYSTEM       -> PermissionScope.SYSTEM
    */
-  private async assertPermissionIdsMatchRoleScope(roleScope: RoleScope, permissionIds: string[]) {
+  private async assertPermissionIdsMatchRoleScope(
+    roleScope: RoleScope,
+    permissionIds: string[],
+  ) {
     if (!permissionIds.length) return;
 
     const requiredPermissionScope =
@@ -463,9 +530,14 @@ export class RoleService {
 
     const foundIds = new Set(perms.map((p) => p.id));
     const missing = permissionIds.filter((id) => !foundIds.has(id));
-    if (missing.length) throw new BadRequestException(`Invalid permission IDs: ${missing.join(', ')}`);
+    if (missing.length)
+      throw new BadRequestException(
+        `Invalid permission IDs: ${missing.join(', ')}`,
+      );
 
-    const wrongScope = perms.filter((p) => p.scope !== requiredPermissionScope).map((p) => p.id);
+    const wrongScope = perms
+      .filter((p) => p.scope !== requiredPermissionScope)
+      .map((p) => p.id);
     if (wrongScope.length) {
       throw new BadRequestException(
         `Permissions must be ${requiredPermissionScope} scope for a ${roleScope} role. Wrong: ${wrongScope.join(', ')}`,

@@ -39,5 +39,4 @@ export class Register {
   @IsOptional()
   @IsString()
   lastName?: string;
-
 }

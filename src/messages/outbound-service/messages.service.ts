@@ -168,9 +168,9 @@ export class MessagingOutboundService {
   }
 }
 
-
-
-function mapAttachmentTypeToMeta(type: string): 'image' | 'video' | 'audio' | 'file' {
+function mapAttachmentTypeToMeta(
+  type: string,
+): 'image' | 'video' | 'audio' | 'file' {
   const t = (type ?? '').toUpperCase();
   if (t === 'IMAGE') return 'image';
   if (t === 'VIDEO') return 'video';

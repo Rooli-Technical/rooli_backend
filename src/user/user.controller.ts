@@ -44,7 +44,6 @@ export class UserController {
     type: SafeUser,
   })
   async getCurrentUser(@Req() req): Promise<SafeUser> {
-
     return this.usersService.findById(req.user.userId);
   }
 
@@ -86,33 +85,35 @@ export class UserController {
     return this.usersService.deactivateMyAccount(req.user.userId);
   }
 
-@Get('user/workspaces')
-  @ApiOperation({ 
-    summary: 'Get current user workspaces', 
-    description: 'Returns all workspaces the authenticated user belongs to across all organizations.' 
+  @Get('user/workspaces')
+  @ApiOperation({
+    summary: 'Get current user workspaces',
+    description:
+      'Returns all workspaces the authenticated user belongs to across all organizations.',
   })
-  @ApiResponse({ status: 200, description: 'Workspaces retrieved successfully.' })
-  async getMyWorkspaces(
-    @CurrentUser('userId') userId: string, 
-  ) {
+  @ApiResponse({
+    status: 200,
+    description: 'Workspaces retrieved successfully.',
+  })
+  async getMyWorkspaces(@CurrentUser('userId') userId: string) {
     return this.usersService.getUserWorkspaces(userId);
   }
 
-@Post('change-password/request-otp')
-  @ApiOperation({ 
-    summary: 'Request a password change OTP', 
-    description: 'Generates a 6-digit OTP and sends it to the currently logged-in user\'s email address for password verification.' 
+  @Post('change-password/request-otp')
+  @ApiOperation({
+    summary: 'Request a password change OTP',
+    description:
+      "Generates a 6-digit OTP and sends it to the currently logged-in user's email address for password verification.",
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'OTP has been successfully generated and sent.',
     schema: {
-      example: { message: 'OTP sent to your email' }
-    }
+      example: { message: 'OTP sent to your email' },
+    },
   })
   async requestChangePasswordOtp(@CurrentUser('userId') userId: string) {
     await this.usersService.requestChangePasswordOtp(userId);
     return { message: 'OTP sent to your email' };
-  } 
+  }
 }
-

@@ -15,11 +15,8 @@ import { ListMembersQueryDto } from './dtos/list-members.dto';
 export class WorkspaceMemberService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async addMember(params: {
-    workspaceId: string;
-    dto: AddWorkspaceMemberDto;
-  }) {
-    const {  workspaceId, dto } = params;
+  async addMember(params: { workspaceId: string; dto: AddWorkspaceMemberDto }) {
+    const { workspaceId, dto } = params;
 
     // 1) Load workspace + orgId
     const workspace = await this.prisma.workspace.findUnique({
@@ -61,7 +58,14 @@ export class WorkspaceMemberService {
         include: {
           member: {
             include: {
-              user: { select: { id: true, email: true, firstName: true, lastName: true } },
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
             },
           },
           role: true,
@@ -149,7 +153,17 @@ export class WorkspaceMemberService {
       data: { roleId: dto.roleId },
       include: {
         member: {
-          include: { user: { select: { id: true, email: true, firstName: true, lastName: true, avatar: true } } },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
+          },
         },
         role: true,
       },
@@ -240,8 +254,6 @@ export class WorkspaceMemberService {
     };
   }
 
-
-
   // -------------------------
   // Helpers
   // -------------------------
@@ -272,15 +284,11 @@ export class WorkspaceMemberService {
     }
   }
 
-
   /**
    * Prevents removing a member if they are the LAST person with "Owner" privileges.
    * Checks both Explicit Roles (Workspace Override) and Implicit Roles (Org Owner).
    */
-  private async assertNotLastOwner(
-    workspaceId: string,
-    memberToRemove: any,
-  ) {
+  private async assertNotLastOwner(workspaceId: string, memberToRemove: any) {
     // A. Check if the person we are removing is even an owner
     const isExplicitOwner = memberToRemove.role?.slug === 'owner';
     // They are an implicit owner if they have NO workspace role override,
