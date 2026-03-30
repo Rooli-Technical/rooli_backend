@@ -25,7 +25,6 @@ import { PlanDto } from './dto/plan-response.dto';
 import { Public } from '@/common/decorators/public.decorator';
 import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
 import { ContextGuard } from '@/common/guards/context.guard';
-import { PermissionResource, PermissionAction } from '@generated/enums';
 
 @ApiTags('Billing')
 @Controller('billing')

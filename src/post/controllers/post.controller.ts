@@ -33,7 +33,8 @@ import { BulkCreatePostDto } from '../dto/request/bulk-schedule.dto';
 import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
-import { PermissionResource, PermissionAction } from '@generated/enums';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+
 
 @Controller('workspaces/:workspaceId/posts')
 @ApiBearerAuth()

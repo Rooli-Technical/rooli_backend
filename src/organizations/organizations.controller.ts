@@ -24,10 +24,10 @@ import { GetAllOrganizationsDto } from './dtos/get-organiations.dto';
 import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
-import { PermissionResource, PermissionAction } from '@generated/enums';
 import { ListMembersQueryDto } from './dtos/list-members.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { UpdateOrgMemberRoleDto } from './dtos/update-member-role.dto';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
@@ -143,7 +143,7 @@ export class OrganizationsController {
   }
 
   @Patch(':memberId/role')
-  @RequirePermission(PermissionResource.MEMBERS, PermissionAction.UPDATE)
+  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.UPDATE)
   @ApiOperation({ summary: 'Update member role (Promotion/Demotion)' })
   async updateRole(
     @Param('organizationId') organizationId: string,
@@ -158,7 +158,7 @@ export class OrganizationsController {
   }
 
   @Delete(':memberId')
-  @RequirePermission(PermissionResource.MEMBERS, PermissionAction.DELETE)
+  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.DELETE)
   @ApiOperation({ summary: 'Remove a member from the entire organization' })
   async remove(
     @Param('organizationId') organizationId: string,

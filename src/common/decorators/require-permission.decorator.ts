@@ -1,5 +1,5 @@
-import { PermissionResource, PermissionAction } from '@generated/enums';
 import { SetMetadata } from '@nestjs/common';
+import { PermissionResource, PermissionAction } from '../constants/rbac';
 
 export const PERMISSION_KEY = 'permission';
 

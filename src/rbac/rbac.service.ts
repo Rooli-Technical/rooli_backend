@@ -2,8 +2,6 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma } from '@generated/client';
 import {
   PermissionScope,
-  PermissionResource,
-  PermissionAction,
   RoleScope,
 } from '@generated/enums';
 import {
@@ -20,6 +18,7 @@ import {
   ListPermissionsQuery,
   PermissionNameFormat,
 } from './dtos/list-permissions-query.dto';
+import { PermissionAction, PermissionResource } from '@/common/constants/rbac';
 
 @Injectable()
 export class RoleService {

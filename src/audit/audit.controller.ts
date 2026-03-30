@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
-import { PermissionResource, PermissionAction } from '@generated/enums';
 import { ListAuditLogsDto } from './dtos/list-audit-logs.dto';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
 
 @Controller('audit')
 export class AuditController {
