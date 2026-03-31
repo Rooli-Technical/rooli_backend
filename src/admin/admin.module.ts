@@ -23,6 +23,9 @@ import { TicketsController } from './support-ticket/support-ticket.controller';
 import { TicketsService } from './support-ticket/support-ticket.service';
 import { TicketsRepository } from './support-ticket/support-ticket.repository';
 import { DomainEventsService } from '@/events/domain-events.service';
+import { SocialHealthController } from './socialcontent/social-health/social-health.controller';
+import { SocialHealthService } from './socialcontent/social-health/social-health.service';
+import { SocialHealthRepository } from './socialcontent/social-health/social-health.repository';
 // import { SupportTicketModule } from './support-ticket/support-ticket.module';
 
 @Module({
@@ -37,6 +40,7 @@ import { DomainEventsService } from '@/events/domain-events.service';
     AdminSecurityController,
     AdminBillingController,
     TicketsController,
+    SocialHealthController
     // AdminAuthController is declared inside AdminAuthModule — remove it from here
   ],
   providers: [
@@ -53,6 +57,8 @@ import { DomainEventsService } from '@/events/domain-events.service';
     TicketsService,
     TicketsRepository,
     DomainEventsService,
+    SocialHealthService,
+    SocialHealthRepository
     // AdminAuthService is provided + exported by AdminAuthModule — remove it from here
   ],
 })
