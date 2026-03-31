@@ -17,7 +17,7 @@ export class PostMediaService {
   private readonly logger = new Logger(PostMediaService.name);
   constructor(private prisma: PrismaService) {}
 
-    // ==========================================
+  // ==========================================
   // 1. UPLOAD FILE (Buffer -> Cloudinary -> DB)
   // ==========================================
   async uploadFile(
@@ -133,7 +133,7 @@ export class PostMediaService {
   // ==========================================
   // 3. DELETE (Cleanup)
   // ==========================================
-async deleteFile(workspaceId: string, fileId: string) {
+  async deleteFile(workspaceId: string, fileId: string) {
     const file = await this.prisma.mediaFile.findFirst({
       where: { id: fileId, workspaceId },
     });
@@ -244,7 +244,6 @@ async deleteFile(workspaceId: string, fileId: string) {
   // HELPER: Stream Upload
   // ------------------------------------------
 
-
   private async uploadToCloudinary(
     file: Express.Multer.File,
     folderContext: string,
@@ -264,7 +263,7 @@ async deleteFile(workspaceId: string, fileId: string) {
     });
   }
 
-   private getThumbnailUrl(result: any): string | null {
+  private getThumbnailUrl(result: any): string | null {
     if (result.resource_type === 'video') {
       // Cloudinary auto-generates jpg thumbnails for videos
       return result.secure_url.replace(/\.[^/.]+$/, '.jpg');
