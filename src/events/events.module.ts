@@ -13,6 +13,7 @@ import { ProfileConnectionSubscriber } from './subscribers/social-connection.sub
 import { AnalyticsModule } from '@/analytics/analytics.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TicketEventsSubscriber } from './subscribers/tickets-events.subscriber';
+import { MailModule } from '@/mail/mail.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { TicketEventsSubscriber } from './subscribers/tickets-events.subscriber'
     }),
     RedisModule,
     AnalyticsModule,
+    MailModule
   ],
   providers: [
     PrismaService,
