@@ -37,7 +37,6 @@ import { MediaFileDto } from './dto/response/media-file.dto';
 import { MediaFolderDto } from './dto/response/media-folder.dto';
 import { MediaLibraryResponseDto } from './dto/response/media-library.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { SaveMetadataDto, SaveMultipleMetadataDto } from './request/post-media.dto';
 
 @ApiTags('Media Library')
 @Controller('workspaces/:workspaceId/media')
@@ -46,51 +45,85 @@ import { SaveMetadataDto, SaveMultipleMetadataDto } from './request/post-media.d
 export class PostMediaController {
   constructor(private readonly mediaService: PostMediaService) {}
 
-  // 1. NEW ENDPOINT: Get Signature
-  @Get('upload/signature')
-  @ApiOperation({ summary: 'Get Cloudinary upload signature for direct frontend uploads' })
-  async getUploadSignature(@CurrentUser('workspaceId') wsId: string) {
-    return this.mediaService.generateSignature(wsId);
-  }
-
-  // 2. UPDATED: Save Metadata (Replaces multipart file upload)
-  @Post('upload')
-  @ApiOperation({ summary: 'Save media metadata after direct Cloudinary upload' })
+@Post('upload')
+  @ApiOperation({ summary: 'Upload a file to the media library' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
+  @ApiBody({
+    description: 'File to upload',
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        folderId: { type: 'string', nullable: true },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
   @ApiStandardResponse(MediaFileDto)
-  async saveMediaMetadata(
+  async uploadFile(
     @Request() req,
     @Param('workspaceId') wsId: string,
-    @Body() body: SaveMetadataDto,
+    @Body('folderId') folderId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 50 }), // 50MB
+        ],
+      }),
+    )
+    file: Express.Multer.File,
   ) {
-    return this.mediaService.saveMediaMetadata(
-      req.user.userId,
-      wsId,
-      body.file,
-      body.folderId,
-    );
+    return this.mediaService.uploadFile(req.user.userId, wsId, file, folderId);
   }
 
-  // 3. UPDATED: Save Multiple Metadata
   @Post('upload/multiple')
   @ApiStandardListResponse(MediaFileDto)
-  @ApiOperation({ summary: 'Save multiple media files metadata' })
-  @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
-  async saveMultipleMetadata(
+  @ApiOperation({ summary: 'Upload multiple media files' })
+  @ApiParam({
+    name: 'workspaceId',
+    description: 'Workspace ID',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Multiple file upload payload',
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+        },
+        folderId: {
+          type: 'string',
+          nullable: true,
+          description: 'Optional folder ID to upload files into',
+        },
+      },
+      required: ['files'],
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files', 10))
+  async uploadMultipleFiles(
     @Request() req,
     @Param('workspaceId') wsId: string,
-    @Body() body: SaveMultipleMetadataDto,
+    @Body('folderId') folderId: string,
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 50 })],
+      }),
+    )
+    files: Express.Multer.File[],
   ) {
-    if (!body.files || body.files.length === 0) {
+    if (!files || files.length === 0) {
       throw new BadRequestException('No files provided');
     }
 
-    return this.mediaService.saveMultipleMetadata(
-      req.user.userId,
-      wsId,
-      body.files,
-      body.folderId,
-    );
+    return this.mediaService.uploadMany(req.user.userId, wsId, files, folderId);
   }
 
   @Get('library')
