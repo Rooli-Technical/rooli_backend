@@ -29,9 +29,6 @@ export class PostMediaService {
       {
         timestamp: timestamp,
         folder: folder,
-        resource_type: 'auto',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi', 'mkv', 'webm'],
-        max_file_size: 50 * 1024 * 1024,
       },
       process.env.CLOUDINARY_API_SECRET, // Make sure this is in your env
     );
