@@ -37,6 +37,9 @@ import { MediaFileDto } from './dto/response/media-file.dto';
 import { MediaFolderDto } from './dto/response/media-folder.dto';
 import { MediaLibraryResponseDto } from './dto/response/media-library.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import {memoryStorage } from 'multer';
+
+const sharedMemoryStorage = memoryStorage();
 
 @ApiTags('Media Library')
 @Controller('workspaces/:workspaceId/media')
@@ -45,9 +48,10 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 export class PostMediaController {
   constructor(private readonly mediaService: PostMediaService) {}
 
-@Post('upload')
+  @Post('upload')
   @ApiOperation({ summary: 'Upload a file to the media library' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
+  @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'File to upload',
     schema: {
@@ -59,8 +63,12 @@ export class PostMediaController {
       required: ['file'],
     },
   })
-  @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: sharedMemoryStorage,
+      limits: { fileSize: 50 * 1024 * 1024 }, 
+    }),
+  )
   @ApiStandardResponse(MediaFileDto)
   async uploadFile(
     @Request() req,
@@ -93,21 +101,19 @@ export class PostMediaController {
       properties: {
         files: {
           type: 'array',
-          items: {
-            type: 'string',
-            format: 'binary',
-          },
+          items: { type: 'string', format: 'binary' },
         },
-        folderId: {
-          type: 'string',
-          nullable: true,
-          description: 'Optional folder ID to upload files into',
-        },
+        folderId: { type: 'string', nullable: true },
       },
       required: ['files'],
     },
   })
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(
+    FilesInterceptor('files', 10, {
+      storage: sharedMemoryStorage,
+      limits: { fileSize: 50 * 1024 * 1024 },
+    }),
+  )
   async uploadMultipleFiles(
     @Request() req,
     @Param('workspaceId') wsId: string,
@@ -174,33 +180,24 @@ export class PostMediaController {
     description:
       'Uploads a new image, links it to the user profile, and deletes the previous avatar file.',
   })
-  @ApiConsumes('multipart/form-data')
+ @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        workspaceId: {
-          type: 'string',
-          description: 'The workspace context for the media storage',
-        },
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Image file (png, jpg, webp)',
-        },
+        file: { type: 'string', format: 'binary', description: 'Image file' },
       },
-      required: ['file', 'workspaceId'],
+      required: ['file'],
     },
   })
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+      storage: sharedMemoryStorage,
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB for avatars is plenty
       fileFilter: (req, file, cb) => {
+        // Basic fail-fast. Service still checks magic bytes via file-type package.
         if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
-          return cb(
-            new BadRequestException('Only image files are allowed'),
-            false,
-          );
+          return cb(new BadRequestException('Only image files are allowed'), false);
         }
         cb(null, true);
       },
