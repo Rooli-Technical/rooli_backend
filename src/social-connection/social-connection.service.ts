@@ -329,6 +329,17 @@ export class SocialConnectionService {
             pageId, // This is your organizationUrn
             pageAccessToken,
           );
+        case 'TWITTER':
+          if (!connection.refreshToken) {
+            throw new BadRequestException('Missing Twitter access secret');
+          }
+          const accessSecret = await this.encryptionService.decrypt(
+            connection.refreshToken,
+          );
+          return await this.twitter.subscribeToWebhooks(
+            pageAccessToken,
+            accessSecret,
+          );
 
         default:
           throw new BadRequestException(

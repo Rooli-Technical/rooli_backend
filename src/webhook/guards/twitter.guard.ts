@@ -29,9 +29,9 @@ export class TwitterWebhookGuard implements CanActivate {
     // Allow CRC GET through; controller handles it.
     if (req.method === 'GET') return true;
 
-    const consumerSecret = this.config.get<string>('TWITTER_CONSUMER_SECRET');
+    const consumerSecret = this.config.get<string>('TWITTER_API_SECRET');
     if (!consumerSecret) {
-      this.logger.error('TWITTER_CONSUMER_SECRET is not set');
+      this.logger.error('TWITTER_API_SECRET is not set');
       throw new UnauthorizedException(
         'Webhook signature verification misconfigured',
       );

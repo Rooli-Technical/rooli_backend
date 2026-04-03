@@ -121,4 +121,35 @@ export class TwitterService {
       },
     ];
   }
+
+  async subscribeToWebhooks(accessToken: string, accessSecret: string): Promise<boolean> {
+    try {
+      // 1. OAuth 1.0a is correct for User Context subscriptions
+      const client = new TwitterApi({
+        appKey: this.config.getOrThrow('TWITTER_API_KEY'),
+        appSecret: this.config.getOrThrow('TWITTER_API_SECRET'),
+        accessToken,
+        accessSecret,
+      });
+
+      const webhookId = this.config.getOrThrow('TWITTER_WEBHOOK_ID');
+
+      // 2. Remove the '2/' prefix because client.v2 does it for you
+      const endpoint = `account_activity/webhooks/${webhookId}/subscriptions/all`;
+      
+      // 3. Fire the request
+      await client.v2.post(endpoint, {});
+      
+      this.logger.log(`Successfully subscribed user to webhook: ${webhookId}`);
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Subscription failed: ${error?.data?.detail || error.message}`);
+      
+      // Catching the 403 Forbidden correctly identifies a tier/permissions issue
+      if (error.code === 403) {
+         throw new BadRequestException('Twitter API tier upgrade or billing setup required for webhooks.');
+      }
+      throw new BadRequestException('Could not subscribe Twitter account to real-time events.');
+    }
+  }
 }

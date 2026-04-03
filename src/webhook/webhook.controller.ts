@@ -15,7 +15,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { createHmac } from 'crypto';
+import * as crypto from 'crypto';
 import { Public } from '@/common/decorators/public.decorator';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +25,7 @@ import { MetaWebhookGuard } from './guards/meta.guard';
 import { PrismaService } from '@/prisma/prisma.service';
 import { LinkedInWebhookGuard } from './guards/linkedin.guard';
 import { TikTokWebhookGuard } from './guards/tiktok.guard';
+import { TwitterWebhookGuard } from './guards/twitter.guard';
 
 @Controller('webhooks')
 @Public()
@@ -343,6 +344,82 @@ export class WebhookController {
     }
 
     // 3. TikTok requires a 200 OK response within 3 seconds, or they will retry!
+    return { status: 'success' };
+
+  }
+
+  // ==========================================
+  // 5. TWITTER (X)
+  // ==========================================
+
+  /**
+   * Twitter CRC (Challenge-Response Check) endpoint.
+   * Twitter sends a GET request here when you register the webhook URL.
+   */
+  @Get('twitter')
+  verifyTwitterCrc(@Query('crc_token') crcToken: string, @Res() res: Response) {
+    console.log("twitter webhook hit")
+    if (!crcToken) {
+      throw new BadRequestException('Missing crc_token');
+    }
+
+    this.logger.log(`[Twitter] CRC challenge received`);
+
+    // Must match the exact environment variable name used in your Guard
+    const consumerSecret = this.config.get<string>('TWITTER_API_SECRET');
+    if (!consumerSecret) {
+      throw new InternalServerErrorException('Twitter Secret missing');
+    }
+
+    // Hash the token using HMAC SHA-256
+    const hash = crypto
+  .createHmac('sha256', consumerSecret)
+  .update(crcToken)
+  .digest('hex');
+
+    // Twitter strictly requires this exact JSON format
+    return {
+      response_token: `sha256=${hash}`,
+    };
+  }
+
+  /**
+   * Twitter webhook receiver.
+   * Secured by the TwitterWebhookGuard checking the X-Twitter-Webhooks-Signature.
+   */
+  @Post('twitter')
+  @UseGuards(TwitterWebhookGuard)
+  async handleTwitter(@Body() payload: any) {
+    this.logger.log(`[Twitter] Webhook payload received`);
+
+    // 1. Log to DB (Firehose can be heavy, but logging raw data is safe)
+    const log = await this.prisma.webhookLog.create({
+      data: {
+        provider: 'TWITTER',
+        // Twitter payloads usually have a "for_user_id" indicating who the event is for
+        eventType: payload.for_user_id ? 'activity_event' : 'system_event',
+        resourceId: payload.for_user_id || 'system',
+        payload: payload,
+        status: 'PENDING',
+      },
+    });
+
+    // 2. Offload to Queue immediately to avoid the 3-second timeout
+    // Because Twitter bundles multiple event types (tweets, DMs, likes) 
+    // into one payload, we pass the whole thing to the worker to parse.
+    await this.inboxQueue.add(
+      'twitter-inbound-activity',
+      { logId: log.id, payload },
+      {
+        jobId: `twitter-webhook-${log.id}`,
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 1500 },
+        removeOnComplete: true,
+        removeOnFail: { age: 7 * 24 * 3600 }, // Keep failed jobs for 1 week for debugging
+      },
+    );
+
+    // 3. Return 200 OK instantly
     return { status: 'success' };
   }
 }
