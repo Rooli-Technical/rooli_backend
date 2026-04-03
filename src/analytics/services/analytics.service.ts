@@ -23,11 +23,15 @@ import { subDays } from 'date-fns/subDays';
 import { AnalyticsNormalizerService } from './analytics-normalizer.service';
 import { DateTime } from 'luxon';
 import { TikTokAnalyticsProvider } from '../providers/tiktok-anlytics.provider';
+import axios from 'axios';
+import * as JSONBig from 'json-bigint';
 
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
   private providers: Map<Platform, IAnalyticsProvider>;
+  private readonly STATUS_URL =
+    'https://open.tiktokapis.com/v2/post/publish/status/fetch/';
 
   constructor(
     private readonly linkedInProvider: LinkedInAnalyticsProvider,
@@ -1432,5 +1436,83 @@ export class AnalyticsService {
     });
 
     return rows.reduce((sum, r) => sum + (r.followersTotal ?? 0), 0);
+  }
+
+  async syncVideoId(destinationId: string) {
+    // 1. Fetch the Destination, including the Profile for credentials
+    const destination = await this.prisma.postDestination.findUnique({
+      where: { id: destinationId },
+      include: {
+        profile: true,
+      },
+    });
+
+    if (!destination || !destination.platformPostId) {
+      throw new NotFoundException('Post destination or Publish ID not found');
+    }
+
+    // Ensure we are only doing this for TikTok profiles
+    if (destination.profile.platform !== 'TIKTOK') {
+      throw new BadRequestException('This destination is not a TikTok profile');
+    }
+
+    // 2. Decrypt Access Token
+    const accessToken = await this.encryptionService.decrypt(
+      destination.profile.accessToken,
+    );
+    console.log(accessToken);
+
+    try {
+      this.logger.log(
+        `Polling TikTok status for PublishID: ${destination.platformPostId}`,
+      );
+
+      const { data } = await axios.post(
+        this.STATUS_URL,
+        { publish_id: destination.platformPostId },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          // This prevents Axios from using JSON.parse() which breaks the BigInt
+          transformResponse: [(data) => data],
+        },
+      );
+console.dir(data, {depth: null})
+      // Manually parse it using the BigInt-aware library
+      const parsedData = JSONBig({ storeAsString: true }).parse(data);
+      const statusData = parsedData.data;
+
+      if (statusData?.status === 'PUBLISH_COMPLETE') {
+        // Now this will be exactly "7624526324199148801" as a string
+        const realVideoId = statusData.publicaly_available_post_id?.[0];
+
+        if (realVideoId) {
+          this.logger.log(`Success! Found real Video ID: ${realVideoId}`);
+
+          await this.prisma.postDestination.update({
+            where: { id: destinationId },
+            data: {
+              platformPostId: realVideoId, // Already a string now
+              platformUrl: `https://www.tiktok.com/video/${realVideoId}`,
+            },
+          });
+          return { success: true, videoId: realVideoId, status: 'COMPLETE' };
+        }
+      }
+
+      return {
+        success: false,
+        status: statusData?.status || 'PROCESSING',
+        message:
+          statusData?.fail_reason ||
+          'Video is still being processed by TikTok.',
+      };
+    } catch (error: any) {
+      const msg = error.response?.data?.error?.message || error.message;
+      this.logger.error(`TikTok Sync Failed: ${msg}`);
+      throw new BadRequestException(`TikTok API Error: ${msg}`);
+    }
   }
 }

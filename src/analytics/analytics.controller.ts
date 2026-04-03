@@ -318,4 +318,21 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
     // Safety check: ensure the profile exists before running heavy aggregation
     return this.service.getWorkspaceBestTimeToPost(profileId, daysCount);
   }
+
+  @Post('sync-destination/:destinationId')
+  @ApiOperation({ 
+    summary: 'Sync TikTok Video ID', 
+    description: 'Polls TikTok to exchange a temporary publish_id for a permanent video_id.' 
+  })
+  @ApiParam({ 
+    name: 'destinationId', 
+    description: 'The ID of the PostDestination record',
+    example: 'cmmdg1ji80003xuiaqd21fh8a' 
+  })
+  @ApiResponse({ status: 200, description: 'Successfully synced or still processing.' })
+  @ApiResponse({ status: 400, description: 'Invalid request or API error.' })
+  @ApiResponse({ status: 404, description: 'Destination not found.' })
+  async syncId(@Param('destinationId') destinationId: string) {
+    return await this.service.syncVideoId(destinationId);
+  }
 }
