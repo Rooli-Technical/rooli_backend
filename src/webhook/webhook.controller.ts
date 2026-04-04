@@ -358,7 +358,6 @@ export class WebhookController {
    */
   @Get('twitter')
   verifyTwitterCrc(@Query('crc_token') crcToken: string, @Res() res: Response) {
-    console.log("twitter webhook hit")
     if (!crcToken) {
       throw new BadRequestException('Missing crc_token');
     }
@@ -375,12 +374,12 @@ export class WebhookController {
     const hash = crypto
   .createHmac('sha256', consumerSecret)
   .update(crcToken)
-  .digest('hex');
+  .digest('base64');
 
     // Twitter strictly requires this exact JSON format
-    return {
+    return res.status(200).json({
       response_token: `sha256=${hash}`,
-    };
+    });
   }
 
   /**
