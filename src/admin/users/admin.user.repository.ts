@@ -169,4 +169,35 @@ export class AdminUserRepository {
     });
     return admins;
   }
+
+  async getUserMetrics() {
+    const now = new Date();
+    const [total, active, suspended, banned] = await Promise.all([
+      this.prisma.user.count({
+        where: { userType: { not: 'SUPER_ADMIN' as UserType } },
+      }),
+      this.prisma.user.count({
+        where: {
+          userType: { not: 'SUPER_ADMIN' as UserType },
+          deletedAt: null,
+          lockedUntil: null,
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          userType: { not: 'SUPER_ADMIN' as UserType },
+          deletedAt: null,
+          lockedUntil: { gte: now },
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          userType: { not: 'SUPER_ADMIN' as UserType },
+          deletedAt: { not: null },
+        },
+      }),
+    ]);
+
+    return { total, active, suspended, banned };
+  }
 }

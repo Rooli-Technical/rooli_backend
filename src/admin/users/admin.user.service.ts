@@ -70,4 +70,8 @@ export class AdminUserService {
   async getAdmins() {
     return await this.adminUserRepository.getAdmins();
   }
+
+  async getUserMetrics() {
+    return this.adminUserRepository.getUserMetrics();
+  }
 }

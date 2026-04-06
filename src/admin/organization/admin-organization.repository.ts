@@ -277,4 +277,20 @@ export class AdminOrganizationRepository {
       select: { id: true, name: true, status: true, isActive: true },
     });
   }
+
+  async getOrganizationMetrics() {
+  const [total, active, suspended, pendingPayment] = await Promise.all([
+    this.prisma.organization.count(),
+    this.prisma.organization.count({ where: { status: 'ACTIVE' } }),
+    this.prisma.organization.count({ where: { status: 'SUSPENDED' } }),
+    this.prisma.organization.count({ where: { status: 'PENDING_PAYMENT' } }),
+  ]);
+
+  return {
+    total,
+    active,
+    suspended,
+    pendingPayment,
+  };
+}
 }
