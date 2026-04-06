@@ -79,9 +79,8 @@ export class SocialConnectionService {
   async handleCallback(platform: Platform, query: any) {
     let authData: OAuthResult;
     let organizationId: string;
-    const normalizedPlatform = platform.toUpperCase();
 
-    if (normalizedPlatform === 'TWITTER') {
+    if (platform === 'TWITTER') {
       const { token, verifier } = query;
       if (!token || !verifier)
         throw new BadRequestException('Missing Twitter tokens');
@@ -109,13 +108,13 @@ export class SocialConnectionService {
 
 
       // Exchange
-      if (normalizedPlatform === 'FACEBOOK')
+      if (platform === 'FACEBOOK')
         authData = await this.facebook.exchangeCode(code);
-      else if (normalizedPlatform === 'INSTAGRAM')
+      else if (platform === 'INSTAGRAM')
         authData = await this.instagram.exchangeCode(code);
-      else if (normalizedPlatform === 'LINKEDIN')
+      else if (platform === 'LINKEDIN')
         authData = await this.linkedin.exchangeCode(code);
-      else if (normalizedPlatform === 'TIKTOK')
+      else if (platform === 'TIKTOK')
         authData = await this.tiktok.exchangeCode(code);
     }
 
@@ -124,7 +123,7 @@ export class SocialConnectionService {
       where: {
         organizationId_platform_platformUserId: {
           organizationId,
-          platform: normalizedPlatform as Platform,
+          platform: platform,
           platformUserId: authData.providerUserId,
         },
       },
@@ -139,7 +138,7 @@ export class SocialConnectionService {
       },
       create: {
         organizationId,
-        platform: normalizedPlatform as Platform,
+        platform: platform,
         platformUserId: authData.providerUserId,
         platformUsername: authData.providerUsername,
         accessToken: await this.encryptionService.encrypt(authData.accessToken),
