@@ -7,7 +7,7 @@ import { TicketsRepository } from './support-ticket.repository';
 import {
   AddCommentDto,
   AssignTicketDto,
-  CreateTicketDto,
+  AdminCreateTicketDto,
   QueryTicketsDto,
   UpdateTicketDto,
 } from './support-ticket.dto';
@@ -26,7 +26,7 @@ export class TicketsService {
 
   // Tickets ──────────────────────────────────────────────────────────────────
 
-  async create(requesterId: string, dto: CreateTicketDto) {
+  async create(requesterId: string, dto: AdminCreateTicketDto) {
     // return this.repo.create(requesterId,dto);
     const member = await this.prisma.workspaceMember.findFirstOrThrow({
       where: { workspaceId: dto.workspaceId },

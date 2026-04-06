@@ -118,4 +118,12 @@ export class EventsGateway
     this.logger.log(`📋 Client rooms: ${[...client.rooms].join(', ')}`);
     return { joined: room }; // 👈 sends ack back to client
   }
+
+  @SubscribeMessage('leave:ticket')
+  handleLeaveTicket(client: Socket, payload: { ticketId: string }) {
+    const room = `ticket:${payload.ticketId}`;
+    client.leave(room);
+    this.logger.log(`👋 Client ${client.id} left room: ${room}`);
+    return { left: room }; 
+  }
 }
