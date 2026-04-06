@@ -246,6 +246,18 @@ export class AdminOrganizationRepository {
     });
   }
 
+
+  async activateOrganization(id: string) {
+    return this.prisma.organization.update({
+      where: { id },
+      data: {
+        status: 'ACTIVE',
+        isActive: true,
+      },
+      select: { id: true, name: true, status: true, isActive: true },
+    });
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // DELETE ORGANIZATION (soft: deactivate OR hard delete — pick one)
   // Using hard delete here since the model has no deletedAt field.
@@ -265,4 +277,20 @@ export class AdminOrganizationRepository {
       select: { id: true, name: true, status: true, isActive: true },
     });
   }
+
+  async getOrganizationMetrics() {
+  const [total, active, suspended, pendingPayment] = await Promise.all([
+    this.prisma.organization.count(),
+    this.prisma.organization.count({ where: { status: 'ACTIVE' } }),
+    this.prisma.organization.count({ where: { status: 'SUSPENDED' } }),
+    this.prisma.organization.count({ where: { status: 'PENDING_PAYMENT' } }),
+  ]);
+
+  return {
+    total,
+    active,
+    suspended,
+    pendingPayment,
+  };
+}
 }

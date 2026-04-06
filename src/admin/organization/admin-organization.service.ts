@@ -66,6 +66,17 @@ export class AdminOrganizationService {
     return this.repo.suspendOrganization(id);
   }
 
+  async activateOrganization(id: string) {
+    const org = await this.repo.findRaw(id);
+    if (!org) throw new NotFoundException(`Organization ${id} not found`);
+
+    if (org.status === 'ACTIVE') {
+      throw new BadRequestException('Organization is already activated.');
+    }
+
+    return this.repo.activateOrganization(id);
+  }
+
   // ── DELETE ────────────────────────────────────────────────────────────────
 
   async deleteOrganization(id: string) {
@@ -73,5 +84,9 @@ export class AdminOrganizationService {
     if (!org) throw new NotFoundException(`Organization ${id} not found`);
 
     return this.repo.deleteOrganization(id);
+  }
+
+  async getOrganizationMetrics() {
+    return this.repo.getOrganizationMetrics();
   }
 }

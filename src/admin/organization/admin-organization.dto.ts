@@ -120,6 +120,21 @@ export class SuspendOrgResponseDto {
   isActive: boolean;
 }
 
+export class ActiveOrgResponseDto {
+  @ApiProperty({ example: 'clxorg123' })
+  id: string;
+
+  @ApiProperty({ example: 'Tech Solutions Inc.' })
+  name: string;
+
+  @ApiProperty({ example: 'ACTIVE' })
+  status: string;
+
+  @ApiProperty({ example: true })
+  isActive: boolean;
+}
+
+
 export class DeleteOrgResponseDto {
   @ApiProperty({ example: 'clxorg123' })
   id: string;
