@@ -106,14 +106,16 @@ export class SocialConnectionService {
         throw new BadRequestException('Invalid OAuth state');
       }
 
+      const normalizedPlatform = platform.toUpperCase();
+
       // Exchange
-      if (platform === 'FACEBOOK')
+      if (normalizedPlatform === 'FACEBOOK')
         authData = await this.facebook.exchangeCode(code);
-      else if (platform === 'INSTAGRAM')
+      else if (normalizedPlatform === 'INSTAGRAM')
         authData = await this.instagram.exchangeCode(code);
-      else if (platform === 'LINKEDIN')
+      else if (normalizedPlatform === 'LINKEDIN')
         authData = await this.linkedin.exchangeCode(code);
-      else if (platform === 'TIKTOK')
+      else if (normalizedPlatform === 'TIKTOK')
         authData = await this.tiktok.exchangeCode(code);
     }
 
