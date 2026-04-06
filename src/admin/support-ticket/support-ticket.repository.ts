@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AddCommentDto,
-  CreateTicketDto,
+  AdminCreateTicketDto,
   QueryTicketsDto,
   UpdateTicketDto,
 } from './support-ticket.dto';
@@ -46,7 +46,7 @@ export class TicketsRepository {
 
   // Tickets ──────────────────────────────────────────────────────────────────
 
-  create(requesterId: string, dto: CreateTicketDto) {
+  create(requesterId: string, dto: AdminCreateTicketDto) {
     return this.prisma.ticket.create({
       data: {
         title: dto.title,

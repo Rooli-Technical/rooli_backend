@@ -25,7 +25,7 @@ import {
 import {
   AddCommentDto,
   AssignTicketDto,
-  CreateTicketDto,
+  AdminCreateTicketDto,
   QueryTicketsDto,
   UpdateTicketDto,
 } from './support-ticket.dto';
@@ -52,7 +52,7 @@ export class TicketsController {
   @ApiResponse({ status: 201, description: 'Ticket created.' })
   @ApiResponse({ status: 400, description: 'Validation error.' })
   create(
-    @Body() dto: CreateTicketDto,
+    @Body() dto: AdminCreateTicketDto,
     @CurrentUser('userId') requesterId: string,
   ) {
     return this.ticketsService.create(requesterId, dto);

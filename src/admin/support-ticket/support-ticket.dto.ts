@@ -17,7 +17,7 @@ import {
 
 // ─── Create ───────────────────────────────────────────────────────────────────
 
-export class CreateTicketDto {
+export class AdminCreateTicketDto {
   @ApiProperty({
     example: "Can't connect Meta Business account",
     minLength: 5,
@@ -55,7 +55,7 @@ export class CreateTicketDto {
 
 // ─── Update ───────────────────────────────────────────────────────────────────
 
-export class UpdateTicketDto extends PartialType(CreateTicketDto) {
+export class UpdateTicketDto extends PartialType(AdminCreateTicketDto) {
   @ApiPropertyOptional({ enum: TicketStatus })
   @IsOptional()
   @IsEnum(TicketStatus)
