@@ -79,8 +79,9 @@ export class SocialConnectionService {
   async handleCallback(platform: Platform, query: any) {
     let authData: OAuthResult;
     let organizationId: string;
+    const normalizedPlatform = platform.toUpperCase();
 
-    if (platform === 'TWITTER') {
+    if (normalizedPlatform === 'TWITTER') {
       const { token, verifier } = query;
       if (!token || !verifier)
         throw new BadRequestException('Missing Twitter tokens');
@@ -106,7 +107,6 @@ export class SocialConnectionService {
         throw new BadRequestException('Invalid OAuth state');
       }
 
-      const normalizedPlatform = platform.toUpperCase();
 
       // Exchange
       if (normalizedPlatform === 'FACEBOOK')
@@ -124,7 +124,7 @@ export class SocialConnectionService {
       where: {
         organizationId_platform_platformUserId: {
           organizationId,
-          platform,
+          platform: normalizedPlatform as Platform,
           platformUserId: authData.providerUserId,
         },
       },
@@ -139,7 +139,7 @@ export class SocialConnectionService {
       },
       create: {
         organizationId,
-        platform,
+        platform: normalizedPlatform as Platform,
         platformUserId: authData.providerUserId,
         platformUsername: authData.providerUsername,
         accessToken: await this.encryptionService.encrypt(authData.accessToken),
