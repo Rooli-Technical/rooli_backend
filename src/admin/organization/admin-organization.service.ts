@@ -85,4 +85,8 @@ export class AdminOrganizationService {
 
     return this.repo.deleteOrganization(id);
   }
+
+  async getOrganizationMetrics() {
+    return this.repo.getOrganizationMetrics();
+  }
 }

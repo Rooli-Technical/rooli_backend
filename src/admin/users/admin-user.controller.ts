@@ -120,6 +120,12 @@ export class AdminUserController {
     return this.adminUserService.suspendUser(id, body.suspendUntil);
   }
 
+  @Get('user/metrics')
+  @HttpCode(HttpStatus.OK)
+  async getUserMetrics() {
+    const metrics = await this.adminUserService.getUserMetrics();
+    return metrics
+  }
   @Patch('user/:id/reactivate')
   @ApiOperation({
     summary: 'Reactivate a user',
@@ -142,4 +148,5 @@ export class AdminUserController {
   getAllAdmins() {
     return this.adminUserService.getAdmins();
   }
+
 }

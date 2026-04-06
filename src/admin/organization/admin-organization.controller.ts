@@ -107,6 +107,15 @@ export class AdminOrganizationController {
     });
   }
 
+  @Get('organization/metrics')
+  @ApiResponse({
+    status: 200,
+    description: 'Organization metrics fetched successfully.',
+  })
+  async getOrganizationMetrics() {
+    const metrics = await this.organizationService.getOrganizationMetrics();
+    return metrics;
+  }
   // ── GET /admin/organizations/:id ───────────────────────────────────────────
 
   @Get('organization/:id')
@@ -177,7 +186,6 @@ export class AdminOrganizationController {
   async activateOrganization(@Param('id') id: string) {
     return this.organizationService.activateOrganization(id);
   }
-
   // ── DELETE /admin/organizations/:id ───────────────────────────────────────
 
   @Delete('organization/:id')
