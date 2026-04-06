@@ -20,6 +20,7 @@ import {
 import { AdminJwtGuard } from '../guards/admin-jwt.guard';
 import { AdminOrganizationService } from './admin-organization.service';
 import {
+  ActiveOrgResponseDto,
   AdminOrgListResponseDto,
   DeleteOrgResponseDto,
   SuspendOrgResponseDto,
@@ -151,6 +152,30 @@ export class AdminOrganizationController {
   @ApiResponse({ status: 403, description: 'Forbidden. Admin only.' })
   async suspendOrganization(@Param('id') id: string) {
     return this.organizationService.suspendOrganization(id);
+  }
+
+  @Patch('organization/:id/activate')
+  @ApiOperation({
+    summary: 'Activate an organization',
+    description:
+      'Sets the organization status to ACTIVE and marks it as inactive. ' +
+      'This prevents all members from accessing the platform.',
+  })
+  @ApiParam({ name: 'id', example: 'clxorg123' })
+  @ApiResponse({
+    status: 200,
+    type: ActiveOrgResponseDto,
+    description: 'Organization activated successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Organization is already activated.',
+  })
+  @ApiResponse({ status: 404, description: 'Organization not found.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Admin only.' })
+  async activateOrganization(@Param('id') id: string) {
+    return this.organizationService.activateOrganization(id);
   }
 
   // ── DELETE /admin/organizations/:id ───────────────────────────────────────

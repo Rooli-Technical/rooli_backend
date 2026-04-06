@@ -246,6 +246,18 @@ export class AdminOrganizationRepository {
     });
   }
 
+
+  async activateOrganization(id: string) {
+    return this.prisma.organization.update({
+      where: { id },
+      data: {
+        status: 'ACTIVE',
+        isActive: true,
+      },
+      select: { id: true, name: true, status: true, isActive: true },
+    });
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // DELETE ORGANIZATION (soft: deactivate OR hard delete — pick one)
   // Using hard delete here since the model has no deletedAt field.

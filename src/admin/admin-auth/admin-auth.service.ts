@@ -194,7 +194,6 @@ export class AdminAuthService {
       role: 'SUPER_ADMIN',
       sessionId: sessionId,
     };
-    console.log(payload, 'Admin token payload');
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
