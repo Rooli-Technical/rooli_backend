@@ -19,6 +19,14 @@ export class SocialCallbackDto {
   @IsString()
   state?: string;
 
+  @ApiProperty({
+    description: 'Required for Tiktok',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  scopes?: string;
+
   @ApiProperty({ description: 'Required for Twitter', required: false })
   @IsOptional()
   @IsString()
