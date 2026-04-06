@@ -6,7 +6,6 @@ import {
   Param,
   Query,
   Patch,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +13,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { SupportTicketService } from './support-ticket.service';
 import { CreateTicketDto, AddCommentDto } from './dtos/create-ticket.dto';
@@ -32,7 +32,7 @@ export class SupportTicketController {
   async create(
     @Param('workspaceId') workspaceId: string,
     @Body() createTicketDto: CreateTicketDto,
-    @CurrentUser('userId') requesterId: string,
+    @CurrentUser('workspaceMemberId') requesterId: string,
   ) {
     return this.ticketService.createTicket(
       workspaceId,
@@ -57,11 +57,13 @@ export class SupportTicketController {
   @Get(':ticketId')
   @ApiOperation({ summary: 'Get detailed information about a specific ticket' })
   @ApiParam({ name: 'ticketId', description: 'The UUID of the ticket' })
+  @ApiQuery({ name: 'isSupportAgent', description: 'Is support agent', required: false })
   async findOne(
     @Param('workspaceId') workspaceId: string,
     @Param('ticketId') ticketId: string,
+    @Query('isSupportAgent') isSupportAgent: boolean,
   ) {
-    return this.ticketService.getTicketDetails(workspaceId, ticketId);
+    return this.ticketService.getTicketDetails(workspaceId, ticketId, isSupportAgent);
   }
 
   @Post(':ticketId/comments')
@@ -85,8 +87,9 @@ export class SupportTicketController {
   @ApiResponse({ status: 200, description: 'Ticket status updated to CLOSED.' })
   async closeTicket(
     @Param('workspaceId') workspaceId: string,
-    @Param('ticketId', ParseUUIDPipe) ticketId: string,
+    @Param('ticketId') ticketId: string,
+    @CurrentUser('workspaceMemberId') requesterId: string,
   ) {
-    return this.ticketService.closeMyTicket(workspaceId, ticketId);
+    return this.ticketService.closeMyTicket(workspaceId, ticketId, requesterId);
   }
 }

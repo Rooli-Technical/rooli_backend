@@ -53,7 +53,7 @@ export class TicketEventsSubscriber {
 
   @OnEvent('ticket.updated', { async: true })
   async handleTicketUpdated(payload: DomainEventPayloadMap['ticket.updated']) {
-    console.log('Called  update event ');
+    console.log(payload)
     // 1. WEBSOCKETS: Update the status badge (e.g., OPEN -> CLOSED) instantly
     this.realtimeEmitter.emitToWorkspace(
       payload.workspaceId,
@@ -61,10 +61,12 @@ export class TicketEventsSubscriber {
       payload,
     );
 
-    await this.email.sendSupportEmail2(
-      payload.email,
-      payload.status.toLowerCase(),
-    );
+    if (payload.email) {
+      await this.email.sendSupportEmail2(
+        payload.email,
+        payload.status?.toLowerCase() || 'updated',
+      );
+    }
   }
 
   @OnEvent('ticket.comment.reply', { async: true })

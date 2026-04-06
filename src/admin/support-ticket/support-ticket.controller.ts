@@ -23,7 +23,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
-  AddCommentDto,
+  AdminAddCommentDto,
   AssignTicketDto,
   AdminCreateTicketDto,
   QueryTicketsDto,
@@ -147,7 +147,7 @@ export class TicketsController {
   addComment(
     @Req() req,
     @Param('id') id: string,
-    @Body() dto: AddCommentDto,
+    @Body() dto: AdminAddCommentDto,
 
     @CurrentUser('userId') requesterId: string,
   ) {

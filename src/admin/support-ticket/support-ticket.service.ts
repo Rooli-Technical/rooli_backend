@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { TicketsRepository } from './support-ticket.repository';
 import {
-  AddCommentDto,
+  AdminAddCommentDto,
   AssignTicketDto,
   AdminCreateTicketDto,
   QueryTicketsDto,

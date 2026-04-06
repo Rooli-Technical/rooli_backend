@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
-  AddCommentDto,
+  AdminAddCommentDto,
   AdminCreateTicketDto,
   QueryTicketsDto,
   UpdateTicketDto,

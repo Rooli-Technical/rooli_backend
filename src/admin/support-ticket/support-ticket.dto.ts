@@ -133,7 +133,7 @@ export class QueryTicketsDto {
 
 // ─── Comment ──────────────────────────────────────────────────────────────────
 
-export class AddCommentDto {
+export class AdminAddCommentDto {
   @ApiProperty({
     example: "Hi! I can see your account and I'm looking into this now.",
   })
