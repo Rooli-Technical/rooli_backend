@@ -11,14 +11,21 @@ import { SocialProfileService } from './social-profile.service';
 import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
 import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
 import { BulkAddProfilesResponseDto } from './dto/response/add-profile-response.dto';
+import { ContextGuard } from '@/common/guards/context.guard';
+import { UseGuards } from '@nestjs/common';
+import { PermissionsGuard } from '@/common/guards/permission.guard';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 
 @ApiTags('Workspace Social Profiles')
 @ApiBearerAuth()
+@UseGuards(ContextGuard, PermissionsGuard)
 @Controller('workspaces/:workspaceId/social-profiles')
 export class SocialProfileController {
   constructor(private readonly profileService: SocialProfileService) {}
 
   @Post()
+  @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.MANAGE) // Only Admins/Owners connect pages
   @ApiOperation({
     summary: 'Bulk Add social profiles to workspace',
     description:
@@ -38,6 +45,7 @@ export class SocialProfileController {
   }
 
   @Get()
+  @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.READ) // Everyone can see what pages exist
   @ApiOperation({
     summary: 'List workspace social profiles',
     description: 'Returns all social media profiles connected to a workspace.',
@@ -63,6 +71,7 @@ export class SocialProfileController {
   }
 
   @Delete(':profileId')
+  @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.MANAGE) // Only Admins/Owners delete pages
   @ApiOperation({
     summary: 'Remove social profile from workspace',
     description:

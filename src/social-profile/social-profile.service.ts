@@ -222,7 +222,11 @@ export class SocialProfileService {
             subscription: { include: { plan: true } },
           },
         },
-        _count: { select: { socialProfiles: true } },
+        _count: { 
+          select: { 
+            socialProfiles: { where: { status: 'CONNECTED' } } 
+          }
+        }
       },
     });
 

@@ -373,34 +373,30 @@ export class SocialConnectionService {
     }
 
     const token = await this.encryptionService.decrypt(connection.accessToken);
+    const userUrn = connection.platformUserId;
 
-    // 3. Extract necessary URNs
-    // pageId is usually stored in the 'externalId' or 'platformPageId' column
-    const organizationUrn = 'urn:li:organization:109376565';
-    const userUrn = 'urn:li:person:oaxV-EunJg';
-
-    if (!organizationUrn || !userUrn) {
+    if (!userUrn) {
       throw new BadRequestException(
         'Connection missing required URNs (User or Organization)',
       );
     }
 
     // 4. Safety Check
-    if (!organizationUrn.startsWith('urn:li:organization:')) {
+    if (!userUrn.startsWith('urn:li:person:')) {
       this.logger.warn(
-        `Attempted to subscribe a non-organization URN: ${organizationUrn}`,
+        `Attempted to subscribe a non-organization URN: ${userUrn}`,
       );
       return false;
     }
 
     this.logger.log(
-      `Initiating LinkedIn subscription for Org: ${organizationUrn}`,
+      `Initiating LinkedIn subscription for Org: ${userUrn}`,
     );
 
     // 5. Delegate to your provider
     return await this.linkedin.subscribeOrganizationToWebhook(
       userUrn,
-      organizationUrn,
+      userUrn,
       token,
     );
   }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -8,14 +8,20 @@ import {
 import { InboxCommentsService } from '../services/inbox-comments.service';
 import { SendCommentReplyDto } from '../dtos/send-comment.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { PermissionsGuard } from '@/common/guards/permission.guard';
+import { ContextGuard } from '@/common/guards/context.guard';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 
 @ApiTags('Comments')
 @ApiBearerAuth()
-@Controller('inbox/:workspaceId/posts')
+@UseGuards(ContextGuard, PermissionsGuard)
+@Controller('workspaces/:workspaceId/inbox/comments')
 export class InboxCommentsController {
   constructor(private readonly inboxService: InboxCommentsService) {}
 
-  @Get(':platformPostId/comments')
+  @Get('/post/:platformPostId')
+  @RequirePermission(PermissionResource.COMMENTS, PermissionAction.READ)
   @ApiOperation({ summary: 'List all comments for a specific post' })
   @ApiResponse({ status: 200, description: 'Returns threaded comments' })
   async listComments(
@@ -28,7 +34,8 @@ export class InboxCommentsController {
     });
   }
 
-  @Post(':postId/comments/:commentId/reply')
+  @Post(':commentId/reply')
+  @RequirePermission(PermissionResource.COMMENTS, PermissionAction.CREATE)
   @ApiOperation({ summary: 'Reply to a specific public comment' })
   @ApiResponse({ status: 201, description: 'Comment reply queued for sending' })
   async replyToComment(
@@ -45,7 +52,7 @@ export class InboxCommentsController {
     });
   }
 
-  @Post(':postId/comments/:commentId/retry')
+  @Post(':commentId/retry')
   @ApiOperation({ summary: 'Retry sending a comment reply' })
   async retrySendingComment(
     @Param('workspaceId') workspaceId: string,
