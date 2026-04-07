@@ -55,6 +55,7 @@ export class PostController {
   }
 
   @Get()
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.READ)
   @ApiOperation({ summary: 'Get all posts in the workspace' })
   @ApiPaginatedResponse(PostDto)
   async findAll(
@@ -65,6 +66,7 @@ export class PostController {
   }
 
   @Get('metrics')
+  @RequirePermission(PermissionResource.ANALYTICS, PermissionAction.READ)
   @ApiOperation({ summary: 'List all posts with metrics' })
   @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiQuery({ name: 'cursor', required: false, type: String })
@@ -82,6 +84,7 @@ export class PostController {
   }
 
   @Get(':postId')
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.READ)
   @ApiOperation({ summary: 'Get a single post by ID' })
   @ApiStandardResponse(PostDto)
   async getOne(
@@ -93,6 +96,7 @@ export class PostController {
   }
 
   @Patch(':postId')
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.UPDATE)
   @ApiOperation({ summary: 'Update a post by ID' })
   @ApiStandardResponse(PostDto)
   async update(
@@ -105,6 +109,7 @@ export class PostController {
   }
 
   @Delete(':postId')
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.DELETE)
   @ApiOperation({
     summary: 'Delete a post by ID (including its thread children)',
   })
@@ -118,6 +123,7 @@ export class PostController {
   }
 
   @Post('bulk/execute')
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.CREATE)
   @RequireFeature('bulkScheduling')
   @ApiOperation({
     summary: 'Execute bulk schedule after CSV validation',
@@ -134,10 +140,10 @@ export class PostController {
   }
 
   @Patch(':id/edit')
-  @ApiOperation({
-    summary: 'Edit a published post content',
-    description:
-      'Updates the content of a post already published to external platforms. Currently supports Facebook only.',
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.UPDATE)
+  @ApiOperation({ 
+    summary: 'Edit a published post content', 
+    description: 'Updates the content of a post already published to external platforms. Currently supports Facebook only.' 
   })
   @ApiParam({ name: 'id', description: 'The internal Database ID of the post' })
   @ApiBody({
@@ -161,10 +167,10 @@ export class PostController {
   }
 
   @Delete(':id/remote')
-  @ApiOperation({
-    summary: 'Delete a published post from platforms',
-    description:
-      'Deletes the post from external social media platforms (Facebook) and marks it as deleted in the database.',
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.DELETE)
+  @ApiOperation({ 
+    summary: 'Delete a published post from platforms', 
+    description: 'Deletes the post from external social media platforms (Facebook) and marks it as deleted in the database.' 
   })
   @ApiParam({ name: 'id', description: 'The internal Database ID of the post' })
   async deleteRemotePost(

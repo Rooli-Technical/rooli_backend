@@ -1,9 +1,6 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma } from '@generated/client';
-import {
-  PermissionScope,
-  RoleScope,
-} from '@generated/enums';
+import { PermissionScope, Prisma, RoleScope } from '@generated/client';
+
 import {
   BadRequestException,
   ForbiddenException,
@@ -18,7 +15,7 @@ import {
   ListPermissionsQuery,
   PermissionNameFormat,
 } from './dtos/list-permissions-query.dto';
-import { PermissionAction, PermissionResource } from '@/common/constants/rbac';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
 
 @Injectable()
 export class RoleService {
@@ -78,35 +75,6 @@ export class RoleService {
     };
   }
 
-  /**
-   * Returns effective permissions for the current request context.
-   * Use this for frontend feature gating.
-   */
-  getMyPermissionsFromRequest(
-    req: any,
-    format: PermissionNameFormat = 'RESOURCE_ACTION',
-  ) {
-    const permissions: string[] = req?.permissions ?? [];
-    const context: 'WORKSPACE' | 'ORGANIZATION' | undefined =
-      req?.currentContext;
-
-    if (format === 'RESOURCE_ACTION') return permissions;
-
-    // If your permissions are stored as "POSTS.CREATE" already, just return them.
-    // If you decide to store as "SCOPE.RESOURCE.ACTION", you can prepend scope here.
-    if (!context) return permissions;
-
-    // If permissions already have scope prefix, do nothing.
-    if (
-      permissions.some(
-        (p) => p.startsWith('WORKSPACE.') || p.startsWith('ORGANIZATION.'),
-      )
-    ) {
-      return permissions;
-    }
-
-    return permissions.map((p) => `${context}.${p}`);
-  }
 
   // ============================================================
   // ROLES
@@ -125,35 +93,38 @@ export class RoleService {
 
     await this.assertOrgMemberOrThrow({ organizationId, userId });
 
-    const scope = query?.scope;
-    const includeSystem = query?.includeSystem ?? true;
+    const page = query?.page || 1;
+    const limit = query?.limit || 50;
+    const skip = (page - 1) * limit;
 
     const where: Prisma.RoleWhereInput = {
-      ...(scope
-        ? { scope }
-        : { scope: { in: [RoleScope.ORGANIZATION, RoleScope.WORKSPACE] } }),
+      ...(query?.scope ? { scope: query.scope } : { scope: { in: ['ORGANIZATION', 'WORKSPACE'] } }),
       OR: [
-        { organizationId }, // org-specific roles
-        ...(includeSystem ? [{ organizationId: null, isSystem: true }] : []), // system templates
+        { organizationId }, 
+        ...(query?.includeSystem ?? true ? [{ organizationId: null, isSystem: true }] : []),
       ],
     };
+  
 
-    return this.prisma.role.findMany({
-      where,
-      orderBy: [{ scope: 'asc' }, { isSystem: 'desc' }, { name: 'asc' }],
-      select: {
-        id: true,
-        scope: true,
-        organizationId: true,
-        name: true,
-        slug: true,
-        description: true,
-        isSystem: true,
-        isDefault: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.role.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ scope: 'asc' }, { isSystem: 'desc' }, { name: 'asc' }],
+      }),
+      this.prisma.role.count({ where }),
+    ]);
+
+    return {
+      items: items.map(role => this.formatRoleResponse(role)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
+    };
   }
 
   async getRole(params: {
@@ -184,7 +155,7 @@ export class RoleService {
       throw new ForbiddenException('Role not accessible in this organization');
     }
 
-    return role;
+    return this.formatRoleResponse(role);
   }
 
   /**
@@ -354,7 +325,7 @@ export class RoleService {
     const permissionIds = [...new Set(dto.permissionIds ?? [])];
     await this.assertPermissionIdsMatchRoleScope(role.scope, permissionIds);
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedRole = await this.prisma.$transaction(async (tx) => {
       // delete existing mappings
       await tx.rolePermission.deleteMany({ where: { roleId } });
 
@@ -373,6 +344,8 @@ export class RoleService {
         },
       });
     });
+
+    return this.formatRoleResponse(updatedRole);
   }
 
   /**
@@ -392,18 +365,8 @@ export class RoleService {
 
     await this.assertOrgMemberOrThrow({ organizationId, userId });
 
-    const role = await this.prisma.role.findUnique({
-      where: { id: roleId },
-      select: { id: true, organizationId: true, isSystem: true },
-    });
-    if (!role) throw new NotFoundException('Role not found');
-
-    if (role.isSystem || role.organizationId === null) {
-      throw new ForbiddenException('System roles cannot be deleted');
-    }
-    if (role.organizationId !== organizationId) {
-      throw new ForbiddenException('Role does not belong to this organization');
-    }
+    const role = await this.prisma.role.findUnique({ where: { id: roleId } });
+    this.assertRoleModifiable(role, organizationId);
 
     const [orgMemberUsage, wsMemberUsage] = await this.prisma.$transaction([
       this.prisma.organizationMember.count({ where: { roleId } }),
@@ -554,5 +517,47 @@ export class RoleService {
     if (!s) throw new BadRequestException('Slug cannot be empty');
     if (s.length > 64) throw new BadRequestException('Slug too long (max 64)');
     return s;
+  }
+
+  private formatRoleResponse(role: any) {
+    return {
+      id: role.id,
+      name: role.name,
+      slug: role.slug,
+      scope: role.scope,
+      description: role.description,
+      isSystem: role.isSystem,
+      isDefault: role.isDefault,
+      createdAt: role.createdAt,
+      permissions:
+        role.permissions?.map((rp: any) => ({
+          id: rp.permission.id,
+          scope: rp.permission.scope,
+          resource: rp.permission.resource,
+          action: rp.permission.action,
+        })) || [],
+    };
+  }
+
+  private assertRoleVisibility(role: any, organizationId: string) {
+    if (!role) throw new NotFoundException('Role not found');
+
+    // Role is visible if it's a System role OR it belongs to their specific Org
+    if (!role.isSystem && role.organizationId !== organizationId) {
+      throw new ForbiddenException('Role not accessible in this organization');
+    }
+    return role;
+  }
+
+  private assertRoleModifiable(role: any, organizationId: string) {
+    this.assertRoleVisibility(role, organizationId);
+
+    // Even if it's visible, they cannot edit or delete System roles
+    if (role.isSystem || role.organizationId === null) {
+      throw new ForbiddenException(
+        'System roles cannot be modified or deleted',
+      );
+    }
+    return role;
   }
 }

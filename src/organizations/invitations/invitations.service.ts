@@ -13,7 +13,6 @@ import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
-import { isPast } from 'date-fns/isPast';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
 
 @Injectable()
@@ -182,7 +181,7 @@ export class InvitationsService {
     };
   }
 
-  async acceptInvite(
+async acceptInvite(
     token: string,
     data: { password?: string; firstName?: string; lastName?: string },
   ) {
@@ -202,14 +201,24 @@ export class InvitationsService {
       throw new BadRequestException('Invitation invalid or expired');
     }
 
+    // 🚨 CRITICAL FIX 1: The TOCTOU Protection (Check Limits at Acceptance)
+    // We pass `invite.email` to exclude THIS specific invite from the "pending" count,
+    // ensuring we only block them if the physical active seats are full.
+    await this.checkSeatLimit(invite.organizationId, invite.email);
+
+    let isNewUser = false;
+    let finalWorkspaceMemberId: string | null = null;
+
     // B. Main Transaction
     const result = await this.prisma.$transaction(async (tx) => {
       // 1. Handle User Account
       let user = await tx.user.findUnique({ where: { email: invite.email } });
 
       if (!user) {
+        isNewUser = true;
         if (!data.password)
           throw new BadRequestException('Password required for new account');
+        
         const hashedPassword = await argon2.hash(data.password);
 
         user = await tx.user.create({
@@ -218,8 +227,10 @@ export class InvitationsService {
             password: hashedPassword,
             firstName: data.firstName,
             lastName: data.lastName,
-            isOnboardingComplete: true, // They bypass onboarding via invite
+            isOnboardingComplete: true, // Bypass onboarding
             isEmailVerified: true,
+            // UX Bonus: Set their default dashboard to the workspace they were invited to
+            lastActiveWorkspaceId: invite.workspaceId || null, 
           },
         });
       }
@@ -235,7 +246,6 @@ export class InvitationsService {
       });
 
       if (!orgMember) {
-        // Resolve Org Role: If invited to workspace, they get default 'member' in Org
         let orgRoleId = invite.roleId;
         if (invite.workspaceId) {
           const defaultRole = await tx.role.findFirst({
@@ -258,8 +268,6 @@ export class InvitationsService {
         });
       }
 
-      let workspaceMemberId: string | null = null;
-
       // 3. Handle Workspace Membership (If applicable)
       if (invite.workspaceId) {
         const existingWsMember = await tx.workspaceMember.findUnique({
@@ -279,9 +287,9 @@ export class InvitationsService {
               roleId: invite.roleId,
             },
           });
-          workspaceMemberId = newWsMember.id;
+          finalWorkspaceMemberId = newWsMember.id;
         } else {
-          workspaceMemberId = existingWsMember.id;
+          finalWorkspaceMemberId = existingWsMember.id;
         }
       }
 
@@ -291,21 +299,33 @@ export class InvitationsService {
         data: { status: 'ACCEPTED', acceptedAt: new Date() },
       });
 
-      return { user, invite: updatedInvite, workspaceMemberId };
+      return { user, invite: updatedInvite, workspaceMemberId: finalWorkspaceMemberId };
     });
 
-    // C. Generate Auto-Login Tokens
-    return {
-      ...(await this.generateTokens(
+    // C. Handle Response & Authentication
+    if (isNewUser) {
+      // 🚨 CRITICAL FIX 2: Inject the Context IDs directly into the Auto-Login JWT
+      const tokens = await this.generateTokens(
         result.user.id,
         result.user.email,
-        result.invite.organizationId,
-        result.invite.workspaceId,
-        result.workspaceMemberId,
+        result.invite.organizationId,    
+        result.invite.workspaceId,        
+        result.workspaceMemberId,         
         result.user.refreshTokenVersion,
-      )),
-      user: this.toSafeUser(result.user),
-    };
+      );
+      
+      return { 
+        message: 'Account created and invite accepted', 
+        ...tokens, 
+        user: this.toSafeUser(result.user) 
+      };
+    } else {
+      // Existing User: Security best practice is forcing them to login with their existing password.
+      return { 
+        message: 'Invite accepted. Please log in to continue.', 
+        requireLogin: true 
+      };
+    }
   }
 
   async resendInvitation(invitationId: string) {
@@ -370,7 +390,7 @@ export class InvitationsService {
 
   async getPendingInvitations(organizationId: string) {
     return this.prisma.invitation.findMany({
-      where: { organizationId },
+      where: { organizationId, status: 'PENDING' },
       include: {
         role: { select: { name: true } },
         workspace: { select: { name: true } }, // Show which workspace they are invited to

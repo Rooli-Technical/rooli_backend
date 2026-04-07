@@ -25,7 +25,6 @@ import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
 
-
 @ApiTags('Workspace Members')
 @ApiBearerAuth()
 @UseGuards(ContextGuard, PermissionsGuard)
@@ -34,7 +33,10 @@ export class WorkspaceMemberController {
   constructor(private readonly memberService: WorkspaceMemberService) {}
 
   @Post()
-  @RequirePermission(PermissionResource.WORKSPACE_MEMBERS, PermissionAction.CREATE)
+  @RequirePermission(
+    PermissionResource.WORKSPACE_MEMBERS,
+    PermissionAction.CREATE,
+  )
   @ApiOperation({
     summary: 'Add a member to workspace',
     description:
@@ -57,7 +59,10 @@ export class WorkspaceMemberController {
   }
 
   @Get()
-  @RequirePermission(PermissionResource.WORKSPACE_MEMBERS, PermissionAction.READ)
+  @RequirePermission(
+    PermissionResource.WORKSPACE_MEMBERS,
+    PermissionAction.READ,
+  )
   @ApiOperation({ summary: 'List workspace members' })
   @ApiResponse({ status: 200, description: 'Paginated list of members.' })
   async listMembers(
@@ -71,7 +76,10 @@ export class WorkspaceMemberController {
   }
 
   @Patch(':memberId')
-  @RequirePermission(PermissionResource.WORKSPACE_MEMBERS, PermissionAction.UPDATE)
+  @RequirePermission(
+    PermissionResource.WORKSPACE_MEMBERS,
+    PermissionAction.UPDATE,
+  )
   @ApiOperation({
     summary: 'Update member role',
     description:
@@ -94,7 +102,10 @@ export class WorkspaceMemberController {
   }
 
   @Delete(':memberId')
-  @RequirePermission(PermissionResource.WORKSPACE_MEMBERS, PermissionAction.DELETE)
+  @RequirePermission(
+    PermissionResource.WORKSPACE_MEMBERS,
+    PermissionAction.DELETE,
+  )
   @ApiOperation({
     summary: 'Remove member',
     description:

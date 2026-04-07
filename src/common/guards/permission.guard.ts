@@ -6,71 +6,51 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSION_KEY } from '../decorators/require-permission.decorator';
-import { PermissionResource, PermissionAction } from '../constants/rbac';
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // 1. Allow endpoints marked as Public or specifically for Billing
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
       context.getClass(),
     ]);
     if (isPublic) return true;
 
-    // 1. Get the Required Permission from the Decorator
     const requiredRule = this.reflector.getAllAndOverride<{
-      resource: PermissionResource;
-      action: PermissionAction;
+      resource: string;
+      action: string;
     }>(PERMISSION_KEY, [context.getHandler(), context.getClass()]);
 
-    // If no permission is required, allow access (Public within the workspace)
-    if (!requiredRule) {
-      return true;
-    }
+    if (!requiredRule) return true; // no permission needed
 
-    // 2. Get the User Context (Loaded by ContextGuard)
     const request = context.switchToHttp().getRequest();
     const userRole = request.currentRole;
-    const userPermissions = request.permissions; // e.g. ["POSTS.CREATE", "POSTS.READ"]
+    const userPermissions = request.permissions; // lowercase strings
 
     if (!userRole || !userPermissions) {
       throw new ForbiddenException('No permission context found');
     }
 
+    // Owners bypass all
     if (userRole.slug === 'owner') return true;
 
-    // ---------------------------------------------------------
-    // 2. PERMISSION WILDCARDS (The "Cascading Check")
-    // ---------------------------------------------------------
+    const resource = requiredRule.resource.toLowerCase();
+    const action = requiredRule.action.toLowerCase();
 
-    // A. GLOBAL ADMIN: "ALL.MANAGE"
-    // Can do absolutely anything in this scope.
-    if (userPermissions.includes(`ALL.MANAGE`)) return true;
-
-    // B. GLOBAL ACTION: "ALL.READ" or "ALL.DELETE"
-    if (userPermissions.includes(`ALL.${requiredRule.action}`)) return true;
-
-    // C. RESOURCE ADMIN: "POSTS.ALL" or "POSTS.MANAGE"
-    if (userPermissions.includes(`${requiredRule.resource}.ALL`)) return true;
-    if (userPermissions.includes(`${requiredRule.resource}.MANAGE`))
-      return true;
-
-    // D. EXACT MATCH: "POSTS.CREATE"
-    // The standard check for granular permissions.
+    // Wildcard checks
     if (
-      userPermissions.includes(
-        `${requiredRule.resource}.${requiredRule.action}`,
-      )
-    )
+      userPermissions.includes('ALL.MANAGE') || // global admin
+      userPermissions.includes(`ALL.${action}`) || // all.read, all.delete
+      userPermissions.includes(`${resource}.ALL`) || // resource.all
+      userPermissions.includes(`${resource}.manage`) || // resource.manage
+      userPermissions.includes(`${resource}.${action}`) // exact
+    ) {
       return true;
+    }
 
-    // ---------------------------------------------------------
-    // 3. FAILURE
-    // ---------------------------------------------------------
     throw new ForbiddenException(
-      `Permission denied. Required: ${requiredRule.resource}.${requiredRule.action}`,
+      `Permission denied. Required: ${resource}.${action}`,
     );
   }
 }

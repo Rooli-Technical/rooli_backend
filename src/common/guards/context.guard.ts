@@ -16,7 +16,7 @@ export class ContextGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // 1. Allow endpoints marked as Public or specifically for Billing
+     // 1. Allow endpoints marked as Public
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
       context.getClass(),
@@ -42,23 +42,22 @@ export class ContextGuard implements CanActivate {
           member: { userId: user.userId },
         },
         include: {
-          role: {
-            include: {
-              permissions: {
-                include: { permission: true },
-              },
-            },
+          role: { // The explicit Workspace Role
+            include: { permissions: { include: { permission: true } } },
           },
           member: {
-            include: { organization: { select: { status: true, id: true } } },
+            include: { 
+              organization: { select: { status: true, id: true } },
+              role: { // 👈 FIX: Must fetch the Org Role for inheritance!
+                include: { permissions: { include: { permission: true } } }
+              }
+            },
           },
         },
       });
 
       if (!wsMember) {
-        throw new ForbiddenException(
-          'You do not have access to this workspace',
-        );
+        throw new ForbiddenException('You do not have access to this workspace');
       }
 
       // Step 2: Check Suspension
@@ -66,21 +65,22 @@ export class ContextGuard implements CanActivate {
         throw new ForbiddenException('Organization is suspended');
       }
 
-      // Step 3: Fire-and-forget update (Don't await!)
-      this.updateLastActive(user.userId, workspaceId);
+      // Step 3: Fire-and-forget update
+      this.updateLastActive(user.userId, workspaceId).catch(() => {});
 
-      //Step 4: Attach Context
+      // 🚨 CRITICAL FIX: Use workspace role if it exists, otherwise fallback to org role
+      const activeRole = wsMember.role || wsMember.member.role;
+
+      // Step 4: Attach Context
       request.currentContext = 'WORKSPACE';
       request.orgId = wsMember.member.organization.id;
       request.workspaceId = workspaceId;
       request.orgMember = wsMember.member;
-
-      // CRITICAL FIX: Always use the Workspace Role
-      request.currentRole = wsMember.role;
+      request.currentRole = activeRole;
 
       // Optimization: Extract permissions names for easier checking
-      request.permissions = wsMember.role.permissions.map(
-        (p) => `${p.permission.resource}.${p.permission.action}`,
+      request.permissions = activeRole.permissions.map(
+        (p) => `${p.permission.resource.toLowerCase()}.${p.permission.action.toLowerCase()}`
       );
 
       return true;
@@ -106,8 +106,7 @@ export class ContextGuard implements CanActivate {
         },
       });
 
-      if (!orgMember)
-        throw new ForbiddenException('Not a member of this organization');
+      if (!orgMember) throw new ForbiddenException('Not a member of this organization');
 
       if (orgMember.organization.status === 'SUSPENDED') {
         throw new ForbiddenException('Organization is suspended');
@@ -118,8 +117,9 @@ export class ContextGuard implements CanActivate {
       request.orgMember = orgMember;
       request.currentRole = orgMember.role;
       request.permissions = orgMember.role.permissions.map(
-        (p) => `${p.permission.resource}.${p.permission.action}`,
+        (p) => `${p.permission.resource.toLowerCase()}.${p.permission.action.toLowerCase()}`
       );
+      
       return true;
     }
 

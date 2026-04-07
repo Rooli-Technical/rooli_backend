@@ -9,21 +9,17 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-} from '@nestjs/swagger';
-import { InvitationsService } from './invitations.service';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { InvitationsService } from '../invitations.service';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { CreateInviteDto } from './dtos/invite-member.dto';
-import { AcceptInviteDto } from './dtos/accept-invite.dto';
+import { CreateInviteDto } from '../dtos/invite-member.dto';
+import { PermissionAction, PermissionResource } from '@/common/constants/rbac';
+import { AcceptInviteDto } from '../dtos/accept-invite.dto';
 import { Public } from '@/common/decorators/public.decorator';
-import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+
 
 @ApiTags('Invitations')
 @ApiBearerAuth()

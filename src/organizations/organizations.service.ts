@@ -1,7 +1,5 @@
 import {
-  BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -12,10 +10,8 @@ import { UpdateOrganizationDto } from './dtos/update-organization.dto';
 import { GetAllOrganizationsDto } from './dtos/get-organiations.dto';
 import { PrismaService } from '@/prisma/prisma.service';
 import slugify from 'slugify';
-import dayjs from 'dayjs';
 import { BillingService } from '@/billing/billing.service';
-import { ListMembersQueryDto } from './dtos/list-members.dto';
-import { Prisma, RoleScope } from '@generated/client';
+import { Prisma } from '@generated/client';
 
 @Injectable()
 export class OrganizationsService {
@@ -63,6 +59,18 @@ export class OrganizationsService {
 
     let organization; // Declare outside to access in catch block
 
+    const workspaceName = `${dto.name} Workspace`;
+    const workspaceSlug = slugify(workspaceName, { lower: true, strict: true });
+
+    const [orgOwnerRole, wsAdminRole] = await Promise.all([
+      this.prisma.role.findFirstOrThrow({
+        where: { slug: 'owner', scope: 'ORGANIZATION' },
+      }),
+      this.prisma.role.findFirstOrThrow({
+        where: { slug: 'owner', scope: 'WORKSPACE' },
+      }),
+    ]);
+
     try {
       // 5. Transaction: Create DB Record
       organization = await this.prisma.$transaction(async (tx) => {
@@ -81,13 +89,29 @@ export class OrganizationsService {
         if (!ownerRole)
           throw new InternalServerErrorException("Role 'owner' missing");
 
-        await tx.organizationMember.create({
+        const orgMember = await tx.organizationMember.create({
           data: {
             organizationId: org.id,
             userId,
             roleId: ownerRole.id,
             invitedByUserId: userId,
           },
+        });
+
+        const workspace = await tx.workspace.create({
+          data: {
+            name: workspaceName,
+            slug: workspaceSlug,
+            timezone: org.timezone,
+            organizationId: org.id,
+            members: {
+              create: {
+                memberId: orgMember.id,
+                roleId: wsAdminRole.id,
+              },
+            },
+          },
+          include: { members: true },
         });
 
         return org;
@@ -133,26 +157,42 @@ export class OrganizationsService {
     return org;
   }
 
-  async getAllOrganizations(dto: GetAllOrganizationsDto) {
-    const { name, isActive, page, limit } = dto;
+  async getAllOrganizations(userId: string, dto: GetAllOrganizationsDto) {
+    const { name, isActive, page = 1, limit = 20 } = dto;
 
     // Calculate pagination offsets
     const skip = (page - 1) * limit;
     const take = limit;
 
-    const where: any = {};
+   const where: Prisma.OrganizationWhereInput = {
+      members: {
+        some: { userId: userId } 
+      }
+    };
+
 
     if (name) where.name = { contains: name, mode: 'insensitive' };
     if (isActive !== undefined) where.isActive = isActive;
 
-    const organizations = await this.prisma.organization.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: 'desc' },
-    });
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.organization.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.organization.count({ where }),
+    ]);
 
-    return organizations;
+    return {
+      items,
+      meta: {
+        total,
+        page,
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
+    };
   }
 
   async updateOrganization(orgId: string, dto: UpdateOrganizationDto) {
@@ -175,230 +215,82 @@ export class OrganizationsService {
       });
 
       // Deactivate all members
-      await tx.organization.update({
-        where: { id: orgId },
+      await tx.organizationMember.updateMany({
+        where: { organizationId: orgId },
         data: {
           isActive: false,
-          status: 'SUSPENDED',
         },
       });
       // Cancel any active subscriptions
-      //await this.cancelSubscription(orgId);
+      await this.billingService.cancelSubscription(orgId);
 
       return { success: true, message: 'Organization deleted successfully' };
     });
   }
 
-  async listOrganizationMembers(params: {
-    organizationId: string;
-    query?: ListMembersQueryDto;
-  }) {
-    const { organizationId, query } = params;
-
-    // 1. Verify Organization exists
-    const organization = await this.prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
-    if (!organization) throw new NotFoundException('Organization not found');
-
-    // 2. Pagination Logic
-    const take = Math.min(query?.limit ?? 20, 100);
-    const skip = ((query?.page ?? 1) - 1) * take;
-
-    // 3. Search Filter (Email, First Name, Last Name)
-    const search = query?.search?.trim();
-    const where: Prisma.OrganizationMemberWhereInput = {
-      organizationId,
-      ...(search
-        ? {
-            user: {
-              OR: [
-                { email: { contains: search, mode: 'insensitive' } },
-                { firstName: { contains: search, mode: 'insensitive' } },
-                { lastName: { contains: search, mode: 'insensitive' } },
-              ],
-            },
-          }
-        : {}),
-    };
-
-    // 4. Execute Fetch
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.organizationMember.findMany({
-        where,
-        take,
-        skip,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          role: true, // The Organization-level role (e.g., Owner, Admin, Member)
-          user: {
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-              avatar: true,
-              lastActiveAt: true,
-            },
-          },
+/**
+   * Returns a high-level snapshot of the organization's usage, limits, and billing.
+   * Perfect for the "Settings > Overview" page.
+   */
+  async getOrganizationSummary(orgId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId, isActive: true },
+      include: {
+        subscription: {
+          include: { plan: true }
         },
-      }),
-      this.prisma.organizationMember.count({ where }),
-    ]);
+        _count: {
+          select: {
+            members: true,
+            workspaces: true,
+          }
+        }
+      }
+    });
+
+    if (!org) throw new NotFoundException('Organization not found');
+
+    const plan = org.subscription?.plan;
+    const customLimits = org.subscription?.customLimits as any;
+
+    // Calculate effective limits (Custom Enterprise overrides vs Standard Plan)
+    const maxWorkspaces = customLimits?.maxWorkspaces ?? plan?.maxWorkspaces ?? 1;
+    const maxTeamMembers = customLimits?.maxTeamMembers ?? plan?.maxTeamMembers ?? 1;
+    const aiCreditsLimit = customLimits?.monthlyAiCredits ?? plan?.monthlyAiCredits ?? 0;
 
     return {
-      items,
-      meta: {
-        total,
-        page: query?.page ?? 1,
-        limit: take,
-        totalPages: Math.ceil(total / take),
+      organization: {
+        id: org.id,
+        name: org.name,
+        status: org.status,
+        createdAt: org.createdAt,
       },
-    };
-  }
-
-  async updateRole(params: {
-    organizationId: string;
-    memberId: string; // Who is being promoted?
-    roleId: string; // The new role
-  }) {
-    const { organizationId, memberId, roleId } = params;
-
-    // 1. Validation: Ensure Role is valid for ORGANIZATION scope
-    const newRole = await this.prisma.role.findUnique({
-      where: { id: roleId },
-    });
-
-    if (!newRole || newRole.scope !== RoleScope.ORGANIZATION) {
-      throw new BadRequestException(
-        'Invalid role. Must be an Organization role.',
-      );
-    }
-
-    // 2. Validation: Prevent Demoting the Last Owner
-    // If we are changing an Owner to something else, check if they are the LAST one.
-    const memberToUpdate = await this.prisma.organizationMember.findUnique({
-      where: { id: memberId },
-      include: { role: true },
-    });
-
-    if (!memberToUpdate) throw new NotFoundException('Member not found');
-
-    if (memberToUpdate.role.slug === 'owner' && newRole.slug !== 'owner') {
-      await this.assertNotLastOrgOwner(organizationId, memberId);
-    }
-
-    // 3. Execute Update
-    return this.prisma.organizationMember.update({
-      where: { id: memberId },
-      data: { roleId },
-      include: { role: true },
-    });
-  }
-
-  /**
-   * Fire an employee.
-   * This removes them from the Organization AND all Workspaces (Cascading delete).
-   */
-  async remove(params: {
-    actorId: string;
-    organizationId: string;
-    memberId: string;
-  }) {
-    const { actorId, organizationId, memberId } = params;
-
-    // 1. Prevent Suicide (Optional, but good UX)
-    // Most apps force you to leave via a separate "Leave Org" button,
-    // rather than "Removing yourself" from the list.
-    if (actorId === memberId) {
-      throw new BadRequestException(
-        'You cannot remove yourself. Use "Leave Organization" instead.',
-      );
-    }
-
-    // 2. Find Member
-    const memberToRemove = await this.prisma.organizationMember.findUnique({
-      where: { id: memberId },
-      include: { role: true },
-    });
-
-    if (!memberToRemove || memberToRemove.organizationId !== organizationId) {
-      throw new NotFoundException('Member not found');
-    }
-
-    // 3. Prevent Removing Last Owner
-    if (memberToRemove.role.slug === 'owner') {
-      await this.assertNotLastOrgOwner(organizationId, memberId);
-    }
-
-    // 4. Execute (Cascade Delete)
-    await this.prisma.organizationMember.delete({
-      where: { id: memberId },
-    });
-
-    return { success: true };
-  }
-
-  /**
-   * Allows a user to voluntarily leave the organization.
-   */
-  async leave(userId: string, organizationId: string) {
-    // 1. Find the Member Record for this User
-    const member = await this.prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId,
-          userId,
+      billing: {
+        planName: plan?.name ?? 'Free / None',
+        interval: plan?.interval ?? 'NONE',
+        isActive: org.subscription?.isActive ?? false,
+      },
+      usage: {
+        workspaces: {
+          used: org._count.workspaces,
+          limit: maxWorkspaces,
+          isNearLimit: org._count.workspaces >= maxWorkspaces,
         },
-      },
-      include: { role: true },
-    });
-
-    if (!member) {
-      throw new NotFoundException('You are not a member of this organization');
-    }
-
-    // 2. Safety Check: Are they the last captain?
-    if (member.role.slug === 'owner') {
-      await this.assertNotLastOrgOwner(organizationId, member.id);
-    }
-
-    // 3. Execution (Cascading Delete)
-    // This removes them from the Org AND all Workspaces automatically
-    // (Assuming onDelete: Cascade in schema)
-    await this.prisma.organizationMember.delete({
-      where: { id: member.id },
-    });
-
-    return { success: true };
+        teamMembers: {
+          used: org._count.members,
+          limit: maxTeamMembers,
+          isNearLimit: org._count.members >= maxTeamMembers,
+        },
+        aiCredits: {
+          used: org.totalCreditsUsed,
+          limit: aiCreditsLimit,
+          isNearLimit: org.totalCreditsUsed >= (aiCreditsLimit * 0.9), // 90% warning
+        }
+      }
+    };
   }
 
   // --- HELPERS ---
-
-  private async assertNotLastOrgOwner(
-    organizationId: string,
-    memberIdToRemove: string,
-  ) {
-    const ownerRole = await this.prisma.role.findFirst({
-      where: { scope: RoleScope.ORGANIZATION, slug: 'owner' },
-    });
-
-    if (!ownerRole) return;
-
-    const remainingOwners = await this.prisma.organizationMember.count({
-      where: {
-        organizationId,
-        roleId: ownerRole.id,
-        NOT: { id: memberIdToRemove },
-      },
-    });
-
-    if (remainingOwners === 0) {
-      throw new BadRequestException(
-        'Cannot remove or demote the last Organization Owner. Transfer ownership first.',
-      );
-    }
-  }
 
   //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Run once a day
   async cleanupAbandonedOrganizations() {

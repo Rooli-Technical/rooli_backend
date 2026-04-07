@@ -6,6 +6,7 @@ import { ListAuditLogsDto } from './dtos/list-audit-logs.dto';
 
 export interface CreateAuditLogDto {
   organizationId: string;
+  workspaceId: string;
   actorUserId?: string;
   actorMemberId?: string;
   action: AuditAction;

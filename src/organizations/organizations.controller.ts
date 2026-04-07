@@ -27,17 +27,20 @@ import { RequirePermission } from '@/common/decorators/require-permission.decora
 import { ListMembersQueryDto } from './dtos/list-members.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { UpdateOrgMemberRoleDto } from './dtos/update-member-role.dto';
-import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+import { OrganizationMemberService } from './organization-member/organization-member.service';
+import { PermissionAction, PermissionResource } from '@/common/constants/rbac';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
 @Controller('organizations')
 @UseGuards(ContextGuard, PermissionsGuard)
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(
+    private readonly organizationsService: OrganizationsService,
+    private readonly organizationMembersService: OrganizationMemberService,
+  ) {}
 
   @Post()
-  @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.CREATE)
   @ApiOperation({
     summary: 'Create organization',
     description:
@@ -67,15 +70,15 @@ export class OrganizationsController {
   @Get()
   @ApiOperation({ summary: 'Get all organizations with optional filters' })
   @ApiOkResponse({ description: 'List of organizations' })
-  async getAll(@Query() query: GetAllOrganizationsDto) {
-    return this.organizationsService.getAllOrganizations(query);
+  async getAll(@Query() query: GetAllOrganizationsDto, @CurrentUser('userId') userId: string) {
+    return this.organizationsService.getAllOrganizations(userId, query);
   }
 
   @Get(':organizationId/members')
-  @ApiOperation({
-    summary: 'List organization members',
-    description:
-      'Returns a paginated list of all members within a specific organization.',
+  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
+  @ApiOperation({ 
+    summary: 'List organization members', 
+    description: 'Returns a paginated list of all members within a specific organization.' 
   })
   @ApiResponse({ status: 200, description: 'Members retrieved successfully.' })
   @ApiResponse({ status: 404, description: 'Organization not found.' })
@@ -83,13 +86,14 @@ export class OrganizationsController {
     @Param('organizationId') organizationId: string,
     @Query() query: ListMembersQueryDto,
   ) {
-    return this.organizationsService.listOrganizationMembers({
+    return this.organizationMembersService.listOrganizationMembers({
       organizationId,
       query,
     });
   }
 
-  @Get(':id')
+  @Get(':organizationId')
+  @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.READ)
   @ApiOperation({
     summary: 'Get organization',
     description:
@@ -109,11 +113,11 @@ export class OrganizationsController {
       },
     },
   })
-  async getOrganization(@Param('id') orgId: string) {
+  async getOrganization(@Param('organizationId') orgId: string) {
     return this.organizationsService.getOrganization(orgId);
   }
 
-  @Patch(':id')
+  @Patch(':organizationId')
   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.UPDATE)
   @ApiOperation({
     summary: 'Update organization',
@@ -135,14 +139,13 @@ export class OrganizationsController {
     },
   })
   async updateOrganization(
-    @Req() req,
-    @Param('id') orgId: string,
+    @Param('organizationId') orgId: string,
     @Body() dto: UpdateOrganizationDto,
   ) {
     return this.organizationsService.updateOrganization(orgId, dto);
   }
 
-  @Patch(':memberId/role')
+  @Patch(':organizationId/members/:memberId/role')
   @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.UPDATE)
   @ApiOperation({ summary: 'Update member role (Promotion/Demotion)' })
   async updateRole(
@@ -150,7 +153,7 @@ export class OrganizationsController {
     @Param('memberId') memberId: string,
     @Body() dto: UpdateOrgMemberRoleDto,
   ) {
-    return this.organizationsService.updateRole({
+    return this.organizationMembersService.updateRole({
       organizationId,
       memberId,
       roleId: dto.roleId,
@@ -165,23 +168,34 @@ export class OrganizationsController {
     @Param('memberId') memberId: string,
     @CurrentUser('userId') actorUserId: string,
   ) {
-    return this.organizationsService.remove({
-      actorId: actorUserId,
+
+    return this.organizationMembersService.remove({
+      actorId: actorUserId, 
       organizationId,
       memberId,
     });
   }
 
-  @Post('leave')
+  @Post(':organizationId/leave')
   @ApiOperation({ summary: 'Voluntarily leave the organization' })
   async leave(
     @Param('organizationId') organizationId: string,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.organizationsService.leave(userId, organizationId);
+    return this.organizationMembersService.leave(userId, organizationId);
   }
 
-  @Delete(':id')
+  @Get(':organizationId/summary')
+  @RequirePermission(PermissionResource.ORG_BILLING, PermissionAction.READ)
+  @ApiOperation({ summary: 'Get organization usage summary' })
+  async getSummary(
+    @Param('organizationId') organizationId: string,
+  ) {
+    return this.organizationsService.getOrganizationSummary(organizationId);
+  }
+
+  @Delete(':organizationId')
+  @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.DELETE)
   @ApiOperation({
     summary: 'Deactivate an organization',
     description:
@@ -194,7 +208,7 @@ export class OrganizationsController {
       example: { success: true, message: 'Organization deleted successfully' },
     },
   })
-  async deleteOrganization(@Req() req, @Param('id') orgId: string) {
+  async deleteOrganization(@Req() req, @Param('organizationId') orgId: string) {
     return this.organizationsService.deleteOrganization(orgId, req.user.userId);
   }
 }

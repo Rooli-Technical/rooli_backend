@@ -24,11 +24,17 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PlanDto } from './dto/plan-response.dto';
 import { Public } from '@/common/decorators/public.decorator';
 import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
+import { Throttle } from '@nestjs/throttler';
+import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { ContextGuard } from '@/common/guards/context.guard';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+import { RequirePermission } from '@/common/decorators/require-permission.decorator';
+
 
 @ApiTags('Billing')
-@Controller('billing')
-@BypassSubscription()
+@BypassSubscription() 
+@UseGuards(ContextGuard, PermissionsGuard)
+@Controller('organizations/:orgId/billing')
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
 
@@ -52,6 +58,7 @@ export class BillingController {
 
   @Get('verify')
   @Public()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({
     summary: 'Verify payment status',
     description:
@@ -66,6 +73,7 @@ export class BillingController {
   // ===========================================================================
 
   @Get('subscription')
+  @RequirePermission(PermissionResource.ORG_BILLING, PermissionAction.READ)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get current subscription details',
@@ -78,6 +86,7 @@ export class BillingController {
 
   @Post('checkout')
   @ApiBearerAuth()
+  @RequirePermission(PermissionResource.ORG_BILLING, PermissionAction.MANAGE)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Initialize new payment or upgrade',
@@ -109,10 +118,9 @@ export class BillingController {
   // ===========================================================================
 
   @Delete('subscription')
+  @RequirePermission(PermissionResource.ORG_BILLING, PermissionAction.MANAGE)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(ContextGuard)
-  // @OrgAuth({ resource: PermissionResource.BILLING, action: PermissionAction.MANAGE })
   @ApiOperation({
     summary: 'Cancel auto-renewal',
     description: 'Downgrades to free tier at the end of the current period.',

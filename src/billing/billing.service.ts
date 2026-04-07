@@ -2,6 +2,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -10,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import * as geoip from 'geoip-lite';
 import { MailService } from '@/mail/mail.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class BillingService {
@@ -98,6 +100,10 @@ export class BillingService {
       throw new BadRequestException('Billing email is required');
     }
 
+    if (user.organizationId !== organizationId) {
+      throw new ForbiddenException('Invalid organization context');
+    }
+
     // FORCE NGN LOGIC
     // We strictly look for the NGN code. If it's missing, this plan isn't ready.
     if (!plan.paystackPlanCodeNgn) {
@@ -105,6 +111,15 @@ export class BillingService {
         'This plan is not configured for payments yet.',
       );
     }
+
+    // 🚨 FIX: Clean up orphaned pending transactions (Double-click protection)
+    await this.prisma.transaction.updateMany({
+      where: {
+        organizationId: org.id,
+        status: 'pending',
+      },
+      data: { status: 'abandoned' }, // Keeps the audit trail, but invalidates it
+    });
 
     // Direct call to Paystack NGN initialization
     return this.initializePaystack(org, plan, email);
@@ -184,9 +199,17 @@ export class BillingService {
         },
       });
 
-      // Log Transaction
-      await tx.transaction.create({
-        data: {
+      // 🚨 FIX: Upsert the Transaction!
+      // If the user clicked "Checkout", this UPDATES the pending record.
+      // If it's an auto-renewal at 3 AM, this CREATES a brand new record.
+      await tx.transaction.upsert({
+        where: { txRef: reference }, // You must add @unique to txRef in schema.prisma if you haven't!
+        update: {
+          providerTxId: id.toString(),
+          status: 'successful',
+          paymentDate: new Date(),
+        },
+        create: {
           organizationId,
           txRef: reference,
           providerTxId: id.toString(),
@@ -363,7 +386,7 @@ export class BillingService {
   // PRIVATE HELPER (NGN Initialization)
   // ---------------------------------------------------------
   private async initializePaystack(org: any, plan: any, email: string) {
-    const reference = `rooli_${org.id}_${Date.now()}`;
+    const reference = `rooli_${org.id}_${randomUUID()}`;
 
     // NGN Logic: Paystack uses Kobo (Amount * 100)
     const amountInKobo = Number(plan.priceNgn) * 100;
@@ -374,6 +397,19 @@ export class BillingService {
         'Cannot process zero value payment via gateway',
       );
     }
+
+    await this.prisma.transaction.create({
+      data: {
+        organizationId: org.id,
+        txRef: reference,
+        providerTxId: 'pending',
+        provider: 'PAYSTACK',
+        amount: Number(plan.priceNgn),
+        currency: 'NGN',
+        status: 'pending',
+        paymentDate: new Date(),
+      },
+    });
 
     const payload = {
       email,
@@ -403,6 +439,12 @@ export class BillingService {
       );
       return { paymentUrl: data.data.authorization_url, reference };
     } catch (error) {
+      await this.prisma.transaction
+        .update({
+          where: { txRef: reference },
+          data: { status: 'failed' },
+        })
+        .catch(() => {});
       this.logger.error('Paystack Init Error', error.response?.data);
       throw new BadRequestException('Paystack initialization failed');
     }
@@ -423,50 +465,61 @@ export class BillingService {
     this.logger.log('🕵️ Running Daily Expiry Check...');
     const now = new Date();
 
-    // 1. Find subscriptions that just expired
-    // We fetch them first so we know WHICH orgs to lock
+    // 1. Find the IDs of orgs that expired
     const expiredSubs = await this.prisma.subscription.findMany({
-      where: {
-        status: 'active',
-        currentPeriodEnd: { lt: now },
-      },
-      select: { id: true, organizationId: true },
+      where: { status: 'active', currentPeriodEnd: { lt: now } },
+      select: { organizationId: true },
     });
 
     if (expiredSubs.length === 0) return;
 
+    // Extract just the organization IDs into a flat array
+    const orgIds = expiredSubs.map((sub) => sub.organizationId);
     this.logger.warn(
-      `Found ${expiredSubs.length} expired subscriptions. Locking accounts...`,
+      `Found ${orgIds.length} expired subscriptions. Locking accounts in bulk...`,
     );
 
-    for (const sub of expiredSubs) {
-      await this.prisma.$transaction(async (tx) => {
-        // Guarded update: only flip if still ACTIVE (prevents double-processing issues)
-        const updated = await tx.subscription.updateMany({
-          where: { id: sub.id, status: 'active' },
-          data: { status: 'past_due', isActive: false },
-        });
+    // 2. 🚨 FIX 2: One massive bulk transaction for everything
+    await this.prisma.$transaction([
+      this.prisma.subscription.updateMany({
+        where: { organizationId: { in: orgIds }, status: 'active' },
+        data: { status: 'past_due', isActive: false },
+      }),
+      this.prisma.organization.updateMany({
+        where: { id: { in: orgIds }, isActive: true },
+        data: { isActive: false, status: 'SUSPENDED' },
+      }),
+      this.prisma.socialProfile.updateMany({
+        where: {
+          isActive: true,
+          workspace: { organizationId: { in: orgIds } },
+        },
+        data: { isActive: false },
+      }),
+    ]);
 
-        // If another instance already processed it, skip locking
-        if (updated.count === 0) return;
+    this.logger.log(
+      `🔒 Successfully locked ${orgIds.length} expired organizations.`,
+    );
+  }
 
-        // Lock social profiles (only those currently active)
-        await tx.socialProfile.updateMany({
-          where: {
-            isActive: true,
-            workspace: { organizationId: sub.organizationId },
-          },
-          data: { isActive: false },
-        });
+  //@Cron(CronExpression.EVERY_WEEKEND) // Runs once a week
+  async cleanupStuckTransactions() {
+    this.logger.log('🧹 Sweeping abandoned and stuck transactions...');
+    
+    // Look back 7 days. Anything older than this is definitely dead.
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 7);
 
-        // Optional: lock org too (helps your other queries)
-        await tx.organization.update({
-          where: { id: sub.organizationId },
-          data: { isActive: false },
-        });
-      });
+    const deleted = await this.prisma.transaction.deleteMany({
+      where: {
+        status: { in: ['abandoned', 'pending'] }, // Clear both abandoned and stuck pending
+        createdAt: { lt: cutoffDate }, // Older than 7 days
+      },
+    });
 
-      this.logger.log(`🔒 Locked Organization: ${sub.organizationId}`);
+    if (deleted.count > 0) {
+      this.logger.log(`🗑️ Deleted ${deleted.count} dead checkout transactions.`);
     }
   }
 

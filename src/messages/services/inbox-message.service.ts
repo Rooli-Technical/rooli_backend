@@ -213,8 +213,24 @@ export class InboxService {
       },
     });
 
+    const items = rows.map((msg) => ({
+      id: msg.id,
+      clientMessageId: msg.clientMessageId,
+      content: msg.content,
+      direction: msg.direction,
+      deliveryStatus: msg.deliveryStatus,
+      createdAt: msg.createdAt,
+      attachments: msg.attachments,
+      // Safely flatten the agent's author info
+      author: msg.authorMember ? {
+        firstName: msg.authorMember.member.user.firstName,
+        lastName: msg.authorMember.member.user.lastName,
+        avatarUrl: msg.authorMember.member.user.avatar?.url || null,
+      } : null,
+    }));
+
     const nextCursor = rows.length === take ? rows[rows.length - 1].id : null;
-    return { items: rows, nextCursor };
+    return { items, nextCursor };
   }
 
   async updateConversation(params: {

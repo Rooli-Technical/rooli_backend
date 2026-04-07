@@ -36,7 +36,7 @@ export const PermissionResource = {
   SCHEDULING: 'SCHEDULING',              // Queue slots
   ANALYTICS: 'ANALYTICS',
   INBOX: 'INBOX',                        // Consolidated DMs and Messages
-  COMMENT: 'COMMENT',                    // Public post replies
+  COMMENTS: 'COMMENTS',                    // Public post replies
   INTERNAL_COMMENT: 'INTERNAL_COMMENT',  // Team chatter
   AI_CONTENT: 'AI_CONTENT',
   AI_USAGE: 'AI_USAGE',

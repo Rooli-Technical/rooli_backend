@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,14 +21,20 @@ import { UpdateConversationDto } from '../dtos/send-message.dto';
 import { SendReplyDto } from '../dtos/send-reply.dto';
 import { InboxService } from '../services/inbox-message.service';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { PermissionsGuard } from '@/common/guards/permission.guard';
+import { ContextGuard } from '@/common/guards/context.guard';
+import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 
 @ApiTags('Messages')
 @ApiBearerAuth()
-@Controller('messages/conversations/:workspaceId')
+@UseGuards(ContextGuard, PermissionsGuard)
+@Controller('workspaces/:workspaceId/inbox/conversations')
 export class InboxController {
   constructor(private readonly inboxService: InboxService) {}
 
   @Get()
+  @RequirePermission(PermissionResource.INBOX, PermissionAction.READ)
   @ApiOperation({ summary: 'List conversations' })
   @ApiResponse({ status: 200, description: 'Returns paginated conversations' })
   async listConversations(
@@ -47,6 +54,7 @@ export class InboxController {
   }
 
   @Get(':conversationId')
+  @RequirePermission(PermissionResource.INBOX, PermissionAction.READ)
   @ApiOperation({ summary: 'Get a specific conversation' })
   @ApiResponse({
     status: 200,
@@ -60,6 +68,7 @@ export class InboxController {
   }
 
   @Get(':conversationId/messages')
+  @RequirePermission(PermissionResource.INBOX, PermissionAction.READ)
   @ApiOperation({ summary: 'List messages in a conversation' })
   @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiQuery({ name: 'cursor', required: false, type: String })
@@ -79,6 +88,7 @@ export class InboxController {
   }
 
   @Patch(':conversationId')
+  @RequirePermission(PermissionResource.INBOX, PermissionAction.UPDATE)
   @ApiOperation({
     summary: 'Update conversation metadata (Assign, Archive, Resolve)',
   })
@@ -96,6 +106,7 @@ export class InboxController {
   }
 
   @Post(':conversationId/read')
+  @RequirePermission(PermissionResource.INBOX, PermissionAction.READ)
   @ApiOperation({ summary: 'Mark conversation as read for current agent' })
   @ApiResponse({ status: 201, description: 'Read state updated' })
   async markRead(
@@ -111,6 +122,7 @@ export class InboxController {
   }
 
   @Post(':conversationId/messages')
+  @RequirePermission(PermissionResource.INBOX, PermissionAction.CREATE)
   @ApiOperation({ summary: 'Send a reply to the customer' })
   @ApiResponse({ status: 201, description: 'Message queued for sending' })
   async sendReply(

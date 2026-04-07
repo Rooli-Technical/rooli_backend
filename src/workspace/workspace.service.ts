@@ -219,9 +219,10 @@ export class WorkspaceService {
   async updateWorkspace(
     workspaceId: string,
     dto: UpdateWorkspaceDto,
+    organizationId: string,
   ): Promise<Workspace> {
     const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
+      where: { id: workspaceId, organizationId },
       select: { id: true, organizationId: true },
     });
     if (!workspace) throw new NotFoundException('Workspace not found.');
@@ -260,10 +261,10 @@ export class WorkspaceService {
    * Delete workspace.
    * If you want soft-delete, add deletedAt and update instead.
    */
-  async deleteWorkspace(workspaceId: string) {
+  async deleteWorkspace(workspaceId: string, organizationId: string) {
     // 1. Fetch the workspace and figure out what Organization it belongs to
     const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
+      where: { id: workspaceId, organizationId },
       select: { id: true, organizationId: true },
     });
 
@@ -476,7 +477,7 @@ export class WorkspaceService {
               : null,
           },
         },
-      })),
-    };
+    })),
+  };
   }
 }
