@@ -29,7 +29,7 @@ import { MessagingOutboundService } from './outbound-service/messages.service';
     TwitterClient,
     EncryptionService,
     CommentOutboundService,
-    MessagingOutboundService
+    MessagingOutboundService,
   ],
   exports: [
     InboxIngestService,
@@ -38,8 +38,8 @@ import { MessagingOutboundService } from './outbound-service/messages.service';
     LinkedInAdapter,
     MetaClient,
     TwitterClient,
-   CommentOutboundService,
-    MessagingOutboundService
+    CommentOutboundService,
+    MessagingOutboundService,
   ],
 })
 export class InboxModule {}

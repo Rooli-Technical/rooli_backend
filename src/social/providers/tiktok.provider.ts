@@ -85,61 +85,63 @@ export class TikTokProvider implements ISocialProvider {
   // ==================================================
   // 📸 PHOTO UPLOAD (Binary FILE_UPLOAD Method)
   // ==================================================
-private async publishPhotos(
-  accessToken: string,
-  caption: string,
-  imageUrls: string[],
-) {
-  this.logger.log(`Starting TikTok URL_PULL for ${imageUrls.length} image(s)...`);
-
-  // STEP 1: Convert to proxy URLs
-  const proxyUrls = this.buildProxyUrls(imageUrls);
-
-  const url = `${this.API_URL}/post/publish/content/init/`;
-
-  const sourceInfo: any = {
-    source: 'PULL_FROM_URL',
-    photo_images: proxyUrls,
-  };
-
-  if (proxyUrls.length > 1) {
-    sourceInfo.photo_cover_index = 0;
-  }
-
-  const initBody = {
-    post_info: {
-      title: '',
-      description: caption || '',
-      privacy_level: 'SELF_ONLY',
-      disable_comment: false,
-    },
-    source_info: sourceInfo,
-    post_mode: 'DIRECT_POST',
-    media_type: 'PHOTO',
-  };
-
-  const initResponse = await axios.post(url, initBody, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  const initData = initResponse.data;
-
-  if (initData.error?.code !== 'ok' && initData.error?.code !== 0) {
-    throw new InternalServerErrorException(
-      `Photo Init Failed: ${initData.error?.message}`,
+  private async publishPhotos(
+    accessToken: string,
+    caption: string,
+    imageUrls: string[],
+  ) {
+    this.logger.log(
+      `Starting TikTok URL_PULL for ${imageUrls.length} image(s)...`,
     );
+
+    // STEP 1: Convert to proxy URLs
+    const proxyUrls = this.buildProxyUrls(imageUrls);
+
+    const url = `${this.API_URL}/post/publish/content/init/`;
+
+    const sourceInfo: any = {
+      source: 'PULL_FROM_URL',
+      photo_images: proxyUrls,
+    };
+
+    if (proxyUrls.length > 1) {
+      sourceInfo.photo_cover_index = 0;
+    }
+
+    const initBody = {
+      post_info: {
+        title: '',
+        description: caption || '',
+        privacy_level: 'SELF_ONLY',
+        disable_comment: false,
+      },
+      source_info: sourceInfo,
+      post_mode: 'DIRECT_POST',
+      media_type: 'PHOTO',
+    };
+
+    const initResponse = await axios.post(url, initBody, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const initData = initResponse.data;
+
+    if (initData.error?.code !== 'ok' && initData.error?.code !== 0) {
+      throw new InternalServerErrorException(
+        `Photo Init Failed: ${initData.error?.message}`,
+      );
+    }
+
+    this.logger.log(`TikTok is now pulling images from your proxy...`);
+
+    return {
+      platformPostId: initData.data.publish_id,
+      url: `https://www.tiktok.com/@tiktok`,
+    };
   }
-
-  this.logger.log(`TikTok is now pulling images from your proxy...`);
-
-  return {
-    platformPostId: initData.data.publish_id,
-    url: `https://www.tiktok.com/@tiktok`,
-  };
-}
 
   // ==================================================
   // 🎬 VIDEO UPLOAD (Step 1: Init)
@@ -253,10 +255,10 @@ private async publishPhotos(
   }
 
   private buildProxyUrls(imageUrls: string[]) {
-  return imageUrls.map((url) =>
-    `${this.BASE_URL}/tiktok/media?url=${encodeURIComponent(url)}`,
-  );
-}
+    return imageUrls.map(
+      (url) => `${this.BASE_URL}/tiktok/media?url=${encodeURIComponent(url)}`,
+    );
+  }
 
   private handleError(error: any) {
     const tqError = error.response?.data?.error;

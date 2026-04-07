@@ -71,7 +71,7 @@ export class PlatformRulesService {
           options?.igKind ?? 'FEED',
         );
 
-      case Platform.TIKTOK: 
+      case Platform.TIKTOK:
         return this.processTikTok(safeContent, media);
 
       default:
@@ -331,7 +331,7 @@ export class PlatformRulesService {
   // Facebook
   // ===========================================================================
 
-private processFacebook(
+  private processFacebook(
     content: string,
     media: MediaItem[],
     FbKind: 'POST' | 'STORY' | 'REEL',
@@ -340,7 +340,9 @@ private processFacebook(
 
     // 1. Prevent completely empty posts (No text AND no media)
     if (media.length === 0 && safeContent.length === 0) {
-      throw new BadRequestException('Facebook post must contain either text or media.');
+      throw new BadRequestException(
+        'Facebook post must contain either text or media.',
+      );
     }
 
     // 2. If it is a Text-Only post, it is perfectly valid!
@@ -352,9 +354,11 @@ private processFacebook(
     if (FbKind === 'POST' && media.length > 10) {
       throw new BadRequestException('Facebook Feed allows max 10 media items.');
     }
-    
+
     if ((FbKind === 'STORY' || FbKind === 'REEL') && media.length > 1) {
-      throw new BadRequestException(`Facebook ${FbKind === 'STORY' ? 'Stories' : 'Reels'} only support exactly 1 media item.`);
+      throw new BadRequestException(
+        `Facebook ${FbKind === 'STORY' ? 'Stories' : 'Reels'} only support exactly 1 media item.`,
+      );
     }
 
     // 4. Validate each media item
@@ -367,7 +371,9 @@ private processFacebook(
       const isVideo = m.mimeType.startsWith('video/');
 
       if (!isImage && !isVideo) {
-        throw new BadRequestException('Facebook media must be image/* or video/*.');
+        throw new BadRequestException(
+          'Facebook media must be image/* or video/*.',
+        );
       }
 
       if (m.size == null || Number.isNaN(m.size)) {
@@ -387,16 +393,24 @@ private processFacebook(
       if (FbKind === 'STORY') {
         if (isImage) {
           const allowedImageMimes = new Set([
-            'image/jpeg', 'image/jpg', 'image/bmp', 
-            'image/png', 'image/gif', 'image/tiff'
+            'image/jpeg',
+            'image/jpg',
+            'image/bmp',
+            'image/png',
+            'image/gif',
+            'image/tiff',
           ]);
 
           if (!allowedImageMimes.has(m.mimeType)) {
-            throw new BadRequestException('Facebook Story images must be jpeg/jpg, bmp, png, gif, or tiff.');
+            throw new BadRequestException(
+              'Facebook Story images must be jpeg/jpg, bmp, png, gif, or tiff.',
+            );
           }
 
           if (m.size > 10 * 1024 * 1024) {
-            throw new BadRequestException('Facebook Story image must not exceed 10MB.');
+            throw new BadRequestException(
+              'Facebook Story image must not exceed 10MB.',
+            );
           }
           continue;
         }
@@ -406,14 +420,18 @@ private processFacebook(
           throw new BadRequestException('Facebook Story video must be mp4.');
         }
         if (m.duration == null || m.width == null || m.height == null) {
-          throw new BadRequestException('Missing video metadata (duration, width, or height).');
+          throw new BadRequestException(
+            'Missing video metadata (duration, width, or height).',
+          );
         }
         if (m.duration < 3 || m.duration > 90) {
-          throw new BadRequestException('Facebook Story video must be between 3 and 90 seconds.');
+          throw new BadRequestException(
+            'Facebook Story video must be between 3 and 90 seconds.',
+          );
         }
         if (m.width < 540 || m.height < 960) {
           throw new BadRequestException(
-            `Stories must be vertical. Your video is ${m.width}x${m.height}. Please upload a video with a 9:16 aspect ratio (like 1080x1920).`
+            `Stories must be vertical. Your video is ${m.width}x${m.height}. Please upload a video with a 9:16 aspect ratio (like 1080x1920).`,
           );
         }
         continue;
@@ -430,16 +448,20 @@ private processFacebook(
           throw new BadRequestException('Facebook Reel video must be mp4.');
         }
         if (m.duration == null || m.width == null || m.height == null) {
-          throw new BadRequestException('Missing video metadata (duration, width, or height).');
+          throw new BadRequestException(
+            'Missing video metadata (duration, width, or height).',
+          );
         }
         if (m.duration < 3 || m.duration > 90) {
-          throw new BadRequestException('Facebook Reel must be 3 to 90 seconds.');
+          throw new BadRequestException(
+            'Facebook Reel must be 3 to 90 seconds.',
+          );
         }
         // It's usually a good idea to enforce vertical ratios for Reels here too!
         if (m.width > m.height) {
-            throw new BadRequestException(
-                `Reels must be vertical. Your video is ${m.width}x${m.height}. Please upload a vertical video.`
-            );
+          throw new BadRequestException(
+            `Reels must be vertical. Your video is ${m.width}x${m.height}. Please upload a vertical video.`,
+          );
         }
         continue;
       }
@@ -522,14 +544,10 @@ private processFacebook(
     return { isValid: true, finalContent: content };
   }
 
-
-// ===========================================================================
+  // ===========================================================================
   // TikTok
   // ===========================================================================
-  private processTikTok(
-    content: string,
-    media: MediaItem[],
-  ): ValidationResult {
+  private processTikTok(content: string, media: MediaItem[]): ValidationResult {
     // 1. Caption Limit
     if (content.length > this.TIKTOK_CAPTION_LIMIT) {
       throw new BadRequestException(
@@ -539,15 +557,23 @@ private processFacebook(
 
     // 2. Prevent Empty Posts
     if (media.length === 0) {
-      throw new BadRequestException('TikTok posts require at least 1 video or 1 image.');
+      throw new BadRequestException(
+        'TikTok posts require at least 1 video or 1 image.',
+      );
     }
 
-    const videoCount = media.filter((m) => m.mimeType?.startsWith('video/')).length;
-    const imageCount = media.filter((m) => m.mimeType?.startsWith('image/')).length;
+    const videoCount = media.filter((m) =>
+      m.mimeType?.startsWith('video/'),
+    ).length;
+    const imageCount = media.filter((m) =>
+      m.mimeType?.startsWith('image/'),
+    ).length;
 
     // 3. Prevent Mixed Media
     if (videoCount > 0 && imageCount > 0) {
-      throw new BadRequestException('TikTok posts cannot mix videos and images.');
+      throw new BadRequestException(
+        'TikTok posts cannot mix videos and images.',
+      );
     }
 
     // 4. Prevent PDFs or other files
@@ -560,17 +586,23 @@ private processFacebook(
     // ============================
     if (videoCount > 0) {
       if (videoCount > 1) {
-        throw new BadRequestException('TikTok allows a maximum of 1 video per post.');
+        throw new BadRequestException(
+          'TikTok allows a maximum of 1 video per post.',
+        );
       }
 
       const video = media.find((m) => m.mimeType?.startsWith('video/'))!;
 
       if (video.duration != null) {
         if (video.duration < this.TIKTOK_MIN_DURATION_SEC) {
-          throw new BadRequestException(`TikTok videos must be at least ${this.TIKTOK_MIN_DURATION_SEC} seconds long.`);
+          throw new BadRequestException(
+            `TikTok videos must be at least ${this.TIKTOK_MIN_DURATION_SEC} seconds long.`,
+          );
         }
         if (video.duration > this.TIKTOK_MAX_DURATION_SEC) {
-          throw new BadRequestException(`TikTok videos cannot exceed ${this.TIKTOK_MAX_DURATION_SEC / 60} minutes.`);
+          throw new BadRequestException(
+            `TikTok videos cannot exceed ${this.TIKTOK_MAX_DURATION_SEC / 60} minutes.`,
+          );
         }
       }
     }
@@ -580,27 +612,35 @@ private processFacebook(
     // ============================
     if (imageCount > 0) {
       if (imageCount === 1) {
-      throw new BadRequestException(
-        'TikTok Photo Mode requires at least 2 images for a carousel. Please add another image or upload a video.',
-      );
-    }
-    
-      if (imageCount > 35) {
-        throw new BadRequestException('TikTok Photo Mode allows a maximum of 35 images.');
+        throw new BadRequestException(
+          'TikTok Photo Mode requires at least 2 images for a carousel. Please add another image or upload a video.',
+        );
       }
 
-      const allowedImageMimes = new Set(['image/jpeg', 'image/jpg', 'image/webp']);
+      if (imageCount > 35) {
+        throw new BadRequestException(
+          'TikTok Photo Mode allows a maximum of 35 images.',
+        );
+      }
+
+      const allowedImageMimes = new Set([
+        'image/jpeg',
+        'image/jpg',
+        'image/webp',
+      ]);
 
       for (const img of media) {
         if (!allowedImageMimes.has(img.mimeType || '')) {
           throw new BadRequestException(
-            `TikTok does not support ${img.mimeType}. Please use JPG, JPEG, or WEBP. (PNGs are not allowed).`
+            `TikTok does not support ${img.mimeType}. Please use JPG, JPEG, or WEBP. (PNGs are not allowed).`,
           );
         }
 
         // 20MB limit = 20 * 1024 * 1024 bytes
         if (img.size != null && img.size > 20971520) {
-          throw new BadRequestException('TikTok images must be 20MB or smaller.');
+          throw new BadRequestException(
+            'TikTok images must be 20MB or smaller.',
+          );
         }
       }
     }

@@ -48,4 +48,3 @@ export class CreateRoleDto {
   @Type(() => Boolean)
   isDefault?: boolean;
 }
-

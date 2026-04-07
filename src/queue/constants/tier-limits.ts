@@ -5,27 +5,27 @@ export type PlanTier = 'CREATOR' | 'BUSINESS' | 'ROCKET' | 'ENTERPRISE';
 
 export type TierLimits = {
   // --- Queue / Scheduling
-  maxQueueSlots: number;          // how many queue slots per workspace
-  maxPostsInQueue: number;       // total posts that can be scheduled at once
-  maxAutoScheduleDays: number;    // how far ahead queue engine can look
+  maxQueueSlots: number; // how many queue slots per workspace
+  maxPostsInQueue: number; // total posts that can be scheduled at once
+  maxAutoScheduleDays: number; // how far ahead queue engine can look
   maxBulkPostsPerRequest: number; // safety + abuse prevention
 
   // --- Workspaces / Profiles / Team
-  maxWorkspaces: number;          // per org (ROCKET example: 5)
-  maxSocialProfiles: number;      // per workspace (example: 4)
-  maxTeamMembers: number;         // per org/workspace (depending on your design)
+  maxWorkspaces: number; // per org (ROCKET example: 5)
+  maxSocialProfiles: number; // per workspace (example: 4)
+  maxTeamMembers: number; // per org/workspace (depending on your design)
 
   // --- AI (if you want to keep it here)
-  aiMonthlyGenerations: number;   // total AI calls/month
-  aiMaxVariants: number;          // variants per prompt
-  aiMaxPlatformsAtOnce: number;   // multi-platform generation
-  aiMaxOutputLength: number;      // chars
+  aiMonthlyGenerations: number; // total AI calls/month
+  aiMaxVariants: number; // variants per prompt
+  aiMaxPlatformsAtOnce: number; // multi-platform generation
+  aiMaxOutputLength: number; // chars
 };
 
 export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
   CREATOR: {
     // Queue
-    maxQueueSlots: 10,          // enough for a simple weekly schedule
+    maxQueueSlots: 10, // enough for a simple weekly schedule
     maxPostsInQueue: 10,
     maxAutoScheduleDays: 30,
     maxBulkPostsPerRequest: 20,

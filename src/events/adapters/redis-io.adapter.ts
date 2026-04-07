@@ -4,7 +4,6 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import { INestApplicationContext } from '@nestjs/common';
 import Redis from 'ioredis';
 
-
 export class RedisSocketIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
 

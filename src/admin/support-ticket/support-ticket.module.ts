@@ -1,14 +1,21 @@
 import { Module } from '@nestjs/common';
 
-import { SupportTicketController } from './support-ticket.controller';
-import { AdminTicketsService } from './support-ticket.service';
+import { TicketsController } from './support-ticket.controller';
+import { TicketsService } from './support-ticket.service';
 import { EventsModule } from '@/events/events.module';
+import { TicketsRepository } from './support-ticket.repository';
+import { DomainEventsService } from '@/events/domain-events.service';
+import { RealtimeEmitterService } from '@/events/realtime-emitter.service';
 
 @Module({
-  imports:[
-    EventsModule
+  imports: [EventsModule],
+  controllers: [TicketsController],
+  providers: [
+    TicketsService,
+    TicketsRepository,
+    DomainEventsService,
+    RealtimeEmitterService,
   ],
-  controllers: [SupportTicketController],
-  providers: [AdminTicketsService],
+  exports: [TicketsService],
 })
-export class SupportTicketModule {}
+export class TicketsModule {}

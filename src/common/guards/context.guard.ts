@@ -10,7 +10,10 @@ import { Reflector } from '@nestjs/core';
 
 @Injectable()
 export class ContextGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService, private readonly reflector: Reflector) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
      // 1. Allow endpoints marked as Public
@@ -124,9 +127,9 @@ export class ContextGuard implements CanActivate {
   }
 
   private async updateLastActive(userId: string, workspaceId: string) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { lastActiveWorkspaceId: workspaceId },
-      });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastActiveWorkspaceId: workspaceId },
+    });
   }
 }

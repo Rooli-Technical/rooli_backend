@@ -42,14 +42,14 @@ export class MediaIngestProcessor extends WorkerHost {
           {
             folder: `rooli/${workspaceId}`,
             resource_type: 'auto',
-            public_id: mediaFile.filename.replace(/\.[^/.]+$/, ""), // Use filename as ID
+            public_id: mediaFile.filename.replace(/\.[^/.]+$/, ''), // Use filename as ID
           },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
           },
         );
-        
+
         response.data.pipe(uploadStream);
       });
 
@@ -67,7 +67,6 @@ export class MediaIngestProcessor extends WorkerHost {
       });
 
       this.logger.log(`Successfully ingested: ${mediaFile.filename}`);
-
     } catch (error) {
       this.logger.error(`Failed to ingest media ${mediaId}`, error);
       // Optional: Mark file as 'FAILED' in DB or retry later

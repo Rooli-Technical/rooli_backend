@@ -150,15 +150,18 @@ export class PostController {
     schema: {
       type: 'object',
       properties: {
-        newContent: { type: 'string', example: 'Updating my status with some fresh info!' }
+        newContent: {
+          type: 'string',
+          example: 'Updating my status with some fresh info!',
+        },
       },
-      required: ['newContent']
-    }
+      required: ['newContent'],
+    },
   })
   async editPost(
     @Param('id') postId: string,
     @Body('newContent') newContent: string,
-     @CurrentUser('workspaceId') workspaceId: string, 
+    @CurrentUser('workspaceId') workspaceId: string,
   ) {
     return this.postService.editPublishedPost(workspaceId, postId, newContent);
   }
@@ -172,7 +175,7 @@ export class PostController {
   @ApiParam({ name: 'id', description: 'The internal Database ID of the post' })
   async deleteRemotePost(
     @Param('id') postId: string,
-     @CurrentUser('workspaceId') workspaceId: string, 
+    @CurrentUser('workspaceId') workspaceId: string,
   ) {
     return this.postService.deletePublishedPost(workspaceId, postId);
   }

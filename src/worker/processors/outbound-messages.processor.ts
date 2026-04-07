@@ -6,9 +6,8 @@ import { DomainEventsService } from '@/events/domain-events.service';
 import { MessagingOutboundService } from '@/messages/outbound-service/messages.service';
 import { CommentOutboundService } from '@/messages/outbound-service/comments.service';
 
-
 @Injectable()
-@Processor('outbound-messages', { concurrency: 15, lockDuration: 120_000,  })
+@Processor('outbound-messages', { concurrency: 15, lockDuration: 120_000 })
 export class OutboundMessagesProcessor extends WorkerHost {
   private readonly logger = new Logger(OutboundMessagesProcessor.name);
 
@@ -16,7 +15,7 @@ export class OutboundMessagesProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly events: DomainEventsService,
     private readonly outboundMessage: MessagingOutboundService,
-    private readonly outboundComment: CommentOutboundService
+    private readonly outboundComment: CommentOutboundService,
   ) {
     super();
   }
@@ -43,8 +42,10 @@ export class OutboundMessagesProcessor extends WorkerHost {
 
   async processOutboundMessage(job: Job<any>) {
     try {
-
-      const { messageId, memberId } = job.data as { messageId: string, memberId?: string };
+      const { messageId, memberId } = job.data as {
+        messageId: string;
+        memberId?: string;
+      };
       if (!messageId) throw new Error('Outbound job missing messageId');
 
       const msg = await this.prisma.inboxMessage.findUnique({
@@ -57,17 +58,26 @@ export class OutboundMessagesProcessor extends WorkerHost {
       if (!msg) return;
 
       // Idempotency: if already SENT/DELIVERED, do nothing
-      if (msg.deliveryStatus === ('SENT' as any) || msg.deliveryStatus === ('DELIVERED' as any)) {
+      if (
+        msg.deliveryStatus === ('SENT' as any) ||
+        msg.deliveryStatus === ('DELIVERED' as any)
+      ) {
         return;
       }
 
       // Set SENDING (best effort)
       await this.prisma.inboxMessage.update({
         where: { id: msg.id },
-        data: { deliveryStatus: 'SENDING' as any, errorCode: null, errorMessage: null },
+        data: {
+          deliveryStatus: 'SENDING' as any,
+          errorCode: null,
+          errorMessage: null,
+        },
       });
 
-      const platform = String(msg.conversation.socialProfile.platform.toUpperCase());
+      const platform = String(
+        msg.conversation.socialProfile.platform.toUpperCase(),
+      );
 
       if (platform === 'INSTAGRAM' || platform === 'FACEBOOK') {
         await this.outboundMessage.sendMetaMessage(msg, memberId);
@@ -97,7 +107,7 @@ export class OutboundMessagesProcessor extends WorkerHost {
       where: { id: commentId },
       include: {
         parent: true,
-        profile: true, 
+        profile: true,
       },
     });
 
@@ -105,7 +115,7 @@ export class OutboundMessagesProcessor extends WorkerHost {
 
     // Idempotency check
     if (!comment.externalCommentId.startsWith('pending_')) {
-      return; 
+      return;
     }
 
     const platform = String(comment.profile.platform.toUpperCase());
@@ -129,21 +139,22 @@ export class OutboundMessagesProcessor extends WorkerHost {
 
       throw new Error(`Unsupported platform for comments: ${platform}`);
     } catch (error: any) {
-      throw error; 
+      throw error;
     }
   }
- 
 
   @OnWorkerEvent('failed')
   async onFailed(job: Job, error: Error) {
     if (job.name === 'send-outbound-comment') {
       const { commentId, workspaceId } = job.data;
-      
-      this.logger.error(`Comment ${commentId} failed to send: ${error.message}`);
+
+      this.logger.error(
+        `Comment ${commentId} failed to send: ${error.message}`,
+      );
 
       await this.prisma.comment.update({
         where: { id: commentId },
-        data: { status: 'FAILED' } 
+        data: { status: 'FAILED' },
       });
 
       // 2. Emit event so the UI instantly changes from the "grey clock" to the "red ❗"
@@ -151,10 +162,8 @@ export class OutboundMessagesProcessor extends WorkerHost {
         workspaceId: workspaceId,
         commentId: commentId,
         status: 'FAILED',
-        error: error.message 
+        error: error.message,
       });
     }
   }
-
 }
-

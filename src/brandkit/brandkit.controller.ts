@@ -1,11 +1,28 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { BrandKitService } from './brandkit.service';
-import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CreateBrandKitDto } from './dto/create-brandkit.dto';
 import { UpdateBrandKitDto } from './dto/update-brandkit.dto';
 
-  @ApiTags('Brand Kit')
-  @ApiBearerAuth()
+@ApiTags('Brand Kit')
+@ApiBearerAuth()
 @Controller('workspaces/:workspaceId/brand-kit')
 export class BrandkitController {
   constructor(private readonly service: BrandKitService) {}
@@ -35,8 +52,13 @@ export class BrandkitController {
   }
 
   @Post('ensure-default')
-  @ApiOperation({ summary: 'Ensure a default brand kit exists (initializes if missing)' })
-  @ApiResponse({ status: 201, description: 'Default kit confirmed or created.' })
+  @ApiOperation({
+    summary: 'Ensure a default brand kit exists (initializes if missing)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Default kit confirmed or created.',
+  })
   async ensureDefault(@Param('workspaceId') workspaceId: string) {
     return this.service.ensureDefaultExists(workspaceId);
   }

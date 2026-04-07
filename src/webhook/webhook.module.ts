@@ -10,16 +10,12 @@ import { EncryptionService } from '@/common/utility/encryption.service';
 @Module({
   imports: [
     BullModule.registerQueue({
-      name: 'webhooks', 
+      name: 'webhooks',
     }),
     BillingModule,
-    WorkerModule
+    WorkerModule,
   ],
   controllers: [WebhookController],
-  providers: [
-    WebhookService,
-    WebhooksProcessor,
-    EncryptionService
-  ],
+  providers: [WebhookService, WebhooksProcessor, EncryptionService],
 })
 export class WebhookModule {}

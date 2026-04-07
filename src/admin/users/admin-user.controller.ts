@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Query,
@@ -25,9 +27,11 @@ import {
   SuspendResponseDto,
   SuspendUserDto,
 } from './admin.user.dto';
+import { AdminRoute } from '@/common/decorators/admin-route.decorator';
 
 @ApiTags('Admin-Users')
 @ApiBearerAuth()
+@AdminRoute()
 @UseGuards(AdminJwtGuard)
 @Controller('admin')
 export class AdminUserController {
@@ -116,6 +120,12 @@ export class AdminUserController {
     return this.adminUserService.suspendUser(id, body.suspendUntil);
   }
 
+  @Get('user/metrics')
+  @HttpCode(HttpStatus.OK)
+  async getUserMetrics() {
+    const metrics = await this.adminUserService.getUserMetrics();
+    return metrics
+  }
   @Patch('user/:id/reactivate')
   @ApiOperation({
     summary: 'Reactivate a user',
@@ -130,4 +140,13 @@ export class AdminUserController {
   async reactivateUser(@Param('id') id: string) {
     return this.adminUserService.reactivateUser(id);
   }
+
+  @Get('fetch-admins')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Fetch all admins that can be assigned' })
+  @ApiResponse({ status: 200, description: 'All admins' })
+  getAllAdmins() {
+    return this.adminUserService.getAdmins();
+  }
+
 }

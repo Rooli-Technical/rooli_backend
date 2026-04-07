@@ -1,5 +1,3 @@
-
-
 export type MetaSendMode = 'PAGE_SEND_API' | 'IG_MESSAGING_API';
 
 export type MetaRecipient = {
@@ -44,4 +42,3 @@ export type MetaProfileResult = {
   profile_picture_url?: string;
   raw: any;
 };
-

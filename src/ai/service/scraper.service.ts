@@ -19,14 +19,16 @@ export class ScraperService {
         throw new Error('Invalid protocol');
       }
     } catch {
-      throw new BadRequestException('Invalid URL. Please provide a valid http/https link.');
+      throw new BadRequestException(
+        'Invalid URL. Please provide a valid http/https link.',
+      );
     }
 
     try {
       const res = await axios.get<string>(parsed.toString(), {
         headers: {
           'User-Agent': 'RooliBot/1.0 (+https://rooli.app)',
-          'Accept': 'text/html,application/xhtml+xml',
+          Accept: 'text/html,application/xhtml+xml',
         },
         timeout: 8000,
         maxRedirects: 5,
@@ -37,16 +39,24 @@ export class ScraperService {
 
       // 1) Handle HTTP status codes cleanly
       if (res.status === 429) {
-        throw new ServiceUnavailableException('This website is rate-limiting requests. Try again later.');
+        throw new ServiceUnavailableException(
+          'This website is rate-limiting requests. Try again later.',
+        );
       }
       if (res.status === 401 || res.status === 403) {
-        throw new ForbiddenException('This website blocked access. Try a different link or paste text instead.');
+        throw new ForbiddenException(
+          'This website blocked access. Try a different link or paste text instead.',
+        );
       }
       if (res.status >= 500) {
-        throw new ServiceUnavailableException('The website is currently unavailable. Try again later.');
+        throw new ServiceUnavailableException(
+          'The website is currently unavailable. Try again later.',
+        );
       }
       if (res.status >= 400) {
-        throw new BadRequestException(`Failed to fetch the URL (HTTP ${res.status}).`);
+        throw new BadRequestException(
+          `Failed to fetch the URL (HTTP ${res.status}).`,
+        );
       }
 
       const $ = cheerio.load(res.data);
@@ -54,7 +64,13 @@ export class ScraperService {
       $('script, style, nav, footer, header, noscript, iframe').remove();
 
       let content = '';
-      const selectors = ['article', 'main', '.post-content', '.entry-content', '#content'];
+      const selectors = [
+        'article',
+        'main',
+        '.post-content',
+        '.entry-content',
+        '#content',
+      ];
 
       for (const selector of selectors) {
         const found = $(selector).text().trim();
@@ -76,7 +92,9 @@ export class ScraperService {
       const clean = content.replace(/\s+/g, ' ').trim().slice(0, 6000);
 
       if (clean.length < 100) {
-        throw new BadRequestException('Could not extract enough readable content from the provided URL.');
+        throw new BadRequestException(
+          'Could not extract enough readable content from the provided URL.',
+        );
       }
 
       return clean;
@@ -93,12 +111,18 @@ export class ScraperService {
       // Axios errors (timeouts, DNS, etc.) => 503 usually
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
-          throw new ServiceUnavailableException('The website took too long to respond. Try again.');
+          throw new ServiceUnavailableException(
+            'The website took too long to respond. Try again.',
+          );
         }
-        throw new ServiceUnavailableException(`Failed to fetch the website: ${error.message}`);
+        throw new ServiceUnavailableException(
+          `Failed to fetch the website: ${error.message}`,
+        );
       }
 
-      throw new InternalServerErrorException('Unexpected error while processing the URL.');
+      throw new InternalServerErrorException(
+        'Unexpected error while processing the URL.',
+      );
     }
   }
 }

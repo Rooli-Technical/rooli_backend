@@ -142,10 +142,7 @@ export class OrganizationsController {
     @Param('organizationId') orgId: string,
     @Body() dto: UpdateOrganizationDto,
   ) {
-    return this.organizationsService.updateOrganization(
-      orgId,
-      dto,
-    );
+    return this.organizationsService.updateOrganization(orgId, dto);
   }
 
   @Patch(':organizationId/members/:memberId/role')

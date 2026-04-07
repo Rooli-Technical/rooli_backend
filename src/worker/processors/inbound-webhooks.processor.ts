@@ -6,12 +6,13 @@ import { TwitterAdapter } from '@/messages/adapters/twitter.adapter';
 
 import { PrismaService } from '@/prisma/prisma.service';
 import { InboxIngestService } from '@/messages/services/inbox-ingest.service';
-import { InboundCommentPayload, NormalizedInboundMessage } from '@/messages/types/adapter.types';
+import {
+  InboundCommentPayload,
+  NormalizedInboundMessage,
+} from '@/messages/types/adapter.types';
 import { DomainEventsService } from '@/events/domain-events.service';
 import { Platform } from '@generated/enums';
 import { LinkedInAdapter } from '@/messages/adapters/linkedIn.adapter';
-
-
 
 @Injectable()
 @Processor('inbox-webhooks', { concurrency: 25 })
@@ -38,7 +39,7 @@ export class InboundWebhooksProcessor extends WorkerHost {
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
 
-           await this.ingest.ingestInboundMessage(resolved);
+          await this.ingest.ingestInboundMessage(resolved);
 
           return;
         }
@@ -48,43 +49,48 @@ export class InboundWebhooksProcessor extends WorkerHost {
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-          
+
           const commentPayload = {
             workspaceId: resolved.workspaceId!,
             socialProfileId: resolved.socialProfileId!,
             platform: resolved.platform as any,
-            externalPostId: resolved.meta?.postId,             // Extracted from meta
-            externalCommentId: resolved.message.externalId,    // Extracted from message
+            externalPostId: resolved.meta?.postId, // Extracted from meta
+            externalCommentId: resolved.message.externalId, // Extracted from message
             externalParentId: resolved.meta?.parentId || null,
-            senderExternalId: resolved.contact.externalId,     // Extracted from contact
-            senderName: resolved.message.senderName || resolved.contact.username || 'Unknown User',
+            senderExternalId: resolved.contact.externalId, // Extracted from contact
+            senderName:
+              resolved.message.senderName ||
+              resolved.contact.username ||
+              'Unknown User',
             senderAvatarUrl: resolved.contact.avatarUrl || null,
-            content: resolved.message.content,                 // Extracted from message
-            timestamp: resolved.occurredAt,                    // Extracted from root
+            content: resolved.message.content, // Extracted from message
+            timestamp: resolved.occurredAt, // Extracted from root
           };
 
           // Pass the freshly mapped payload INSTEAD of using 'as unknown as'
           const result = await this.ingest.ingestInboundComment(commentPayload);
-          
-         // 1. Capture the result WITHOUT destructuring it immediately
+
+          // 1. Capture the result WITHOUT destructuring it immediately
           //const result = await this.ingest.ingestInboundComment(resolved as unknown as InboundCommentPayload);
 
-
           if (!result) {
-            this.logger.warn(`Skipped emitting comment event: Master Post not found in DB.`);
+            this.logger.warn(
+              `Skipped emitting comment event: Master Post not found in DB.`,
+            );
             return;
           }
-
 
           return;
         }
 
         case 'twitter-inbound-dm': {
-          const normalized = this.twitterAdapter.normalizeDirectMessage(job.data);
+          const normalized = this.twitterAdapter.normalizeDirectMessage(
+            job.data,
+          );
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-           await this.ingest.ingestInboundMessage(resolved);
+          await this.ingest.ingestInboundMessage(resolved);
           return;
         }
 
@@ -93,25 +99,30 @@ export class InboundWebhooksProcessor extends WorkerHost {
           if (!normalized) return;
 
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-          await this.ingest.ingestInboundMessage(resolved);  
+          await this.ingest.ingestInboundMessage(resolved);
           return;
         }
         case 'linkedin-inbound-comment': {
           // 1. Create a LinkedInAdapter to normalize the wild LinkedIn JSON
-          const normalized = this.linkedInAdapter.normalizeComment(job.data.payload);
+          const normalized = this.linkedInAdapter.normalizeComment(
+            job.data.payload,
+          );
           if (!normalized) return;
 
           // 2. Resolve the profile just like you do for Meta/Twitter
           const resolved = await this.resolveWorkspaceAndProfile(normalized);
-          
+
           // 3. Save it to the database
-          const result = await this.ingest.ingestInboundComment(resolved as unknown as InboundCommentPayload);
+          const result = await this.ingest.ingestInboundComment(
+            resolved as unknown as InboundCommentPayload,
+          );
 
           if (!result) {
-            this.logger.warn(`Skipped emitting comment event: Master Post not found in DB.`);
+            this.logger.warn(
+              `Skipped emitting comment event: Master Post not found in DB.`,
+            );
             return;
           }
-
 
           return;
         }
@@ -135,17 +146,18 @@ export class InboundWebhooksProcessor extends WorkerHost {
   private async resolveWorkspaceAndProfile(
     normalized: NormalizedInboundMessage,
   ): Promise<NormalizedInboundMessage> {
-
     const platformInput = normalized.contact?.platform || normalized.platform;
-  
-  // 1. Normalize Enum to Uppercase
-  const platform = platformInput?.toUpperCase() as Platform;
+
+    // 1. Normalize Enum to Uppercase
+    const platform = platformInput?.toUpperCase() as Platform;
 
     if (normalized.workspaceId && normalized.socialProfileId) return normalized;
 
     const ownerExternalId = normalized.meta?.ownerExternalId;
     if (!ownerExternalId) {
-      throw new Error('Missing normalized.meta.ownerExternalId for socialProfile resolution');
+      throw new Error(
+        'Missing normalized.meta.ownerExternalId for socialProfile resolution',
+      );
     }
 
     // Adjust this query to match your SocialProfile schema.
@@ -154,11 +166,11 @@ export class InboundWebhooksProcessor extends WorkerHost {
       where: {
         platform,
         OR: [
-          { platformId: ownerExternalId },       // Catches Facebook Pages
-          { webhookRoutingUserId: ownerExternalId }  // Catches Standalone Instagram DMs
-        ]
+          { platformId: ownerExternalId }, // Catches Facebook Pages
+          { webhookRoutingUserId: ownerExternalId }, // Catches Standalone Instagram DMs
+        ],
       },
-      select: { id: true, workspaceId: true, accessToken: true, },
+      select: { id: true, workspaceId: true, accessToken: true },
     });
 
     if (!profile) {
@@ -167,6 +179,11 @@ export class InboundWebhooksProcessor extends WorkerHost {
       );
     }
 
-    return { ...normalized, socialProfileId: profile.id, workspaceId: profile.workspaceId, accessToken: profile.accessToken };
+    return {
+      ...normalized,
+      socialProfileId: profile.id,
+      workspaceId: profile.workspaceId,
+      accessToken: profile.accessToken,
+    };
   }
 }

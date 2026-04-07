@@ -1,10 +1,18 @@
-import { Platform } from "@generated/enums";
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsEnum, IsISO8601, IsInt, Min, Max } from "class-validator";
+import { Platform } from '@generated/enums';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsOptional,
+  IsEnum,
+  IsISO8601,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class PreviewQueueDto {
   @ApiPropertyOptional({
-    description: 'Optional platform filter (if your slots are platform-specific).',
+    description:
+      'Optional platform filter (if your slots are platform-specific).',
     enum: Platform,
     example: 'LINKEDIN',
   })
@@ -22,7 +30,8 @@ export class PreviewQueueDto {
   from?: string;
 
   @ApiPropertyOptional({
-    description: 'How many days to look ahead. The preview will include all slots in the next N days.',
+    description:
+      'How many days to look ahead. The preview will include all slots in the next N days.',
     example: 30,
     minimum: 1,
     maximum: 90,

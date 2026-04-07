@@ -19,8 +19,12 @@ import {
 } from '@nestjs/swagger';
 import { AdminJwtGuard } from '../guards/admin-jwt.guard';
 import { AdminOrganizationService } from './admin-organization.service';
-import { AdminOrgListResponseDto, DeleteOrgResponseDto, SuspendOrgResponseDto } from './admin-organization.dto';
-
+import {
+  ActiveOrgResponseDto,
+  AdminOrgListResponseDto,
+  DeleteOrgResponseDto,
+  SuspendOrgResponseDto,
+} from './admin-organization.dto';
 
 @ApiTags('Admin-Organization')
 @ApiBearerAuth()
@@ -103,6 +107,15 @@ export class AdminOrganizationController {
     });
   }
 
+  @Get('organization/metrics')
+  @ApiResponse({
+    status: 200,
+    description: 'Organization metrics fetched successfully.',
+  })
+  async getOrganizationMetrics() {
+    const metrics = await this.organizationService.getOrganizationMetrics();
+    return metrics;
+  }
   // ── GET /admin/organizations/:id ───────────────────────────────────────────
 
   @Get('organization/:id')
@@ -150,6 +163,29 @@ export class AdminOrganizationController {
     return this.organizationService.suspendOrganization(id);
   }
 
+  @Patch('organization/:id/activate')
+  @ApiOperation({
+    summary: 'Activate an organization',
+    description:
+      'Sets the organization status to ACTIVE and marks it as inactive. ' +
+      'This prevents all members from accessing the platform.',
+  })
+  @ApiParam({ name: 'id', example: 'clxorg123' })
+  @ApiResponse({
+    status: 200,
+    type: ActiveOrgResponseDto,
+    description: 'Organization activated successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Organization is already activated.',
+  })
+  @ApiResponse({ status: 404, description: 'Organization not found.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Admin only.' })
+  async activateOrganization(@Param('id') id: string) {
+    return this.organizationService.activateOrganization(id);
+  }
   // ── DELETE /admin/organizations/:id ───────────────────────────────────────
 
   @Delete('organization/:id')

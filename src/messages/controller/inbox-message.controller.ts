@@ -25,9 +25,7 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 @ApiBearerAuth()
 @Controller('messages/conversations/:workspaceId')
 export class InboxController {
-  constructor(
-    private readonly inboxService: InboxService,
-  ) {}
+  constructor(private readonly inboxService: InboxService) {}
 
   @Get()
   @ApiOperation({ summary: 'List conversations' })

@@ -55,11 +55,14 @@ export class TikTokService {
       params.append('redirect_uri', redirectUri!);
 
       const { data: tokenData } = await lastValueFrom(
-        this.httpService.post(`${this.API_URL}/oauth/token/`, params.toString(), {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        }),
+        this.httpService.post(
+          `${this.API_URL}/oauth/token/`,
+          params.toString(),
+          {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          },
+        ),
       );
-
 
       // TikTok v2 wraps successful data or errors differently
       if (tokenData.error && tokenData.error !== '0') {
@@ -78,7 +81,7 @@ export class TikTokService {
         }),
       );
 
-     if (userData.error?.code !== 'ok' && userData.error?.code !== 0) {
+      if (userData.error?.code !== 'ok' && userData.error?.code !== 0) {
         throw new Error(userData.error?.message || 'Failed to fetch user info');
       }
 
@@ -95,7 +98,10 @@ export class TikTokService {
         scopes: tokenData.scope,
       };
     } catch (error: any) {
-      this.logger.error('TikTok Exchange Failed', error.response?.data || error.message);
+      this.logger.error(
+        'TikTok Exchange Failed',
+        error.response?.data || error.message,
+      );
       throw new BadRequestException('Failed to connect TikTok account');
     }
   }
@@ -114,7 +120,9 @@ export class TikTokService {
 
       // 1. Same exact fix we used in exchangeCode!
       if (data.error?.code !== 'ok' && data.error?.code !== 0) {
-        throw new Error(data.error?.message || 'TikTok API returned an unknown error');
+        throw new Error(
+          data.error?.message || 'TikTok API returned an unknown error',
+        );
       }
 
       const user = data.data.user;
@@ -132,7 +140,10 @@ export class TikTokService {
         },
       ];
     } catch (error: any) {
-      this.logger.error(`TikTok Profile Fetch Failed: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `TikTok Profile Fetch Failed: ${error.message}`,
+        error.response?.data,
+      );
       return [];
     }
   }
@@ -151,9 +162,13 @@ export class TikTokService {
       params.append('token', accessToken);
 
       await lastValueFrom(
-        this.httpService.post(`${this.API_URL}/oauth/revoke/`, params.toString(), {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        }),
+        this.httpService.post(
+          `${this.API_URL}/oauth/revoke/`,
+          params.toString(),
+          {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          },
+        ),
       );
       this.logger.log(`Successfully revoked TikTok token`);
     } catch (error: any) {

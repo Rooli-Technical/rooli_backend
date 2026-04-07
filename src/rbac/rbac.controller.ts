@@ -41,7 +41,11 @@ export class RoleController {
     @CurrentUser('userId') userId: string,
     @Query() query: ListRolesQuery,
   ) {
-    return this.roleService.listOrganizationRoles({ userId, organizationId: orgId, query });
+    return this.roleService.listOrganizationRoles({
+      userId,
+      organizationId: orgId,
+      query,
+    });
   }
 
   @Post()
@@ -74,10 +78,15 @@ export class RoleController {
   async updateRole(
     @Param('orgId') orgId: string,
     @Param('roleId') roleId: string,
-   @CurrentUser('userId') userId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: UpdateRoleDto,
   ) {
-    return this.roleService.updateRole({ userId, organizationId: orgId, roleId, dto });
+    return this.roleService.updateRole({
+      userId,
+      organizationId: orgId,
+      roleId,
+      dto,
+    });
   }
 
   @Put(':roleId/permissions')
@@ -89,7 +98,12 @@ export class RoleController {
     @CurrentUser('userId') userId: string,
     @Body() dto: ReplaceRolePermissionsDto,
   ) {
-    return this.roleService.replaceRolePermissions({ userId, organizationId: orgId, roleId, dto });
+    return this.roleService.replaceRolePermissions({
+      userId,
+      organizationId: orgId,
+      roleId,
+      dto,
+    });
   }
 
   @Delete(':roleId')
@@ -100,7 +114,11 @@ export class RoleController {
     @Param('roleId') roleId: string,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.roleService.deleteRole({ userId, organizationId: orgId, roleId });
+    return this.roleService.deleteRole({
+      userId,
+      organizationId: orgId,
+      roleId,
+    });
   }
 
   @Get(':roleId/usage')
@@ -111,7 +129,10 @@ export class RoleController {
     @Param('roleId') roleId: string,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.roleService.getRoleUsage({ userId, organizationId: orgId, roleId });
+    return this.roleService.getRoleUsage({
+      userId,
+      organizationId: orgId,
+      roleId,
+    });
   }
-
 }

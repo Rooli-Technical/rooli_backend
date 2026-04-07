@@ -247,11 +247,11 @@ export class PostService {
     let slotIndex = 0;
 
     for (const postDto of dto.posts) {
-     const { finalScheduledAt, status } = await this.resolvePostSchedule(
-    workspaceId, 
-    postDto, 
-    postDto.isAutoSchedule ? availableSlots[slotIndex++] : undefined
-  );
+      const { finalScheduledAt, status } = await this.resolvePostSchedule(
+        workspaceId,
+        postDto,
+        postDto.isAutoSchedule ? availableSlots[slotIndex++] : undefined,
+      );
 
       const payloads = await this.destinationBuilder.preparePayloads(
         workspaceId,
@@ -374,11 +374,13 @@ export class PostService {
       throw new BadRequestException('Cannot edit a post in progress.');
     }
 
-const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId, {
-    ...dto,
-    needsApproval: existing.status === 'PENDING_APPROVAL'
-  });
-  
+    const { finalScheduledAt, status } = await this.resolvePostSchedule(
+      workspaceId,
+      {
+        ...dto,
+        needsApproval: existing.status === 'PENDING_APPROVAL',
+      },
+    );
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const post = await tx.post.update({
@@ -441,7 +443,11 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
     });
   }
 
-  async editPublishedPost(workspaceId: string, postId: string, newContent: string) {
+  async editPublishedPost(
+    workspaceId: string,
+    postId: string,
+    newContent: string,
+  ) {
     const post = await this.prisma.post.findFirst({
       where: { id: postId, workspaceId },
       include: {
@@ -453,7 +459,9 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
 
     if (!post) throw new NotFoundException('Post not found');
     if (!['PUBLISHED'].includes(post.status)) {
-      throw new BadRequestException('You can only edit posts that have already been published.');
+      throw new BadRequestException(
+        'You can only edit posts that have already been published.',
+      );
     }
 
     const results = { success: [] as string[], errors: [] as any[] };
@@ -474,8 +482,12 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
       try {
         const provider = this.socialFactory.getProvider('FACEBOOK') as any; // Cast to your FB provider
         const credentials = await this.resolveOAuth2Creds(dest);
-        
-        await provider.editContent(credentials.accessToken, dest.platformPostId, newContent);
+
+        await provider.editContent(
+          credentials.accessToken,
+          dest.platformPostId,
+          newContent,
+        );
 
         // Update the destination's specific override content
         await this.prisma.postDestination.update({
@@ -532,8 +544,11 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
       try {
         const provider = this.socialFactory.getProvider('FACEBOOK') as any;
         const credentials = await this.resolveOAuth2Creds(dest);
-        
-        await provider.deleteContent(credentials.accessToken, dest.platformPostId);
+
+        await provider.deleteContent(
+          credentials.accessToken,
+          dest.platformPostId,
+        );
 
         // Mark destination as deleted in DB
         await this.prisma.postDestination.update({
@@ -883,47 +898,63 @@ const { finalScheduledAt, status } = await this.resolvePostSchedule(workspaceId,
   }
 
   private async resolvePostSchedule(
-  workspaceId: string,
-  dto: { isAutoSchedule?: boolean; scheduledAt?: string | Date | null; timezone?: string | null; needsApproval?: boolean },
-  providedAutoSlot?: Date // Used by bulk to pass in pre-fetched slots
-) {
-  let finalScheduledAt: Date | null = null;
+    workspaceId: string,
+    dto: {
+      isAutoSchedule?: boolean;
+      scheduledAt?: string | Date | null;
+      timezone?: string | null;
+      needsApproval?: boolean;
+    },
+    providedAutoSlot?: Date, // Used by bulk to pass in pre-fetched slots
+  ) {
+    let finalScheduledAt: Date | null = null;
 
-  // 1. Determine the Date
-  if (dto.isAutoSchedule) {
-    if (providedAutoSlot) {
-      finalScheduledAt = providedAutoSlot;
-    } else {
-      const slots = await this.queueService.getNextAvailableSlots(workspaceId, 1);
-      if (!slots?.length) throw new BadRequestException('No available queue slots.');
-      finalScheduledAt = slots[0];
-    }
-  } else if (dto.scheduledAt) {
-    finalScheduledAt = typeof dto.scheduledAt === 'string'
-      ? (dto.timezone && !dto.scheduledAt.endsWith('Z') 
-          ? fromZonedTime(dto.scheduledAt, dto.timezone) 
-          : new Date(dto.scheduledAt))
-      : dto.scheduledAt;
+    // 1. Determine the Date
+    if (dto.isAutoSchedule) {
+      if (providedAutoSlot) {
+        finalScheduledAt = providedAutoSlot;
+      } else {
+        const slots = await this.queueService.getNextAvailableSlots(
+          workspaceId,
+          1,
+        );
+        if (!slots?.length)
+          throw new BadRequestException('No available queue slots.');
+        finalScheduledAt = slots[0];
+      }
+    } else if (dto.scheduledAt) {
+      finalScheduledAt =
+        typeof dto.scheduledAt === 'string'
+          ? dto.timezone && !dto.scheduledAt.endsWith('Z')
+            ? fromZonedTime(dto.scheduledAt, dto.timezone)
+            : new Date(dto.scheduledAt)
+          : dto.scheduledAt;
 
-    if (isNaN(finalScheduledAt.getTime())) {
-      throw new BadRequestException('Invalid scheduledAt datetime.');
+      if (isNaN(finalScheduledAt.getTime())) {
+        throw new BadRequestException('Invalid scheduledAt datetime.');
+      }
+
+      // Centralized Past Date Check
+      if (isBefore(finalScheduledAt, subMinutes(new Date(), 5))) {
+        throw new BadRequestException('Scheduled time is in the past.');
+      }
     }
 
-    // Centralized Past Date Check
-    if (isBefore(finalScheduledAt, subMinutes(new Date(), 5))) {
-      throw new BadRequestException('Scheduled time is in the past.');
-    }
+    // 2. Determine the Status
+    const status: PostStatus = dto.needsApproval
+      ? 'PENDING_APPROVAL'
+      : finalScheduledAt
+        ? 'SCHEDULED'
+        : 'DRAFT';
+
+    return { finalScheduledAt, status };
   }
 
-  // 2. Determine the Status
-  const status: PostStatus = dto.needsApproval
-    ? 'PENDING_APPROVAL'
-    : finalScheduledAt ? 'SCHEDULED' : 'DRAFT';
-
-  return { finalScheduledAt, status };
-}
-
-async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?: string }) {
+  async listPostsWithMetrics(params: {
+    workspaceId: string;
+    take: number;
+    cursor?: string;
+  }) {
     const { workspaceId, take, cursor } = params;
 
     const posts = await this.prisma.post.findMany({
@@ -946,9 +977,9 @@ async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?:
                 facebookStats: true,
                 instagramStats: true,
                 tiktokStats: true,
-              }
-            }
-          }
+              },
+            },
+          },
         },
       },
     });
@@ -991,32 +1022,34 @@ async listPostsWithMetrics(params: { workspaceId: string; take: number; cursor?:
     return { items, nextCursor };
   }
 
-
-  private async resolveOAuth2Creds(dest: any): Promise<{ accessToken: string }> {
-    // 1. Find the encrypted token. 
-    // Depending on your database schema, the token might be saved directly on the 
+  private async resolveOAuth2Creds(
+    dest: any,
+  ): Promise<{ accessToken: string }> {
+    // 1. Find the encrypted token.
+    // Depending on your database schema, the token might be saved directly on the
     // SocialProfile, or it might be inherited from the parent SocialConnection.
-    const encryptedToken = dest.profile?.accessToken ?? dest.profile?.connection?.accessToken;
+    const encryptedToken =
+      dest.profile?.accessToken ?? dest.profile?.connection?.accessToken;
 
     // 2. Fail fast if the user's account is disconnected or missing a token
     if (!encryptedToken) {
       throw new BadRequestException(
-        `Your ${dest.profile?.platform} account (${dest.profile?.name}) is missing an access token. Please reconnect it.`
+        `Your ${dest.profile?.platform} account (${dest.profile?.name}) is missing an access token. Please reconnect it.`,
       );
     }
 
     try {
-      const rawAccessToken = await this.encryptionService.decrypt(encryptedToken);
+      const rawAccessToken =
+        await this.encryptionService.decrypt(encryptedToken);
 
       if (!rawAccessToken) {
         throw new Error('Decryption returned null or empty string');
       }
 
       return { accessToken: rawAccessToken };
-      
     } catch (error: any) {
       throw new InternalServerErrorException(
-        `Security Error: Could not decrypt credentials for ${dest.profile?.platform}. Please reconnect the account.`
+        `Security Error: Could not decrypt credentials for ${dest.profile?.platform}. Please reconnect the account.`,
       );
     }
   }

@@ -54,53 +54,62 @@ export class AuditService {
 
   // Basic sanitization to prevent saving passwords in logs
   private sanitize(data: any): any {
-  if (!data) return null;
+    if (!data) return null;
 
-  const sensitiveKeys = ['password', 'token', 'secret', 'authorization', 'creditcard'];
+    const sensitiveKeys = [
+      'password',
+      'token',
+      'secret',
+      'authorization',
+      'creditcard',
+    ];
 
-  const seen = new WeakSet();
+    const seen = new WeakSet();
 
-  const walk = (value: any, depth = 0): any => {
-    if (depth > 6) return '[TRUNCATED_DEPTH]';
+    const walk = (value: any, depth = 0): any => {
+      if (depth > 6) return '[TRUNCATED_DEPTH]';
 
-    if (value === null || value === undefined) return value;
+      if (value === null || value === undefined) return value;
 
-    if (typeof value === 'bigint') return value.toString();
-    if (typeof value === 'function') return '[FUNCTION]';
+      if (typeof value === 'bigint') return value.toString();
+      if (typeof value === 'function') return '[FUNCTION]';
 
-    if (typeof value === 'string') {
-      // avoid storing huge blobs
-      return value.length > 2000 ? value.slice(0, 2000) + '...[TRUNCATED]' : value;
-    }
-
-    if (Array.isArray(value)) {
-      if (value.length > 50) return [...value.slice(0, 50), '[TRUNCATED_ARRAY]'];
-      return value.map((v) => walk(v, depth + 1));
-    }
-
-    if (typeof value === 'object') {
-      if (seen.has(value)) return '[CIRCULAR]';
-      seen.add(value);
-
-      const out: Record<string, any> = {};
-      for (const key of Object.keys(value)) {
-        const lowered = key.toLowerCase();
-        if (sensitiveKeys.some((k) => lowered.includes(k))) {
-          out[key] = '[REDACTED]';
-        } else {
-          out[key] = walk(value[key], depth + 1);
-        }
+      if (typeof value === 'string') {
+        // avoid storing huge blobs
+        return value.length > 2000
+          ? value.slice(0, 2000) + '...[TRUNCATED]'
+          : value;
       }
-      return out;
-    }
 
-    return value;
-  };
+      if (Array.isArray(value)) {
+        if (value.length > 50)
+          return [...value.slice(0, 50), '[TRUNCATED_ARRAY]'];
+        return value.map((v) => walk(v, depth + 1));
+      }
 
-  return walk(data);
-}
+      if (typeof value === 'object') {
+        if (seen.has(value)) return '[CIRCULAR]';
+        seen.add(value);
 
- async listOrganizationLogs(params: {
+        const out: Record<string, any> = {};
+        for (const key of Object.keys(value)) {
+          const lowered = key.toLowerCase();
+          if (sensitiveKeys.some((k) => lowered.includes(k))) {
+            out[key] = '[REDACTED]';
+          } else {
+            out[key] = walk(value[key], depth + 1);
+          }
+        }
+        return out;
+      }
+
+      return value;
+    };
+
+    return walk(data);
+  }
+
+  async listOrganizationLogs(params: {
     organizationId: string;
     query: ListAuditLogsDto;
   }) {
@@ -113,7 +122,11 @@ export class AuditService {
       organizationId,
       ...(query.resourceType ? { resourceType: query.resourceType } : {}),
       ...(query.actorEmail
-        ? { actorUser: { email: { contains: query.actorEmail, mode: 'insensitive' } } }
+        ? {
+            actorUser: {
+              email: { contains: query.actorEmail, mode: 'insensitive' },
+            },
+          }
         : {}),
     };
 
@@ -124,7 +137,9 @@ export class AuditService {
         take,
         skip,
         include: {
-          actorUser: { select: { id: true, email: true, firstName: true, lastName: true } },
+          actorUser: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
           actorMember: { select: { id: true, userId: true } },
         },
       }),

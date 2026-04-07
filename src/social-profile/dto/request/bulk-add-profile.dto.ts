@@ -8,7 +8,9 @@ export class BulkAddProfilesDto {
   @IsNotEmpty()
   connectionId: string;
 
-  @ApiProperty({ description: 'Platform explicitly to check against the Plan limits'})
+  @ApiProperty({
+    description: 'Platform explicitly to check against the Plan limits',
+  })
   @IsNotEmpty()
   @IsEnum(Platform)
   platform: Platform;

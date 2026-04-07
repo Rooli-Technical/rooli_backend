@@ -1,10 +1,21 @@
-import { Platform } from "@generated/enums";
-import { ApiPropertyOptional, ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsEnum, IsISO8601, IsInt, Min, Max, IsArray, ArrayMinSize, IsString } from "class-validator";
+import { Platform } from '@generated/enums';
+import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
+import {
+  IsOptional,
+  IsEnum,
+  IsISO8601,
+  IsInt,
+  Min,
+  Max,
+  IsArray,
+  ArrayMinSize,
+  IsString,
+} from 'class-validator';
 
 export class AutoScheduleDto {
   @ApiPropertyOptional({
-    description: 'Optional platform filter (if scheduling is platform-specific).',
+    description:
+      'Optional platform filter (if scheduling is platform-specific).',
     enum: Platform,
     example: 'INSTAGRAM',
   })

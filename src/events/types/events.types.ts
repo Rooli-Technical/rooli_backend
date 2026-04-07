@@ -13,12 +13,12 @@ export type DomainEventName =
   | 'publishing.post.declined'
   | 'ticket.created'
   | 'ticket.comment.added'
+  | 'ticket.comment.reply'
   | 'ticket.updated'
   | 'notification.created'
   | 'notification.read'
   | 'notification.read_all'
-  | 'system.social_profile.connected'
-  ;
+  | 'system.social_profile.connected';
 
 export type InboxMessageCreatedEvent = {
   workspaceId: string;
@@ -190,8 +190,21 @@ export type DomainEventPayloadMap = {
     isFromSupport: boolean;
     isInternal: boolean;
     createdAt: Date;
-    author: { id: string; name: string; };
+    author: { id: string; name: string };
     mediaFiles: any[];
+  };
+
+  'ticket.comment.reply': {
+    workspaceId: string;
+    ticketId: string;
+    id: string; // comment ID
+    content: string;
+    isFromSupport: boolean;
+    isInternal: boolean;
+    createdAt: Date;
+    author: { id: string; name: string };
+    mediaFiles: any[];
+    email: string; // Added email field for sending support email notifications
   };
 
   'ticket.updated': {
@@ -201,6 +214,7 @@ export type DomainEventPayloadMap = {
     priority?: string;
     assigneeId?: string;
     closedAt?: Date | null;
+    email?: string; // Added email field for sending support email notifications
   };
 
   'system.social_profile.connected': {

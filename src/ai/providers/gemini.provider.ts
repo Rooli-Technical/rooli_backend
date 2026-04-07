@@ -1,7 +1,16 @@
-import { AiProvider } from "@generated/enums";
-import { Injectable, BadRequestException, ServiceUnavailableException, InternalServerErrorException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { IAiProvider, TextGenOptions, TextGenResult } from "../interfaces/ai-provider.interface";
+import { AiProvider } from '@generated/enums';
+import {
+  Injectable,
+  BadRequestException,
+  ServiceUnavailableException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  IAiProvider,
+  TextGenOptions,
+  TextGenResult,
+} from '../interfaces/ai-provider.interface';
 
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
@@ -28,9 +37,7 @@ export class GeminiProvider implements IAiProvider {
         temperature: options.temperature ?? 0.7,
         maxOutputTokens: options.maxTokens ?? 1000,
         responseMimeType:
-          options.responseFormat === 'json'
-            ? 'application/json'
-            : 'text/plain',
+          options.responseFormat === 'json' ? 'application/json' : 'text/plain',
       };
 
       const result = await model.generateContent({

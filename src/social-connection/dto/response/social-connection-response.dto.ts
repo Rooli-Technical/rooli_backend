@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-
 export class SocialPageDto {
   @ApiProperty({ example: '123456789' })
   id: string;

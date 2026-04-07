@@ -1,4 +1,3 @@
-
 import {
   ConnectedSocket,
   MessageBody,
@@ -37,7 +36,9 @@ declare module 'socket.io' {
   cors: { origin: true, credentials: true },
   transports: ['websocket'],
 })
-export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
+export class EventsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
+{
   private readonly logger = new Logger(EventsGateway.name);
 
   @WebSocketServer()
@@ -65,7 +66,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, 
 
     client.join(this.roomMember(client.user.memberId));
 
-    this.logger.log(`Socket connected: ${client.id} user=${client.user.userId}`);
+    this.logger.log(
+      `Socket connected: ${client.id} user=${client.user.userId}`,
+    );
   }
 
   handleDisconnect(client: Socket) {
@@ -78,7 +81,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, 
     @MessageBody() body: { workspaceId: string; conversationId: string },
   ) {
     if (!client.user) return { ok: false };
-    if (!client.user.workspaceIds.includes(body.workspaceId)) return { ok: false };
+    if (!client.user.workspaceIds.includes(body.workspaceId))
+      return { ok: false };
 
     client.join(this.roomConversation(body.workspaceId, body.conversationId));
     return { ok: true };
@@ -102,10 +106,24 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, 
     return `workspace:${workspaceId}:conversation:${conversationId}`;
   }
 
-
   private roomMember(memberId: string) {
     return `member:${memberId}`;
   }
 
-  
+  @SubscribeMessage('join:ticket')
+  handleJoinTicket(client: Socket, payload: { ticketId: string }) {
+    const room = `ticket:${payload.ticketId}`;
+    client.join(room);
+    this.logger.log(`✅ Client ${client.id} joined room: ${room}`);
+    this.logger.log(`📋 Client rooms: ${[...client.rooms].join(', ')}`);
+    return { joined: room }; // 👈 sends ack back to client
+  }
+
+  @SubscribeMessage('leave:ticket')
+  handleLeaveTicket(client: Socket, payload: { ticketId: string }) {
+    const room = `ticket:${payload.ticketId}`;
+    client.leave(room);
+    this.logger.log(`👋 Client ${client.id} left room: ${room}`);
+    return { left: room }; 
+  }
 }

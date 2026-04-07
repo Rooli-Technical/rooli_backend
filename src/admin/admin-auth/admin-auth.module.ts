@@ -32,6 +32,8 @@ import { AdminJwtGuard } from '../guards/admin-jwt.guard';
     JwtModule,
     AdminAuthService,
     AdminJwtGuard,
+    PassportModule, // ← add this
+    AdminJwtStrategy,
   ],
 })
 export class AdminAuthModule {}

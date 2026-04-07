@@ -81,7 +81,7 @@ export class SocialConnectionController {
     enum: Platform,
     example: 'FACEBOOK',
   })
-@ApiStandardResponse(SocialConnectionResponseDto)
+  @ApiStandardResponse(SocialConnectionResponseDto)
   async handleCallback(
     @Param('platform') platform: Platform,
     @Query() query: SocialCallbackDto,
@@ -182,17 +182,18 @@ export class SocialConnectionController {
   }
 
   @Post('subscribe/:connectionId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Subscribe a LinkedIn Organization to Webhooks',
-    description: 'Registers the organization for social action notifications (comments) using the stored LinkedIn credentials.'
+    description:
+      'Registers the organization for social action notifications (comments) using the stored LinkedIn credentials.',
   })
-  @ApiParam({ 
-    name: 'connectionId', 
-    description: 'The internal database UUID/ID of the LinkedIn SocialConnection',
-    example: '550e8400-e29b-41d4-a716-446655440000' 
+  @ApiParam({
+    name: 'connectionId',
+    description:
+      'The internal database UUID/ID of the LinkedIn SocialConnection',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   async subscribe(@Param('connectionId') connectionId: string) {
-    
     await this.socialConnectionService.subscribeByConnectionId(connectionId);
 
     return {

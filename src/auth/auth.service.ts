@@ -128,9 +128,9 @@ export class AuthService {
       });
     }
 
-   const [orgOwnerRole, wsAdminRole] = await Promise.all([
+    const [orgOwnerRole, wsAdminRole] = await Promise.all([
       this.prisma.role.findFirstOrThrow({
-        where: { slug: 'owner', scope: 'ORGANIZATION' }, 
+        where: { slug: 'owner', scope: 'ORGANIZATION' },
       }),
       this.prisma.role.findFirstOrThrow({
         where: { slug: 'owner', scope: 'WORKSPACE' },
@@ -170,7 +170,7 @@ export class AuthService {
             },
           },
         },
-        include: { members: true }
+        include: { members: true },
       });
 
       // 3. Create Brand Kit
@@ -202,7 +202,7 @@ export class AuthService {
       return { org, workspace, user: updatedUser };
     });
 
-    // 1. Generate Tokens 
+    // 1. Generate Tokens
     const newTokens = await this.generateTokens(
       txResult.user.id,
       txResult.user.email,
@@ -258,7 +258,6 @@ export class AuthService {
       },
     });
 
-
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const validPass = await argon2.verify(user.password, loginDto.password);
@@ -300,84 +299,84 @@ export class AuthService {
     };
   }
 
-async refreshTokens(refreshToken: string): Promise<AuthResponse> {
-  try {
-    const payload = this.jwtService.verify(refreshToken, {
-      secret: this.configService.get('JWT_REFRESH_SECRET'),
-    });
+  async refreshTokens(refreshToken: string): Promise<AuthResponse> {
+    try {
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+      });
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub, deletedAt: null },
-      include: {
-        organizationMemberships: {
-          include: {
-            organization: true,
-            workspaceMemberships: { 
-              include: { workspace: true },
-              take: 1,
-              orderBy: { createdAt: 'desc' },
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub, deletedAt: null },
+        include: {
+          organizationMemberships: {
+            include: {
+              organization: true,
+              workspaceMemberships: {
+                include: { workspace: true },
+                take: 1,
+                orderBy: { createdAt: 'desc' },
+              },
             },
+            take: 1,
+            orderBy: { createdAt: 'desc' },
           },
-          take: 1,
-          orderBy: { createdAt: 'desc' },
         },
-      },
-    });
+      });
 
-    if (!user || !user.refreshToken)
-      throw new UnauthorizedException('Access Denied');
-    
-    if (user.refreshTokenVersion !== payload.ver)
-      throw new UnauthorizedException('Session invalidated');
+      if (!user || !user.refreshToken)
+        throw new UnauthorizedException('Access Denied');
 
-    // Security: Verify the hash of the refresh token
-    const isValid = await argon2.verify(user.refreshToken, refreshToken);
-    if (!isValid) {
+      if (user.refreshTokenVersion !== payload.ver)
+        throw new UnauthorizedException('Session invalidated');
+
+      // Security: Verify the hash of the refresh token
+      const isValid = await argon2.verify(user.refreshToken, refreshToken);
+      if (!isValid) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { refreshToken: null },
+        });
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // 2. Re-Resolve Context
+      // This uses your updated resolveLoginContext which now handles Member-based lookups
+      const context = await this.resolveLoginContext(user);
+
+      // 3. Generate New Tokens with fresh Org/Workspace IDs
+      const tokens = await this.generateTokens(
+        user.id,
+        user.email,
+        context.orgId,
+        context.workspaceId,
+        context.workspaceMemberId,
+        user.refreshTokenVersion,
+      );
+
+      // 4. Update the database with the new hashed refresh token
+      await this.updateRefreshToken(user.id, tokens.refreshToken);
+
+      // 5. Update last activity and sticky session
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { refreshToken: null },
+        data: {
+          lastActiveAt: new Date(),
+          lastActiveWorkspaceId: context.workspaceId,
+        },
       });
+
+      return {
+        user: this.toSafeUser(user),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        requiresEmailVerification: !user.isEmailVerified,
+        lastActiveWorkspaceId: context.workspaceId,
+      };
+    } catch (error: any) {
+      this.logger.warn(`Refresh failed: ${error.message}`);
       throw new UnauthorizedException('Invalid refresh token');
     }
-
-    // 2. Re-Resolve Context 
-    // This uses your updated resolveLoginContext which now handles Member-based lookups
-    const context = await this.resolveLoginContext(user);
-
-    // 3. Generate New Tokens with fresh Org/Workspace IDs
-    const tokens = await this.generateTokens(
-      user.id,
-      user.email,
-      context.orgId,
-      context.workspaceId,
-      context.workspaceMemberId,
-      user.refreshTokenVersion,
-    );
-
-    // 4. Update the database with the new hashed refresh token
-    await this.updateRefreshToken(user.id, tokens.refreshToken);
-
-    // 5. Update last activity and sticky session
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastActiveAt: new Date(),
-        lastActiveWorkspaceId: context.workspaceId,
-      },
-    });
-
-    return {
-      user: this.toSafeUser(user),
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      requiresEmailVerification: !user.isEmailVerified,
-      lastActiveWorkspaceId: context.workspaceId,
-    };
-  } catch (error: any) {
-    this.logger.warn(`Refresh failed: ${error.message}`);
-    throw new UnauthorizedException('Invalid refresh token');
   }
-}
 
   async handleSocialLogin(googleUser: any, ip: string) {
     const lowerEmail = googleUser.email.toLowerCase();
@@ -415,7 +414,6 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
       );
 
       await this.updateRefreshToken(user.id, tokens.refreshToken);
-
 
       return {
         user: this.toSafeUser(user),
@@ -469,79 +467,87 @@ async refreshTokens(refreshToken: string): Promise<AuthResponse> {
    * 2. Fallback to Most Recent Workspace
    * 3. Fallback to Organization (if Billing Admin)
    */
-private async resolveLoginContext(user: any) {
-  let activeWorkspaceId = user.lastActiveWorkspaceId;
-  let activeOrgId: string | null = null;
-  let activeWorkspaceMemberId: string | null = null;
+  private async resolveLoginContext(user: any) {
+    let activeWorkspaceId = user.lastActiveWorkspaceId;
+    let activeOrgId: string | null = null;
+    let activeWorkspaceMemberId: string | null = null;
 
-  // 1. Verify Sticky Session (Normal path)
-  if (activeWorkspaceId) {
-    const stickyMember = await this.prisma.workspaceMember.findFirst({
-      where: {
-        workspaceId: activeWorkspaceId,
-        member: { userId: user.id },
-      },
-      select: { id: true, workspace: { select: { organizationId: true } } },
-    });
+    // 1. Verify Sticky Session (Normal path)
+    if (activeWorkspaceId) {
+      const stickyMember = await this.prisma.workspaceMember.findFirst({
+        where: {
+          workspaceId: activeWorkspaceId,
+          member: { userId: user.id },
+        },
+        select: { id: true, workspace: { select: { organizationId: true } } },
+      });
 
-    if (stickyMember) {
-      activeOrgId = stickyMember.workspace.organizationId;
-      activeWorkspaceMemberId = stickyMember.id;
-    } else {
-      activeWorkspaceId = null; 
+      if (stickyMember) {
+        activeOrgId = stickyMember.workspace.organizationId;
+        activeWorkspaceMemberId = stickyMember.id;
+      } else {
+        activeWorkspaceId = null;
+      }
     }
-  }
 
-  // 2. Direct Workspace Membership Fallback
-  if (!activeWorkspaceId) {
-    const directWs = await this.prisma.workspaceMember.findFirst({
-      where: { member: { userId: user.id } },
-      include: { workspace: { select: { organizationId: true } } },
-    });
+    // 2. Direct Workspace Membership Fallback
+    if (!activeWorkspaceId) {
+      const directWs = await this.prisma.workspaceMember.findFirst({
+        where: { member: { userId: user.id } },
+        include: { workspace: { select: { organizationId: true } } },
+      });
 
-    if (directWs) {
-      activeWorkspaceId = directWs.workspaceId;
-      activeOrgId = directWs.workspace.organizationId;
-      activeWorkspaceMemberId = directWs.id;
+      if (directWs) {
+        activeWorkspaceId = directWs.workspaceId;
+        activeOrgId = directWs.workspace.organizationId;
+        activeWorkspaceMemberId = directWs.id;
+      }
     }
-  }
 
-  // 3. YOUR NEW LOGIC: Reach through Organization to find ANY workspace
-  if (!activeWorkspaceId) {
-    const firstOrgWithWorkspaces = await this.prisma.organizationMember.findFirst({
-      where: { userId: user.id },
-      include: {
-        organization: {
+    // 3. YOUR NEW LOGIC: Reach through Organization to find ANY workspace
+    if (!activeWorkspaceId) {
+      const firstOrgWithWorkspaces =
+        await this.prisma.organizationMember.findFirst({
+          where: { userId: user.id },
           include: {
-            workspaces: { take: 1, orderBy: { createdAt: 'asc' } }
-          }
+            organization: {
+              include: {
+                workspaces: { take: 1, orderBy: { createdAt: 'asc' } },
+              },
+            },
+          },
+        });
+
+      if (firstOrgWithWorkspaces) {
+        activeOrgId = firstOrgWithWorkspaces.organizationId;
+        const fallbackWs = firstOrgWithWorkspaces.organization.workspaces[0];
+
+        if (fallbackWs) {
+          activeWorkspaceId = fallbackWs.id;
+          const wsMember = await this.prisma.workspaceMember.findFirst({
+            where: {
+              workspaceId: activeWorkspaceId,
+              member: { userId: user.id },
+            },
+            select: { id: true },
+          });
+          if (wsMember) activeWorkspaceMemberId = wsMember.id;
         }
       }
-    });
-
-    if (firstOrgWithWorkspaces) {
-      activeOrgId = firstOrgWithWorkspaces.organizationId;
-      const fallbackWs = firstOrgWithWorkspaces.organization.workspaces[0];
-      
-      if (fallbackWs) {
-        activeWorkspaceId = fallbackWs.id;
-        const wsMember = await this.prisma.workspaceMember.findFirst({
-          where: { workspaceId: activeWorkspaceId, member: { userId: user.id } },
-          select: { id: true }
-        });
-        if (wsMember) activeWorkspaceMemberId = wsMember.id;
-      }
     }
+
+    return {
+      orgId: activeOrgId,
+      workspaceId: activeWorkspaceId,
+      workspaceMemberId: activeWorkspaceMemberId,
+    };
   }
 
-  return { orgId: activeOrgId, workspaceId: activeWorkspaceId, workspaceMemberId: activeWorkspaceMemberId };
-}
-
- async generateTokens(
+  async generateTokens(
     userId: string,
     email: string,
     orgId: string | null,
-    workspaceId: string | null, 
+    workspaceId: string | null,
     workspaceMemberId: string | null,
     version: number,
   ) {
@@ -549,7 +555,7 @@ private async resolveLoginContext(user: any) {
       sub: userId,
       email,
       orgId,
-      workspaceId, 
+      workspaceId,
       workspaceMemberId,
       ver: version,
     };
@@ -578,7 +584,6 @@ private async resolveLoginContext(user: any) {
       data: { refreshToken: hash },
     });
   }
-
 
   private async generateUniqueOrgSlug(name: string): Promise<string> {
     const baseSlug = slugify(name, { lower: true, strict: true });
@@ -704,7 +709,7 @@ private async resolveLoginContext(user: any) {
         lastActiveWorkspaceId: true,
         organizationMemberships: {
           include: {
-            role: true, 
+            role: true,
             organization: {
               include: {
                 subscription: {
@@ -723,20 +728,22 @@ private async resolveLoginContext(user: any) {
 
     const primaryMembership = user.organizationMemberships?.[0];
 
-   return {
-    id: user.id,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    role: primaryMembership?.role?.slug || 'USER', 
-    isEmailVerified: user.isEmailVerified,
-    isOnboardingComplete: user.isOnboardingComplete,
-    lastActiveWorkspace: user.lastActiveWorkspaceId,
-    organization: primaryMembership?.organization,
-    allowedPlatforms: primaryMembership?.organization?.subscription?.plan?.allowedPlatforms || [],
-    UserType: user.userType,
-    plan: primaryMembership?.organization?.subscription?.plan,
-  };
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: primaryMembership?.role?.slug || 'USER',
+      isEmailVerified: user.isEmailVerified,
+      isOnboardingComplete: user.isOnboardingComplete,
+      lastActiveWorkspace: user.lastActiveWorkspaceId,
+      organization: primaryMembership?.organization,
+      allowedPlatforms:
+        primaryMembership?.organization?.subscription?.plan?.allowedPlatforms ||
+        [],
+      UserType: user.userType,
+      plan: primaryMembership?.organization?.subscription?.plan,
+    };
   }
 
   validatePasswordStrength(password: string): void {
@@ -828,10 +835,12 @@ private async resolveLoginContext(user: any) {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      avatar: user.avatar ? {
-      ...user.avatar,
-      size: user.avatar.size.toString(), 
-    } : null,
+      avatar: user.avatar
+        ? {
+            ...user.avatar,
+            size: user.avatar.size.toString(),
+          }
+        : null,
       isEmailVerified: user.isEmailVerified,
       lastActiveAt: user.lastActiveAt,
       userType: user.userType,

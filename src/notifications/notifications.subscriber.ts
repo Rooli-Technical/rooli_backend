@@ -250,7 +250,7 @@ export class NotificationsSubscriber {
         platform: evt.platform,
         profileName: evt.profileName,
         snippet: evt.snippet,
-      } 
+      },
     });
   }
 
@@ -265,7 +265,6 @@ export class NotificationsSubscriber {
     reason: string;
     actorMemberId?: string;
   }) {
-
     const friendlyErrorMessage = `We encountered an issue while publishing to ${evt.platform}. Please check your account connection and try again.`;
 
     await this.notifyPostEvent({
@@ -458,12 +457,39 @@ export class NotificationsSubscriber {
     }
   }
 
-// ============================================================================
+  // ============================================================================
   // TICKET EVENTS (The "Red Bell" Database Notifications)
   // ============================================================================
 
+    @OnEvent('ticket.created', { async: true })
+  async onTicketCreatedForAdmins(evt: DomainEventPayloadMap['ticket.created']) {
+    try {
+      // 1. Get all workspace members (Admins/Support Agents)
+      const recipientMemberIds = await this.listWorkspaceMemberIds(evt.workspaceId);
+      
+      if (!recipientMemberIds.length) return;
+
+      // 2. Create the notification for the team
+      await this.notifications.createMany({
+        workspaceId: evt.workspaceId,
+        memberIds: recipientMemberIds, 
+        type: NotificationType.SUPPORT_NEW_TICKET,
+        title: `New Ticket: #${evt.ticketNumber}`,
+        body: `${evt.requesterName} opened: "${evt.title}"`,
+        link: `/support/tickets/${evt.ticketId}`, // The link to the admin ticket view
+        data: { ticketId: evt.ticketId } as Prisma.InputJsonValue,
+        dedupeKey: `ticket:created:${evt.ticketId}`,
+        skipDuplicates: true,
+      });
+    } catch (e: any) {
+      this.logger.warn(`onTicketCreatedForAdmins failed: ${e?.message ?? String(e)}`);
+    }
+  }
+
   @OnEvent('ticket.comment.added', { async: true })
-  async onTicketCommentAdded(evt: DomainEventPayloadMap['ticket.comment.added']) {
+  async onTicketCommentAdded(
+    evt: DomainEventPayloadMap['ticket.comment.added'],
+  ) {
     try {
       // Rule: Only notify the customer if Rooli Support replied publicly!
       if (!evt.isFromSupport || evt.isInternal) return;
@@ -477,7 +503,7 @@ export class NotificationsSubscriber {
       await this.notifications.create({
         workspaceId: evt.workspaceId,
         memberId: ticket.requesterId, // The WorkspaceMember who opened the ticket
-        type: NotificationType.SYSTEM_ALERT, 
+        type: NotificationType.SUPPORT_NEW_MESSAGE,
         title: `Rooli Support Replied`,
         body: `You have a new reply on Ticket #${ticket.ticketNumber}.`,
         link: `/support/tickets/${evt.ticketId}`,
@@ -485,7 +511,9 @@ export class NotificationsSubscriber {
         dedupeKey: `ticket:reply:${evt.ticketId}:${evt.id}`, // Use comment ID to prevent dupes
       });
     } catch (e: any) {
-      this.logger.warn(`onTicketCommentAdded failed: ${e?.message ?? String(e)}`);
+      this.logger.warn(
+        `onTicketCommentAdded failed: ${e?.message ?? String(e)}`,
+      );
     }
   }
 
@@ -515,6 +543,7 @@ export class NotificationsSubscriber {
       this.logger.warn(`onTicketUpdated failed: ${e?.message ?? String(e)}`);
     }
   }
+
 
   // ============================================================================
   // Recipient helpers

@@ -1,7 +1,10 @@
 import { Platform, Prisma } from '@generated/client';
 import { Injectable, Logger } from '@nestjs/common';
 import { AnalyticsRepository } from './analytics.repository';
-import { FetchAccountResult, FetchPostResult } from '../interfaces/analytics-provider.interface';
+import {
+  FetchAccountResult,
+  FetchPostResult,
+} from '../interfaces/analytics-provider.interface';
 
 @Injectable()
 export class AnalyticsNormalizerService {
@@ -17,9 +20,10 @@ export class AnalyticsNormalizerService {
     platform: Platform,
     rawData: FetchAccountResult,
   ) {
-    const previousSnapshot = await this.analyticsRepository.getLastAccountSnapshot(
-      internalSocialProfileId,
-    );
+    const previousSnapshot =
+      await this.analyticsRepository.getLastAccountSnapshot(
+        internalSocialProfileId,
+      );
 
     const growth = this.calculateDelta(
       rawData.unified.followersTotal,
@@ -87,12 +91,18 @@ export class AnalyticsNormalizerService {
    */
   private getPlatformRelationKey(platform: Platform): string {
     switch (platform) {
-      case 'TWITTER': return 'twitterStats';
-      case 'LINKEDIN': return 'linkedInStats';
-      case 'FACEBOOK': return 'facebookStats';
-      case 'INSTAGRAM': return 'instagramStats';
-      case 'TIKTOK': return 'tiktokStats';
-      default: throw new Error(`Unsupported platform: ${platform}`);
+      case 'TWITTER':
+        return 'twitterStats';
+      case 'LINKEDIN':
+        return 'linkedInStats';
+      case 'FACEBOOK':
+        return 'facebookStats';
+      case 'INSTAGRAM':
+        return 'instagramStats';
+      case 'TIKTOK':
+        return 'tiktokStats';
+      default:
+        throw new Error(`Unsupported platform: ${platform}`);
     }
   }
 }

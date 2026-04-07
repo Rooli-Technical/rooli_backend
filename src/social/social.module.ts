@@ -8,7 +8,6 @@ import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bullmq';
 import { TikTokProvider } from './providers/tiktok.provider';
 
-
 @Module({
   imports: [
     HttpModule,

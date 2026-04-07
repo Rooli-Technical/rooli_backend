@@ -1,11 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 
 export type CalendarInclude = 'posts' | 'campaigns' | 'holidays';
 
 export class GetCalendarQueryDto {
   @ApiProperty({
-    description: 'Start of range (YYYY-MM-DD). Use day boundaries in workspace timezone.',
+    description:
+      'Start of range (YYYY-MM-DD). Use day boundaries in workspace timezone.',
     example: '2026-02-01',
   })
   @IsNotEmpty()
@@ -16,7 +23,7 @@ export class GetCalendarQueryDto {
     description: 'End of range (YYYY-MM-DD). Usually first day of next month.',
     example: '2026-03-01',
   })
-   @IsNotEmpty()
+  @IsNotEmpty()
   @IsString()
   to: string;
 

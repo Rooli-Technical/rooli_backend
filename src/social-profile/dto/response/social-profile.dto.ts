@@ -1,5 +1,5 @@
-import { Platform } from "@generated/enums";
-import { ApiProperty } from "@nestjs/swagger";
+import { Platform } from '@generated/enums';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class SocialProfileDto {
   @ApiProperty()

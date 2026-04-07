@@ -1,10 +1,20 @@
-import { Platform } from "@generated/enums";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsInt, Min, Max, IsString, Matches, IsOptional, IsEnum, IsBoolean } from "class-validator";
+import { Platform } from '@generated/enums';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsInt,
+  Min,
+  Max,
+  IsString,
+  Matches,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateQueueSlotDto {
   @ApiProperty({
-    description: 'Day of week (1=Mon ... 7=Sun). Use this consistently everywhere.',
+    description:
+      'Day of week (1=Mon ... 7=Sun). Use this consistently everywhere.',
     example: 1,
     minimum: 1,
     maximum: 7,
@@ -20,7 +30,9 @@ export class CreateQueueSlotDto {
     pattern: '^([01]\\d|2[0-3]):([0-5]\\d)$',
   })
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'time must be HH:mm (24h)' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'time must be HH:mm (24h)',
+  })
   time: string;
 
   @ApiPropertyOptional({

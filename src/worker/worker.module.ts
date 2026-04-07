@@ -38,7 +38,7 @@ import { HttpModule } from '@nestjs/axios';
     forwardRef(() => PollingModule),
     RedisModule,
     NotificationsModule,
-    HttpModule
+    HttpModule,
   ],
   controllers: [WorkerController],
   providers: [

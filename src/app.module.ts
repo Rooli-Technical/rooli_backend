@@ -60,12 +60,12 @@ import { MediaProxyModule } from './media-proxy/media-proxy.module';
 
     BullModule.forRootAsync({
       // 1. We inject the existing client from your RedisModule
-      inject: ['REDIS_CLIENT'], 
+      inject: ['REDIS_CLIENT'],
       useFactory: (redisClient: Redis) => {
         return {
           // 2. Pass the actual instance, NOT a config object.
           // This forces BullMQ to share the existing socket.
-          connection: redisClient, 
+          connection: redisClient,
           defaultJobOptions: {
             removeOnComplete: true,
             attempts: 3,
@@ -87,7 +87,6 @@ import { MediaProxyModule } from './media-proxy/media-proxy.module';
 
     // ApprovalsModule,
 
-
     RooliBullBoardModule,
 
     // AccessControlModule,
@@ -104,7 +103,6 @@ import { MediaProxyModule } from './media-proxy/media-proxy.module';
 
     PostMediaModule,
 
-
     QueueModule,
 
     SocialModule,
@@ -120,13 +118,13 @@ import { MediaProxyModule } from './media-proxy/media-proxy.module';
     CalendarModule,
 
     RbacModule,
-    
+
     UserModule,
-    
+
     AuditModule,
-    
+
     InboxModule,
-    
+
     NotificationsModule,
 
     EventEmitterModule.forRoot({

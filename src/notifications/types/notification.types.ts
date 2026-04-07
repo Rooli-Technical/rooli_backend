@@ -1,5 +1,5 @@
-import { Prisma } from "@generated/client";
-import { NotificationType } from "@generated/enums";
+import { Prisma } from '@generated/client';
+import { NotificationType } from '@generated/enums';
 
 export type CreateNotificationInput = {
   workspaceId: string;

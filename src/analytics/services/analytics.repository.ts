@@ -41,7 +41,11 @@ export class AnalyticsRepository {
     });
   }
 
-  async saveAccountAnalytics(payload: { baseData: any; specificKey: string; specificData: any }) {
+  async saveAccountAnalytics(payload: {
+    baseData: any;
+    specificKey: string;
+    specificData: any;
+  }) {
     const { baseData, specificKey, specificData } = payload;
     const dateKey = startOfDay(new Date(baseData.date));
 
@@ -64,7 +68,7 @@ export class AnalyticsRepository {
         ...baseData,
         date: dateKey,
         // E.g., linkedInStats: { create: { demographics: {...} } }
-        [specificKey]: { create: specificData }, 
+        [specificKey]: { create: specificData },
       },
       update: {
         ...baseData,
@@ -76,7 +80,11 @@ export class AnalyticsRepository {
     });
   }
 
-  async savePostSnapshot(payload: { baseData: any; specificKey: string; specificData: any }) {
+  async savePostSnapshot(payload: {
+    baseData: any;
+    specificKey: string;
+    specificData: any;
+  }) {
     const { baseData, specificKey, specificData } = payload;
     const dateKey = startOfDay(new Date(baseData.day));
 
@@ -156,5 +164,4 @@ export class AnalyticsRepository {
       orderBy: { date: 'asc' },
     });
   }
-
 }

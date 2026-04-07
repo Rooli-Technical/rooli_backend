@@ -10,9 +10,7 @@ import { FEATURE_KEY } from '../decorators/require-feature.decorator';
 
 @Injectable()
 export class FeatureGuard implements CanActivate {
-  constructor(
-    private reflector: Reflector,
-  ) {}
+  constructor(private reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredFeature = this.reflector.getAllAndOverride<

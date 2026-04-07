@@ -71,7 +71,7 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
         );
         results.push(...mapped);
       } catch (e: any) {
-        console.log(e)
+        console.log(e);
         this.logger.error(`Twitter batch chunk failed: ${e.message}`);
       }
     }
@@ -79,62 +79,71 @@ export class TwitterAnalyticsProvider implements IAnalyticsProvider {
     return results;
   }
 
+  async getAccountStats(
+    userId: string,
+    credentials: any,
+  ): Promise<FetchAccountResult> {
+    try {
+      const client = this.makeClient(credentials);
 
-  async getAccountStats(userId: string, credentials: any): Promise<FetchAccountResult> {
-    try{
-    const client = this.makeClient(credentials);
+      // This fetches the user associated with the Access Token/Secret
+      const { data: user } = await client.v2.me({
+        'user.fields': ['public_metrics'],
+      });
 
-    // This fetches the user associated with the Access Token/Secret
-    const { data: user } = await client.v2.me({
-      'user.fields': ['public_metrics'],
-    });
+      const userStats = user.public_metrics || {};
 
-    const userStats = user.public_metrics || {};
-
-    return {
-      platformId: user.id,
-      fetchedAt: new Date(),
-      unified: {
-        followersTotal: userStats.followers_count ?? 0,
-        impressions: 0, // Not available via standard v2 API
-        reach: 0,
-        profileViews: 0,
-        clicks: 0,
-        engagementCount: userStats.like_count ?? 0,
-      },
-      specific: {
-        mentions: 0, // Populate if you have premium API
-        tweetCount: userStats.tweet_count ?? 0,
-      }
-    };
-  }catch(e){
-    console.log(e)
-    throw e
+      return {
+        platformId: user.id,
+        fetchedAt: new Date(),
+        unified: {
+          followersTotal: userStats.followers_count ?? 0,
+          impressions: 0, // Not available via standard v2 API
+          reach: 0,
+          profileViews: 0,
+          clicks: 0,
+          engagementCount: userStats.like_count ?? 0,
+        },
+        specific: {
+          mentions: 0, // Populate if you have premium API
+          tweetCount: userStats.tweet_count ?? 0,
+        },
+      };
+    } catch (e) {
+      console.log(e);
+      throw e;
+    }
   }
-  }
 
-private mapToDomain(tweet: any): FetchPostResult {
+  private mapToDomain(tweet: any): FetchPostResult {
     const publicM = tweet.public_metrics ?? {};
     const organic = tweet.organic_metrics;
     const nonPublic = tweet.non_public_metrics;
-    const linkClicks = organic?.url_link_clicks ?? nonPublic?.url_link_clicks ?? 0;
-    const profileClicks = organic?.user_profile_clicks ?? nonPublic?.user_profile_clicks ?? 0;
+    const linkClicks =
+      organic?.url_link_clicks ?? nonPublic?.url_link_clicks ?? 0;
+    const profileClicks =
+      organic?.user_profile_clicks ?? nonPublic?.user_profile_clicks ?? 0;
 
     return {
       unified: {
         postId: tweet.id,
         likes: publicM.like_count ?? 0,
         comments: publicM.reply_count ?? 0,
-        impressions: nonPublic?.impression_count ?? organic?.impression_count ?? 0,
+        impressions:
+          nonPublic?.impression_count ?? organic?.impression_count ?? 0,
         reach: 0,
-        engagementCount: (publicM.like_count ?? 0) + (publicM.reply_count ?? 0) + (publicM.retweet_count ?? 0) + linkClicks,
+        engagementCount:
+          (publicM.like_count ?? 0) +
+          (publicM.reply_count ?? 0) +
+          (publicM.retweet_count ?? 0) +
+          linkClicks,
       },
       specific: {
         retweets: publicM.retweet_count ?? 0,
         quotes: publicM.quote_count ?? 0,
         bookmarks: publicM.bookmark_count ?? 0,
         videoViews: publicM.view_count ?? 0,
-      }
+      },
     };
   }
 

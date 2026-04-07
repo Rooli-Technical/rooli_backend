@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -14,8 +19,7 @@ export class AdminAuthService {
     private configService: ConfigService,
   ) {}
 
-
-  async login(email: string, password: string) {
+  async login(email: string, password: string, ip: string) {
     const lowerEmail = email.toLowerCase();
 
     const user = await this.prisma.user.findUnique({
@@ -41,7 +45,9 @@ export class AdminAuthService {
 
     // Only SUPER_ADMINs allowed
     if (user.userType !== 'SUPER_ADMIN') {
-      this.logger.warn(`Non-admin login attempt on admin route for ${lowerEmail}`);
+      this.logger.warn(
+        `Non-admin login attempt on admin route for ${lowerEmail}`,
+      );
       throw new ForbiddenException('Access denied: Not a system administrator');
     }
 
@@ -53,9 +59,8 @@ export class AdminAuthService {
     }
 
     // Verify password
-   
-    const isPasswordValid = await argon2.verify(user.password,password);
 
+    const isPasswordValid = await argon2.verify(user.password, password);
 
     if (!isPasswordValid) {
       const attempts = user.loginAttempts + 1;
@@ -92,20 +97,39 @@ export class AdminAuthService {
 
     this.logger.log(`Admin login successful for ${lowerEmail}`);
 
+    // Delete Existing sessions
+    await this.prisma.adminSession.deleteMany({
+      where: {
+        adminId: user.id,
+      },
+    });
+    // Create a new token
+
+    const session = await this.prisma.adminSession.create({
+      data: {
+        adminId: user.id,
+        ip: ip, // pass ip from the controller
+        isActive: true,
+      },
+    });
+
     const tokens = await this.generateAdminTokens(
       user.id,
       user.email,
       user.refreshTokenVersion,
+      session.id,
     );
+
+    // After generateAdminTokens()
 
     return {
       ...tokens,
       user: {
-        id:        user.id,
-        email:     user.email,
+        id: user.id,
+        email: user.email,
         firstName: user.firstName,
-        lastName:  user.lastName,
-        role:      'SUPER_ADMIN',
+        lastName: user.lastName,
+        role: 'SUPER_ADMIN',
       },
     };
   }
@@ -114,7 +138,7 @@ export class AdminAuthService {
   // GOOGLE LOGIN  (existing — untouched)
   // ─────────────────────────────────────────────────────────────────────────
 
-  async handleAdminGoogleLogin(googleUser: any) {
+  async handleAdminGoogleLogin(googleUser: any, ip: string = 'unknown') {
     const lowerEmail = googleUser.email.toLowerCase();
 
     const user = await this.prisma.user.findUnique({
@@ -123,12 +147,22 @@ export class AdminAuthService {
 
     if (!user || user.userType !== 'SUPER_ADMIN') {
       this.logger.warn(`Failed admin login attempt for ${lowerEmail}`);
-      throw new UnauthorizedException('Access denied: Not a system administrator');
+      throw new UnauthorizedException(
+        'Access denied: Not a system administrator',
+      );
     }
 
-    return this.generateAdminTokens(user.id, user.email, user.refreshTokenVersion);
-  }
+    const session = await this.prisma.adminSession.create({
+      data: { adminId: user.id, ip, isActive: true },
+    });
 
+    return this.generateAdminTokens(
+      user.id,
+      user.email,
+      user.refreshTokenVersion,
+      session.id,
+    );
+  }
 
   async logout(userId: string) {
     await this.prisma.user.update({
@@ -147,8 +181,19 @@ export class AdminAuthService {
   // TOKEN GENERATION  (existing — untouched)
   // ─────────────────────────────────────────────────────────────────────────
 
-  private async generateAdminTokens(userId: string, email: string, version: number) {
-    const payload = { sub: userId, email, ver: version, role: 'SUPER_ADMIN' };
+  private async generateAdminTokens(
+    userId: string,
+    email: string,
+    version: number,
+    sessionId: string,
+  ) {
+    const payload = {
+      sub: userId,
+      email,
+      ver: version,
+      role: 'SUPER_ADMIN',
+      sessionId: sessionId,
+    };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {

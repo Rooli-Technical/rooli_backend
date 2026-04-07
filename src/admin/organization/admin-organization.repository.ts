@@ -32,7 +32,7 @@ export interface AdminOrgListItem {
 
 export interface AdminOrgListOptions {
   search?: string;
-  status?: string;   // ACTIVE | SUSPENDED | PENDING_PAYMENT
+  status?: string; // ACTIVE | SUSPENDED | PENDING_PAYMENT
   dateFrom?: Date;
   dateTo?: Date;
   page: number;
@@ -49,7 +49,9 @@ export class AdminOrganizationRepository {
   // LIST ORGANIZATIONS
   // ─────────────────────────────────────────────────────────────────────────
 
-  async listOrganizations(options: AdminOrgListOptions): Promise<PaginatedResult<AdminOrgListItem>> {
+  async listOrganizations(
+    options: AdminOrgListOptions,
+  ): Promise<PaginatedResult<AdminOrgListItem>> {
     const { search, status, dateFrom, dateTo, page, limit } = options;
 
     const searchWhere = search
@@ -64,14 +66,15 @@ export class AdminOrganizationRepository {
 
     const statusWhere = status ? { status: status as any } : {};
 
-    const dateWhere = dateFrom || dateTo
-      ? {
-          createdAt: {
-            ...(dateFrom ? { gte: dateFrom } : {}),
-            ...(dateTo   ? { lte: dateTo   } : {}),
-          },
-        }
-      : {};
+    const dateWhere =
+      dateFrom || dateTo
+        ? {
+            createdAt: {
+              ...(dateFrom ? { gte: dateFrom } : {}),
+              ...(dateTo ? { lte: dateTo } : {}),
+            },
+          }
+        : {};
 
     const where = { ...searchWhere, ...statusWhere, ...dateWhere };
 
@@ -139,19 +142,19 @@ export class AdminOrganizationRepository {
       );
 
       return {
-        id:             org.id,
-        name:           org.name,
-        slug:           org.slug,
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
         billingCountry: org.billingCountry,
-        currency:       org.currency,
-        status:         org.status,
-        isActive:       org.isActive,
-        createdAt:      org.createdAt,
-        plan:           org.subscription?.plan ?? null,
-        memberCount:    org._count.members,
+        currency: org.currency,
+        status: org.status,
+        isActive: org.isActive,
+        createdAt: org.createdAt,
+        plan: org.subscription?.plan ?? null,
+        memberCount: org._count.members,
         workspaceCount: org._count.workspaces,
-        socialCount:    org.socialConnections.length,
-        owner:          ownerMember?.user ?? null,
+        socialCount: org.socialConnections.length,
+        owner: ownerMember?.user ?? null,
       };
     });
 
@@ -236,8 +239,20 @@ export class AdminOrganizationRepository {
     return this.prisma.organization.update({
       where: { id },
       data: {
-        status:   'SUSPENDED',
+        status: 'SUSPENDED',
         isActive: false,
+      },
+      select: { id: true, name: true, status: true, isActive: true },
+    });
+  }
+
+
+  async activateOrganization(id: string) {
+    return this.prisma.organization.update({
+      where: { id },
+      data: {
+        status: 'ACTIVE',
+        isActive: true,
       },
       select: { id: true, name: true, status: true, isActive: true },
     });
@@ -262,4 +277,20 @@ export class AdminOrganizationRepository {
       select: { id: true, name: true, status: true, isActive: true },
     });
   }
+
+  async getOrganizationMetrics() {
+  const [total, active, suspended, pendingPayment] = await Promise.all([
+    this.prisma.organization.count(),
+    this.prisma.organization.count({ where: { status: 'ACTIVE' } }),
+    this.prisma.organization.count({ where: { status: 'SUSPENDED' } }),
+    this.prisma.organization.count({ where: { status: 'PENDING_PAYMENT' } }),
+  ]);
+
+  return {
+    total,
+    active,
+    suspended,
+    pendingPayment,
+  };
+}
 }

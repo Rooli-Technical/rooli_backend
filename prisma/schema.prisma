@@ -61,6 +61,8 @@ model User {
 
   assignedTickets Ticket[]        @relation("TicketAssignee")
   ticketComments  TicketComment[]
+  adminSessions   AdminSession[]  @relation("AdminSessions")
+  ipWhitelist     IpWhitelist[]   @relation("AdminIpWhitelist")
 
   @@index([email, deletedAt])
   @@index([createdAt])
@@ -173,7 +175,6 @@ model OrganizationMember {
   lastActiveAt DateTime?
 
   isActive Boolean @default(true)
-
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation("UserOrganizationMemberships", fields: [userId], references: [id], onDelete: Cascade)
@@ -383,6 +384,8 @@ model Post {
   timezone       String    @default("UTC")
   isAutoSchedule Boolean   @default(false) // If true, uses QueueSlot
 
+  isUrgent    Boolean @default(false)
+
   errorMessage String? // General error (if all failed)
   maxRetries   Int     @default(3)
   retryCount   Int     @default(0)
@@ -406,9 +409,6 @@ model Post {
   // Who is currently responsible for this post? (e.g., The manager reviewing it)
   assigneeId String?
   assignee   WorkspaceMember? @relation("PostAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-
-  // Kanban Board Priority Flag
-  isUrgent Boolean @default(false)
 
   internalComments InternalPostComment[]
 
@@ -1318,7 +1318,7 @@ model Permission {
   name        String
   description String?
   scope       PermissionScope
-  resource   String
+  resource    String
   action      String
 
   createdAt DateTime @default(now())
@@ -1814,7 +1814,6 @@ enum AiFeature {
 }
 
 
-
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -1905,6 +1904,10 @@ enum NotificationType {
   INBOX_NEW_MESSAGE
   INBOX_ASSIGNED
   INBOX_MENTION
+  SUPPORT_NEW_TICKET
+  SUPPORT_NEW_MESSAGE
+  SUPPORT_ASSIGNED
+  SUPPORT_COMMENT_ADDED
   SYSTEM_ALERT
 }
 
@@ -1960,4 +1963,23 @@ enum TicketPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  adminId   String
+  ip        String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminSessions", fields: [adminId], references: [id])
+}
+
+model IpWhitelist {
+  id        String   @id @default(cuid())
+  adminId   String
+  ipRange   String
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminIpWhitelist", fields: [adminId], references: [id])
 }

@@ -551,7 +551,7 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
           // ✅ THE FIX: Encode ONLY the URN, leave the wrapper alone!
           const encodedUrn = encodeURIComponent(urn); // Turns colons into %3A
           const entityType = urn.includes('ugcPost') ? 'ugcPost' : 'share';
-          const formattedEntity = `(${entityType}:${encodedUrn})`; 
+          const formattedEntity = `(${entityType}:${encodedUrn})`;
 
           const params = {
             q: 'entity',
@@ -585,8 +585,6 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
           return data?.elements?.[0]?.count ?? 0;
         };
 
-      
-
         // 4. Fetch all metrics concurrently for this specific post
         const [impressions, likes, comments, reposts] = await Promise.all([
           fetchMetric('IMPRESSION'),
@@ -599,19 +597,19 @@ export class LinkedInAnalyticsProvider implements IAnalyticsProvider {
           unified: {
             postId: urn,
             impressions,
-            reach: impressions, 
+            reach: impressions,
             likes,
             comments,
             engagementCount: likes + comments + reposts,
           },
           specific: {
             reposts,
-            clicks: 0, 
+            clicks: 0,
             videoViews: 0,
           },
         });
       } catch (e: any) {
-       console.log(e)
+        console.log(e);
       }
 
       // 5. Safe delay to prevent HTTP 429 Too Many Requests

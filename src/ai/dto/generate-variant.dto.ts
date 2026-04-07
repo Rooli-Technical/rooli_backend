@@ -1,18 +1,27 @@
-import { Platform } from "@generated/enums";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsString, IsArray, IsOptional, IsInt, Min, Max } from "class-validator";
+import { Platform } from '@generated/enums';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsArray,
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class GenerateVariantsDto {
-  @ApiProperty({ example: 'Post about why consistency beats hype in marketing' })
+  @ApiProperty({
+    example: 'Post about why consistency beats hype in marketing',
+  })
   @IsString()
   prompt: string;
 
-@ApiProperty({ 
+  @ApiProperty({
     description: 'Target platforms for the variants',
     type: [String],
-    enum: Platform,   
-    enumName: 'Platform', 
-    example: ['LINKEDIN', 'FACEBOOK'] 
+    enum: Platform,
+    enumName: 'Platform',
+    example: ['LINKEDIN', 'FACEBOOK'],
   })
   @IsArray()
   platforms: Platform[];

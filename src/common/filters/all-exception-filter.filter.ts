@@ -26,7 +26,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const response = exception.getResponse();
-      
+
       if (typeof response === 'object' && response !== null) {
         errorDetails = response;
         message = (response as any).message || exception.message;
@@ -42,7 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: httpAdapter.getRequestUrl(ctx.getRequest()),
       message: message, // Main message
-      ...((errorDetails && typeof errorDetails === 'object') ? errorDetails : {})
+      ...(errorDetails && typeof errorDetails === 'object' ? errorDetails : {}),
     };
 
     httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);

@@ -7,7 +7,19 @@ export interface StatCard {
 }
 
 export interface MonthlyPoint {
-  month: 'JAN' | 'FEB' | 'MAR' | 'APR' | 'MAY' | 'JUN' | 'JUL' | 'AUG' | 'SEP' | 'OCT' | 'NOV' | 'DEC';
+  month:
+    | 'JAN'
+    | 'FEB'
+    | 'MAR'
+    | 'APR'
+    | 'MAY'
+    | 'JUN'
+    | 'JUL'
+    | 'AUG'
+    | 'SEP'
+    | 'OCT'
+    | 'NOV'
+    | 'DEC';
   year: number;
   count: number;
 }
@@ -26,10 +38,10 @@ export interface InfrastructureHealth {
 }
 
 export interface WorkspaceGrowth {
-  webhookSuccessRate: number;   // e.g. 98.7 (percentage of PROCESSED out of non-IGNORED)
-  webhookTotal: number;         // total webhooks in the period
-  webhookProcessed: number;     // successfully processed
-  webhookFailed: number;        // failed webhooks
+  webhookSuccessRate: number; // e.g. 98.7 (percentage of PROCESSED out of non-IGNORED)
+  webhookTotal: number; // total webhooks in the period
+  webhookProcessed: number; // successfully processed
+  webhookFailed: number; // failed webhooks
   // connectedAccounts: number;    // total active SocialProfiles (isActive = true)
 }
 
@@ -41,8 +53,18 @@ export interface DateRange {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MONTHS = [
-  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC',
 ] as const;
 
 @Injectable()
@@ -56,11 +78,14 @@ export class AdminDashboardRepository {
     return parseFloat((((current - previous) / previous) * 100).toFixed(1));
   }
 
-  private getPreviousPeriod(dateFrom: Date, dateTo: Date): { prevFrom: Date; prevTo: Date } {
+  private getPreviousPeriod(
+    dateFrom: Date,
+    dateTo: Date,
+  ): { prevFrom: Date; prevTo: Date } {
     const durationMs = dateTo.getTime() - dateFrom.getTime();
     return {
       prevFrom: new Date(dateFrom.getTime() - durationMs),
-      prevTo:   new Date(dateFrom.getTime()),
+      prevTo: new Date(dateFrom.getTime()),
     };
   }
 
@@ -74,14 +99,17 @@ export class AdminDashboardRepository {
     return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1);
   }
 
-  private getMonthWindows(dateFrom: Date, dateTo: Date): { from: Date; to: Date }[] {
+  private getMonthWindows(
+    dateFrom: Date,
+    dateTo: Date,
+  ): { from: Date; to: Date }[] {
     const windows: { from: Date; to: Date }[] = [];
     const cursor = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), 1);
-    const end    = new Date(dateTo.getFullYear(), dateTo.getMonth() + 1, 1);
+    const end = new Date(dateTo.getFullYear(), dateTo.getMonth() + 1, 1);
 
     while (cursor < end) {
       const from = new Date(cursor);
-      const to   = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+      const to = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
       windows.push({ from, to });
       cursor.setMonth(cursor.getMonth() + 1);
     }
@@ -93,49 +121,88 @@ export class AdminDashboardRepository {
   // STAT CARD 1 — "Total Users"
   // ─────────────────────────────────────────────────────────────────────────
 
-  async getTotalUsersStatCard({ dateFrom, dateTo }: DateRange): Promise<StatCard> {
+  async getTotalUsersStatCard({
+    dateFrom,
+    dateTo,
+  }: DateRange): Promise<StatCard> {
     const { prevFrom, prevTo } = this.getPreviousPeriod(dateFrom, dateTo);
 
     const [total, currentPeriod, previousPeriod] = await Promise.all([
       this.prisma.user.count({ where: { deletedAt: null } }),
-      this.prisma.user.count({ where: { deletedAt: null, createdAt: { gte: dateFrom, lte: dateTo } } }),
-      this.prisma.user.count({ where: { deletedAt: null, createdAt: { gte: prevFrom, lt: prevTo } } }),
+      this.prisma.user.count({
+        where: { deletedAt: null, createdAt: { gte: dateFrom, lte: dateTo } },
+      }),
+      this.prisma.user.count({
+        where: { deletedAt: null, createdAt: { gte: prevFrom, lt: prevTo } },
+      }),
     ]);
 
-    return { total, percentageChangeFromLastMonth: this.percentageChange(currentPeriod, previousPeriod) };
+    return {
+      total,
+      percentageChangeFromLastMonth: this.percentageChange(
+        currentPeriod,
+        previousPeriod,
+      ),
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // STAT CARD 2 — "Total Workspaces"
   // ─────────────────────────────────────────────────────────────────────────
 
-  async getTotalWorkspacesStatCard({ dateFrom, dateTo }: DateRange): Promise<StatCard> {
+  async getTotalWorkspacesStatCard({
+    dateFrom,
+    dateTo,
+  }: DateRange): Promise<StatCard> {
     const { prevFrom, prevTo } = this.getPreviousPeriod(dateFrom, dateTo);
 
     const [total, currentPeriod, previousPeriod] = await Promise.all([
       this.prisma.workspace.count(),
-      this.prisma.workspace.count({ where: { createdAt: { gte: dateFrom, lte: dateTo } } }),
-      this.prisma.workspace.count({ where: { createdAt: { gte: prevFrom, lt: prevTo } } }),
+      this.prisma.workspace.count({
+        where: { createdAt: { gte: dateFrom, lte: dateTo } },
+      }),
+      this.prisma.workspace.count({
+        where: { createdAt: { gte: prevFrom, lt: prevTo } },
+      }),
     ]);
 
-    return { total, percentageChangeFromLastMonth: this.percentageChange(currentPeriod, previousPeriod) };
+    return {
+      total,
+      percentageChangeFromLastMonth: this.percentageChange(
+        currentPeriod,
+        previousPeriod,
+      ),
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // STAT CARD 3 — "Connected Socials"
   // ─────────────────────────────────────────────────────────────────────────
 
-  async getConnectedSocialsStatCard({ dateFrom, dateTo }: DateRange): Promise<StatCard> {
+  async getConnectedSocialsStatCard({
+    dateFrom,
+    dateTo,
+  }: DateRange): Promise<StatCard> {
     const { prevFrom, prevTo } = this.getPreviousPeriod(dateFrom, dateTo);
     const base = { status: 'CONNECTED', isActive: true } as const;
 
     const [total, currentPeriod, previousPeriod] = await Promise.all([
       this.prisma.socialProfile.count({ where: base }),
-      this.prisma.socialProfile.count({ where: { ...base, createdAt: { gte: dateFrom, lte: dateTo } } }),
-      this.prisma.socialProfile.count({ where: { ...base, createdAt: { gte: prevFrom, lt: prevTo } } }),
+      this.prisma.socialProfile.count({
+        where: { ...base, createdAt: { gte: dateFrom, lte: dateTo } },
+      }),
+      this.prisma.socialProfile.count({
+        where: { ...base, createdAt: { gte: prevFrom, lt: prevTo } },
+      }),
     ]);
 
-    return { total, percentageChangeFromLastMonth: this.percentageChange(currentPeriod, previousPeriod) };
+    return {
+      total,
+      percentageChangeFromLastMonth: this.percentageChange(
+        currentPeriod,
+        previousPeriod,
+      ),
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -147,19 +214,28 @@ export class AdminDashboardRepository {
 
     const [currentAgg, previousAgg] = await Promise.all([
       this.prisma.transaction.aggregate({
-        where: { status: 'successful', paymentDate: { gte: dateFrom, lte: dateTo } },
+        where: {
+          status: 'successful',
+          paymentDate: { gte: dateFrom, lte: dateTo },
+        },
         _sum: { amount: true },
       }),
       this.prisma.transaction.aggregate({
-        where: { status: 'successful', paymentDate: { gte: prevFrom, lt: prevTo } },
+        where: {
+          status: 'successful',
+          paymentDate: { gte: prevFrom, lt: prevTo },
+        },
         _sum: { amount: true },
       }),
     ]);
 
-    const current  = Number(currentAgg._sum.amount ?? 0);
+    const current = Number(currentAgg._sum.amount ?? 0);
     const previous = Number(previousAgg._sum.amount ?? 0);
 
-    return { total: current, percentageChangeFromLastMonth: this.percentageChange(current, previous) };
+    return {
+      total: current,
+      percentageChangeFromLastMonth: this.percentageChange(current, previous),
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -173,7 +249,10 @@ export class AdminDashboardRepository {
   //   (isActive = true, no date filter — reflects current live state)
   // ─────────────────────────────────────────────────────────────────────────
 
-  async getWorkspaceGrowth({ dateFrom, dateTo }: DateRange): Promise<WorkspaceGrowth> {
+  async getWorkspaceGrowth({
+    dateFrom,
+    dateTo,
+  }: DateRange): Promise<WorkspaceGrowth> {
     const [processed, failed, pending, connectedAccounts] = await Promise.all([
       // Successfully handled webhooks
       this.prisma.webhookLog.count({
@@ -226,7 +305,10 @@ export class AdminDashboardRepository {
   // CHART — "Users Growth" bar chart
   // ─────────────────────────────────────────────────────────────────────────
 
-  async getUsersGrowthByMonth({ dateFrom, dateTo }: DateRange): Promise<MonthlyPoint[]> {
+  async getUsersGrowthByMonth({
+    dateFrom,
+    dateTo,
+  }: DateRange): Promise<MonthlyPoint[]> {
     const windows = this.getMonthWindows(dateFrom, dateTo);
 
     const counts = await Promise.all(
@@ -248,7 +330,10 @@ export class AdminDashboardRepository {
   // CHART — "Monthly Revenue" bar chart
   // ─────────────────────────────────────────────────────────────────────────
 
-  async getMonthlyRevenueByMonth({ dateFrom, dateTo }: DateRange): Promise<MonthlyPoint[]> {
+  async getMonthlyRevenueByMonth({
+    dateFrom,
+    dateTo,
+  }: DateRange): Promise<MonthlyPoint[]> {
     const windows = this.getMonthWindows(dateFrom, dateTo);
 
     const results = await Promise.all(
@@ -272,14 +357,18 @@ export class AdminDashboardRepository {
   // ─────────────────────────────────────────────────────────────────────────
 
   async getInfrastructureHealth(): Promise<InfrastructureHealth> {
-    const [totalWorkspaces, queuedPosts, sentToday, failedJobs] = await Promise.all([
-      this.prisma.workspace.count(),
-      this.prisma.post.count({ where: { status: 'SCHEDULED' } }),
-      this.prisma.post.count({
-        where: { status: 'PUBLISHED', publishedAt: { gte: this.todayStart, lt: this.tomorrowStart } },
-      }),
-      this.prisma.post.count({ where: { status: 'FAILED' } }),
-    ]);
+    const [totalWorkspaces, queuedPosts, sentToday, failedJobs] =
+      await Promise.all([
+        this.prisma.workspace.count(),
+        this.prisma.post.count({ where: { status: 'SCHEDULED' } }),
+        this.prisma.post.count({
+          where: {
+            status: 'PUBLISHED',
+            publishedAt: { gte: this.todayStart, lt: this.tomorrowStart },
+          },
+        }),
+        this.prisma.post.count({ where: { status: 'FAILED' } }),
+      ]);
 
     return { totalWorkspaces, queuedPosts, sentToday, failedJobs };
   }
@@ -289,15 +378,27 @@ export class AdminDashboardRepository {
   // ─────────────────────────────────────────────────────────────────────────
 
   async getUserDistribution(): Promise<UserDistributionResult> {
-    const now           = new Date();
+    const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const [total, active, suspended] = await Promise.all([
       this.prisma.user.count({ where: { deletedAt: null } }),
-      this.prisma.user.count({ where: { deletedAt: null, isEmailVerified: true, lastActiveAt: { gte: thirtyDaysAgo } } }),
-      this.prisma.user.count({ where: { deletedAt: null, lockedUntil: { gte: now } } }),
+      this.prisma.user.count({
+        where: {
+          deletedAt: null,
+          isEmailVerified: true,
+          lastActiveAt: { gte: thirtyDaysAgo },
+        },
+      }),
+      this.prisma.user.count({
+        where: { deletedAt: null, lockedUntil: { gte: now } },
+      }),
     ]);
 
-    return { active, suspended, inactive: Math.max(0, total - active - suspended) };
+    return {
+      active,
+      suspended,
+      inactive: Math.max(0, total - active - suspended),
+    };
   }
 }

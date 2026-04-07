@@ -106,6 +106,7 @@ export class SocialConnectionService {
         throw new BadRequestException('Invalid OAuth state');
       }
 
+
       // Exchange
       if (platform === 'FACEBOOK')
         authData = await this.facebook.exchangeCode(code);
@@ -117,13 +118,12 @@ export class SocialConnectionService {
         authData = await this.tiktok.exchangeCode(code);
     }
 
-
     // 3. UPSERT CONNECTION
     const connection = await this.prisma.socialConnection.upsert({
       where: {
         organizationId_platform_platformUserId: {
           organizationId,
-          platform,
+          platform: platform,
           platformUserId: authData.providerUserId,
         },
       },
@@ -138,7 +138,7 @@ export class SocialConnectionService {
       },
       create: {
         organizationId,
-        platform,
+        platform: platform,
         platformUserId: authData.providerUserId,
         platformUsername: authData.providerUsername,
         accessToken: await this.encryptionService.encrypt(authData.accessToken),
@@ -216,16 +216,19 @@ export class SocialConnectionService {
    * Revokes tokens (optional) and deletes the connection.
    * Cascade deletes all linked SocialProfiles in Workspaces.
    */
-async disconnect(connectionId: string, organizationId: string) {
+  async disconnect(connectionId: string, organizationId: string) {
     const connection = await this.prisma.socialConnection.findFirst({
-      where: { id: connectionId, organizationId, status: ConnectionStatus.CONNECTED },
-      include: { profiles: true }, 
+      where: {
+        id: connectionId,
+        organizationId,
+        status: ConnectionStatus.CONNECTED,
+      },
+      include: { profiles: true },
     });
 
     if (!connection) throw new NotFoundException('Social Connection not found');
 
     const token = await this.encryptionService.decrypt(connection.accessToken);
-
 
     switch (connection.platform) {
       case 'FACEBOOK':
@@ -234,11 +237,13 @@ async disconnect(connectionId: string, organizationId: string) {
 
       case 'INSTAGRAM':
         const isNativeIg = token.trim().startsWith('IG');
-        
+
         if (isNativeIg) {
           await this.instagram.disconnect(token);
         } else {
-          this.logger.log(`Skipping token revocation for FB-connected IG connection to protect parent Facebook login.`);
+          this.logger.log(
+            `Skipping token revocation for FB-connected IG connection to protect parent Facebook login.`,
+          );
         }
         break;
       case 'TIKTOK':
@@ -254,20 +259,21 @@ async disconnect(connectionId: string, organizationId: string) {
     // 4. Soft Delete the connection from the database
     await this.prisma.socialConnection.update({
       where: { id: connectionId },
-      data: { 
+      data: {
         status: ConnectionStatus.DISCONNECTED,
         // Cascade the disconnect to all linked profiles automatically
         profiles: {
           updateMany: {
             where: { socialConnectionId: connectionId },
-            data: { status: ConnectionStatus.DISCONNECTED }
-          }
-        }
+            data: { status: ConnectionStatus.DISCONNECTED },
+          },
+        },
       },
     });
 
-    return { message: 'Connection disconnected and associated profiles paused.' };
-
+    return {
+      message: 'Connection disconnected and associated profiles paused.',
+    };
   }
 
   private async ensurePlatformAllowed(orgId: string, platform: Platform) {
@@ -294,7 +300,7 @@ async disconnect(connectionId: string, organizationId: string) {
     pageAccessToken: string,
   ) {
     const connection = await this.prisma.socialConnection.findUnique({
-      where: { id: connectionId, status: ConnectionStatus.CONNECTED  },
+      where: { id: connectionId, status: ConnectionStatus.CONNECTED },
     });
 
     if (!connection) {
@@ -324,6 +330,17 @@ async disconnect(connectionId: string, organizationId: string) {
             pageId, // This is your organizationUrn
             pageAccessToken,
           );
+        case 'TWITTER':
+          if (!connection.refreshToken) {
+            throw new BadRequestException('Missing Twitter access secret');
+          }
+          const accessSecret = await this.encryptionService.decrypt(
+            connection.refreshToken,
+          );
+          return await this.twitter.subscribeToWebhooks(
+            pageAccessToken,
+            accessSecret,
+          );
 
         default:
           throw new BadRequestException(
@@ -341,7 +358,7 @@ async disconnect(connectionId: string, organizationId: string) {
   async subscribeByConnectionId(connectionId: string): Promise<boolean> {
     // 1. Fetch the specific LinkedIn connection
     const connection = await this.prisma.socialConnection.findUnique({
-      where: { id: connectionId, status: ConnectionStatus.CONNECTED  },
+      where: { id: connectionId, status: ConnectionStatus.CONNECTED },
     });
 
     // 2. Validation

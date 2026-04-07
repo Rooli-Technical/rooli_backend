@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class GenerateHolidayPostDto {
   @ApiProperty({
@@ -22,9 +28,9 @@ export class GenerateHolidayPostDto {
   @IsOptional()
   brandKitId?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Character limit for the platform',
-    example: 280 
+    example: 280,
   })
   @IsNumber()
   @IsOptional()

@@ -1,12 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional,  IsBoolean, IsString } from 'class-validator';
+import { IsOptional, IsBoolean, IsString } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { PaginationDto } from '@/common/dtos/pagination.dto';
 
-
 export class NotificationListDto extends PaginationDto {
   @ApiPropertyOptional({
-    description: 'The ID of the last notification received (for cursor-based pagination) Optional',
+    description:
+      'The ID of the last notification received (for cursor-based pagination) Optional',
   })
   @IsOptional()
   @IsString()

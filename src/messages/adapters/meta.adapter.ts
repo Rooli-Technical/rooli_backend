@@ -63,7 +63,8 @@ export class MetaAdapter implements SocialAdapter {
     // Best-effort platform inference:
     // If you support both FB + IG, use something in rawEntry/object, or store it on SocialProfile mapping.
     // Here we mark as INSTAGRAM by default, but preserve raw info in meta for later.
-    const platform: NormalizedPlatform = inferMetaPlatform(input?.objectType) ?? 'FACEBOOK';
+    const platform: NormalizedPlatform =
+      inferMetaPlatform(input?.objectType) ?? 'FACEBOOK';
 
     // Conversation external id:
     // Meta does not always provide a "thread id" in messaging webhook.
@@ -210,7 +211,8 @@ export class MetaAdapter implements SocialAdapter {
     if (field !== 'feed' && field !== 'comments') return null;
 
     // Best-effort platform inference
-    const platform: NormalizedPlatform = inferMetaPlatform(objectType) ?? 'FACEBOOK';
+    const platform: NormalizedPlatform =
+      inferMetaPlatform(objectType) ?? 'FACEBOOK';
 
     // ==========================================
     // 1. INSTAGRAM COMMENTS
@@ -220,7 +222,8 @@ export class MetaAdapter implements SocialAdapter {
       if (!igMessageText) return null; // Ignore non-text events (likes, etc.)
 
       const igFromId = value?.from?.id;
-      const igFromUsername = value?.from?.username ?? `meta_${igFromId?.slice(0, 8)}`;
+      const igFromUsername =
+        value?.from?.username ?? `meta_${igFromId?.slice(0, 8)}`;
       const igPostId = value?.media?.id;
       const igCommentId = value?.id;
       const igOwnerExternalId = rawEntry?.id; // The Business Account ID receiving the comment
@@ -271,15 +274,19 @@ export class MetaAdapter implements SocialAdapter {
     // 2. FACEBOOK COMMENTS
     // ==========================================
     if (platform === 'FACEBOOK' && field === 'feed') {
-      const verb = value?.verb; 
+      const verb = value?.verb;
       if (verb && verb !== 'add' && verb !== 'edited') return null;
 
       const fbPostId = value?.post_id;
       const fbCommentId = value?.comment_id?.toString();
       const fbFromId = value?.from?.id ?? value?.sender_id;
       const fbFromName = value?.from?.name ?? value?.sender_name;
-      const fbMessageText: string = (value?.message ?? value?.text ?? '').toString();
-      
+      const fbMessageText: string = (
+        value?.message ??
+        value?.text ??
+        ''
+      ).toString();
+
       const createdTime = value?.created_time
         ? new Date(Number(value.created_time) * 1000)
         : new Date();
@@ -388,15 +395,17 @@ function mapMetaAttachmentType(t: any) {
   return 'UNKNOWN';
 }
 
-function inferMetaPlatform(objectType: string | undefined): NormalizedPlatform | null {
+function inferMetaPlatform(
+  objectType: string | undefined,
+): NormalizedPlatform | null {
   const s = String(objectType ?? '').toLowerCase();
-  
+
   // Instagram Graph API webhooks explicitly use "instagram"
   if (s === 'instagram') return 'INSTAGRAM';
-  
+
   // Facebook Messenger webhooks use "page"
   if (s === 'page') return 'FACEBOOK';
-  
+
   return null;
 }
 

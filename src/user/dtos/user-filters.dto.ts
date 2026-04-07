@@ -4,7 +4,7 @@ import { PaginationDto } from '@/common/dtos/pagination.dto';
 
 export class UserFiltersDto extends PaginationDto {
   @IsOptional()
-   @IsString()
+  @IsString()
   role?: string;
 
   @IsOptional()

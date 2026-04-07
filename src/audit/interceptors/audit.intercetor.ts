@@ -14,8 +14,6 @@ import { AuditAction, AuditResourceType } from '@generated/enums';
 
 export const AUDIT_CONTEXT_KEY = 'audit_context';
 
-
-
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
   private readonly logger = new Logger(AuditInterceptor.name);
@@ -48,7 +46,9 @@ export class AuditInterceptor implements NestInterceptor {
 
     const decoration = this.reflector.get(AUDIT_CONTEXT_KEY, context.getHandler());
     const action = decoration?.action ?? this.mapMethodToAction(method);
-    const resourceType = decoration?.resource ?? this.guessResourceFromUrl(req.originalUrl || req.url);
+    const resourceType =
+      decoration?.resource ??
+      this.guessResourceFromUrl(req.originalUrl || req.url);
 
     return next.handle().pipe(
       tap((data) => {
@@ -96,11 +96,15 @@ export class AuditInterceptor implements NestInterceptor {
 
   private mapMethodToAction(method: string): AuditAction {
     switch (method) {
-      case 'POST': return AuditAction.CREATE;
+      case 'POST':
+        return AuditAction.CREATE;
       case 'PUT':
-      case 'PATCH': return AuditAction.UPDATE;
-      case 'DELETE': return AuditAction.DELETE;
-      default: return AuditAction.UPDATE;
+      case 'PATCH':
+        return AuditAction.UPDATE;
+      case 'DELETE':
+        return AuditAction.DELETE;
+      default:
+        return AuditAction.UPDATE;
     }
   }
 

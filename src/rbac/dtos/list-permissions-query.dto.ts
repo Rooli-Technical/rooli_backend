@@ -7,14 +7,16 @@ export enum PermissionScope {
   SYSTEM = 'SYSTEM',
 }
 
-
-export const PermissionNameFormats = ['SCOPE_RESOURCE_ACTION', 'RESOURCE_ACTION'] as const;
-export type PermissionNameFormat = typeof PermissionNameFormats[number];
+export const PermissionNameFormats = [
+  'SCOPE_RESOURCE_ACTION',
+  'RESOURCE_ACTION',
+] as const;
+export type PermissionNameFormat = (typeof PermissionNameFormats)[number];
 
 export class ListPermissionsQuery {
-  @ApiPropertyOptional({ 
-    enum: PermissionScope, 
-    description: 'Filter permissions by their applicable scope' 
+  @ApiPropertyOptional({
+    enum: PermissionScope,
+    description: 'Filter permissions by their applicable scope',
   })
   @IsOptional()
   @IsEnum(PermissionScope)

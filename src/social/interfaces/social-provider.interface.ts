@@ -1,6 +1,6 @@
 export interface PostResult {
   platformPostId: string; // The ID returned by Twitter/FB
-  url?: string;           // Direct link to the post
+  url?: string; // Direct link to the post
 }
 
 export interface SocialCredentials {
@@ -11,20 +11,20 @@ export interface SocialCredentials {
 
 export interface ISocialProvider {
   publish(
-    credentials: SocialCredentials, 
+    credentials: SocialCredentials,
     content: string,
     mediaFiles: { url: string; mimeType: string }[], // Need mimeType for video/images
-    metadata?: any
+    metadata?: any,
   ): Promise<any>;
 }
 
-type MediaFile = { 
-  url: string; 
-  mimeType: string; 
+type MediaFile = {
+  url: string;
+  mimeType: string;
   // Optional: Only strictly required for Reels
-  metadata?: { 
-    durationSeconds?: number; 
-    width?: number; 
-    height?: number; 
-  } 
+  metadata?: {
+    durationSeconds?: number;
+    width?: number;
+    height?: number;
+  };
 };

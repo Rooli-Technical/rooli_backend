@@ -2,23 +2,32 @@ import { PrismaService } from '@/prisma/prisma.service';
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import * as streamifier from 'streamifier';
 import {
   v2 as cloudinary,
-  UploadApiErrorResponse,
-  UploadApiResponse,
+  UploadApiOptions,
 } from 'cloudinary';
+import * as fs from 'fs/promises';
+import pLimit from 'p-limit';
+import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
+
+
 
 @Injectable()
 export class PostMediaService {
   private readonly logger = new Logger(PostMediaService.name);
+
+  // Class property, not a loose const
+  private readonly ALLOWED_MIME_TYPES = new Set([
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'video/mp4', 'video/quicktime', 'video/webm',
+  ]);
+
   constructor(private prisma: PrismaService) {}
 
   // ==========================================
-  // 1. UPLOAD FILE (Buffer -> Cloudinary -> DB)
+  // 1. UPLOAD FILE (Smartly handles Buffer or Path)
   // ==========================================
   async uploadFile(
     userId: string,
@@ -31,72 +40,146 @@ export class PostMediaService {
       const folder = await this.prisma.mediaFolder.findFirst({
         where: { id: folderId, workspaceId },
       });
-      if (!folder)
-        throw new BadRequestException('Folder not found in this workspace');
+      if (!folder) throw new BadRequestException('Folder not found in this workspace');
+    }
+
+    // B. Safe Magic Byte Validation
+    let detected;
+    if (file.buffer) {
+      detected = await fileTypeFromBuffer(file.buffer);
+    } else if (file.path) {
+      // Reads only the first chunk from disk, preserving RAM
+      detected = await fileTypeFromFile(file.path); 
+    }
+
+    if (!detected || !this.ALLOWED_MIME_TYPES.has(detected.mime)) {
+      // Cleanup temp file if it was a rejected disk upload
+      if (file.path) await fs.unlink(file.path).catch(() => {});
+      throw new BadRequestException(`File type not allowed: ${detected?.mime ?? 'unknown'}`);
     }
 
     try {
-      // Upload to Cloudinary (Stream)
-      const uploadResult = await this.uploadToCloudinary(file, workspaceId);
+      // C. Upload to Cloudinary (Routes to buffer or path logic)
+      const uploadResult = await this.processCloudinaryUpload(file, workspaceId);
 
-      // Save Metadata to Database
+      // D. Save to DB
       const mediaFile = await this.prisma.mediaFile.create({
         data: {
           workspaceId,
           userId,
           folderId: folderId || null,
-
           filename: file.originalname,
           originalName: file.originalname,
-          mimeType: file.mimetype,
+          mimeType: detected.mime, // use verified mime
           size: BigInt(file.size),
-
           url: uploadResult.secure_url,
           publicId: uploadResult.public_id,
           thumbnailUrl: this.getThumbnailUrl(uploadResult),
-
           width: uploadResult.width,
           height: uploadResult.height,
-          duration: uploadResult.duration
-            ? Math.round(uploadResult.duration)
-            : null, // Videos only
-
+          duration: uploadResult.duration ? Math.round(uploadResult.duration) : null,
           isAiGenerated: false,
         },
       });
 
-      // Return friendly object (BigInt can be messy in JSON)
-      return {
-        ...mediaFile,
-        size: mediaFile.size.toString(),
-      };
+      return { ...mediaFile, size: mediaFile.size.toString() };
     } catch (err) {
-      console.log(err);
+      this.logger.error('Upload failed', err);
+      // Ensure disk cleanup on failure
+      if (file.path) await fs.unlink(file.path).catch(() => {});
       throw err;
     }
   }
 
-  async uploadMany(
-    userId: string,
-    workspaceId: string,
-    files: Array<Express.Multer.File>,
-    folderId?: string,
-  ) {
-    // 1. Validate Folder Once (Optimization)
-    if (folderId) {
-      const folder = await this.prisma.mediaFolder.findFirst({
-        where: { id: folderId, workspaceId },
+  async uploadMany(userId: string, workspaceId: string, files: Express.Multer.File[], folderId?: string) {
+    const limit = pLimit(3); // max 3 concurrent uploads
+    return Promise.all(
+      files.map((file) => limit(() => this.uploadFile(userId, workspaceId, file, folderId))),
+    );
+  }
+
+  // ==========================================
+  // 2. AI & AVATAR HELPERS
+  // ==========================================
+  async uploadAiGeneratedBuffer(userId: string, workspaceId: string, buffer: Buffer, prompt: string) {
+    const uploadResult = await this.uploadBufferToCloudinary(buffer, {
+      folder: `rooli/${workspaceId}`,
+      resource_type: 'image',
+    });
+
+    const mediaFile = await this.prisma.mediaFile.create({
+      data: {
+        workspaceId,
+        userId,
+        filename: `ai-${Date.now()}.png`,
+        originalName: prompt.substring(0, 50),
+        mimeType: 'image/png',
+        size: BigInt(buffer.length),
+        url: uploadResult.secure_url,       // Fixed variable reference
+        publicId: uploadResult.public_id,
+        thumbnailUrl: uploadResult.secure_url,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        isAiGenerated: true,
+      },
+    });
+
+    return { ...mediaFile, size: mediaFile.size.toString() };
+  }
+
+  // (updateUserAvatar, createFolder, getLibrary, deleteFile remain largely identical and correct from your snippet)
+
+  // ==========================================
+  // 3. PRIVATE UPLOAD HELPERS
+  // ==========================================
+  
+  // Smart router for Multer's MemoryStorage vs DiskStorage
+  private async processCloudinaryUpload(file: Express.Multer.File, workspaceId: string): Promise<any> {
+    const opts: UploadApiOptions = {
+      folder: `rooli/${workspaceId}`,
+      resource_type: 'auto',
+    };
+
+    if (file.buffer) {
+      // MEMORY STORAGE (Images)
+      return this.uploadBufferToCloudinary(file.buffer, opts);
+    } else if (file.path) {
+      // DISK STORAGE (Videos)
+      const isLarge = file.size > 100 * 1024 * 1024; // 100MB
+      const uploadFn = isLarge ? cloudinary.uploader.upload_large : cloudinary.uploader.upload;
+      if (isLarge) opts.chunk_size = 6_000_000;
+
+      const uploadResult = await new Promise((resolve, reject) => {
+        uploadFn(file.path, opts, (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        });
       });
-      if (!folder) throw new BadRequestException('Folder not found');
+
+      // Crucial: Clean up the temp file after disk upload
+      await fs.unlink(file.path).catch(err => this.logger.error('Failed to delete temp file', err));
+      return uploadResult;
     }
 
-    const uploadPromises = files.map((file) =>
-      this.uploadFile(userId, workspaceId, file, folderId),
-    );
+    throw new BadRequestException('Invalid file format: No buffer or path found.');
+  }
 
-    const results = await Promise.all(uploadPromises);
+  private uploadBufferToCloudinary(buffer: Buffer, opts: UploadApiOptions): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(opts, (err, result) =>
+        err ? reject(err) : resolve(result),
+      );
+      stream.end(buffer);
+    });
+  }
 
-    return results;
+  private getThumbnailUrl(result: any): string | null {
+    if (result.resource_type === 'video') {
+      return result.secure_url
+        .replace('/upload/', '/upload/so_0/')
+        .replace(/\.[^/.]+$/, '.jpg');
+    }
+    return result.secure_url;
   }
 
   // ==========================================
@@ -134,70 +217,24 @@ export class PostMediaService {
   // ==========================================
   // 3. DELETE (Cleanup)
   // ==========================================
-  async deleteFile(workspaceId: string, fileId: string) {
-    const file = await this.prisma.mediaFile.findFirst({
-      where: { id: fileId, workspaceId },
-    });
+async deleteFile(workspaceId: string, fileId: string) {
+  const file = await this.prisma.mediaFile.findFirst({
+    where: { id: fileId, workspaceId },
+  });
+  if (!file) throw new BadRequestException('File not found');
 
-    if (!file) throw new BadRequestException('File not found');
+  // Cloudinary first — if this fails, DB record still exists,
+  // so you can retry the deletion later
+  await cloudinary.uploader.destroy(file.publicId, {
+    resource_type: file.mimeType.startsWith('video') ? 'video' : 'image',
+  });
 
-    // A. Delete from Cloudinary first
-    await cloudinary.uploader.destroy(file.publicId, {
-      resource_type: file.mimeType.startsWith('video') ? 'video' : 'image',
-    });
+  // DB last — only runs if cloud deletion succeeded
+  await this.prisma.mediaFile.delete({ where: { id: fileId } });
 
-    // B. Delete from DB
-    await this.prisma.mediaFile.delete({ where: { id: fileId } });
-    return;
-  }
+  return { success: true };
+}
 
-  async uploadAiGeneratedBuffer(
-    userId: string,
-    workspaceId: string,
-    buffer: Buffer,
-    prompt: string,
-  ) {
-    // 1. Upload the raw buffer to Cloudinary
-    const uploadResult = await new Promise<any>((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: `rooli/${workspaceId}`,
-          resource_type: 'image',
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        },
-      );
-      uploadStream.end(buffer); // Pushes the AI buffer to the cloud
-    });
-
-    // 2. Save to Database
-    const mediaFile = await this.prisma.mediaFile.create({
-      data: {
-        workspaceId,
-        userId,
-        filename: `ai-${Date.now()}.png`,
-        originalName: prompt.substring(0, 50),
-        mimeType: 'image/png',
-        size: BigInt(buffer.length),
-
-        url: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
-        thumbnailUrl: uploadResult.secure_url,
-
-        width: uploadResult.width,
-        height: uploadResult.height,
-
-        isAiGenerated: true,
-      },
-    });
-
-    return {
-      ...mediaFile,
-      size: mediaFile.size.toString(),
-    };
-  }
 
   async updateUserAvatar(
     userId: string,
@@ -240,33 +277,4 @@ export class PostMediaService {
     };
   }
 
-  // ------------------------------------------
-  // HELPER: Stream Upload
-  // ------------------------------------------
-  private async uploadToCloudinary(
-    file: Express.Multer.File,
-    folderContext: string,
-  ): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: `rooli/${folderContext}`, // Organize in Cloudinary by Workspace ID
-          resource_type: 'auto', // Auto-detect Image vs Video
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        },
-      );
-      streamifier.createReadStream(file.buffer).pipe(uploadStream);
-    });
-  }
-
-  private getThumbnailUrl(result: any): string | null {
-    if (result.resource_type === 'video') {
-      // Cloudinary auto-generates jpg thumbnails for videos
-      return result.secure_url.replace(/\.[^/.]+$/, '.jpg');
-    }
-    return result.secure_url;
-  }
 }

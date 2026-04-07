@@ -34,7 +34,9 @@ export class MetaWebhookGuard implements CanActivate {
 
     if (!metaSecret) {
       this.logger.error('META_CLIENT_SECRET is not set');
-      throw new UnauthorizedException('Webhook signature verification misconfigured');
+      throw new UnauthorizedException(
+        'Webhook signature verification misconfigured',
+      );
     }
 
     const signature = this.getSignature(req);
@@ -45,7 +47,9 @@ export class MetaWebhookGuard implements CanActivate {
     const raw = (req as any).rawBody as Buffer | undefined;
     if (!raw || !Buffer.isBuffer(raw)) {
       this.logger.error('rawBody not found on request.');
-      throw new UnauthorizedException('Webhook signature verification unavailable');
+      throw new UnauthorizedException(
+        'Webhook signature verification unavailable',
+      );
     }
 
     // 1. Check against the standard Facebook/Meta Secret
@@ -63,7 +67,9 @@ export class MetaWebhookGuard implements CanActivate {
     }
 
     // 3. If BOTH fail, reject the request
-    this.logger.warn(`Meta signature mismatch. Request rejected. Got signature: ${signature}`);
+    this.logger.warn(
+      `Meta signature mismatch. Request rejected. Got signature: ${signature}`,
+    );
     throw new UnauthorizedException('Invalid Meta signature');
   }
 

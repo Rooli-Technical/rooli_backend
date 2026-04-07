@@ -17,7 +17,8 @@ export interface Response<T> {
 
 @Injectable()
 export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T>> {
+  implements NestInterceptor<T, Response<T>>
+{
   intercept(
     context: ExecutionContext,
     next: CallHandler,
@@ -27,18 +28,17 @@ export class TransformInterceptor<T>
         // Access the native response object to get the status code
         const ctx = context.switchToHttp();
         const response = ctx.getResponse();
-        
-        
+
         const message = data?.message || null;
-        
+
         // If data contains 'message', clean it up so 'data' only contains the payload
         // (This part is optional, depends on your preference)
-        const finalData = data; 
+        const finalData = data;
 
         return {
           statusCode: response.statusCode,
           success: true,
-          message: message, 
+          message: message,
           data: finalData,
           timestamp: new Date().toISOString(),
           path: ctx.getRequest().url,

@@ -2,7 +2,10 @@ import { RedisService } from '@/redis/redis.service';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TwitterApi } from 'twitter-api-v2';
-import { OAuthResult, SocialPageOption } from '../interfaces/social-provider.interface';
+import {
+  OAuthResult,
+  SocialPageOption,
+} from '../interfaces/social-provider.interface';
 
 @Injectable()
 export class TwitterService {
@@ -10,9 +13,8 @@ export class TwitterService {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly redisService: RedisService, 
+    private readonly redisService: RedisService,
   ) {}
-
 
   async generateAuthLink(organizationId: string): Promise<string> {
     try {
@@ -21,19 +23,19 @@ export class TwitterService {
         appSecret: this.config.getOrThrow('TWITTER_API_SECRET'),
       });
 
-      const callbackUrl = this.config.get('TWITTER_REDIRECT_URI')
-      
-      const authLink = await client.generateAuthLink(callbackUrl, { 
-        linkMode: 'authorize' 
+      const callbackUrl = this.config.get('TWITTER_REDIRECT_URI');
+
+      const authLink = await client.generateAuthLink(callbackUrl, {
+        linkMode: 'authorize',
       });
 
       // STORE STATE IN REDIS
       // We store the "secret" associated with this temporary token
       // We also store the organizationId so we know who is connecting later
       await this.redisService.set(
-        `twitter_auth:${authLink.oauth_token}`, 
-        JSON.stringify({ secret: authLink.oauth_token_secret, organizationId }), 
-        600 
+        `twitter_auth:${authLink.oauth_token}`,
+        JSON.stringify({ secret: authLink.oauth_token_secret, organizationId }),
+        600,
       );
 
       return authLink.url;
@@ -43,13 +45,20 @@ export class TwitterService {
     }
   }
 
- // 2. EXCHANGE FOR TOKENS
-  async login(oauth_token: string, oauth_verifier: string): Promise<OAuthResult> {
+  // 2. EXCHANGE FOR TOKENS
+  async login(
+    oauth_token: string,
+    oauth_verifier: string,
+  ): Promise<OAuthResult> {
     // A. Retrieve Secret from Redis
-    const cachedData = await this.redisService.get(`twitter_auth:${oauth_token}`);
-    
+    const cachedData = await this.redisService.get(
+      `twitter_auth:${oauth_token}`,
+    );
+
     if (!cachedData) {
-      throw new BadRequestException('Twitter session expired. Please try again.');
+      throw new BadRequestException(
+        'Twitter session expired. Please try again.',
+      );
     }
 
     const { secret } = JSON.parse(cachedData);
@@ -60,11 +69,12 @@ export class TwitterService {
         appKey: this.config.getOrThrow('TWITTER_API_KEY'),
         appSecret: this.config.getOrThrow('TWITTER_API_SECRET'),
         accessToken: oauth_token,
-        accessSecret: secret,   
+        accessSecret: secret,
       });
 
       // C. Exchange for Permanent User Tokens
-      const { accessToken, accessSecret, userId, screenName } = await client.login(oauth_verifier);
+      const { accessToken, accessSecret, userId, screenName } =
+        await client.login(oauth_verifier);
 
       // Cleanup
       await this.redisService.del(`twitter_auth:${oauth_token}`);
@@ -72,14 +82,13 @@ export class TwitterService {
       return {
         providerUserId: userId,
         providerUsername: screenName,
-        accessToken: accessToken, 
-        // We use the 'refreshToken' field to store the 'Access Secret' 
+        accessToken: accessToken,
+        // We use the 'refreshToken' field to store the 'Access Secret'
         // because we need BOTH to post.
-        refreshToken: accessSecret, 
+        refreshToken: accessSecret,
         scopes: ['tweet.read', 'tweet.write', 'users.read'],
-        expiresAt: null 
+        expiresAt: null,
       };
-
     } catch (error) {
       this.logger.error('Twitter Verification Failed', error);
       throw new BadRequestException('Invalid Twitter credentials.');
@@ -87,7 +96,10 @@ export class TwitterService {
   }
 
   // 3. GET IMPORTABLE (Just the Profile)
-  async getProfile(accessToken: string, accessSecret: string): Promise<SocialPageOption[]> {
+  async getProfile(
+    accessToken: string,
+    accessSecret: string,
+  ): Promise<SocialPageOption[]> {
     const client = new TwitterApi({
       appKey: this.config.getOrThrow('TWITTER_API_KEY'),
       appSecret: this.config.getOrThrow('TWITTER_API_SECRET'),
@@ -97,14 +109,47 @@ export class TwitterService {
 
     const currentUser = await client.v1.verifyCredentials();
 
-    return [{
-      id: currentUser.id_str,
-      name: currentUser.name,       // "John Doe"
-      username: currentUser.screen_name, // "@johndoe"
-      picture: currentUser.profile_image_url_https,
-      platform: 'TWITTER',
-      type: 'PROFILE',
-      accessToken: accessToken, // We only pass the token here (Secret is looked up via Connection later)
-    }];
+    return [
+      {
+        id: currentUser.id_str,
+        name: currentUser.name, // "John Doe"
+        username: currentUser.screen_name, // "@johndoe"
+        picture: currentUser.profile_image_url_https,
+        platform: 'TWITTER',
+        type: 'PROFILE',
+        accessToken: accessToken, // We only pass the token here (Secret is looked up via Connection later)
+      },
+    ];
+  }
+
+  async subscribeToWebhooks(accessToken: string, accessSecret: string): Promise<boolean> {
+    try {
+      // 1. OAuth 1.0a is correct for User Context subscriptions
+      const client = new TwitterApi({
+        appKey: this.config.getOrThrow('TWITTER_API_KEY'),
+        appSecret: this.config.getOrThrow('TWITTER_API_SECRET'),
+        accessToken,
+        accessSecret,
+      });
+
+      const webhookId = this.config.getOrThrow('TWITTER_WEBHOOK_ID');
+
+      // 2. Remove the '2/' prefix because client.v2 does it for you
+      const endpoint = `account_activity/webhooks/${webhookId}/subscriptions/all`;
+      
+      // 3. Fire the request
+      await client.v2.post(endpoint, {});
+      
+      this.logger.log(`Successfully subscribed user to webhook: ${webhookId}`);
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Subscription failed: ${error?.data?.detail || error.message}`);
+      
+      // Catching the 403 Forbidden correctly identifies a tier/permissions issue
+      if (error.code === 403) {
+         throw new BadRequestException('Twitter API tier upgrade or billing setup required for webhooks.');
+      }
+      throw new BadRequestException('Could not subscribe Twitter account to real-time events.');
+    }
   }
 }

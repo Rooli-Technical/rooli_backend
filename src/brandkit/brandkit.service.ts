@@ -1,9 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@generated/client';
 import { CreateBrandKitDto } from './dto/create-brandkit.dto';
 import { UpdateBrandKitDto } from './dto/update-brandkit.dto';
-
 
 @Injectable()
 export class BrandKitService {
@@ -18,12 +21,19 @@ export class BrandKitService {
     return kit;
   }
 
-  async upsertForWorkspace(workspaceId: string, dto: CreateBrandKitDto | UpdateBrandKitDto) {
+  async upsertForWorkspace(
+    workspaceId: string,
+    dto: CreateBrandKitDto | UpdateBrandKitDto,
+  ) {
     // Normalize JSON fields
-    const colors = dto.colors ? (dto.colors as unknown as Prisma.JsonObject) : undefined;
-    const guidelines = dto.guidelines ? (dto.guidelines as unknown as Prisma.JsonObject) : undefined;
+    const colors = dto.colors
+      ? (dto.colors as unknown as Prisma.JsonObject)
+      : undefined;
+    const guidelines = dto.guidelines
+      ? (dto.guidelines as unknown as Prisma.JsonObject)
+      : undefined;
 
-    // validate hex colors 
+    // validate hex colors
     this.assertValidColors(dto.colors);
 
     // Ensure workspace exists
@@ -55,13 +65,15 @@ export class BrandKitService {
         isActive: dto.isActive,
       },
       include: {
-      logo: true 
-    }
+        logo: true,
+      },
     });
   }
 
   async ensureDefaultExists(workspaceId: string) {
-    const existing = await this.prisma.brandKit.findUnique({ where: { workspaceId } });
+    const existing = await this.prisma.brandKit.findUnique({
+      where: { workspaceId },
+    });
     if (existing) return existing;
 
     // Create a minimal default kit

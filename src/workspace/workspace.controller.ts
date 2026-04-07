@@ -1,7 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { CreateWorkspaceDto } from './dtos/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dtos/update-workspace.dto';
 import { ListWorkspacesQueryDto } from './dtos/list-workspaces.dto';
@@ -17,7 +24,6 @@ import { RequirePermission } from '@/common/decorators/require-permission.decora
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
 
-
   @Post()
   @RequirePermission(PermissionResource.WORKSPACE, PermissionAction.CREATE)
   @ApiOperation({ summary: 'Create a new workspace' })
@@ -32,20 +38,21 @@ export class WorkspaceController {
     return this.workspaceService.createWorkspace(user.userId, orgId, dto);
   }
 
-
   @Get()
   @ApiOperation({
-    summary:
-      'Get all workspaces (Admins see all, members see assigned only)',
+    summary: 'Get all workspaces (Admins see all, members see assigned only)',
   })
   @ApiParam({ name: 'orgId', description: 'Organization ID' })
-
   async findAll(
     @CurrentUser() user: { userId: string },
     @Param('orgId') orgId: string,
     @Query() query: ListWorkspacesQueryDto,
   ) {
-    return this.workspaceService.listOrganizationWorkspaces(user.userId, orgId, query);
+    return this.workspaceService.listOrganizationWorkspaces(
+      user.userId,
+      orgId,
+      query,
+    );
   }
 
 
@@ -54,7 +61,7 @@ export class WorkspaceController {
   @ApiOperation({ summary: 'Get workspace by ID' })
   @ApiParam({ name: 'id', description: 'Workspace ID' })
   @ApiResponse({ status: 404, description: 'Workspace not found' })
-  async findOne(@Param('orgId') orgId: string,@Param('id') id: string) {
+  async findOne(@Param('orgId') orgId: string, @Param('id') id: string) {
     return this.workspaceService.getWorkspace(orgId, id);
   }
 

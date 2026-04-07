@@ -6,7 +6,6 @@ import { lastValueFrom } from 'rxjs';
 @Injectable()
 export class InstagramService {
   private readonly logger = new Logger(InstagramService.name);
-  
 
   private readonly AUTH_HOST = 'https://www.instagram.com';
   private readonly API_HOST = 'https://api.instagram.com';
@@ -19,7 +18,7 @@ export class InstagramService {
 
   generateAuthUrl(state: string): string {
     const clientId = this.config.get('INSTAGRAM_CLIENT_ID');
-    const redirectUri = this.config.get('INSTAGRAM_CALLBACK_URL'); 
+    const redirectUri = this.config.get('INSTAGRAM_CALLBACK_URL');
 
     const scopes = [
       'instagram_business_basic',
@@ -50,7 +49,7 @@ export class InstagramService {
       params.append('code', code);
 
       const { data: shortTokenData } = await lastValueFrom(
-        this.httpService.post(`${this.API_HOST}/oauth/access_token`, params)
+        this.httpService.post(`${this.API_HOST}/oauth/access_token`, params),
       );
 
       // 2. Exchange Short-Lived for Long-Lived Token (60 Days)
@@ -63,7 +62,6 @@ export class InstagramService {
           },
         }),
       );
-
 
       // 3. Get User Profile (to confirm it's a Professional Account)
       const { data: userProfile } = await lastValueFrom(
@@ -79,27 +77,32 @@ export class InstagramService {
       // "Instagram Login" flow supports BUSINESS and CREATOR.
       // Personal accounts might log in but will fail on publishing APIs.
       if (userProfile.account_type === 'PERSONAL') {
-        throw new BadRequestException('Rooli requires a Professional (Creator/Business) Instagram account.');
+        throw new BadRequestException(
+          'Rooli requires a Professional (Creator/Business) Instagram account.',
+        );
       }
 
       return {
         providerUserId: userProfile.id,
         providerUsername: userProfile.username,
         accessToken: longTokenData.access_token,
-        expiresAt: new Date(Date.now() + (longTokenData.expires_in * 1000)),
-        accountType: userProfile.account_type, 
+        expiresAt: new Date(Date.now() + longTokenData.expires_in * 1000),
+        accountType: userProfile.account_type,
         scopes: [], // IG doesn't return scopes in token response usually
         user_id: userProfile.user_id,
-
       };
-
     } catch (error: any) {
-      this.logger.error('IG (No-Page) Exchange Failed', error.response?.data || error.message);
-      throw new BadRequestException(error.message || 'Failed to connect Instagram account');
+      this.logger.error(
+        'IG (No-Page) Exchange Failed',
+        error.response?.data || error.message,
+      );
+      throw new BadRequestException(
+        error.message || 'Failed to connect Instagram account',
+      );
     }
   }
 
-// GET ACCOUNT (Importable Page)
+  // GET ACCOUNT (Importable Page)
   async getAccount(accessToken: string) {
     try {
       const { data } = await lastValueFrom(
@@ -111,43 +114,47 @@ export class InstagramService {
         }),
       );
 
-
       const validTypes = ['BUSINESS', 'CREATOR', 'MEDIA_CREATOR'];
-      
+
       if (!validTypes.includes(data.account_type)) {
-        throw new BadRequestException('Only Instagram Business or Creator accounts are supported.');
+        throw new BadRequestException(
+          'Only Instagram Business or Creator accounts are supported.',
+        );
       }
 
       return [
         {
           id: data.id,
-          name: data.username, 
+          name: data.username,
           username: data.username,
           platform: 'INSTAGRAM',
-          type: 'PAGE', 
+          type: 'PAGE',
           picture: data.profile_picture_url,
-          accessToken: accessToken, 
+          accessToken: accessToken,
           user_id: data.user_id,
         },
       ];
     } catch (error: any) {
-      this.logger.error(`IG Fetch Failed: ${error.message}`, error.response?.data);
+      this.logger.error(
+        `IG Fetch Failed: ${error.message}`,
+        error.response?.data,
+      );
       return [];
     }
   }
 
   async disconnect(accessToken: string): Promise<void> {
-  try {
-    await lastValueFrom(
-      this.httpService.delete(`${this.GRAPH_HOST}/me/permissions`, {
-        params: { access_token: accessToken },
-      }),
-    );
-    this.logger.log(`Successfully revoked Instagram token`);
-  } catch (error: any) {
-    // We log a warning but don't throw; we still want to delete the local record
-    const errorMsg = error.response?.data?.error?.message || error.message;
-    this.logger.warn(`External revocation failed: ${errorMsg}`);
+    try {
+      await lastValueFrom(
+        this.httpService.delete(`${this.GRAPH_HOST}/me/permissions`, {
+          params: { access_token: accessToken },
+        }),
+      );
+      this.logger.log(`Successfully revoked Instagram token`);
+    } catch (error: any) {
+      // We log a warning but don't throw; we still want to delete the local record
+      const errorMsg = error.response?.data?.error?.message || error.message;
+      this.logger.warn(`External revocation failed: ${errorMsg}`);
+    }
   }
-}
 }

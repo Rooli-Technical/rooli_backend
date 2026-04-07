@@ -1,9 +1,14 @@
 import { UserType } from '@generated/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsEnum, IsEmail } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsEmail,
+} from 'class-validator';
 
 export class OnboardingDto {
-
   @ApiProperty({
     description: 'The name of the organization',
     example: 'Acme Corporation',

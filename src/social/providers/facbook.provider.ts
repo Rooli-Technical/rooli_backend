@@ -265,18 +265,20 @@ export class FacebookProvider implements ISocialProvider {
     });
 
     const finalPostId = finishRes.data.post_id;
-    
+
     if (!finalPostId) {
-      this.logger.log(`Reel ${video_id} is processing. Queuing Post ID fetch...`);
+      this.logger.log(
+        `Reel ${video_id} is processing. Queuing Post ID fetch...`,
+      );
       await this.postVerificationQueue.add(
-        'fetch-real-post-id', 
+        'fetch-real-post-id',
         { platform: 'FACEBOOK', mediaId: video_id, pageId, accessToken: token },
-        { 
-          delay: 60000, 
-          attempts: 5, 
+        {
+          delay: 60000,
+          attempts: 5,
           backoff: { type: 'exponential', delay: 60000 },
           removeOnComplete: true,
-        }
+        },
       );
     }
 
@@ -321,7 +323,6 @@ export class FacebookProvider implements ISocialProvider {
       },
     );
 
-
     return {
       platformPostId: storyRes.data.post_id ?? storyRes.data.id ?? photoId,
       url: `https://facebook.com/${pageId}`,
@@ -360,7 +361,6 @@ export class FacebookProvider implements ISocialProvider {
     const finishRes = await axios.post(storiesUrl, null, {
       params: { upload_phase: 'finish', video_id, access_token: token },
     });
-
 
     return {
       platformPostId: finishRes.data.post_id ?? video_id,
@@ -413,7 +413,7 @@ export class FacebookProvider implements ISocialProvider {
       access_token: token,
     });
 
-    const videoId = response.data.id; 
+    const videoId = response.data.id;
 
     // 2. Add to Queue with the 1-Minute Delay & Exponential Backoff
     await this.postVerificationQueue.add(
