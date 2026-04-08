@@ -677,6 +677,9 @@ model Subscription {
   currentPeriodEnd   DateTime
   cancelAtPeriodEnd  Boolean            @default(false)
 
+  readOnlyNotifiedAt  DateTime?
+  suspendedNotifiedAt DateTime?
+
   // --- PAYSTACK SPECIFIC FIELDS (NGN) ---
   paystackSubscriptionCode String? // "SUB_vsyqdmlzble3uii"
   paystackEmailToken       String? // "otk_54321" (For one-click actions)
