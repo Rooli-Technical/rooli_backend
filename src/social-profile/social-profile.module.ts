@@ -11,9 +11,10 @@ import { TwitterService } from '@/social-connection/providers/twitter.service';
 import { InstagramService } from '@/social-connection/providers/instagram.service';
 import { EventsModule } from '@/events/events.module';
 import { TikTokService } from '@/social-connection/providers/tiktok.service';
+import { PlanAccessModule } from '@/plan-access-service/plan-access.module';
 
 @Module({
-  imports: [SocialConnectionModule, HttpModule, EventsModule],
+  imports: [SocialConnectionModule, HttpModule, EventsModule, PlanAccessModule],
   controllers: [SocialProfileController],
   providers: [
     SocialProfileService,

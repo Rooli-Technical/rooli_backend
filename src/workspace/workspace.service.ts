@@ -10,12 +10,14 @@ import { UpdateWorkspaceDto } from './dtos/update-workspace.dto';
 import { Workspace, Prisma } from '@generated/client';
 import { ListWorkspacesQueryDto } from './dtos/list-workspaces.dto';
 import { AuthService } from '@/auth/auth.service';
+import { PlanAccessService } from '@/plan-access-service/plan-access.service';
 
 @Injectable()
 export class WorkspaceService {
   constructor(
     private prisma: PrismaService,
     private authService: AuthService,
+    private planAccessService: PlanAccessService,
   ) {}
 
   async createWorkspace(
@@ -24,7 +26,7 @@ export class WorkspaceService {
     dto: CreateWorkspaceDto,
   ): Promise<Workspace> {
     // Enforce plan limit BEFORE transaction
-    await this.checkWorkspaceLimitAndGetFeatures(organizationId);
+    await this.planAccessService.ensureWorkspaceLimit(organizationId);
 
     const slug = this.normalizeSlug(dto.slug ?? dto.name);
 
@@ -64,7 +66,7 @@ export class WorkspaceService {
         // Fetch OWNER role id (org override if exists, else system)
         const ownerRoleId = await this.getRoleIdOrThrow(tx, {
           scope: 'WORKSPACE',
-          slug: 'owner',
+          slug: 'ws-owner',
           organizationId: organizationId,
         });
 
@@ -100,7 +102,7 @@ export class WorkspaceService {
     const member = await this.getOrgMemberOrThrow({ organizationId, userId });
 
     // Check if Admin/Owner
-    const isOrgAdmin = ['owner', 'admin'].includes(member.role?.slug);
+    const isOrgAdmin = ['org-owner', 'org-admin'].includes(member.role?.slug);
 
     const limit = Math.min(query?.limit ?? 20, 100);
     const page = Math.max(query?.page ?? 1, 1);
@@ -302,7 +304,7 @@ export class WorkspaceService {
         workspace: {
           select: {
             organizationId: true,
-            organization: { select: { status: true } },
+            organization: { select: { billingStatus: true } },
           },
         },
       },
@@ -313,7 +315,7 @@ export class WorkspaceService {
       throw new ForbiddenException('You are not a member of this workspace');
     }
 
-    if (membership.workspace.organization.status === 'SUSPENDED') {
+    if (membership.workspace.organization.billingStatus === 'SUSPENDED') {
       throw new ForbiddenException('Organization is suspended');
     }
 
@@ -394,41 +396,6 @@ export class WorkspaceService {
   // 4. HELPERS
   // --------------------------------------------------------
 
-  private async checkWorkspaceLimitAndGetFeatures(orgId: string) {
-    const org = await this.prisma.organization.findUnique({
-      where: { id: orgId },
-      include: {
-        subscription: {
-          include: { plan: true },
-        },
-      },
-    });
-
-    if (!org) throw new NotFoundException('Organization not found');
-
-    // 1. Check Subscription Status
-    const sub = org.subscription;
-    const isActive = sub && ['active'].includes(sub.status);
-
-    // 2. Determine Effective Plan (Fallback to Free/Default limits if inactive)
-    const plan = isActive ? sub.plan : null;
-
-    // 3. Set Limits (Default to 1 if no active plan)
-    // This ensures even free users (who might not have a sub row) are limited to 1.
-    const maxWorkspaces = plan?.maxWorkspaces ?? 1;
-    // 4. Count & Enforce
-    const currentCount = await this.prisma.workspace.count({
-      where: { organizationId: orgId },
-    });
-    if (currentCount >= maxWorkspaces) {
-      throw new ForbiddenException(
-        `Workspace limit reached. Your plan allows ${maxWorkspaces} workspaces.`,
-      );
-    }
-
-    return { features: (plan?.features as any) ?? {} };
-  }
-
   private async getRoleIdOrThrow(
     tx: Prisma.TransactionClient,
     params: {
@@ -477,7 +444,7 @@ export class WorkspaceService {
               : null,
           },
         },
-    })),
-  };
+      })),
+    };
   }
 }

@@ -109,6 +109,7 @@ export class BillingController {
     return this.billingService.initializePayment(
       req.user.organizationId,
       body.planId,
+      body.interval,
       req.user,
     );
   }

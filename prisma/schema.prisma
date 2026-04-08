@@ -109,6 +109,9 @@ model Organization {
   subscription Subscription? // 1-to-1 relation
   transactions Transaction[] // Payment history
 
+  billingStatus BillingStatus
+  readOnly      Boolean       @default(false)
+
   settings Json?
 
   publishingMetrics PublishingMetric[]
@@ -205,7 +208,7 @@ model WorkspaceMember {
   assignedConversations InboxConversation[]     @relation("ConversationAssignee")
   readStates            ConversationReadState[]
 
-  isActive  Boolean @default(true)
+  isActive  Boolean   @default(true)
   deletedAt DateTime?
 
   notifications Notification[]
@@ -384,7 +387,7 @@ model Post {
   timezone       String    @default("UTC")
   isAutoSchedule Boolean   @default(false) // If true, uses QueueSlot
 
-  isUrgent    Boolean @default(false)
+  isUrgent Boolean @default(false)
 
   errorMessage String? // General error (if all failed)
   maxRetries   Int     @default(3)
@@ -617,39 +620,37 @@ model PublishingMetric {
 // The Plan Model (Your Tiers)
 model Plan {
   id          String   @id @default(cuid())
-  name        String   @unique
+  name        String // e.g., "Business", "Rocket", "Enterprise"
+  tier        PlanTier  @unique // ENUM: BUSINESS, ROCKET, ENTERPRISE
   description String?
-  tier        PlanTier @default(CREATOR)
+  isActive    Boolean  @default(true)
 
-  // BILLING MAPPING
-  paystackPlanCodeNgn String? @unique
-  paystackPlanCodeUsd String? @unique
+  badge String?
 
-  // PRICING (Display purposes)
-  priceNgn Decimal         @default(0.00) @db.Decimal(10, 2)
-  priceUsd Decimal         @default(0.00) @db.Decimal(10, 2)
-  interval BillingInterval
+  // -- PRICING (Stored in Cents/Kobo) --
+  monthlyPriceUsd Int
+  annualPriceUsd  Int
+  monthlyPriceNgn Int
+  annualPriceNgn  Int
 
-  // --- LIMITS (The "Guards") ---
+  // -- GATEWAY IDENTIFIERS (PAYSTACK ONLY) --
+  paystackPlanCodeMonthlyNgn String?
+  paystackPlanCodeAnnualNgn  String?
+  paystackPlanCodeMonthlyUsd String? // Replaced Stripe with Paystack USD
+  paystackPlanCodeAnnualUsd  String? // Replaced Stripe with Paystack USD
 
-  // Rocket Plan specific: "Up to 5 workspaces"
-  maxWorkspaces Int @default(1)
+  // -- USAGE LIMITS --
+  maxWorkspaces     Int
+  maxSocialProfiles Int
+  maxUsers          Int
 
-  // "Up to 3 social profiles" (Creator) vs "4 per workspace" (Rocket)
-  maxSocialProfilesPerWorkspace Int @default(3)
+  // -- AI CREDITS --
+  aiCreditsMonthly   Int
+  aiOverageRateCents Int
+  aiOverageCapCents  Int?
 
-  // "1 user" (Creator) vs "Unlimited" (Rocket - set to -1 or 9999)
-  maxTeamMembers Int @default(1)
-
-  // AI Usage Limits (Credits per month)
-  monthlyAiCredits Int @default(100)
-
-  // --- FEATURES (Flags) ---
-  // JSON stores boolean flags: 
-  // { "canRemoveBranding": true, "hasAdvancedAnalytics": true, "hasApprovalWorkflow": true }
-  features Json @default("{}")
-
-  isActive      Boolean        @default(true)
+  // -- FEATURES --
+  features      Json
   subscriptions Subscription[]
 
   // list allowed platforms
@@ -670,11 +671,14 @@ model Subscription {
   plan   Plan   @relation(fields: [planId], references: [id])
 
   // STATUS & PERIOD
-  status             String   @default("active") // "active", "past_due", "canceled", "incomplete"
+  status             SubscriptionStatus
   isActive           Boolean
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean  @default(false)
+  cancelAtPeriodEnd  Boolean            @default(false)
+
+  readOnlyNotifiedAt  DateTime?
+  suspendedNotifiedAt DateTime?
 
   // --- PAYSTACK SPECIFIC FIELDS (NGN) ---
   paystackSubscriptionCode String? // "SUB_vsyqdmlzble3uii"
@@ -686,6 +690,23 @@ model Subscription {
   // Example: { "maxWorkspaces": 10, "maxTeamMembers": 50 }
   // Logic: const limit = sub.customLimits?.maxWorkspaces || plan.maxWorkspaces
   customLimits Json?
+
+  extraWorkspacesPurchased Int @default(0)
+
+  isTrial          Boolean  @default(true)
+  trialStartAt     DateTime?
+  trialEndsAt      DateTime?
+  watermarkEnabled Boolean   @default(true)
+
+  billingInterval BillingInterval // MONTHLY | ANNUAL
+
+  aiCreditsUsed      Int @default(0)
+  aiOverageCostCents Int @default(0)
+
+  failedPaymentAttempts Int       @default(0)
+  lastPaymentFailedAt   DateTime? // The anchor for Day 0 -> Day 14 sequence
+
+  lastCreditResetAt DateTime  @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1314,7 +1335,7 @@ model RolePermission {
 }
 
 model Permission {
-  id          String             @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   description String?
   scope       PermissionScope
@@ -1405,29 +1426,28 @@ model AuditLog {
   id             String @id @default(cuid())
   organizationId String
 
-// Who did it?
+  // Who did it?
   actorUserId   String?
-  actorMemberId String? 
-  actorUser    User?               @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
-  actorMember  OrganizationMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
+  actorMemberId String?
+  actorUser     User?               @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorMember   OrganizationMember? @relation(fields: [actorMemberId], references: [id], onDelete: SetNull)
 
   // What did they do?
-  action       AuditAction       // e.g., "APPROVED_POST", "INVITED_USER", "DELETED_PROFILE"
+  action       AuditAction // e.g., "APPROVED_POST", "INVITED_USER", "DELETED_PROFILE"
   resourceType AuditResourceType // e.g., "POST", "WORKSPACE_MEMBER", "SOCIAL_PROFILE"
-  resourceId   String?           // The ID of the post or user they affected
-  details      Json?             // Extra data (e.g., { "previousStatus": "DRAFT", "newStatus": "SCHEDULED" })
+  resourceId   String? // The ID of the post or user they affected
+  details      Json? // Extra data (e.g., { "previousStatus": "DRAFT", "newStatus": "SCHEDULED" })
 
-  workspaceId    String?
-  workspace      Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   ipAddress String?
   userAgent String?
 
-  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
 
- @@index([organizationId, createdAt])
+  @@index([organizationId, createdAt])
   @@index([workspaceId, createdAt])
   @@index([action, resourceType])
 }
@@ -1538,6 +1558,24 @@ model TicketComment {
   @@index([ticketId])
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELED
+  EXPIRED
+}
+
+enum BillingStatus {
+  TRIAL_ACTIVE        // Trial ongoing
+  ACTIVE              // Paid + valid
+  GRACE_PERIOD        // Payment failed but still usable (Day 0–7)
+  READ_ONLY           // Locked (Day 8+)
+  SUSPENDED           // Fully blocked (Day 14+)
+  CANCELED            // User canceled but still in paid period
+}
+
 enum ConnectionStatus {
   CONNECTED
   EXPIRED
@@ -1622,7 +1660,6 @@ enum CreditType {
 }
 
 enum PlanTier {
-  CREATOR
   BUSINESS
   ROCKET
   ENTERPRISE
@@ -1812,7 +1849,6 @@ enum AiFeature {
   BULK
   HOLIDAY_POST
 }
-
 
 enum InvitationStatus {
   PENDING

@@ -165,7 +165,7 @@ export class AdminOrganizationRepository {
   // GET ONE ORGANIZATION (for View details)
   // ─────────────────────────────────────────────────────────────────────────
 
-  async findById(id: string) {
+async findById(id: string) {
     return this.prisma.organization.findUnique({
       where: { id },
       select: {
@@ -181,7 +181,7 @@ export class AdminOrganizationRepository {
         timezone: true,
         createdAt: true,
         updatedAt: true,
-        totalCreditsUsed: true,
+        totalCreditsUsed: true, // Note: You also have `aiCreditsUsed` on Subscription now. Make sure this still exists on Organization if you kept it for lifetime tracking!
         subscription: {
           select: {
             status: true,
@@ -189,18 +189,27 @@ export class AdminOrganizationRepository {
             currentPeriodStart: true,
             currentPeriodEnd: true,
             cancelAtPeriodEnd: true,
+
+            billingInterval: true, 
+            isTrial: true,         
+            trialEndsAt: true,     
+            aiCreditsUsed: true,   
+
             plan: {
               select: {
                 id: true,
                 name: true,
                 tier: true,
-                priceNgn: true,
-                priceUsd: true,
-                interval: true,
+
+                monthlyPriceNgn: true,
+                annualPriceNgn: true,
+                monthlyPriceUsd: true,
+                annualPriceUsd: true,
+
                 maxWorkspaces: true,
-                maxTeamMembers: true,
-                maxSocialProfilesPerWorkspace: true,
-                monthlyAiCredits: true,
+                maxUsers: true,          // Was maxTeamMembers
+                maxSocialProfiles: true, // Was maxSocialProfilesPerWorkspace
+                aiCreditsMonthly: true,  // Was monthlyAiCredits
               },
             },
           },

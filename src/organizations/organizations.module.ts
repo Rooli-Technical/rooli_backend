@@ -8,10 +8,13 @@ import { BillingModule } from '@/billing/billing.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { OrganizationMemberService } from './organization-member/organization-member.service';
+import { PlanAccessService } from '@/plan-access-service/plan-access.service';
+import { PlanAccessModule } from '@/plan-access-service/plan-access.module';
 
 @Module({
   imports: [
     BillingModule,
+    PlanAccessModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

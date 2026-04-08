@@ -1,290 +1,139 @@
 import {
-  BillingInterval,
   PlanTier,
-  Prisma,
+  Platform,
 } from '../../generated/prisma/client';
 import { prisma } from './utils';
 
+
 export async function seedPlans() {
-  const plans: Prisma.PlanCreateInput[] = [
-    // ======================
-    // CREATOR
-    //======================
+  const plans = [
     {
-      name: 'Creator Monthly',
-      description: 'For creators, solo founders, freelancers & small brands.',
-      tier: PlanTier.CREATOR,
-
-      priceNgn: 7350,
-      priceUsd: 5,
-
-      interval: BillingInterval.MONTHLY,
-
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN'],
-
-      maxWorkspaces: 1,
-      maxSocialProfilesPerWorkspace: 3,
-      maxTeamMembers: 1,
-      monthlyAiCredits: 100,
-
-      features: {
-        canRemoveBranding: false,
-        advancedAnalytics: false,
-        mediaLibrary: true,
-      },
-
-      isActive: true,
-
-      // NGN = REAL
-      paystackPlanCodeNgn: 'PLN_u9jzjn5g3as3wk8',
-
-      // USD = DUMMY (UI ONLY)
-      paystackPlanCodeUsd: 'DUMMY_USD_CREATOR_MONTHLY',
-    },
-
-    {
-      name: 'Creator Annual',
-      description: 'Annual - For creators & freelancers.',
-      tier: PlanTier.CREATOR,
-
-      priceNgn: 83790,
-      priceUsd: 57,
-
-      interval: BillingInterval.YEARLY,
-
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN'],
-
-      maxWorkspaces: 1,
-      maxSocialProfilesPerWorkspace: 3,
-      maxTeamMembers: 1,
-      monthlyAiCredits:  100,
-
-      features: {
-        canRemoveBranding: false,
-        advancedAnalytics: false,
-        mediaLibrary: true,
-        aiAdvanced: true
-      },
-
-      isActive: true,
-
-      paystackPlanCodeNgn: 'PLN_tf507aah9h9a3tf',
-      paystackPlanCodeUsd: 'DUMMY_USD_CREATOR_ANNUAL',
-    },
-
-    // // ======================
-    // // BUSINESS
-    // // ======================
-    {
-      name: 'Business Monthly',
-      description: 'For growing businesses & small teams.',
+      name: 'Business',
+      description: 'For growing businesses & small teams',
       tier: PlanTier.BUSINESS,
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
+      badge: 'Most Popular',
 
-      priceNgn: 14700,
-      priceUsd: 10,
+      monthlyPriceUsd: 1200,
+      annualPriceUsd: 9600,
+      monthlyPriceNgn: 1764000,
+      annualPriceNgn: 14112000,
 
-      interval: BillingInterval.MONTHLY,
+      paystackPlanCodeMonthlyNgn: 'PLN_y8l5ovjzqx6bo5j',
+      paystackPlanCodeAnnualNgn: 'PLN_j2dz1p5g4zima6a',
+      paystackPlanCodeMonthlyUsd: 'DUMMY_USD_BUSINESS_MONTHLY',
+      paystackPlanCodeAnnualUsd: 'DUMMY_USD_BUSINESS_ANNUAL',
 
       maxWorkspaces: 1,
-      maxSocialProfilesPerWorkspace: 4,
-      maxTeamMembers: 3,
-      monthlyAiCredits: 1000,
+      maxSocialProfiles: 4,
+      maxUsers: 3,
+
+      aiCreditsMonthly: 30,
+      aiOverageRateCents: 2,
+      aiOverageCapCents: 2000,
+
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'] as Platform[],
 
       features: {
-        canRemoveBranding: true,
-        advancedAnalytics: true,
-        approvalWorkflow: true,
+        analytics: 'basic',
         bulkScheduling: true,
-        mediaLibrary: true,
-        aiAdvanced: true,
-        visualCalendar: true
+        postApprovals: true,
+        repurposeContent: true,
       },
 
       isActive: true,
-
-      paystackPlanCodeNgn: 'PLN_y8l5ovjzqx6bo5j',
-      paystackPlanCodeUsd: 'DUMMY_USD_BUSINESS_MONTHLY',
     },
 
     {
-      name: 'Business Annual',
-      description: 'Annual - For growing businesses.',
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
-      tier: PlanTier.BUSINESS,
-
-      priceNgn: 167580,
-      priceUsd: 114,
-
-      interval: BillingInterval.YEARLY,
-
-      maxWorkspaces: 1,
-      maxSocialProfilesPerWorkspace: 4,
-      maxTeamMembers: 3,
-      monthlyAiCredits: 1000,
-
-      features: {
-        canRemoveBranding: true,
-        advancedAnalytics: true,
-        approvalWorkflow: true,
-        bulkScheduling: true,
-        mediaLibrary: true,
-        aiAdvanced: true,
-        visualCalendar: true
-      },
-
-      isActive: true,
-
-      paystackPlanCodeNgn: 'PLN_j2dz1p5g4zima6a',
-      paystackPlanCodeUsd: 'DUMMY_USD_BUSINESS_ANNUAL',
-    },
-
-    // // ======================
-    // // ROCKET
-    // // ======================
-    {
-      name: 'Rocket Monthly',
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
-      description: 'For agencies & large teams.',
+      name: 'Rocket',
+      description: 'Best for agencies & growing teams',
       tier: PlanTier.ROCKET,
+      badge: 'Best for Agencies',
 
-      priceNgn: 44100,
-      priceUsd: 30,
+      monthlyPriceUsd: 4900,
+      annualPriceUsd: 47000,
+      monthlyPriceNgn: 7203000,
+      annualPriceNgn: 69090000,
 
-      interval: BillingInterval.MONTHLY,
+      paystackPlanCodeMonthlyNgn: 'PLN_of4tu83cw2og4s5',
+      paystackPlanCodeAnnualNgn: 'PLN_oiwln4pt1wxbw61',
+      paystackPlanCodeMonthlyUsd: 'DUMMY_USD_ROCKET_MONTHLY',
+      paystackPlanCodeAnnualUsd: 'DUMMY_USD_ROCKET_ANNUAL',
 
       maxWorkspaces: 5,
-      maxSocialProfilesPerWorkspace: 4,
-      maxTeamMembers: 9999,
-      monthlyAiCredits: 5000,
+      maxSocialProfiles: 20,
+      maxUsers: 9999,
+
+      aiCreditsMonthly: 100,
+      aiOverageRateCents: 2,
+      aiOverageCapCents: 5000,
+
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'] as Platform[],
 
       features: {
-        canRemoveBranding: true,
-        advancedAnalytics: true,
-        approvalWorkflow: true,
-        whiteLabelReports: true,
-        prioritySupport: true,
-        hasCampaigns: true, 
-        hasLabels: true,
-        mediaLibrary: true,
+        analytics: 'advanced',
         bulkScheduling: true,
-        queueScheduling: true,
-        aiAdvanced: true,
-        aiBulkGenerate: true,
-        visualCalendar: true
+        postApprovals: true,
+        bulkAI: true,
+        whiteLabelReports: true,
+        clientPortal: true,
+        prioritySupport: true,
+        repurposeContent: true,
       },
 
       isActive: true,
-
-      paystackPlanCodeNgn: 'PLN_of4tu83cw2og4s5',
-      paystackPlanCodeUsd: 'DUMMY_USD_ROCKET_MONTHLY',
     },
 
     {
-      name: 'Rocket Annual',
-      description: 'Annual - For agencies & companies.',
-      tier: PlanTier.ROCKET,
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
-
-      priceNgn: 502740,
-      priceUsd: 342,
-
-      interval: BillingInterval.YEARLY,
-
-      maxWorkspaces: 5,
-      maxSocialProfilesPerWorkspace: 4,
-      maxTeamMembers: 9999,
-      monthlyAiCredits: 5000,
-
-      features: {
-        canRemoveBranding: true,
-        advancedAnalytics: true,
-        approvalWorkflow: true,
-        whiteLabelReports: true,
-        prioritySupport: true,
-        hasCampaigns: true,
-        hasLabels: true,
-       mediaLibrary: true,
-        bulkScheduling: true,
-        queueScheduling: true,
-        aiAdvanced: true,
-        aiBulkGenerate: true,
-        visualCalendar: true
-      },
-
-      isActive: true,
-
-      paystackPlanCodeNgn: 'PLN_oiwln4pt1wxbw61',
-      paystackPlanCodeUsd: 'DUMMY_USD_ROCKET_ANNUAL',
-    },
-
-  
-   // ======================
-    // ENTERPRISE (Contact Sales)
-    // ======================
-    {
-      name: 'Enterprise', 
-      description: 'Custom solutions for large organizations.',
+      name: 'Enterprise',
+      description: 'Custom solutions for large organizations',
       tier: PlanTier.ENTERPRISE,
-      
-      // Price is just a placeholder/baseline. 
-      // In reality, you charge what you negotiate.
-      priceNgn: 294000, 
-      priceUsd: 200,
-      
-      interval: BillingInterval.MONTHLY, // Default to monthly for system calculation
 
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'],
-      
-      // "Custom" means you likely manually edit these per org, 
-      // but these serve as the high defaults:
-      maxWorkspaces: 9999, // Unlimited
-      maxSocialProfilesPerWorkspace: 9999, // Unlimited
-      maxTeamMembers: 9999, // Unlimited
-      monthlyAiCredits: 999999, // Effectively Unlimited
-      
+      monthlyPriceUsd: 20000,
+      annualPriceUsd: 240000,
+      monthlyPriceNgn: 29400000,
+      annualPriceNgn: 352800000,
+
+      paystackPlanCodeMonthlyNgn: 'MANUAL',
+      paystackPlanCodeAnnualNgn: 'MANUAL',
+      paystackPlanCodeMonthlyUsd: 'MANUAL',
+      paystackPlanCodeAnnualUsd: 'MANUAL',
+
+      maxWorkspaces: 9999,
+      maxSocialProfiles: 9999,
+      maxUsers: 9999,
+
+      aiCreditsMonthly: 999999,
+      aiOverageRateCents: 0,
+      aiOverageCapCents: null,
+
+      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'] as Platform[],
+
       features: {
-        canRemoveBranding: true,
-        advancedAnalytics: true,
-        approvalWorkflow: true,
-        whiteLabelReports: true,
-        prioritySupport: true,
-        dedicatedAccountManager: true,
-        sla: true,
-        customIntegrations: true,
-       hasCampaigns: true, 
-        hasLabels: true,
-        mediaLibrary: true,
+        analytics: 'advanced',
         bulkScheduling: true,
-        queueScheduling: true,
-        aiAdvanced: true,
-        aiBulkGenerate: true,
-        visualCalendar: true
+        postApprovals: true,
+        bulkAI: true,
+        whiteLabelReports: true,
+        clientPortal: true,
+        campaignPlanning: true,
+        prioritySupport: true,
+        repurposeContent: true,
+        sla: true,
       },
-      
-      // HIDDEN FROM PUBLIC UI
-      // Use this flag in your frontend to show a "Contact Sales" button instead of "Subscribe"
-      isActive: false, 
-      
-      // No automatic billing
-      paystackPlanCodeNgn: 'MANUAL_BILLING',
-      paystackPlanCodeUsd: 'MANUAL_BILLING',
-    }
+
+      isActive: false,
+    },
   ];
 
   await prisma.$transaction(async (tx) => {
     for (const plan of plans) {
       await tx.plan.upsert({
-        where: { name: plan.name },
+        where: { tier: plan.tier },
         update: plan,
         create: plan,
       });
     }
-  },
-{
-  maxWait: 10000, // Time to wait for a connection
-  timeout: 30000  // Time to execute the whole thing (30 seconds)
-});
+  });
 
-  console.log('Plans seeded successfully');
+  console.log('V2 Pricing Plans seeded successfully');
 }

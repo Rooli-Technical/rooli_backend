@@ -33,7 +33,6 @@ export class FacebookService {
       'pages_manage_posts', // For FB Posting
 
       'pages_read_user_content', // For FB Inbox (Incoming posts)
-      'publish_video',
       'read_insights', // Keep only if posting Videos to FB
 
       'pages_manage_metadata',

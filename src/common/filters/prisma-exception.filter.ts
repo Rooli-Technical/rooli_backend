@@ -8,27 +8,42 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
+    console.error(exception);
+
+    let status = 500;
+    let message = 'Database error';
+    let code = 'DB_ERROR';
+
     switch (exception.code) {
       case 'P2002':
-        response.status(409).json({
-          statusCode: 409,
-          message: 'Resource already exists',
-          error: 'Conflict',
-        });
+        status = 409;
+        message = 'Resource already exists';
+        code = 'DUPLICATE_RESOURCE';
         break;
+
       case 'P2025':
-        response.status(404).json({
-          statusCode: 404,
-          message: 'Resource not found',
-          error: 'Not Found',
-        });
+        status = 404;
+        message = 'Resource not found';
+        code = 'NOT_FOUND';
         break;
+
+      case 'P2003':
+        status = 400;
+        message = 'Invalid reference';
+        code = 'FOREIGN_KEY_ERROR';
+        break;
+
       default:
-        response.status(500).json({
-          statusCode: 500,
-          message: 'Internal server error',
-          error: 'Internal Server Error',
-        });
+        status = 500;
+        message = 'Internal server error';
+        code = 'INTERNAL_DB_ERROR';
     }
+
+    response.status(status).json({
+      statusCode: status,
+      code,
+      message,
+      timestamp: new Date().toISOString(),
+    });
   }
 }

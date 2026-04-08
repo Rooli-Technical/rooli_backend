@@ -118,7 +118,7 @@ export class AuthService {
     const orgName = dto.name;
     const workspaceName = dto.initialWorkspaceName || 'General';
     const orgSlug = await this.generateUniqueOrgSlug(orgName);
-    const workspaceSlug = slugify(workspaceName, { lower: true, strict: true });
+    const workspaceSlug = await this.generateUniqueOrgSlug(workspaceName);
 
     // 1. Update User Type
     if (dto.userType) {
@@ -130,12 +130,16 @@ export class AuthService {
 
     const [orgOwnerRole, wsAdminRole] = await Promise.all([
       this.prisma.role.findFirstOrThrow({
-        where: { slug: 'owner', scope: 'ORGANIZATION' },
+        where: { slug: 'org-owner', scope: 'ORGANIZATION' },
       }),
       this.prisma.role.findFirstOrThrow({
-        where: { slug: 'owner', scope: 'WORKSPACE' },
+        where: { slug: 'ws-owner', scope: 'WORKSPACE' },
       }),
     ]);
+
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 14); // 14-day trial timer
+
     const txResult = await this.prisma.$transaction(async (tx) => {
       // 1. Create Org
       const org = await tx.organization.create({
@@ -144,7 +148,8 @@ export class AuthService {
           slug: orgSlug,
           billingEmail: user.email,
           timezone: dto.timezone,
-          status: 'PENDING_PAYMENT',
+          status: 'ACTIVE',
+          billingStatus: 'TRIAL_ACTIVE',
           members: {
             create: { userId: user.id, roleId: orgOwnerRole.id },
           },
@@ -179,16 +184,7 @@ export class AuthService {
       });
 
       // 4. Create Subscription
-      await tx.subscription.create({
-        data: {
-          organizationId: org.id,
-          planId: selectedPlan.id,
-          status: 'incomplete',
-          isActive: false,
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(),
-        },
-      });
+      await this.billingService.startTrial(org.id, selectedPlan.id);
 
       // 5. Update User Context
       const updatedUser = await tx.user.update({
@@ -221,18 +217,10 @@ export class AuthService {
       data: { refreshToken: hashedRefreshToken },
     });
 
-    const paymentData = await this.billingService.initializePayment(
-      txResult.org.id,
-      selectedPlan.id,
-      txResult.user,
-    );
-
     return {
       user: this.toSafeUser(txResult.user),
       ...newTokens,
       activeWorkspaceId: txResult.workspace.id,
-      paymentUrl: paymentData.paymentUrl,
-      reference: paymentData.reference,
     };
   }
 

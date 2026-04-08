@@ -12,6 +12,7 @@ import {
 import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
 import { ConnectionStatus, Platform } from '@generated/enums';
 import { DomainEventsService } from '@/events/domain-events.service';
+import { PlanAccessService } from '@/plan-access-service/plan-access.service';
 
 @Injectable()
 export class SocialProfileService {
@@ -21,45 +22,42 @@ export class SocialProfileService {
     private readonly connectionService: SocialConnectionService,
     private readonly encryption: EncryptionService,
     private readonly domainEvents: DomainEventsService,
+    private readonly planAccessService: PlanAccessService,
   ) {}
 
   async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
-    const { remaining, allowedPlatforms } =
-      await this.getWorkspaceLimitInfo(workspaceId);
+   // 1. Get the Workspace to find the Organization ID
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { organizationId: true }
+    });
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
-    // // 1. Plan guard
-    if (!allowedPlatforms.includes(dto.platform)) {
-      throw new ForbiddenException(
-        `The ${dto.platform} platform is not available on your current plan.`,
-      );
+    const orgId = workspace.organizationId;
+
+    // 2. ENFORCE BILLING & PLAN PLATFORM ACCESS
+    await this.planAccessService.ensurePlatformAllowed(orgId, dto.platform);
+
+    // 3. Slot calculation (count ONLY new profiles)
+    const existingInWorkspace = await this.prisma.socialProfile.findMany({
+      where: { workspaceId, platformId: { in: dto.platformIds } },
+      select: { platformId: true },
+    });
+
+    const existingIds = new Set(existingInWorkspace.map((p) => p.platformId));
+    const newProfilesCount = dto.platformIds.filter((id) => !existingIds.has(id)).length;
+
+    // 4. ENFORCE BILLING PROFILE LIMITS
+    if (newProfilesCount > 0) {
+      await this.planAccessService.ensureSocialProfileLimit(orgId, newProfilesCount);
     }
 
-    // 2. Fetch importable pages once
+    // 5. Fetch importable pages once
     const importablePages = await this.connectionService.getImportablePages(
       dto.connectionId,
       true,
     );
 
-    // 3. Slot calculation (count ONLY new profiles)
-    const existingInWorkspace = await this.prisma.socialProfile.findMany({
-      where: {
-        workspaceId,
-        platformId: { in: dto.platformIds },
-      },
-      select: { platformId: true },
-    });
-
-    const existingIds = new Set(existingInWorkspace.map((p) => p.platformId));
-
-    const newProfilesCount = dto.platformIds.filter(
-      (id) => !existingIds.has(id),
-    ).length;
-
-    if (newProfilesCount > remaining) {
-      throw new ForbiddenException(
-        `You have ${remaining} slots left, but tried to add ${newProfilesCount} new profiles.`,
-      );
-    }
 
     const added: any[] = [];
 
@@ -191,11 +189,15 @@ export class SocialProfileService {
    * Soft disconnects the profile from the workspace.
    */
   async removeProfile(workspaceId: string, profileId: string) {
-    const profile = await this.prisma.socialProfile.findFirst({
+   const profile = await this.prisma.socialProfile.findFirst({
       where: { id: profileId, workspaceId },
+      include: { workspace: { select: { organizationId: true } } }
     });
 
     if (!profile) throw new NotFoundException('Profile not found');
+
+    //  2. DEFENSIVE BILLING CHECK
+    await this.planAccessService.ensureActiveBilling(profile.workspace.organizationId);
 
     await this.prisma.socialProfile.update({
       where: { id: profileId },
@@ -213,40 +215,6 @@ export class SocialProfileService {
   // HELPERS
   // ===========================================================================
 
-  private async getWorkspaceLimitInfo(workspaceId: string) {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      include: {
-        organization: {
-          include: {
-            subscription: { include: { plan: true } },
-          },
-        },
-        _count: { 
-          select: { 
-            socialProfiles: { where: { status: 'CONNECTED' } } 
-          }
-        }
-      },
-    });
-
-    if (!workspace) throw new NotFoundException('Workspace not found');
-
-    const plan = workspace.organization.subscription?.plan;
-
-    const limit = plan?.maxSocialProfilesPerWorkspace;
-    const allowed = plan?.allowedPlatforms || [];
-
-    const current = workspace._count.socialProfiles;
-
-    return {
-      limit,
-      current,
-      remaining: limit === -1 ? 9999 : Math.max(0, limit - current),
-      allowedPlatforms: allowed,
-    };
-  }
-
   private mapAccountType(providerType: string, platform: string): any {
     // Simple mapper to convert string 'PAGE' to Enum 'FACEBOOK_PAGE'
     if (platform === 'FACEBOOK') return 'FACEBOOK_PAGE';
@@ -255,6 +223,7 @@ export class SocialProfileService {
       return providerType === 'PAGE' ? 'LINKEDIN_PAGE' : 'LINKEDIN_PROFILE';
     }
     if (platform === 'TWITTER') return 'TWITTER_PROFILE';
+    if (platform === 'TIKTOK') return 'TIKTOK_BUSINESS';
 
     return 'FACEBOOK_PAGE'; // Default safety
   }
