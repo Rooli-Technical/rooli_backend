@@ -12,6 +12,8 @@ import { firstValueFrom } from 'rxjs';
 import * as geoip from 'geoip-lite';
 import { MailService } from '@/mail/mail.service';
 import { randomUUID } from 'crypto';
+import { BillingInterval } from '@generated/enums';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class BillingService {
@@ -31,39 +33,42 @@ export class BillingService {
   async getAvailablePlans(userIp: string, timeZone?: string) {
     const geo = geoip.lookup(userIp);
     const country = this.inferCountry(geo?.country, timeZone);
-
     const isNigeria = country === 'NG';
 
     const plans = await this.prisma.plan.findMany({
       where: { isActive: true },
-      orderBy: isNigeria ? { priceNgn: 'asc' } : { priceUsd: 'asc' },
+      orderBy: { monthlyPriceUsd: 'asc' }, // Order by tier level
     });
 
-    // Transform Data (The Magic Step)
     return plans.map((plan) => {
+      // Because your DB stores Kobo/Cents, we divide by 100 for the UI to display cleanly.
+      const monthlyPrice = isNigeria
+        ? plan.monthlyPriceNgn / 100
+        : plan.monthlyPriceUsd / 100;
+      const annualPrice = isNigeria
+        ? plan.annualPriceNgn / 100
+        : plan.annualPriceUsd / 100;
+
       return {
         id: plan.id,
         name: plan.name,
-        description: plan.description,
+        badge: plan.badge,
         tier: plan.tier,
-        interval: plan.interval,
+        description: plan.description,
         features: plan.features,
-        maxWorkspaces: plan.maxWorkspaces,
 
-        maxSocialProfilesPerWorkspace: plan.maxSocialProfilesPerWorkspace,
-        maxTeamMembers: plan.maxTeamMembers,
+        limits: {
+          workspaces: plan.maxWorkspaces,
+          socialProfiles: plan.maxSocialProfiles,
+          users: plan.maxUsers,
+          aiCredits: plan.aiCreditsMonthly,
+        },
 
-        monthlyAiCredits: plan.monthlyAiCredits,
-
-        // DYNAMIC CURRENCY LOGIC
-        currency: isNigeria ? 'NGN' : 'USD',
-        price: isNigeria ? plan.priceNgn : plan.priceUsd,
-
-        // We explicitly check if this plan IS available for this region
-        // (e.g., maybe some plans are NGN only)
-        isAvailable: isNigeria
-          ? Number(plan.priceNgn) > 0
-          : Number(plan.priceUsd) > 0,
+        pricing: {
+          currency: isNigeria ? 'NGN' : 'USD',
+          monthly: monthlyPrice,
+          annual: annualPrice,
+        },
       };
     });
   }
@@ -79,59 +84,89 @@ export class BillingService {
     return {
       ...subscription,
       isActive:
-        subscription.status === 'active' &&
+        subscription.status === 'ACTIVE' &&
         new Date() < subscription.currentPeriodEnd,
     };
   }
 
   // ---------------------------------------------------------
-  // 3. INITIALIZE PAYMENT (Strictly NGN for now)
+  // 3. INITIALIZE PAYMENT (Dynamic NGN & USD Support)
   // ---------------------------------------------------------
-  async initializePayment(organizationId: string, planId: string, user: any) {
+  async initializePayment(
+    organizationId: string,
+    planId: string,
+    interval: 'MONTHLY' | 'ANNUAL',
+    user: any,
+  ) {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) throw new NotFoundException('Plan not found');
 
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
     });
-
     const email = org.billingEmail || user?.email;
-    if (!email) {
-      throw new BadRequestException('Billing email is required');
-    }
+    if (!email) throw new BadRequestException('Billing email is required');
 
     if (user.organizationId !== organizationId) {
       throw new ForbiddenException('Invalid organization context');
     }
 
-    // FORCE NGN LOGIC
-    // We strictly look for the NGN code. If it's missing, this plan isn't ready.
-    if (!plan.paystackPlanCodeNgn) {
+    // 1. Determine Currency from the Organization (Defaults to NGN in your schema)
+    const targetCurrency = org.currency || 'NGN';
+
+    // 2. Select the correct Code and Amount based on INTERVAL and CURRENCY
+    let amountInBaseUnit: number; // Kobo for NGN, Cents for USD
+    let paystackPlanCode: string;
+
+    if (targetCurrency === 'USD') {
+      if (interval === 'ANNUAL') {
+        amountInBaseUnit = plan.annualPriceUsd;
+        paystackPlanCode = plan.paystackPlanCodeAnnualUsd;
+      } else {
+        amountInBaseUnit = plan.monthlyPriceUsd;
+        paystackPlanCode = plan.paystackPlanCodeMonthlyUsd;
+      }
+    } else {
+      // Fallback to NGN
+      if (interval === 'ANNUAL') {
+        amountInBaseUnit = plan.annualPriceNgn;
+        paystackPlanCode = plan.paystackPlanCodeAnnualNgn;
+      } else {
+        amountInBaseUnit = plan.monthlyPriceNgn;
+        paystackPlanCode = plan.paystackPlanCodeMonthlyNgn;
+      }
+    }
+
+    // Safety check: ensure you've added the Paystack code to the DB for this currency/interval!
+    if (!paystackPlanCode || paystackPlanCode === 'MANUAL') {
       throw new BadRequestException(
-        'This plan is not configured for payments yet.',
+        `This plan is not configured for ${interval} ${targetCurrency} payments yet.`,
       );
     }
 
-    // 🚨 FIX: Clean up orphaned pending transactions (Double-click protection)
+    // Clean up orphaned transactions
     await this.prisma.transaction.updateMany({
-      where: {
-        organizationId: org.id,
-        status: 'pending',
-      },
-      data: { status: 'abandoned' }, // Keeps the audit trail, but invalidates it
+      where: { organizationId: org.id, status: 'pending' },
+      data: { status: 'abandoned' },
     });
 
-    // Direct call to Paystack NGN initialization
-    return this.initializePaystack(org, plan, email);
+    // Pass the selected data to the Paystack helper
+    return this.initializePaystack(
+      org,
+      plan,
+      email,
+      amountInBaseUnit,
+      paystackPlanCode,
+      targetCurrency,
+    );
   }
 
-  // ---------------------------------------------------------
+// ---------------------------------------------------------
   // 4. ACTIVATE SUBSCRIPTION (Webhook Handler)
   // ---------------------------------------------------------
   async activateSubscription(payload: any) {
     const data = payload.data;
-    const { reference, amount, currency, metadata, plan, authorization, id } =
-      data;
+    const { reference, amount, currency, metadata, plan, authorization, id } = data;
 
     // 1. Identify Organization
     const organizationId = metadata?.organizationId;
@@ -140,28 +175,42 @@ export class BillingService {
       return;
     }
 
-    // 2. Identify Plan using NGN Code
-    // The webhook returns `plan.plan_code`. We check our NGN column.
+    // 2. Identify Plan using the Paystack Code
     const paystackPlanCode = plan?.plan_code;
     if (!paystackPlanCode) {
       this.logger.error(`Charge ${reference} has no plan code`);
       return;
     }
 
-    // Look up purely by the NGN code column
-    const localPlan = await this.prisma.plan.findUnique({
-      where: { paystackPlanCodeNgn: paystackPlanCode },
+    //  MULTI-CURRENCY & MULTI-INTERVAL LOOKUP
+    // We search the DB to see if this code matches ANY of the 4 columns
+    const localPlan = await this.prisma.plan.findFirst({
+      where: {
+        OR: [
+          { paystackPlanCodeMonthlyNgn: paystackPlanCode },
+          { paystackPlanCodeAnnualNgn: paystackPlanCode },
+          { paystackPlanCodeMonthlyUsd: paystackPlanCode },
+          { paystackPlanCodeAnnualUsd: paystackPlanCode },
+        ],
+      },
     });
 
     if (!localPlan) {
-      this.logger.error(`Unknown Paystack NGN Plan Code: ${paystackPlanCode}`);
+      this.logger.error(`Unknown Paystack Plan Code: ${paystackPlanCode}`);
       return;
     }
 
-    // 3. Calculate Dates
+    // 3. Determine Interval & Calculate Dates
+    // If the code matches either of the Annual columns, it's an Annual sub!
+    const isAnnual =
+      localPlan.paystackPlanCodeAnnualNgn === paystackPlanCode ||
+      localPlan.paystackPlanCodeAnnualUsd === paystackPlanCode;
+
+    const billingInterval = isAnnual ? 'ANNUAL' : 'MONTHLY';
+
     const startDate = new Date();
     const endDate = new Date();
-    if (localPlan.interval === 'YEARLY') {
+    if (billingInterval === 'ANNUAL') {
       endDate.setFullYear(endDate.getFullYear() + 1);
     } else {
       endDate.setMonth(endDate.getMonth() + 1);
@@ -170,40 +219,49 @@ export class BillingService {
     // 4. DB Transaction
     const result = await this.prisma.$transaction(async (tx) => {
       const previousSuccessCount = await tx.transaction.count({
-        where: {
-          organizationId,
-          status: 'successful',
-        },
+        where: { organizationId, status: 'successful' },
       });
       const isNewSignup = previousSuccessCount === 0;
 
+      //  UPDATE SUBSCRIPTION & CLEAR DUNNING ANCHORS
       await tx.subscription.upsert({
         where: { organizationId },
         create: {
           organizationId,
           planId: localPlan.id,
-          status: 'active',
+          status: 'ACTIVE',
           isActive: true,
+          billingInterval: billingInterval as BillingInterval, 
           currentPeriodStart: startDate,
           currentPeriodEnd: endDate,
           paystackAuthCode: authorization?.authorization_code,
+          isTrial: false,
+          watermarkEnabled: false,
+          lastPaymentFailedAt: null,
+          failedPaymentAttempts: 0,  
+          aiCreditsUsed: 0,             
+          lastCreditResetAt: new Date()
+
         },
         update: {
           planId: localPlan.id,
-          status: 'active',
+          status: 'ACTIVE',
           isActive: true,
+          billingInterval: billingInterval as BillingInterval, 
           currentPeriodStart: startDate,
           currentPeriodEnd: endDate,
           paystackAuthCode: authorization?.authorization_code,
           cancelAtPeriodEnd: false,
+          isTrial: false,
+          watermarkEnabled: false,
+          lastPaymentFailedAt: null, 
+          failedPaymentAttempts: 0,  
         },
       });
 
-      // 🚨 FIX: Upsert the Transaction!
-      // If the user clicked "Checkout", this UPDATES the pending record.
-      // If it's an auto-renewal at 3 AM, this CREATES a brand new record.
+      // Update Transaction Log
       await tx.transaction.upsert({
-        where: { txRef: reference }, // You must add @unique to txRef in schema.prisma if you haven't!
+        where: { txRef: reference }, 
         update: {
           providerTxId: id.toString(),
           status: 'successful',
@@ -214,20 +272,25 @@ export class BillingService {
           txRef: reference,
           providerTxId: id.toString(),
           provider: 'PAYSTACK',
-          amount: Number(amount) / 100,
+          amount: Number(amount) / 100, // Convert Paystack's Kobo/Cents back to whole Naira/Dollars
           currency: currency || 'NGN',
           status: 'successful',
           paymentDate: new Date(),
         },
       });
 
-      // Unlock Org
+      //  UNLOCK THE ORGANIZATION
       const org = await tx.organization.update({
         where: { id: organizationId },
-        data: { status: 'ACTIVE', isActive: true },
+        data: { 
+          status: 'ACTIVE', 
+          billingStatus: 'ACTIVE',
+          isActive: true,
+          readOnly: false // Clear Day 8 Dunning read-only state!
+        },
         include: {
           members: {
-            where: { role: { slug: 'owner' } },
+            where: { role: { slug: 'org-owner' } },
             include: { user: true },
             take: 1,
           },
@@ -238,7 +301,7 @@ export class BillingService {
         },
       });
 
-      //unlock social profiles too
+      // Unlock social profiles (In case they hit Day 14 Suspension)
       await tx.socialProfile.updateMany({
         where: {
           workspace: { organizationId: organizationId },
@@ -249,6 +312,7 @@ export class BillingService {
       return { org, isNewSignup };
     });
 
+    // 5. Send Welcome Email Logic
     if (result.isNewSignup) {
       const owner = result.org.members[0]?.user;
       const defaultWorkspace = result.org.workspaces[0];
@@ -259,14 +323,11 @@ export class BillingService {
           .catch((e) => this.logger.error(`Failed to send welcome email`, e));
       }
     } else {
-      this.logger.log(
-        `Renewal payment processed for Org: ${organizationId}. No welcome email sent.`,
-      );
+      this.logger.log(`Renewal payment processed for Org: ${organizationId}. Account Unlocked.`);
     }
 
     return result;
   }
-
   // ---------------------------------------------------------
   // 5. SYNC SUBSCRIPTION DETAILS (Webhook)
   // ---------------------------------------------------------
@@ -319,7 +380,7 @@ export class BillingService {
 
       return this.prisma.subscription.update({
         where: { organizationId },
-        data: { status: 'cancelled', cancelAtPeriodEnd: true },
+        data: { status: 'CANCELED', cancelAtPeriodEnd: true },
       });
     } catch (e) {
       this.logger.error(e.response?.data);
@@ -327,10 +388,10 @@ export class BillingService {
     }
   }
 
-  // ---------------------------------------------------------
-  // 7. HANDLE FAILURES
-  // ---------------------------------------------------------
 
+  // ---------------------------------------------------------
+  // 7. HANDLE FAILURES (Sets the Dunning Anchor)
+  // ---------------------------------------------------------
   async handleFailedPayment(paystackData: any) {
     const { reference, amount, currency, metadata, gateway_response, id } =
       paystackData;
@@ -349,7 +410,81 @@ export class BillingService {
         paymentDate: new Date(),
       },
     });
-    this.logger.warn(`Payment failed: ${gateway_response}`);
+
+    // 🚨 SET DUNNING ANCHOR
+    await this.prisma.subscription.updateMany({
+      where: { organizationId },
+      data: {
+        status: 'PAST_DUE',
+        lastPaymentFailedAt: new Date(),
+        failedPaymentAttempts: { increment: 1 },
+      },
+    });
+    this.logger.warn(`Payment failed: ${gateway_response}. Dunning started.`);
+  }
+
+  // ---------------------------------------------------------
+  // 8. THE DUNNING CRON JOB
+  // ---------------------------------------------------------
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async executeDunningAndTrials() {
+    this.logger.log('🕵️ Executing Dunning & Trial State Machine...');
+    const now = new Date();
+
+    // PHASE 1: Expire Free Trials
+    const expiredTrials = await this.prisma.subscription.updateMany({
+      where: { isTrial: true, status: 'TRIALING', trialEndsAt: { lt: now } },
+      data: { status: 'PAST_DUE', isActive: false },
+    });
+    if (expiredTrials.count > 0) {
+      await this.prisma.organization.updateMany({
+        where: { subscription: { isTrial: true, status: 'PAST_DUE' } },
+        data: { readOnly: true },
+      });
+    }
+
+    // PHASE 2: Day 8 Read-Only Enforcements
+    const eightDaysAgo = new Date();
+    eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+    await this.prisma.organization.updateMany({
+      where: {
+        readOnly: false,
+        subscription: {
+          status: 'PAST_DUE',
+          lastPaymentFailedAt: { lte: eightDaysAgo },
+        },
+      },
+      data: { readOnly: true },
+    });
+
+    // PHASE 3: Day 14 Hard Suspensions
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    const doomedSubs = await this.prisma.subscription.findMany({
+      where: {
+        status: 'PAST_DUE',
+        lastPaymentFailedAt: { lte: fourteenDaysAgo },
+      },
+      select: { organizationId: true },
+    });
+
+    if (doomedSubs.length > 0) {
+      const orgIds = doomedSubs.map((s) => s.organizationId);
+      await this.prisma.$transaction([
+        this.prisma.subscription.updateMany({
+          where: { organizationId: { in: orgIds } },
+          data: { status: 'SUSPENDED', isActive: false },
+        }),
+        this.prisma.organization.updateMany({
+          where: { id: { in: orgIds } },
+          data: { status: 'SUSPENDED', isActive: false },
+        }),
+        this.prisma.socialProfile.updateMany({
+          where: { workspace: { organizationId: { in: orgIds } } },
+          data: { isActive: false },
+        }),
+      ]);
+    }
   }
 
   async verifyPayment(reference: string) {
@@ -382,41 +517,78 @@ export class BillingService {
     return data.data;
   }
 
+
   // ---------------------------------------------------------
-  // PRIVATE HELPER (NGN Initialization)
+  // 2. START FREE TRIAL (Called by Onboarding)
   // ---------------------------------------------------------
-  private async initializePaystack(org: any, plan: any, email: string) {
+  async startTrial(organizationId: string, planId: string) {
+    // Edge case check (Improvement #3)
+    const existing = await this.prisma.subscription.findUnique({ where: { organizationId } });
+    if (existing) throw new BadRequestException('Organization already has a subscription');
+
+    const now = new Date();
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
+    return this.prisma.subscription.create({
+      data: {
+        organizationId,
+        planId,
+        status: 'TRIALING', 
+        isActive: true,
+        billingInterval: 'MONTHLY',
+        currentPeriodStart: now,
+        currentPeriodEnd: trialEndsAt,
+        isTrial: true,
+        trialStartAt: now, 
+        trialEndsAt: trialEndsAt,
+        watermarkEnabled: true,
+        aiCreditsUsed: 0, 
+        lastCreditResetAt: now, 
+      },
+    });
+  }
+  // ---------------------------------------------------------
+  // PRIVATE HELPER (Multi-Currency Initialization)
+  // ---------------------------------------------------------
+  private async initializePaystack(
+    org: any,
+    plan: any,
+    email: string,
+    amountInBaseUnit: number, // Kobo or Cents
+    paystackPlanCode: string,
+    currency: string, // 'NGN' or 'USD'
+  ) {
     const reference = `rooli_${org.id}_${randomUUID()}`;
 
-    // NGN Logic: Paystack uses Kobo (Amount * 100)
-    const amountInKobo = Number(plan.priceNgn) * 100;
-
     // Safety check for free plans or zero price
-    if (amountInKobo <= 0) {
+    if (amountInBaseUnit <= 0) {
       throw new BadRequestException(
         'Cannot process zero value payment via gateway',
       );
     }
 
+    // 1. Create Pending Transaction in the DB
     await this.prisma.transaction.create({
       data: {
         organizationId: org.id,
         txRef: reference,
         providerTxId: 'pending',
         provider: 'PAYSTACK',
-        amount: Number(plan.priceNgn),
-        currency: 'NGN',
+        amount: amountInBaseUnit / 100, // Convert Kobo/Cents back to standard ₦ or $ for the DB log
+        currency: currency, // 👈 Dynamically saved as NGN or USD
         status: 'pending',
         paymentDate: new Date(),
       },
     });
 
+    // 2. Build the Paystack Payload
     const payload = {
       email,
-      amount: amountInKobo,
-      plan: plan.paystackPlanCodeNgn,
+      amount: amountInBaseUnit, // Already in Kobo/Cents from the DB!
+      plan: paystackPlanCode,
       reference,
-      currency: 'NGN', // <--- Force NGN currency
+      currency: currency, // 👈 Tell Paystack to charge in NGN or USD
       metadata: {
         organizationId: org.id,
         targetPlanId: plan.id,
@@ -425,6 +597,7 @@ export class BillingService {
       callback_url: `${this.config.get('CALLBACK_URL')}`,
     };
 
+    // 3. Fire the Request
     try {
       const { data } = await firstValueFrom(
         this.httpService.post(
@@ -440,10 +613,7 @@ export class BillingService {
       return { paymentUrl: data.data.authorization_url, reference };
     } catch (error) {
       await this.prisma.transaction
-        .update({
-          where: { txRef: reference },
-          data: { status: 'failed' },
-        })
+        .update({ where: { txRef: reference }, data: { status: 'failed' } })
         .catch(() => {});
       this.logger.error('Paystack Init Error', error.response?.data);
       throw new BadRequestException('Paystack initialization failed');
@@ -454,59 +624,16 @@ export class BillingService {
     await this.prisma.subscription.updateMany({
       where: { paystackSubscriptionCode: paystackCode },
       data: {
-        status: 'past_due', // Blocks access immediately
+        status: 'PAST_DUE', // Blocks access immediately
         isActive: false,
       },
     });
   }
 
-  //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async handleExpiredSubscriptions() {
-    this.logger.log('🕵️ Running Daily Expiry Check...');
-    const now = new Date();
-
-    // 1. Find the IDs of orgs that expired
-    const expiredSubs = await this.prisma.subscription.findMany({
-      where: { status: 'active', currentPeriodEnd: { lt: now } },
-      select: { organizationId: true },
-    });
-
-    if (expiredSubs.length === 0) return;
-
-    // Extract just the organization IDs into a flat array
-    const orgIds = expiredSubs.map((sub) => sub.organizationId);
-    this.logger.warn(
-      `Found ${orgIds.length} expired subscriptions. Locking accounts in bulk...`,
-    );
-
-    // 2. 🚨 FIX 2: One massive bulk transaction for everything
-    await this.prisma.$transaction([
-      this.prisma.subscription.updateMany({
-        where: { organizationId: { in: orgIds }, status: 'active' },
-        data: { status: 'past_due', isActive: false },
-      }),
-      this.prisma.organization.updateMany({
-        where: { id: { in: orgIds }, isActive: true },
-        data: { isActive: false, status: 'SUSPENDED' },
-      }),
-      this.prisma.socialProfile.updateMany({
-        where: {
-          isActive: true,
-          workspace: { organizationId: { in: orgIds } },
-        },
-        data: { isActive: false },
-      }),
-    ]);
-
-    this.logger.log(
-      `🔒 Successfully locked ${orgIds.length} expired organizations.`,
-    );
-  }
-
   //@Cron(CronExpression.EVERY_WEEKEND) // Runs once a week
   async cleanupStuckTransactions() {
     this.logger.log('🧹 Sweeping abandoned and stuck transactions...');
-    
+
     // Look back 7 days. Anything older than this is definitely dead.
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 7);
@@ -519,7 +646,9 @@ export class BillingService {
     });
 
     if (deleted.count > 0) {
-      this.logger.log(`🗑️ Deleted ${deleted.count} dead checkout transactions.`);
+      this.logger.log(
+        `🗑️ Deleted ${deleted.count} dead checkout transactions.`,
+      );
     }
   }
 
