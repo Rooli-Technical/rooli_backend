@@ -14,7 +14,7 @@ import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
-import { PlanAccessService } from '@/plan-access-service/plan-access-service.service';
+import { PlanAccessService } from '@/plan-access-service/plan-access.service';
 
 @Injectable()
 export class InvitationsService {
@@ -59,7 +59,10 @@ export class InvitationsService {
     }
 
     // 2. Billing: Check seat capacity before proceeding
-    await this.planAccessService.ensureSeatAvailable(organizationId, lowerEmail);
+    await this.planAccessService.ensureSeatAvailable(
+      organizationId,
+      lowerEmail,
+    );
 
     // 3. Resolve Role
     // Logic:
@@ -183,7 +186,7 @@ export class InvitationsService {
     };
   }
 
-async acceptInvite(
+  async acceptInvite(
     token: string,
     data: { password?: string; firstName?: string; lastName?: string },
   ) {
@@ -206,7 +209,10 @@ async acceptInvite(
     // 🚨 CRITICAL FIX 1: The TOCTOU Protection (Check Limits at Acceptance)
     // We pass `invite.email` to exclude THIS specific invite from the "pending" count,
     // ensuring we only block them if the physical active seats are full.
-    await this.planAccessService.ensureSeatAvailable(invite.organizationId, invite.email);
+    await this.planAccessService.ensureSeatAvailable(
+      invite.organizationId,
+      invite.email,
+    );
 
     let isNewUser = false;
     let finalWorkspaceMemberId: string | null = null;
@@ -220,7 +226,7 @@ async acceptInvite(
         isNewUser = true;
         if (!data.password)
           throw new BadRequestException('Password required for new account');
-        
+
         const hashedPassword = await argon2.hash(data.password);
 
         user = await tx.user.create({
@@ -232,7 +238,7 @@ async acceptInvite(
             isOnboardingComplete: true, // Bypass onboarding
             isEmailVerified: true,
             // UX Bonus: Set their default dashboard to the workspace they were invited to
-            lastActiveWorkspaceId: invite.workspaceId || null, 
+            lastActiveWorkspaceId: invite.workspaceId || null,
           },
         });
       }
@@ -301,7 +307,11 @@ async acceptInvite(
         data: { status: 'ACCEPTED', acceptedAt: new Date() },
       });
 
-      return { user, invite: updatedInvite, workspaceMemberId: finalWorkspaceMemberId };
+      return {
+        user,
+        invite: updatedInvite,
+        workspaceMemberId: finalWorkspaceMemberId,
+      };
     });
 
     // C. Handle Response & Authentication
@@ -310,22 +320,22 @@ async acceptInvite(
       const tokens = await this.generateTokens(
         result.user.id,
         result.user.email,
-        result.invite.organizationId,    
-        result.invite.workspaceId,        
-        result.workspaceMemberId,         
+        result.invite.organizationId,
+        result.invite.workspaceId,
+        result.workspaceMemberId,
         result.user.refreshTokenVersion,
       );
-      
-      return { 
-        message: 'Account created and invite accepted', 
-        ...tokens, 
-        user: this.toSafeUser(result.user) 
+
+      return {
+        message: 'Account created and invite accepted',
+        ...tokens,
+        user: this.toSafeUser(result.user),
       };
     } else {
       // Existing User: Security best practice is forcing them to login with their existing password.
-      return { 
-        message: 'Invite accepted. Please log in to continue.', 
-        requireLogin: true 
+      return {
+        message: 'Invite accepted. Please log in to continue.',
+        requireLogin: true,
       };
     }
   }
@@ -342,7 +352,10 @@ async acceptInvite(
 
     // 2. SAFETY CHECK: Re-verify organization capacity
     // Pass the email to exclude it from the "pending count" since it's already in the DB
-    await this.planAccessService.ensureSeatAvailable(invite.organizationId, invite.email);
+    await this.planAccessService.ensureSeatAvailable(
+      invite.organizationId,
+      invite.email,
+    );
 
     // 3. Refresh Token & Timestamp
     const newToken = crypto.randomBytes(32).toString('hex');
