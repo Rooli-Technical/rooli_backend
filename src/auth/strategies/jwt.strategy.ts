@@ -94,9 +94,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const sub = org.subscription;
     const plan = sub?.plan;
 
-    // A subscription is valid if status is 'active' AND it hasn't expired
-    const isSubscriptionValid =
-      sub?.status === 'active' && new Date() < sub.currentPeriodEnd;
 
     return {
       userId: user.id,
@@ -106,12 +103,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       workspaceMemberId: payload.workspaceMemberId,
       orgRoleId: membership.roleId,
       roles: [membership.role.name],
-      features: (plan?.features as unknown as PlanFeatures) || {},
       userPlan: plan.tier,
-      subscriptionStatus: isSubscriptionValid ? 'active' : 'inactive',
       limits: {
         maxWorkspaces: plan?.maxWorkspaces || 1,
-        maxTeamMembers: plan?.maxTeamMembers || 1,
+        maxTeamMembers: plan?.maxUsers || 1,
       },
     };
   }

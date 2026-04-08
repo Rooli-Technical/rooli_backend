@@ -9,9 +9,10 @@ import { PromptBuilder } from './service/prompt.service';
 import { ScraperService } from './service/scraper.service';
 import { PostMediaModule } from '@/post-media/post-media.module';
 import { HuggingFaceProvider } from './providers/huggingface.provider';
+import { PlanAccessModule } from '@/plan-access-service/plan-access.module';
 
 @Module({
-  imports: [PostMediaModule],
+  imports: [PostMediaModule, PlanAccessModule],
   controllers: [AiController],
   providers: [
     AiService,
