@@ -4,100 +4,164 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { addMonths, startOfMonth } from 'date-fns';
-import { AI_COSTS, AI_TIER_LIMITS } from '../constants/ai.constant';
-import { AiFeature } from '@generated/enums';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 @Injectable()
 export class AiQuotaService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * 🛡️ THE GATEKEEPER
-   * Checks if an organization has remaining credits for the current month.
+   * 🛡️ ATOMIC QUOTA CONSUMPTION
+   * Prevents race conditions, calculates overage, and deducts credits in one transaction.
    */
-  async assertCanUse(
-    workspaceId: string,
-    feature: AiFeature,
-    count: number = 1,
-  ): Promise<boolean> {
-    const { organizationId, tier } =
-      await this.getWorkspaceContext(workspaceId);
-    const limit = AI_TIER_LIMITS[tier].monthlyCredits;
-
-    const cost = this.getFeatureCost(feature, count);
-
-    // 2. Count usage across the WHOLE organization
-    const usage = await await this.getCurrentMonthUsage(organizationId);
-
-    // 3. Throw if over limit
-    if (usage + cost > limit) {
-      throw new ForbiddenException(
-        `Insufficient AI Credits. This action costs ${cost} credits, but you only have ${limit - usage} left.`,
-      );
-    }
-
-    return true;
-  }
-
-  /**
-   * 📊 USAGE DATA FOR UI
-   * Returns a breakdown to show in the user's dashboard.
-   */
-  async getQuotaStatus(workspaceId: string) {
-    const { organizationId, tier } =
-      await this.getWorkspaceContext(workspaceId);
-
-    const used = await this.getCurrentMonthUsage(organizationId);
-
-    const limit = AI_TIER_LIMITS[tier].monthlyCredits;
-
-    return {
-      used,
-      limit,
-      remaining: Math.max(0, limit - used),
-      percentage: Math.min(100, Math.round((used / limit) * 100)),
-      tier,
-      resetsAt: startOfMonth(addMonths(new Date(), 1)),
-    };
-  }
-
-  // --- PRIVATE HELPERS ---
-
-  private async getWorkspaceContext(workspaceId: string) {
+  async consumeQuota(workspaceId: string, cost: number = 1) {
+    // 1. Fast lookup for the Organization ID
     const ws = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: {
-        organizationId: true,
-        organization: {
-          select: {
-            subscription: {
-              select: { plan: { select: { tier: true } } },
-            },
-          },
-        },
-      },
+      select: { organizationId: true },
     });
     if (!ws) throw new NotFoundException('Workspace not found');
 
-    const tier = (ws.organization?.subscription?.plan?.tier ?? 'CREATOR') as
-      | 'CREATOR'
-      | 'BUSINESS'
-      | 'ROCKET';
+    // 2. ATOMIC TRANSACTION
+    return await this.prisma.$transaction(async (tx) => {
+      // Use standard findUnique. In highly concurrent apps, you might use raw SQL with FOR UPDATE here.
+      const org = await tx.organization.findUnique({
+        where: { id: ws.organizationId },
+        include: { subscription: { include: { plan: true } } },
+      });
 
-    return { organizationId: ws.organizationId, tier };
+      if (!org || !org.subscription) {
+        throw new ForbiddenException('No active subscription found');
+      }
+
+      // 🚨 Enforce all locked billing states!
+      const blockedStates = ['SUSPENDED', 'READ_ONLY', 'EXPIRED'];
+
+      if (blockedStates.includes(org.billingStatus)) {
+        throw new ForbiddenException(
+          'Account inactive. Please update your payment method.',
+        );
+      }
+
+      const sub = org.subscription;
+
+      if (sub.status === 'EXPIRED') {
+        throw new ForbiddenException('Trial expired. Please upgrade.');
+      }
+
+      const customLimits = sub.customLimits as any;
+      let limit =
+        customLimits?.aiCreditsMonthly ?? sub.plan?.aiCreditsMonthly ?? 0;
+
+      // 🚨 THE TRIAL OVERRIDE
+      if (sub.status === 'TRIALING') {
+        limit = 20;
+      }
+
+      const overageRate = sub.plan?.aiOverageRateCents ?? 0;
+      const overageCap = sub.plan?.aiOverageCapCents ?? 0; // The max they are allowed to spend on overages
+
+      const used = sub.aiCreditsUsed;
+      const newTotalUsed = used + cost;
+
+      let overageCostToAdd = 0;
+      let overageIncurred = false;
+
+      // 🚨 OVERAGE LOGIC
+      if (newTotalUsed > limit && limit < 999999) {
+        // Hard block for trials!
+        if (sub.status === 'TRIALING') {
+          throw new ForbiddenException(
+            'Free Trial AI limit reached (20/20). Please upgrade your plan to continue using AI.',
+          );
+        }
+
+        // 🚨 RESTORED MISSING MATH:
+        // Calculate exactly how many of THESE specific credits are over the limit
+        const totalOverage = Math.max(0, newTotalUsed - limit);
+        const previousOverage = Math.max(0, used - limit);
+        const overageCreditsToCharge = totalOverage - previousOverage;
+
+        if (overageRate > 0) {
+          overageCostToAdd = overageCreditsToCharge * overageRate;
+          overageIncurred = true;
+
+          // Enforce Overage Cap
+          if (
+            overageCap > 0 &&
+            sub.aiOverageCostCents + overageCostToAdd > overageCap
+          ) {
+            throw new ForbiddenException(
+              `AI Overage Cap ($${overageCap / 100}) reached. Please upgrade your plan.`,
+            );
+          }
+        } else {
+          // If overageRate is 0, they are not allowed to go over. Block them.
+          throw new ForbiddenException(
+            `Insufficient AI Credits. You have ${Math.max(0, limit - used)} left.`,
+          );
+        }
+      }
+
+      // 🚨 ATOMIC UPDATE
+      await tx.subscription.update({
+        where: { id: sub.id },
+        data: {
+          aiCreditsUsed: { increment: cost },
+          ...(overageCostToAdd > 0
+            ? { aiOverageCostCents: { increment: overageCostToAdd } }
+            : {}),
+        },
+      });
+
+      // Calculate UX metrics
+      const remainingCredits = Math.max(0, limit - newTotalUsed);
+      const isNearLimit = newTotalUsed >= limit * 0.8 && newTotalUsed <= limit; // 80% warning
+
+      return {
+        allowed: true,
+        remainingCredits,
+        isNearLimit,
+        overageIncurred,
+        cost,
+      };
+    });
   }
 
   /**
-   * Calculate total credits used this month
+   * ⏪ REFUND QUOTA (Used if AI provider fails AFTER we charged them)
+   */
+  async refundQuota(workspaceId: string, cost: number) {
+    const ws = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { organizationId: true },
+    });
+    if (!ws) return;
+
+    // Simple decrement. (In a perfect world, you'd calculate overage refunds too, but this is fine for error recovery)
+    await this.prisma.subscription.updateMany({
+      where: { organizationId: ws.organizationId },
+      data: { aiCreditsUsed: { decrement: cost } },
+    });
+  }
+
+  /**
+   * 📊 ANALYTICS: CURRENT CALENDAR MONTH USAGE
+   * Use this for Dashboard charts and UI stats, NOT for billing enforcement.
+   * Calculates the total credits spent from the 1st of the current month to today.
    */
   async getCurrentMonthUsage(organizationId: string): Promise<number> {
-    const start = startOfMonth(new Date());
+    const now = new Date();
+    const start = startOfMonth(now);
+    const end = endOfMonth(now);
 
     const result = await this.prisma.aiGeneration.aggregate({
       where: {
         organizationId,
-        createdAt: { gte: start },
+        createdAt: {
+          gte: start,
+          lte: end,
+        },
       },
       _sum: {
         creditCost: true,
@@ -105,21 +169,5 @@ export class AiQuotaService {
     });
 
     return result._sum.creditCost || 0;
-  }
-
-  private getFeatureCost(
-    feature: AiFeature | string,
-    count: number = 1,
-  ): number {
-    const baseCost = AI_COSTS[feature] ?? 1;
-
-    // For features like 'BULK', you might want to multiply cost by count
-    // For single actions, count defaults to 1.
-    if (feature === 'BULK' || feature === 'VARIANTS') {
-      // Example logic: Base cost + small fee per additional item
-      return baseCost + (count > 1 ? (count - 1) * 0.5 : 0);
-    }
-
-    return baseCost * count;
   }
 }

@@ -37,6 +37,7 @@ export async function seedPlans() {
         analytics: 'basic',
         bulkScheduling: true,
         postApprovals: true,
+        repurposeContent: true,
       },
 
       isActive: true,
@@ -76,6 +77,7 @@ export async function seedPlans() {
         whiteLabelReports: true,
         clientPortal: true,
         prioritySupport: true,
+        repurposeContent: true,
       },
 
       isActive: true,
@@ -115,6 +117,7 @@ export async function seedPlans() {
         clientPortal: true,
         campaignPlanning: true,
         prioritySupport: true,
+        repurposeContent: true,
         sla: true,
       },
 

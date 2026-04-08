@@ -3,4 +3,5 @@ export type FeatureKey =
   | 'postApprovals'
   | 'bulkAI'
   | 'clientPortal'
-  | 'prioritySupport';
+  | 'prioritySupport'
+  | 'repurposeContent';

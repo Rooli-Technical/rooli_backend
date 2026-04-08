@@ -730,6 +730,64 @@ export class BillingService {
     }
   }
 
+@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async processAiOverages() {
+    // 1. Find subscriptions renewing tomorrow that have overages
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const subsWithOverage = await this.prisma.subscription.findMany({
+      where: {
+        status: 'ACTIVE',
+        aiOverageCostCents: { gt: 0 },
+        currentPeriodEnd: { lte: tomorrow } 
+      },
+      include: {
+        // 🚨 FIX 2: Fetch the email from the connected Organization!
+        organization: { select: { email: true } } 
+      }
+    });
+
+    for (const sub of subsWithOverage) {
+      // Safety check: We need the authorization code to charge them
+      if (!sub.paystackAuthCode) {
+        this.logger.warn(`Skipping overage charge for Org ${sub.organizationId} - No Auth Code`);
+        continue;
+      }
+
+      try {
+        // 🚨 FIX 1: Use your HttpService to hit Paystack's Charge Authorization API
+        await firstValueFrom(
+          this.httpService.post(
+            'https://api.paystack.co/transaction/charge_authorization',
+            {
+              authorization_code: sub.paystackAuthCode,
+              email: sub.organization.email, // Fetched from the include above
+              amount: sub.aiOverageCostCents, // It's already in cents/kobo!
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+                'Content-Type': 'application/json',
+              },
+            },
+          ),
+        );
+
+        // 3. Clear the overage ledger ONLY if the charge succeeds
+        await this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: { aiOverageCostCents: 0 }
+        });
+        
+      } catch (error: any) {
+        const errorMsg = error.response?.data?.message || error.message;
+        this.logger.error(`Failed to charge overage for Org ${sub.organizationId}: ${errorMsg}`);
+        // If it fails, we keep the overage on the ledger and try again later.
+      }
+    }
+  }
+
   private inferCountry(ipCountry?: string, timeZone?: string) {
     if (timeZone === 'Africa/Lagos') return 'NG';
     if (ipCountry) return ipCountry;
