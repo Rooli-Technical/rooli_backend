@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; color: #374151; line-height: 1.6; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; border-top: 4px solid #EF4444; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+    .button { display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px; }
+    .footer { margin-top: 30px; font-size: 12px; color: #6b7280; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Notice: Workspace Suspended</h2>
+    <p>Hi there,</p>
+    <p>We're reaching out because we still haven't been able to process the payment for your Rooli subscription, and it is now 14 days past due.</p>
+    <p>As a result, your workspace has been <strong>suspended</strong>.</p>
+    <p><strong>What happens now?</strong></p>
+    <ul>
+      <li>All social profiles connected to your workspace have been deactivated.</li>
+      <li><strong>Any queued posts will no longer be published.</strong></li>
+      <li>Access to the application is restricted.</li>
+    </ul>
+    <p>We'd love to get you back up and running. To reactivate your workspace and resume publishing, please update your payment information.</p>
+    
+    <a href="{{billingUrl}}" class="button">Update Payment & Reactivate</a>
+    
+    <p style="margin-top: 24px;">If you believe this is an error or need help, please reach out to our support team.</p>
+    <p>Thanks,<br>The Rooli Team</p>
+  </div>
+  <div class="footer">
+    &copy; {{year}} Rooli. All rights reserved.
+  </div>
+</body>
+</html>

@@ -90,16 +90,35 @@ export class WebhooksProcessor extends WorkerHost {
           await this.billingService.saveSubscriptionDetails(payload);
           break;
 
+        // 🚨 THE DUNNING TRIGGERS (Day 0)
+        case 'charge.failed':
         case 'invoice.payment_failed':
-        case 'subscription.not_renew': // Optional: Paystack event for stopped renewals
-        case 'subscription.disable':
-          // EXPIRATION: Determine which code to use
-          // Note: 'subscription.disable' sends code in data.code, others might be data.subscription_code
-          const subCode = data.subscription_code || data.code;
+          // This calls the method that sets: status: 'PAST_DUE', lastPaymentFailedAt: new Date()
+          // Your cron job will take over from here!
+          await this.billingService.handleFailedPayment(data);
+          break;
 
+        // 🚨 THE CANCELLATION TRIGGERS
+        case 'subscription.disable':
+        case 'subscription.not_renew':
+          // The user (or Paystack) has officially canceled the subscription.
+          const subCode = data.subscription_code || data.code;
           if (subCode) {
-            await this.billingService.markAsExpired(subCode);
-            this.logger.warn(`Subscription marked past_due: ${subCode}`);
+            // Let's update this to properly mark it as canceled, not past_due
+            await this.prisma.subscription.updateMany({
+              where: { paystackSubscriptionCode: subCode },
+              data: {
+                status: 'CANCELED',
+                cancelAtPeriodEnd: true,
+              },
+            });
+            await this.prisma.organization.updateMany({
+              where: {
+                subscription: { paystackSubscriptionCode: subCode },
+              },
+              data: { billingStatus: 'CANCELED' },
+            });
+            this.logger.warn(`Subscription canceled: ${subCode}`);
           }
           break;
 
@@ -124,121 +143,147 @@ export class WebhooksProcessor extends WorkerHost {
   // TIKTOK LOGIC
   // ==========================================
 
-private async processTikTokPublish(logId: string, payload: any) {
-  const event = payload.event;
-  let content: any = {};
+  private async processTikTokPublish(logId: string, payload: any) {
+    const event = payload.event;
+    let content: any = {};
 
-  // 1. Parse stringified JSON if necessary
-  try {
-    content = typeof payload.content === 'string' 
-      ? JSON.parse(payload.content) 
-      : (payload.content || {});
-  } catch (e) {
-    this.logger.error(`Failed to parse TikTok webhook content: ${payload.content}`);
-    content = {};
-  }
-
-  const publishId = content.publish_id;
-  if (!publishId) {
-    this.logger.warn(`TikTok publish webhook missing publish_id: Log ${logId}`);
-    return;
-  }
-
-  // 2. Find the destination
-  const destination = await this.prisma.postDestination.findFirst({
-    where: { platformPostId: publishId },
-    include: {
-      post: true,
-      profile: { include: { connection: true } },
-    },
-  });
-
-  if (!destination) {
-    this.logger.warn(`Could not find PostDestination for TikTok publish_id: ${publishId}`);
-    return;
-  }
-
-  // 3. Handle Success Event
-  if (event === 'post.publish.complete' || event === 'video.publish.completed') {
-    let finalVideoId = publishId; // Default to publish_id if fetch fails
-    let liveUrl = null;
-
+    // 1. Parse stringified JSON if necessary
     try {
-      const accessToken = await this.encryptionService.decrypt(destination.profile.accessToken);
-
-      const statusResponse = await axios.post(
-        'https://open.tiktokapis.com/v2/post/publish/status/fetch/',
-        { publish_id: publishId },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          transformResponse: [(data) => {
-            try { return JSONBig.parse(data); } catch { return data; }
-          }],
-        },
+      content =
+        typeof payload.content === 'string'
+          ? JSON.parse(payload.content)
+          : payload.content || {};
+    } catch (e) {
+      this.logger.error(
+        `Failed to parse TikTok webhook content: ${payload.content}`,
       );
-
-      // TikTok typo: "publicaly"
-      const publicIds = statusResponse.data?.data?.publicaly_available_post_id || [];
-
-      if (publicIds.length > 0) {
-        finalVideoId = publicIds[0].toString(); // This is our real numeric ID
-        
-        const rawUsername = destination.profile.username || 
-                           destination.profile.connection?.platformUsername || 
-                           'tiktok';
-        const cleanUsername = rawUsername.replace('@', '');
-        liveUrl = `https://www.tiktok.com/@${cleanUsername}/video/${finalVideoId}`;
-      }
-    } catch (error: any) {
-      this.logger.error(`Failed to fetch live URL for TikTok: ${error.message}`);
+      content = {};
     }
 
-    // Update Destination (Swap publish_id for real video_id here)
-    await this.prisma.postDestination.update({
-      where: { id: destination.id },
-      data: {
-        status: 'SUCCESS',
-        platformUrl: liveUrl,
-        platformPostId: finalVideoId, 
-        publishedAt: new Date(),
+    const publishId = content.publish_id;
+    if (!publishId) {
+      this.logger.warn(
+        `TikTok publish webhook missing publish_id: Log ${logId}`,
+      );
+      return;
+    }
+
+    // 2. Find the destination
+    const destination = await this.prisma.postDestination.findFirst({
+      where: { platformPostId: publishId },
+      include: {
+        post: true,
+        profile: { include: { connection: true } },
       },
     });
 
-    // Update Parent Post
-    await this.prisma.post.update({
-      where: { id: destination.postId },
-      data: { status: 'PUBLISHED', publishedAt: new Date() },
-    });
+    if (!destination) {
+      this.logger.warn(
+        `Could not find PostDestination for TikTok publish_id: ${publishId}`,
+      );
+      return;
+    }
 
-    this.logger.log(`TikTok post ${finalVideoId} is now SUCCESS.`);
-  } 
-  
-  // 4. Handle Failure Event
-  else if (event === 'post.publish.failed' || event === 'video.upload.failed') {
-    await this.prisma.postDestination.update({
-      where: { id: destination.id },
-      data: {
-        status: 'FAILED',
-        errorMessage: 'TikTok rejected the video during final processing (Guidelines/Copyright).',
-      },
-    });
+    // 3. Handle Success Event
+    if (
+      event === 'post.publish.complete' ||
+      event === 'video.publish.completed'
+    ) {
+      let finalVideoId = publishId; // Default to publish_id if fetch fails
+      let liveUrl = null;
 
-    // Only mark parent as FAILED if you want to (Careful if multi-platform)
-    await this.prisma.post.update({
-      where: { id: destination.postId },
-      data: { status: 'FAILED' },
+      try {
+        const accessToken = await this.encryptionService.decrypt(
+          destination.profile.accessToken,
+        );
+
+        const statusResponse = await axios.post(
+          'https://open.tiktokapis.com/v2/post/publish/status/fetch/',
+          { publish_id: publishId },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            transformResponse: [
+              (data) => {
+                try {
+                  return JSONBig.parse(data);
+                } catch {
+                  return data;
+                }
+              },
+            ],
+          },
+        );
+
+        // TikTok typo: "publicaly"
+        const publicIds =
+          statusResponse.data?.data?.publicaly_available_post_id || [];
+
+        if (publicIds.length > 0) {
+          finalVideoId = publicIds[0].toString(); // This is our real numeric ID
+
+          const rawUsername =
+            destination.profile.username ||
+            destination.profile.connection?.platformUsername ||
+            'tiktok';
+          const cleanUsername = rawUsername.replace('@', '');
+          liveUrl = `https://www.tiktok.com/@${cleanUsername}/video/${finalVideoId}`;
+        }
+      } catch (error: any) {
+        this.logger.error(
+          `Failed to fetch live URL for TikTok: ${error.message}`,
+        );
+      }
+
+      // Update Destination (Swap publish_id for real video_id here)
+      await this.prisma.postDestination.update({
+        where: { id: destination.id },
+        data: {
+          status: 'SUCCESS',
+          platformUrl: liveUrl,
+          platformPostId: finalVideoId,
+          publishedAt: new Date(),
+        },
+      });
+
+      // Update Parent Post
+      await this.prisma.post.update({
+        where: { id: destination.postId },
+        data: { status: 'PUBLISHED', publishedAt: new Date() },
+      });
+
+      this.logger.log(`TikTok post ${finalVideoId} is now SUCCESS.`);
+    }
+
+    // 4. Handle Failure Event
+    else if (
+      event === 'post.publish.failed' ||
+      event === 'video.upload.failed'
+    ) {
+      await this.prisma.postDestination.update({
+        where: { id: destination.id },
+        data: {
+          status: 'FAILED',
+          errorMessage:
+            'TikTok rejected the video during final processing (Guidelines/Copyright).',
+        },
+      });
+
+      // Only mark parent as FAILED if you want to (Careful if multi-platform)
+      await this.prisma.post.update({
+        where: { id: destination.postId },
+        data: { status: 'FAILED' },
+      });
+    }
+
+    // 5. Cleanup Log
+    await this.prisma.webhookLog.update({
+      where: { id: logId },
+      data: { status: 'PROCESSED', processedAt: new Date() },
     });
   }
-
-  // 5. Cleanup Log
-  await this.prisma.webhookLog.update({
-    where: { id: logId },
-    data: { status: 'PROCESSED', processedAt: new Date() },
-  });
-}
 
   private async processTikTokDeauth(logId: string, payload: any) {
     const openId = payload.user_openid;

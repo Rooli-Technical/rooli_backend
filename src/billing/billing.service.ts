@@ -161,12 +161,13 @@ export class BillingService {
     );
   }
 
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
   // 4. ACTIVATE SUBSCRIPTION (Webhook Handler)
   // ---------------------------------------------------------
   async activateSubscription(payload: any) {
     const data = payload.data;
-    const { reference, amount, currency, metadata, plan, authorization, id } = data;
+    const { reference, amount, currency, metadata, plan, authorization, id } =
+      data;
 
     // 1. Identify Organization
     const organizationId = metadata?.organizationId;
@@ -231,37 +232,36 @@ export class BillingService {
           planId: localPlan.id,
           status: 'ACTIVE',
           isActive: true,
-          billingInterval: billingInterval as BillingInterval, 
+          billingInterval: billingInterval as BillingInterval,
           currentPeriodStart: startDate,
           currentPeriodEnd: endDate,
           paystackAuthCode: authorization?.authorization_code,
           isTrial: false,
           watermarkEnabled: false,
           lastPaymentFailedAt: null,
-          failedPaymentAttempts: 0,  
-          aiCreditsUsed: 0,             
-          lastCreditResetAt: new Date()
-
+          failedPaymentAttempts: 0,
+          aiCreditsUsed: 0,
+          lastCreditResetAt: new Date(),
         },
         update: {
           planId: localPlan.id,
           status: 'ACTIVE',
           isActive: true,
-          billingInterval: billingInterval as BillingInterval, 
+          billingInterval: billingInterval as BillingInterval,
           currentPeriodStart: startDate,
           currentPeriodEnd: endDate,
           paystackAuthCode: authorization?.authorization_code,
           cancelAtPeriodEnd: false,
           isTrial: false,
           watermarkEnabled: false,
-          lastPaymentFailedAt: null, 
-          failedPaymentAttempts: 0,  
+          lastPaymentFailedAt: null,
+          failedPaymentAttempts: 0,
         },
       });
 
       // Update Transaction Log
       await tx.transaction.upsert({
-        where: { txRef: reference }, 
+        where: { txRef: reference },
         update: {
           providerTxId: id.toString(),
           status: 'successful',
@@ -282,11 +282,11 @@ export class BillingService {
       //  UNLOCK THE ORGANIZATION
       const org = await tx.organization.update({
         where: { id: organizationId },
-        data: { 
-          status: 'ACTIVE', 
+        data: {
+          status: 'ACTIVE',
           billingStatus: 'ACTIVE',
           isActive: true,
-          readOnly: false // Clear Day 8 Dunning read-only state!
+          readOnly: false, // Clear Day 8 Dunning read-only state!
         },
         include: {
           members: {
@@ -323,7 +323,9 @@ export class BillingService {
           .catch((e) => this.logger.error(`Failed to send welcome email`, e));
       }
     } else {
-      this.logger.log(`Renewal payment processed for Org: ${organizationId}. Account Unlocked.`);
+      this.logger.log(
+        `Renewal payment processed for Org: ${organizationId}. Account Unlocked.`,
+      );
     }
 
     return result;
@@ -388,7 +390,6 @@ export class BillingService {
     }
   }
 
-
   // ---------------------------------------------------------
   // 7. HANDLE FAILURES (Sets the Dunning Anchor)
   // ---------------------------------------------------------
@@ -420,22 +421,45 @@ export class BillingService {
         failedPaymentAttempts: { increment: 1 },
       },
     });
+
+    // NEW: Send Day 0 Email
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: { members: { include: { user: true, role: true } } },
+    });
+
+    if (org) {
+      const owner = org.members.find((m) => m.role.slug === 'org-owner')?.user;
+      if (owner) {
+        await this.emailService.sendPaymentFailedEmail(owner.email, org.name);
+      }
+    }
     this.logger.warn(`Payment failed: ${gateway_response}. Dunning started.`);
   }
 
   // ---------------------------------------------------------
   // 8. THE DUNNING CRON JOB
   // ---------------------------------------------------------
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async executeDunningAndTrials() {
     this.logger.log('🕵️ Executing Dunning & Trial State Machine...');
     const now = new Date();
 
+    // FIX 1: Calculate the exact timestamps for the queries
+    const eightDaysAgo = new Date();
+    eightDaysAgo.setDate(now.getDate() - 8);
+
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(now.getDate() - 14);
+
+    // -----------------------------------------------------------------
     // PHASE 1: Expire Free Trials
+    // -----------------------------------------------------------------
     const expiredTrials = await this.prisma.subscription.updateMany({
       where: { isTrial: true, status: 'TRIALING', trialEndsAt: { lt: now } },
       data: { status: 'PAST_DUE', isActive: false },
     });
+    
     if (expiredTrials.count > 0) {
       await this.prisma.organization.updateMany({
         where: { subscription: { isTrial: true, status: 'PAST_DUE' } },
@@ -443,47 +467,89 @@ export class BillingService {
       });
     }
 
+    // -----------------------------------------------------------------
     // PHASE 2: Day 8 Read-Only Enforcements
-    const eightDaysAgo = new Date();
-    eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
-    await this.prisma.organization.updateMany({
+    // -----------------------------------------------------------------
+    const eightDayOrgs = await this.prisma.organization.findMany({
       where: {
         readOnly: false,
         subscription: {
           status: 'PAST_DUE',
           lastPaymentFailedAt: { lte: eightDaysAgo },
+          readOnlyNotifiedAt: null,
         },
       },
-      data: { readOnly: true },
+      select: { id: true, billingEmail: true },
     });
 
+    if (eightDayOrgs.length > 0) {
+      const orgIds = eightDayOrgs.map((o) => o.id);
+
+      await this.prisma.organization.updateMany({
+        where: { id: { in: orgIds } },
+        data: { readOnly: true, billingStatus: 'READ_ONLY' },
+      });
+
+      await this.prisma.subscription.updateMany({
+        where: { organizationId: { in: orgIds } },
+        data: { readOnlyNotifiedAt: new Date() },
+      });
+
+      Promise.allSettled(
+        eightDayOrgs.map((org) =>
+          this.emailService.sendReadOnlyWarningEmail(org.billingEmail),
+        ),
+      );
+    }
+
+    // -----------------------------------------------------------------
     // PHASE 3: Day 14 Hard Suspensions
-    const fourteenDaysAgo = new Date();
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    // -----------------------------------------------------------------
     const doomedSubs = await this.prisma.subscription.findMany({
       where: {
         status: 'PAST_DUE',
         lastPaymentFailedAt: { lte: fourteenDaysAgo },
+        suspendedNotifiedAt: null,
       },
-      select: { organizationId: true },
+      include: {
+        organization: { select: { id: true, billingEmail: true } },
+      },
     });
 
     if (doomedSubs.length > 0) {
       const orgIds = doomedSubs.map((s) => s.organizationId);
+
       await this.prisma.$transaction([
         this.prisma.subscription.updateMany({
           where: { organizationId: { in: orgIds } },
-          data: { status: 'SUSPENDED', isActive: false },
+          data: {
+            status: 'SUSPENDED',
+            isActive: false,
+            suspendedNotifiedAt: new Date(),
+          },
         }),
         this.prisma.organization.updateMany({
           where: { id: { in: orgIds } },
-          data: { status: 'SUSPENDED', isActive: false },
+          data: {
+            status: 'SUSPENDED',
+            isActive: false,
+            billingStatus: 'SUSPENDED',
+          },
         }),
+        // 🚨 FIX 2: Deactivate Social Profiles to stop the publishing queue!
         this.prisma.socialProfile.updateMany({
           where: { workspace: { organizationId: { in: orgIds } } },
           data: { isActive: false },
         }),
       ]);
+
+      Promise.allSettled(
+        doomedSubs.map((s) =>
+          this.emailService.sendAccountSuspendedEmail(
+            s.organization.billingEmail,
+          ),
+        ),
+      );
     }
   }
 
@@ -517,14 +583,16 @@ export class BillingService {
     return data.data;
   }
 
-
   // ---------------------------------------------------------
   // 2. START FREE TRIAL (Called by Onboarding)
   // ---------------------------------------------------------
   async startTrial(organizationId: string, planId: string) {
     // Edge case check (Improvement #3)
-    const existing = await this.prisma.subscription.findUnique({ where: { organizationId } });
-    if (existing) throw new BadRequestException('Organization already has a subscription');
+    const existing = await this.prisma.subscription.findUnique({
+      where: { organizationId },
+    });
+    if (existing)
+      throw new BadRequestException('Organization already has a subscription');
 
     const now = new Date();
     const trialEndsAt = new Date();
@@ -534,17 +602,17 @@ export class BillingService {
       data: {
         organizationId,
         planId,
-        status: 'TRIALING', 
+        status: 'TRIALING',
         isActive: true,
         billingInterval: 'MONTHLY',
         currentPeriodStart: now,
         currentPeriodEnd: trialEndsAt,
         isTrial: true,
-        trialStartAt: now, 
+        trialStartAt: now,
         trialEndsAt: trialEndsAt,
         watermarkEnabled: true,
-        aiCreditsUsed: 0, 
-        lastCreditResetAt: now, 
+        aiCreditsUsed: 0,
+        lastCreditResetAt: now,
       },
     });
   }

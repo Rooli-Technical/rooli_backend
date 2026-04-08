@@ -188,4 +188,57 @@ export class MailService {
       html,
     );
   }
+
+  async sendReadOnlyWarningEmail(email: string) {
+    // Assuming your frontend has a dedicated billing settings page
+    const billingUrl = `${this.configService.get('FRONTEND_URL')}/settings/billing`;
+
+    const context = {
+      billingUrl,
+      year: new Date().getFullYear(),
+    };
+
+    const html = await this.compileTemplate('read-only-warning', context);
+
+    await this.sendZeptoMail(
+      email,
+      'Action Required: Your Rooli workspace is now Read-Only',
+      html,
+    );
+  }
+
+  async sendAccountSuspendedEmail(email: string) {
+    const billingUrl = `${this.configService.get('FRONTEND_URL')}/settings/billing`;
+
+    const context = {
+      billingUrl,
+      year: new Date().getFullYear(),
+    };
+
+    const html = await this.compileTemplate('account-suspended', context);
+
+    await this.sendZeptoMail(
+      email,
+      'Notice: Your Rooli workspace has been suspended',
+      html,
+    );
+  }
+
+  async sendPaymentFailedEmail(email: string, orgName: string) {
+    const billingUrl = `${this.configService.get('FRONTEND_URL')}/settings/billing`;
+
+    const context = {
+      orgName,
+      billingUrl,
+      year: new Date().getFullYear(),
+    };
+
+    const html = await this.compileTemplate('payment-failed', context);
+
+    await this.sendZeptoMail(
+      email,
+      `Payment failed for your Rooli workspace: ${orgName}`,
+      html,
+    );
+  }
 }
