@@ -20,7 +20,7 @@ export class PromptBuilder {
       depth = 'BASIC',
     } = args;
 
-    // 1. Core Identity (Creator +)
+    // 1. Core Identity 
     const tone = toneOverride ?? brandKit?.tone ?? 'Professional';
 
     // 2. Advanced Identity (Business +)

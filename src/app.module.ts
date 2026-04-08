@@ -42,7 +42,8 @@ import { SupportTicketModule } from './support-ticket/support-ticket.module';
 import Redis from 'ioredis';
 import { AdminModule } from './admin/admin.module';
 import { MediaProxyModule } from './media-proxy/media-proxy.module';
-import { PlanAccessServiceModule } from './plan-access-service/plan-access.module';
+import { PlanAccessModule } from './plan-access-service/plan-access.module';
+
 
 @Module({
   imports: [
@@ -139,7 +140,7 @@ import { PlanAccessServiceModule } from './plan-access-service/plan-access.modul
     SupportTicketModule,
     AdminModule,
     MediaProxyModule,
-    PlanAccessServiceModule,
+    PlanAccessModule,
   ],
   controllers: [AppController],
   providers: [

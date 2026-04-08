@@ -122,14 +122,5 @@ export class AnalyticsScheduler {
 
     this.logger.log(`✅ Finished scheduling. Total jobs: ${totalScheduled}`);
   }
-  /**
-   * Helper: Check if this plan allows this platform
-   */
-  // private shouldSkipPlatform(platform: Platform, plan: PlanTier): boolean {
-  //   // Creator Plan does NOT include Twitter (X)
-  //   if (plan === 'CREATOR' && platform === 'TWITTER') {
-  //     return true; // Skip
-  //   }
-  //   return false;
-  // }
+
 }

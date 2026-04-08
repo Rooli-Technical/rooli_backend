@@ -546,8 +546,8 @@ export class AnalyticsService {
 
     if (profileIds.length === 0) return this.emptyResponse(start, end);
 
-    // Base (Creator-like) always computed
-    const base = await this.getWorkspaceCreatorBase(
+    // Base always computed
+    const base = await this.getWorkspaceBaseMetrics(
       workspaceId,
       profileIds,
       start,
@@ -558,8 +558,6 @@ export class AnalyticsService {
       ...base,
       connectedProfiles: profiles,
     };
-
-    if (tier === PlanTier.CREATOR) return responsePayload;
 
     const business = await this.getWorkspaceBusiness(
       profileIds,
@@ -577,11 +575,13 @@ export class AnalyticsService {
       start,
       end,
     );
+    if (tier === PlanTier.ROCKET)
+      return { ...responsePayload, business, rocket };
 
-    return { ...responsePayload, business, rocket };
+    return responsePayload;
   }
 
-  private async getWorkspaceCreatorBase(
+  private async getWorkspaceBaseMetrics(
     workspaceId: string,
     profileIds: string[],
     start: Date,
@@ -597,7 +597,7 @@ export class AnalyticsService {
 
     return {
       period: { start, end },
-      creator: {
+      base: {
         snapshot: { followersTotal, totalEngagement: engagementTotal },
         followerGrowth: followerSeries,
         recentPosts,
@@ -1081,7 +1081,7 @@ export class AnalyticsService {
   private emptyResponse(start: Date, end: Date) {
     return {
       period: { start, end },
-      creator: {
+      base: {
         snapshot: { followersTotal: 0, totalEngagement: 0 },
         followerGrowth: [],
         recentPosts: [],
@@ -1305,7 +1305,13 @@ export class AnalyticsService {
     takePerPlatform = 3,
   ) {
     // 1. Fetch snapshots in the date range, ordered globally by highest engagement
-    const platforms = ['TWITTER', 'LINKEDIN', 'FACEBOOK', 'INSTAGRAM'];
+    const platforms = [
+      'TWITTER',
+      'LINKEDIN',
+      'FACEBOOK',
+      'INSTAGRAM',
+      'TIKTOK',
+    ];
 
     const results = Object.fromEntries(platforms.map((p) => [p, []]));
 
@@ -1479,7 +1485,7 @@ export class AnalyticsService {
           transformResponse: [(data) => data],
         },
       );
-console.dir(data, {depth: null})
+      console.dir(data, { depth: null });
       // Manually parse it using the BigInt-aware library
       const parsedData = JSONBig({ storeAsString: true }).parse(data);
       const statusData = parsedData.data;
