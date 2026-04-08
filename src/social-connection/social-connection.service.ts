@@ -19,6 +19,7 @@ import { TwitterService } from './providers/twitter.service';
 import { RedisService } from '@/redis/redis.service';
 import { InstagramService } from './providers/instagram.service';
 import { TikTokService } from './providers/tiktok.service';
+import { PlanAccessService } from '@/plan-access-service/plan-access.service';
 
 @Injectable()
 export class SocialConnectionService {
@@ -34,6 +35,7 @@ export class SocialConnectionService {
     private readonly instagram: InstagramService,
     private readonly tiktok: TikTokService,
     private readonly redisService: RedisService,
+    private readonly planAccessService: PlanAccessService,
   ) {}
 
   /**
@@ -46,7 +48,7 @@ export class SocialConnectionService {
   ): Promise<string> {
     // 1. CHECK FEATURE ACCESS
     // Stop them here if their plan doesn't support this platform
-    await this.ensurePlatformAllowed(organizationId, platform);
+    await this.planAccessService.ensurePlatformAllowed(organizationId, platform);
 
     const rawState = Buffer.from(JSON.stringify({ organizationId })).toString(
       'base64',
@@ -89,6 +91,10 @@ export class SocialConnectionService {
       const cached = await this.redisService.get(`twitter_auth:${token}`);
       if (cached) organizationId = JSON.parse(cached).organizationId;
 
+      if (!cached) {
+        throw new BadRequestException('Twitter authentication session expired. Please try again.');
+      }
+
       authData = await this.twitter.login(token, verifier);
     } else {
       const { code, state } = query;
@@ -106,6 +112,8 @@ export class SocialConnectionService {
         throw new BadRequestException('Invalid OAuth state');
       }
 
+      // Check billing status right before we upsert the connection
+    await this.planAccessService.ensureActiveBilling(organizationId);
 
       // Exchange
       if (platform === 'FACEBOOK')
@@ -276,23 +284,6 @@ export class SocialConnectionService {
     };
   }
 
-  private async ensurePlatformAllowed(orgId: string, platform: Platform) {
-    const sub = await this.prisma.subscription.findUnique({
-      where: { organizationId: orgId, status: 'active' },
-      include: { plan: true },
-    });
-
-    // If no active sub, maybe allow free tier logic or throw
-    if (!sub) throw new ForbiddenException('No active subscription found.');
-
-    const allowed = sub.plan.allowedPlatforms;
-
-    if (!allowed.includes(platform)) {
-      throw new ForbiddenException(
-        `Your current plan (${sub.plan.name}) does not support ${platform}. Please upgrade.`,
-      );
-    }
-  }
 
   async subscribePage(
     connectionId: string,

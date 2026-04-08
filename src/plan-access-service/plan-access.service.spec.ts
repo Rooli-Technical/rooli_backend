@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PlanAccessServiceService } from './plan-access-service.service';
+import { PlanAccessServiceService } from './plan-access.service';
 
 describe('PlanAccessServiceService', () => {
   let service: PlanAccessServiceService;

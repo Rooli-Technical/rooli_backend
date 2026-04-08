@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { FeatureKey } from './types/plan-access.types';
+import { Platform } from '@generated/enums';
 
 
 
@@ -110,5 +111,71 @@ export class PlanAccessService {
         `Your current plan does not include access to: ${String(featureKey)}. Please upgrade.`,
       );
     }
+  }
+
+
+ /**
+   * 4. PLATFORM ACCESS ENFORCEMENT
+   */
+  async ensurePlatformAllowed(organizationId: string, platform: string /* or Platform */) {
+    // We pass `true` because connecting a new social account is a MUTATION.
+    // If they are in Read-Only mode or Suspended, they shouldn't be able to do this.
+    const org = await this.getValidatedOrg(organizationId, true);
+
+    const isTrial = org.subscription.isTrial;
+    let allowedPlatforms = org.subscription.plan?.allowedPlatforms || [];
+
+    //  Trial override: Override the plan's default platforms if they are on a trial
+    if (isTrial) {
+      // Adjust this array to exactly match whatever your spec dictates for trials!
+      allowedPlatforms = ['FACEBOOK', 'INSTAGRAM', 'TIKTOK']; 
+    }
+
+    if (!allowedPlatforms.includes(platform as any)) {
+      // 🚀 UX Polish: Give them a specific error message if they are on a trial
+      const errorMessage = isTrial
+        ? `${platform} is not available during the Free Trial. Please upgrade your plan to unlock this platform.`
+        : `Your current plan does not support connecting ${platform} accounts. Please upgrade.`;
+
+      throw new ForbiddenException(errorMessage);
+    }
+  }
+
+  /**
+   * 5. SOCIAL PROFILE LIMIT ENFORCEMENT
+   */
+  async ensureSocialProfileLimit(organizationId: string, newProfileCount: number = 1) {
+    const org = await this.getValidatedOrg(organizationId, true);
+    
+    const sub = org.subscription;
+    const customLimits = sub.customLimits as any;
+    
+    // 🚨 Match the new schema name: maxSocialProfiles
+    const limit = customLimits?.maxSocialProfiles ?? sub.plan?.maxSocialProfiles ?? 0;
+
+    if (limit === -1 || limit >= 9999) return; // Unlimited
+
+    // Count currently connected profiles across the whole organization
+    const currentCount = await this.prisma.socialProfile.count({
+      where: {
+        workspace: { organizationId },
+        status: 'CONNECTED',
+      },
+    });
+
+    if (currentCount + newProfileCount > limit) {
+      throw new ForbiddenException(
+        `Social profile limit reached. Your plan allows ${limit} profiles. Please upgrade to add more.`
+      );
+    }
+  }
+
+  /**
+   * 6. GENERIC MUTATION ENFORCEMENT
+   * Ensures the organization is neither Suspended nor Read-Only.
+   */
+  async ensureActiveBilling(organizationId: string) {
+    // getValidatedOrg with 'true' automatically throws 403 if Suspended or Read-Only
+    await this.getValidatedOrg(organizationId, true);
   }
 }

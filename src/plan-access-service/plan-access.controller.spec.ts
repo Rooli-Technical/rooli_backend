@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PlanAccessServiceController } from './plan-access-service.controller';
-import { PlanAccessServiceService } from './plan-access-service.service';
+import { PlanAccessServiceController } from './plan-access.controller';
+import { PlanAccessServiceService } from './plan-access.service';
 
 describe('PlanAccessServiceController', () => {
   let controller: PlanAccessServiceController;
@@ -11,7 +11,9 @@ describe('PlanAccessServiceController', () => {
       providers: [PlanAccessServiceService],
     }).compile();
 
-    controller = module.get<PlanAccessServiceController>(PlanAccessServiceController);
+    controller = module.get<PlanAccessServiceController>(
+      PlanAccessServiceController,
+    );
   });
 
   it('should be defined', () => {
