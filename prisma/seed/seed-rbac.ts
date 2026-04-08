@@ -32,7 +32,7 @@ const SCOPE_RESOURCES: Record<PermissionScope, PermissionResource[]> = {
     PermissionResource.SCHEDULING,
     PermissionResource.ANALYTICS,
     PermissionResource.INBOX,
-    PermissionResource.COMMENT,
+    PermissionResource.COMMENTS,
     PermissionResource.INTERNAL_COMMENT,
     PermissionResource.AI_CONTENT,
     PermissionResource.AI_USAGE,
@@ -122,21 +122,21 @@ const permissionRows = (Object.values(PermissionScope) as PermissionScope[]).fla
 
 const orgOwner = await upsertSystemRole({
   scope: RoleScope.ORGANIZATION,
-  slug: 'owner',
+  slug: 'org-owner',
   name: 'Owner',
   description: 'Full access to organization billing and settings',
 });
 
 const orgAdmin = await upsertSystemRole({
   scope: RoleScope.ORGANIZATION,
-  slug: 'admin',
+  slug: 'org-admin',
   name: 'Admin',
   description: 'Can manage billing, members, and integrations',
 });
 
 const orgMember = await upsertSystemRole({
   scope: RoleScope.ORGANIZATION,
-  slug: 'member',
+  slug: 'org-member',
   name: 'Member',
   description: 'Basic membership. Needs workspace access to see content.',
   isDefault: true,
@@ -144,14 +144,14 @@ const orgMember = await upsertSystemRole({
 
 const wsOwner = await upsertSystemRole({
   scope: RoleScope.WORKSPACE,
-  slug: 'owner',
+  slug: 'ws-owner',
   name: 'Workspace Owner',
   description: 'Full control over workspace content and settings',
 });
 
 const wsEditor = await upsertSystemRole({
   scope: RoleScope.WORKSPACE,
-  slug: 'editor',
+  slug: 'ws-editor',
   name: 'Editor',
   description: 'Can create, edit, delete, and schedule content',
   isDefault: true,
@@ -159,21 +159,21 @@ const wsEditor = await upsertSystemRole({
 
 const wsViewer = await upsertSystemRole({
   scope: RoleScope.WORKSPACE,
-  slug: 'viewer',
+  slug: 'ws-viewer',
   name: 'Viewer',
   description: 'Read-only access to content and analytics',
 });
 
 const wsContributor = await upsertSystemRole({
     scope: RoleScope.WORKSPACE,
-    slug: 'contributor',
+    slug: 'ws-contributor',
     name: 'Contributor',
     description: 'Can draft content and leave internal comments. Must submit for approval.',
   });
 
   const wsClient = await upsertSystemRole({
     scope: RoleScope.WORKSPACE,
-    slug: 'client',
+    slug:  'ws-client',
     name: 'Client',
     description: 'Read-only access to specific dashboards. Can approve or reject content.',
   });
@@ -196,6 +196,7 @@ const wsContributor = await upsertSystemRole({
       scope: PermissionScope.ORGANIZATION,
       resources: [
         PermissionResource.ORG_BILLING,
+        PermissionResource.SUBSCRIPTION,
         PermissionResource.ORG_MEMBERS,
         PermissionResource.INVITATIONS,
         PermissionResource.INTEGRATION,
@@ -236,7 +237,7 @@ const wsContributor = await upsertSystemRole({
         PermissionResource.SCHEDULING,
         PermissionResource.TEMPLATE,
         PermissionResource.INBOX,
-        PermissionResource.COMMENT,
+        PermissionResource.COMMENTS,
         PermissionResource.AI_CONTENT,
       ],
       actions: [
