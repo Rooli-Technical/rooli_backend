@@ -621,9 +621,11 @@ model PublishingMetric {
 model Plan {
   id          String   @id @default(cuid())
   name        String // e.g., "Business", "Rocket", "Enterprise"
-  tier        PlanTier // ENUM: BUSINESS, ROCKET, ENTERPRISE
+  tier        PlanTier  @unique // ENUM: BUSINESS, ROCKET, ENTERPRISE
   description String?
   isActive    Boolean  @default(true)
+
+  badge String?
 
   // -- PRICING (Stored in Cents/Kobo) --
   monthlyPriceUsd Int
@@ -688,9 +690,10 @@ model Subscription {
 
   extraWorkspacesPurchased Int @default(0)
 
-  isTrial          Boolean  @default(false)
-  trialEndsAt      DateTime
-  watermarkEnabled Boolean
+  isTrial          Boolean  @default(true)
+  trialStartAt     DateTime?
+  trialEndsAt      DateTime?
+  watermarkEnabled Boolean   @default(true)
 
   billingInterval BillingInterval // MONTHLY | ANNUAL
 
@@ -700,7 +703,7 @@ model Subscription {
   failedPaymentAttempts Int       @default(0)
   lastPaymentFailedAt   DateTime? // The anchor for Day 0 -> Day 14 sequence
 
-  lastCreditResetAt DateTime
+  lastCreditResetAt DateTime  @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1654,7 +1657,6 @@ enum CreditType {
 }
 
 enum PlanTier {
-  CREATOR
   BUSINESS
   ROCKET
   ENTERPRISE
