@@ -88,11 +88,42 @@ export class AdminBillingController {
 
   // ─── PLANS ─────────────────────────────────────────────────────────────────
 
-  @Get('plans')
-  @ApiOperation({ summary: 'List all subscription plans' })
-  @ApiResponse({ status: 200, type: PlansListResponseDto })
-  async getPlans() {
-    const data = await this.billingService.getPlans();
+  @Post('plans')
+  @ApiOperation({
+    summary: 'Create a new plan tier',
+    description: 'Adds a new subscription tier. name and tier are permanent after creation.',
+  })
+  @ApiBody({ type: CreatePlanDto })
+  @ApiResponse({ status: 201, type: SinglePlanResponseDto })
+  @ApiResponse({ status: 400, type: ErrorResponseDto })
+  async createPlan(@Body() body: CreatePlanDto) {
+    const data = await this.billingService.createPlan(body as any);
+    return { success: true, data };
+  }
+
+  @Patch('plans/:planId')
+  @ApiOperation({
+    summary: 'Edit plan configuration',
+    description: 'Editable fields: Pricing, Limits, Features, Platforms, isActive. Sending `name` or `tier` returns 400.',
+  })
+  @ApiParam({ name: 'planId', example: 'clxyz123abc' })
+  @ApiBody({ type: UpdatePlanDto })
+  async updatePlan(
+    @Param('planId') planId: string,
+    @Body() body: UpdatePlanDto & { name?: unknown; tier?: unknown },
+  ) {
+    // Guard: name and tier are immutable
+    if ('name' in body || 'tier' in body) {
+      throw new BadRequestException('Plan name and tier cannot be changed after creation');
+    }
+
+    if (Object.keys(body).length === 0) {
+      throw new BadRequestException('Provide at least one editable field');
+    }
+
+    // Since the DTO properties now exactly match UpdatePlanInput, we can just pass the body.
+    const data = await this.billingService.updatePlan(planId, body as any);
+
     return { success: true, data };
   }
 
@@ -103,92 +134,6 @@ export class AdminBillingController {
   @ApiResponse({ status: 404, description: 'Plan not found.' })
   async getPlan(@Param('planId') planId: string) {
     const data = await this.billingService.getPlanById(planId);
-    return { success: true, data };
-  }
-
-  @Post('plans')
-  @ApiOperation({
-    summary: 'Create a new plan tier',
-    description:
-      'Adds a new subscription tier. name and tier are permanent after creation.',
-  })
-  @ApiBody({ type: CreatePlanDto })
-  @ApiResponse({ status: 201, type: SinglePlanResponseDto })
-  @ApiResponse({ status: 400, type: ErrorResponseDto })
-  async createPlan(@Body() body: CreatePlanDto) {
-    const data = await this.billingService.createPlan({
-      ...body,
-      tier: body.tier as any,
-      interval: body.interval as any,
-    });
-    return { success: true, data };
-  }
-
-  @Patch('plans/:planId')
-  @ApiOperation({
-    summary: 'Edit plan configuration',
-    description:
-      'Editable fields: priceNgn, priceUsd, maxWorkspaces, maxSocialProfilesPerWorkspace, ' +
-      'maxTeamMembers, monthlyAiCredits, isActive. ' +
-      'Sending `name` or `tier` returns 400.',
-  })
-  @ApiParam({ name: 'planId', example: 'clxyz123abc' })
-  @ApiBody({ type: UpdatePlanDto })
-  @ApiResponse({ status: 200, type: SinglePlanResponseDto })
-  @ApiResponse({
-    status: 400,
-    type: ErrorResponseDto,
-    description: 'name/tier sent, or no editable fields provided.',
-  })
-  @ApiResponse({ status: 404, description: 'Plan not found.' })
-  async updatePlan(
-    @Param('planId') planId: string,
-    @Body() body: UpdatePlanDto & { name?: unknown; tier?: unknown },
-  ) {
-    // Guard: name and tier are immutable
-    if ('name' in body || 'tier' in body) {
-      throw new BadRequestException(
-        'Plan name and tier cannot be changed after creation',
-      );
-    }
-
-    const {
-      priceNgn,
-      priceUsd,
-      maxWorkspaces,
-      maxSocialProfilesPerWorkspace,
-      maxTeamMembers,
-      monthlyAiCredits,
-      isActive,
-    } = body;
-
-    const hasAtLeastOneField = [
-      priceNgn,
-      priceUsd,
-      maxWorkspaces,
-      maxSocialProfilesPerWorkspace,
-      maxTeamMembers,
-      monthlyAiCredits,
-      isActive,
-    ].some((v) => v !== undefined);
-
-    if (!hasAtLeastOneField) {
-      throw new BadRequestException(
-        'Provide at least one editable field: priceNgn, priceUsd, maxWorkspaces, ' +
-          'maxSocialProfilesPerWorkspace, maxTeamMembers, monthlyAiCredits, isActive',
-      );
-    }
-
-    const data = await this.billingService.updatePlan(planId, {
-      priceNgn,
-      priceUsd,
-      maxWorkspaces,
-      maxSocialProfilesPerWorkspace,
-      maxTeamMembers,
-      monthlyAiCredits,
-      isActive,
-    });
-
     return { success: true, data };
   }
 

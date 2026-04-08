@@ -11,18 +11,30 @@ import {
   IsNotEmpty,
   IsUrl,
   ValidateIf,
+  IsObject,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
-// ─── ENUMS (mirror Prisma enums) ─────────────────────────────────────────────
+
+// ─── ENUMS (Aligned with Prisma) ─────────────────────────────────────────────
 
 export enum PlanTierEnum {
-  CREATOR = 'CREATOR',
-  PRO = 'PRO',
+  BUSINESS = 'BUSINESS',
   ROCKET = 'ROCKET',
   ENTERPRISE = 'ENTERPRISE',
 }
+
+export enum PlatformEnum {
+  FACEBOOK = 'FACEBOOK',
+  INSTAGRAM = 'INSTAGRAM',
+  LINKEDIN = 'LINKEDIN',
+  TWITTER = 'TWITTER',
+  TIKTOK = 'TIKTOK',
+}
+
+
+
 
 export enum BillingIntervalEnum {
   MONTHLY = 'MONTHLY',
@@ -50,147 +62,186 @@ export enum SubscriptionStatus {
 // ─── PLAN DTOs ───────────────────────────────────────────────────────────────
 
 export class CreatePlanDto {
-  @ApiProperty({
-    example: 'Rocket',
-    description:
-      'Unique plan name. Permanent — cannot be changed after creation.',
-  })
+  @ApiProperty({ example: 'Rocket' })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiPropertyOptional({
-    example: 'Best for growing agencies',
-    description: 'Optional plan description.',
-  })
+  @ApiPropertyOptional({ example: 'Best for growing agencies' })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({
-    enum: PlanTierEnum,
-    example: PlanTierEnum.ROCKET,
-    description: 'Plan tier. Permanent — cannot be changed after creation.',
-  })
+  @ApiProperty({ enum: PlanTierEnum, example: PlanTierEnum.ROCKET })
   @IsEnum(PlanTierEnum)
   tier: PlanTierEnum;
 
-  @ApiProperty({
-    enum: BillingIntervalEnum,
-    example: BillingIntervalEnum.MONTHLY,
-  })
-  @IsEnum(BillingIntervalEnum)
-  interval: BillingIntervalEnum;
-
-  @ApiProperty({
-    example: 29000,
-    description:
-      'Monthly price in NGN (kobo or full units — match your Paystack setup).',
-  })
+  // -- PRICING --
+  @ApiProperty({ example: 29000 })
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  priceNgn: number;
+  monthlyPriceNgn: number;
 
-  @ApiProperty({
-    example: 29,
-    description: 'Monthly price in USD.',
-  })
+  @ApiProperty({ example: 290000 })
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  priceUsd: number;
+  annualPriceNgn: number;
 
+  @ApiProperty({ example: 29 })
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  monthlyPriceUsd: number;
+
+  @ApiProperty({ example: 290 })
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  annualPriceUsd: number;
+
+  // -- LIMITS --
   @ApiPropertyOptional({ example: 5, default: 1 })
   @IsOptional()
   @IsInt()
-  @IsPositive()
   @Type(() => Number)
   maxWorkspaces?: number;
 
   @ApiPropertyOptional({ example: 4, default: 3 })
   @IsOptional()
   @IsInt()
-  @IsPositive()
   @Type(() => Number)
-  maxSocialProfilesPerWorkspace?: number;
+  maxSocialProfiles?: number;
 
-  @ApiPropertyOptional({
-    example: -1,
-    default: 1,
-    description: 'Max team members. Use -1 for unlimited.',
-  })
+  @ApiPropertyOptional({ example: -1, default: 1 })
   @IsOptional()
   @IsInt()
   @Type(() => Number)
-  maxTeamMembers?: number;
+  maxUsers?: number;
 
+  // -- AI --
   @ApiPropertyOptional({ example: 500, default: 100 })
   @IsOptional()
   @IsInt()
-  @IsPositive()
   @Type(() => Number)
-  monthlyAiCredits?: number;
+  aiCreditsMonthly?: number;
 
-  @ApiPropertyOptional({ example: 'PLN_abc123ngn' })
+  @ApiPropertyOptional({ example: 5 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  aiOverageRateCents?: number;
+
+  @ApiPropertyOptional({ example: 5000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  aiOverageCapCents?: number;
+
+  // -- FEATURES & PLATFORMS --
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  features?: Record<string, any>;
+
+  @ApiPropertyOptional({ enum: PlatformEnum, isArray: true })
+  @IsOptional()
+  @IsEnum(PlatformEnum, { each: true })
+  allowedPlatforms?: PlatformEnum[];
+
+  // -- PAYSTACK CODES --
+  @ApiPropertyOptional({ example: 'PLN_abc123ngn_mo' })
   @IsOptional()
   @IsString()
-  paystackPlanCodeNgn?: string;
+  paystackPlanCodeMonthlyNgn?: string;
 
-  @ApiPropertyOptional({ example: 'PLN_abc123usd' })
+  @ApiPropertyOptional({ example: 'PLN_abc123ngn_yr' })
   @IsOptional()
   @IsString()
-  paystackPlanCodeUsd?: string;
+  paystackPlanCodeAnnualNgn?: string;
+
+  @ApiPropertyOptional({ example: 'PLN_abc123usd_mo' })
+  @IsOptional()
+  @IsString()
+  paystackPlanCodeMonthlyUsd?: string;
+
+  @ApiPropertyOptional({ example: 'PLN_abc123usd_yr' })
+  @IsOptional()
+  @IsString()
+  paystackPlanCodeAnnualUsd?: string;
 }
 
 export class UpdatePlanDto {
-  @ApiPropertyOptional({
-    example: 35000,
-    description:
-      'New NGN price. name and tier are NOT accepted — sending them returns 400.',
-  })
+  @ApiPropertyOptional({ example: 35000 })
   @IsOptional()
   @IsNumber()
-  @Min(0)
   @Type(() => Number)
-  priceNgn?: number;
+  monthlyPriceNgn?: number;
+
+  @ApiPropertyOptional({ example: 350000 })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  annualPriceNgn?: number;
 
   @ApiPropertyOptional({ example: 35 })
   @IsOptional()
   @IsNumber()
-  @Min(0)
   @Type(() => Number)
-  priceUsd?: number;
+  monthlyPriceUsd?: number;
 
-  @ApiPropertyOptional({ example: 10 })
+  @ApiPropertyOptional({ example: 350 })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  annualPriceUsd?: number;
+
+  @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
-  @IsPositive()
   @Type(() => Number)
   maxWorkspaces?: number;
 
-  @ApiPropertyOptional({ example: 6 })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
-  @IsPositive()
   @Type(() => Number)
-  maxSocialProfilesPerWorkspace?: number;
+  maxSocialProfiles?: number;
 
-  @ApiPropertyOptional({
-    example: -1,
-    description: '-1 = unlimited.',
-  })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
   @Type(() => Number)
-  maxTeamMembers?: number;
+  maxUsers?: number;
 
-  @ApiPropertyOptional({ example: 1000 })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
-  @IsPositive()
   @Type(() => Number)
-  monthlyAiCredits?: number;
+  aiCreditsMonthly?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  aiOverageRateCents?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  aiOverageCapCents?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  features?: Record<string, any>;
+
+  @ApiPropertyOptional({ enum: PlatformEnum, isArray: true })
+  @IsOptional()
+  @IsEnum(PlatformEnum, { each: true })
+  allowedPlatforms?: PlatformEnum[];
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()

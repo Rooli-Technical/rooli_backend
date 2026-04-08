@@ -1,46 +1,8 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { BillingInterval, PlanTier } from '@generated/enums';
+
 import { Injectable } from '@nestjs/common';
+import { UpdatePlanInput, CreatePlanInput, ManualOverrideInput, GetPaymentsInput } from './types/admin-billing.types';
 
-export interface UpdatePlanInput {
-  priceNgn?: number;
-  priceUsd?: number;
-  maxWorkspaces?: number;
-  maxSocialProfilesPerWorkspace?: number;
-  maxTeamMembers?: number;
-  monthlyAiCredits?: number;
-  isActive?: boolean;
-}
-
-export interface CreatePlanInput {
-  name: string;
-  description?: string;
-  tier: PlanTier;
-  priceNgn: number;
-  priceUsd: number;
-  interval: BillingInterval;
-  maxWorkspaces?: number;
-  maxSocialProfilesPerWorkspace?: number;
-  maxTeamMembers?: number;
-  monthlyAiCredits?: number;
-  paystackPlanCodeNgn?: string;
-  paystackPlanCodeUsd?: string;
-}
-
-export interface GetPaymentsInput {
-  search?: string;
-  page?: number;
-  limit?: number;
-}
-
-export type OverrideType = 'extend_trial' | 'custom_end_date';
-
-export interface ManualOverrideInput {
-  organizationId: string;
-  overrideType: OverrideType;
-  /** Only required when overrideType === "custom_end_date" */
-  customEndDate?: Date;
-}
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -58,20 +20,21 @@ export class AdminBillingService {
     return this.prisma.plan.update({
       where: { id: planId },
       data: {
-        ...(data.priceNgn !== undefined && { priceNgn: data.priceNgn }),
-        ...(data.priceUsd !== undefined && { priceUsd: data.priceUsd }),
-        ...(data.maxWorkspaces !== undefined && {
-          maxWorkspaces: data.maxWorkspaces,
-        }),
-        ...(data.maxSocialProfilesPerWorkspace !== undefined && {
-          maxSocialProfilesPerWorkspace: data.maxSocialProfilesPerWorkspace,
-        }),
-        ...(data.maxTeamMembers !== undefined && {
-          maxTeamMembers: data.maxTeamMembers,
-        }),
-        ...(data.monthlyAiCredits !== undefined && {
-          monthlyAiCredits: data.monthlyAiCredits,
-        }),
+        ...(data.monthlyPriceNgn !== undefined && { monthlyPriceNgn: data.monthlyPriceNgn }),
+        ...(data.annualPriceNgn !== undefined && { annualPriceNgn: data.annualPriceNgn }),
+        ...(data.monthlyPriceUsd !== undefined && { monthlyPriceUsd: data.monthlyPriceUsd }),
+        ...(data.annualPriceUsd !== undefined && { annualPriceUsd: data.annualPriceUsd }),
+        
+        ...(data.maxWorkspaces !== undefined && { maxWorkspaces: data.maxWorkspaces }),
+        ...(data.maxSocialProfiles !== undefined && { maxSocialProfiles: data.maxSocialProfiles }),
+        ...(data.maxUsers !== undefined && { maxUsers: data.maxUsers }),
+        ...(data.aiCreditsMonthly !== undefined && { aiCreditsMonthly: data.aiCreditsMonthly }),
+        
+        ...(data.aiOverageRateCents !== undefined && { aiOverageRateCents: data.aiOverageRateCents }),
+        ...(data.aiOverageCapCents !== undefined && { aiOverageCapCents: data.aiOverageCapCents }),
+        ...(data.features !== undefined && { features: data.features }),
+        ...(data.allowedPlatforms !== undefined && { allowedPlatforms: data.allowedPlatforms }),
+
         ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
     });
@@ -79,7 +42,7 @@ export class AdminBillingService {
 
   async getPlans() {
     return this.prisma.plan.findMany({
-      orderBy: { priceNgn: 'asc' },
+      orderBy: { monthlyPriceNgn: 'asc' }, 
     });
   }
 
@@ -95,15 +58,32 @@ export class AdminBillingService {
         name: data.name,
         description: data.description,
         tier: data.tier,
-        priceNgn: data.priceNgn,
-        priceUsd: data.priceUsd,
-        interval: data.interval,
+        
+        //  Mapped to your new Pricing fields
+        monthlyPriceNgn: data.monthlyPriceNgn,
+        annualPriceNgn: data.annualPriceNgn,
+        monthlyPriceUsd: data.monthlyPriceUsd,
+        annualPriceUsd: data.annualPriceUsd,
+        
+        //  Mapped to your new Limit fields
         maxWorkspaces: data.maxWorkspaces ?? 1,
-        maxSocialProfilesPerWorkspace: data.maxSocialProfilesPerWorkspace ?? 3,
-        maxTeamMembers: data.maxTeamMembers ?? 1,
-        monthlyAiCredits: data.monthlyAiCredits ?? 100,
-        paystackPlanCodeNgn: data.paystackPlanCodeNgn,
-        paystackPlanCodeUsd: data.paystackPlanCodeUsd,
+        maxSocialProfiles: data.maxSocialProfiles ?? 3,
+        maxUsers: data.maxUsers ?? 1,
+        
+        //  Mapped to your new AI fields
+        aiCreditsMonthly: data.aiCreditsMonthly ?? 100,
+        aiOverageRateCents: data.aiOverageRateCents ?? 0,
+        aiOverageCapCents: data.aiOverageCapCents ?? null,
+        
+        //  Features & Platforms
+        features: data.features ?? {},
+        allowedPlatforms: data.allowedPlatforms ?? ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER'],
+
+        //  Mapped to your specific Gateway fields
+        paystackPlanCodeMonthlyNgn: data.paystackPlanCodeMonthlyNgn,
+        paystackPlanCodeAnnualNgn: data.paystackPlanCodeAnnualNgn,
+        paystackPlanCodeMonthlyUsd: data.paystackPlanCodeMonthlyUsd,
+        paystackPlanCodeAnnualUsd: data.paystackPlanCodeAnnualUsd,
       },
     });
   }
@@ -122,12 +102,10 @@ export class AdminBillingService {
         subscription.currentPeriodEnd > new Date()
           ? subscription.currentPeriodEnd
           : new Date();
-      newPeriodEnd = new Date(base.getTime() + ONE_WEEK_MS);
+      newPeriodEnd = new Date(base.getTime() + ONE_WEEK_MS); //  ONE_WEEK_MS is now defined
     } else {
       if (!input.customEndDate) {
-        throw new Error(
-          'customEndDate is required for custom_end_date override',
-        );
+        throw new Error('customEndDate is required for custom_end_date override');
       }
       if (input.customEndDate <= new Date()) {
         throw new Error('customEndDate must be in the future');
@@ -139,7 +117,7 @@ export class AdminBillingService {
       where: { id: subscription.id },
       data: {
         currentPeriodEnd: newPeriodEnd,
-        status: 'active',
+        status: 'ACTIVE', // Fixed enum casing
         isActive: true,
         cancelAtPeriodEnd: false,
       },
@@ -155,11 +133,11 @@ export class AdminBillingService {
 
     const activeSubsWithPlan = await this.prisma.subscription.findMany({
       where: { isActive: true },
-      include: { plan: { select: { priceNgn: true } } },
+      include: { plan: { select: { monthlyPriceNgn: true } } }, //  Fixed to monthlyPriceNgn
     });
 
     const mrr = activeSubsWithPlan.reduce(
-      (sum, sub) => sum + Number(sub.plan.priceNgn),
+      (sum, sub) => sum + Number(sub.plan.monthlyPriceNgn || 0), //  Fixed to monthlyPriceNgn
       0,
     );
     const arr = mrr * 12;
@@ -167,7 +145,7 @@ export class AdminBillingService {
     const [canceledThisMonth, totalActiveLastMonth, flagged] =
       await Promise.all([
         this.prisma.subscription.count({
-          where: { status: 'canceled', updatedAt: { gte: startOfMonth } },
+          where: { status: 'CANCELED', updatedAt: { gte: startOfMonth } }, //  Fixed enum casing
         }),
         this.prisma.subscription.count({
           where: { isActive: true, createdAt: { lt: startOfMonth } },
@@ -179,9 +157,7 @@ export class AdminBillingService {
 
     const churnRate =
       totalActiveLastMonth > 0
-        ? parseFloat(
-            ((canceledThisMonth / totalActiveLastMonth) * 100).toFixed(1),
-          )
+        ? parseFloat(((canceledThisMonth / totalActiveLastMonth) * 100).toFixed(1))
         : 0;
 
     return { mrr, arr, churnRate, flagged };
@@ -189,11 +165,7 @@ export class AdminBillingService {
 
   // ─── PAYMENT HISTORY ───────────────────────────────────────────────────────
 
-  async getPaymentHistory({
-    search,
-    page = 1,
-    limit = 20,
-  }: GetPaymentsInput = {}) {
+  async getPaymentHistory({ search, page = 1, limit = 20 }: GetPaymentsInput = {}) {
     const skip = (page - 1) * limit;
 
     const where = search
@@ -262,7 +234,7 @@ export class AdminBillingService {
         organizationId: input.organizationId,
         amount: input.amount,
         currency: input.currency ?? 'NGN',
-        status: 'successful',
+        status: 'successful', 
         txRef: input.txRef,
         provider: 'MANUAL',
         providerTxId: input.txRef,
@@ -271,4 +243,5 @@ export class AdminBillingService {
       include: { organization: true },
     });
   }
+
 }
