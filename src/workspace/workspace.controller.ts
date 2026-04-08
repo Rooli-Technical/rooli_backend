@@ -59,32 +59,32 @@ export class WorkspaceController {
   @Get(':workspaceId')
   @RequirePermission(PermissionResource.WORKSPACE, PermissionAction.READ)
   @ApiOperation({ summary: 'Get workspace by ID' })
-  @ApiParam({ name: 'id', description: 'Workspace ID' })
+  @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
   @ApiResponse({ status: 404, description: 'Workspace not found' })
-  async findOne(@Param('orgId') orgId: string, @Param('id') id: string) {
-    return this.workspaceService.getWorkspace(orgId, id);
+  async findOne(@Param('orgId') orgId: string, @Param('workspaceId') workspaceId: string) {
+    return this.workspaceService.getWorkspace(orgId, workspaceId);
   }
 
 
   @Patch(':workspaceId')
   @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.UPDATE)
   @ApiOperation({ summary: 'Update workspace details' })
-  @ApiParam({ name: 'id', description: 'Workspace ID' })
+  @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
   async update(
-    @Param('id') id: string,
+    @Param('workspaceId') workspaceId: string,
     @Body() dto: UpdateWorkspaceDto,
     @CurrentUser('organizationId') organizationId: string,
   ) {
-    return this.workspaceService.updateWorkspace(id, dto, organizationId);
+    return this.workspaceService.updateWorkspace(workspaceId, dto, organizationId);
   }
 
 
   @Delete(':workspaceId')
   @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.DELETE)
   @ApiOperation({ summary: 'Delete a workspace' })
-  @ApiParam({ name: 'id', description: 'Workspace ID' })
-  async delete(@Param('id') id: string, @CurrentUser('organizationId') organizationId: string) {
-    return this.workspaceService.deleteWorkspace(id, organizationId);
+  @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
+  async delete(@Param('workspaceId') workspaceId: string, @CurrentUser('organizationId') organizationId: string) {
+    return this.workspaceService.deleteWorkspace(workspaceId, organizationId);
   }
 
 
@@ -92,10 +92,10 @@ export class WorkspaceController {
   @ApiOperation({
     summary: 'Switch active workspace for current user',
   })
-  @ApiParam({ name: 'id', description: 'Workspace ID' })
+  @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
   async switchWorkspace(
     @CurrentUser() user: { userId: string },
-    @Param('id') workspaceId: string,
+    @Param('workspaceId') workspaceId: string,
   ) {
     return this.workspaceService.switchWorkspace(user.userId, workspaceId);
   }
