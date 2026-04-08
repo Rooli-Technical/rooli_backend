@@ -14,6 +14,7 @@ import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
+import { PlanAccessService } from '@/plan-access-service/plan-access-service.service';
 
 @Injectable()
 export class InvitationsService {
@@ -22,6 +23,7 @@ export class InvitationsService {
     private readonly mailService: MailService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly planAccessService: PlanAccessService,
   ) {}
 
   // ===========================================================================
@@ -57,7 +59,7 @@ export class InvitationsService {
     }
 
     // 2. Billing: Check seat capacity before proceeding
-    await this.checkSeatLimit(organizationId, lowerEmail);
+    await this.planAccessService.ensureSeatAvailable(organizationId, lowerEmail);
 
     // 3. Resolve Role
     // Logic:
@@ -204,7 +206,7 @@ async acceptInvite(
     // 🚨 CRITICAL FIX 1: The TOCTOU Protection (Check Limits at Acceptance)
     // We pass `invite.email` to exclude THIS specific invite from the "pending" count,
     // ensuring we only block them if the physical active seats are full.
-    await this.checkSeatLimit(invite.organizationId, invite.email);
+    await this.planAccessService.ensureSeatAvailable(invite.organizationId, invite.email);
 
     let isNewUser = false;
     let finalWorkspaceMemberId: string | null = null;
@@ -340,7 +342,7 @@ async acceptInvite(
 
     // 2. SAFETY CHECK: Re-verify organization capacity
     // Pass the email to exclude it from the "pending count" since it's already in the DB
-    await this.checkSeatLimit(invite.organizationId, invite.email);
+    await this.planAccessService.ensureSeatAvailable(invite.organizationId, invite.email);
 
     // 3. Refresh Token & Timestamp
     const newToken = crypto.randomBytes(32).toString('hex');
@@ -408,40 +410,6 @@ async acceptInvite(
    * The "Feature Guard" logic.
    * Checks if Org has space for more members based on Plan.
    */
-  private async checkSeatLimit(organizationId: string, excludeEmail?: string) {
-    const org = await this.prisma.organization.findUnique({
-      where: { id: organizationId },
-      include: { subscription: { include: { plan: true } } },
-    });
-
-    if (!org) throw new NotFoundException('Organization not found');
-
-    // Default to 1 seat if no plan exists (Safety fallback)
-    const limit = org.subscription?.plan?.maxTeamMembers || 1;
-
-    // Handle Unlimited
-    if (limit === -1 || limit >= 9999) return;
-
-    // Count Active Members
-    const activeMembers = await this.prisma.organizationMember.count({
-      where: { organizationId },
-    });
-
-    // Count Pending Invites (excluding the current user if resending)
-    const pendingInvites = await this.prisma.invitation.count({
-      where: {
-        organizationId,
-        status: 'PENDING',
-        email: excludeEmail ? { not: excludeEmail } : undefined,
-      },
-    });
-
-    if (activeMembers + pendingInvites >= limit) {
-      throw new ForbiddenException(
-        `Seat limit reached (${limit}). Upgrade your plan to invite more team members.`,
-      );
-    }
-  }
 
   private async generateTokens(
     userId: string,

@@ -380,10 +380,20 @@ export class BillingService {
         ),
       );
 
-      return this.prisma.subscription.update({
-        where: { organizationId },
-        data: { status: 'CANCELED', cancelAtPeriodEnd: true },
-      });
+      return await this.prisma.$transaction([
+        this.prisma.subscription.update({
+          where: { organizationId },
+          data: {
+            status: 'CANCELED',
+            cancelAtPeriodEnd: true,
+            isActive: false,
+          },
+        }),
+        this.prisma.organization.update({
+          where: { id: organizationId },
+          data: { billingStatus: 'CANCELED' },
+        }),
+      ]);
     } catch (e) {
       this.logger.error(e.response?.data);
       throw new BadRequestException('Cancellation failed');
@@ -440,7 +450,7 @@ export class BillingService {
   // ---------------------------------------------------------
   // 8. THE DUNNING CRON JOB
   // ---------------------------------------------------------
-@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async executeDunningAndTrials() {
     this.logger.log('🕵️ Executing Dunning & Trial State Machine...');
     const now = new Date();
@@ -459,7 +469,7 @@ export class BillingService {
       where: { isTrial: true, status: 'TRIALING', trialEndsAt: { lt: now } },
       data: { status: 'PAST_DUE', isActive: false },
     });
-    
+
     if (expiredTrials.count > 0) {
       await this.prisma.organization.updateMany({
         where: { subscription: { isTrial: true, status: 'PAST_DUE' } },

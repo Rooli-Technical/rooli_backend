@@ -12,6 +12,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import slugify from 'slugify';
 import { BillingService } from '@/billing/billing.service';
 import { Prisma } from '@generated/client';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class OrganizationsService {
@@ -43,10 +44,16 @@ export class OrganizationsService {
 
     if (!user) throw new NotFoundException('User not found');
 
+    const orgCount = user.organizationMemberships.length;
+
+    if (orgCount >= 1) {
+      throw new Error('Free users can only own 1 organization');
+    }
+
     // 3. Prepare Slug (Respect DTO, Fallback to Name)
     let slug = dto.slug;
     if (!slug) {
-      slug = slugify(dto.name, { lower: true, strict: true });
+      slug = await this.generateUniqueOrgSlug(dto.name);
     }
 
     // 4. Check Uniqueness
@@ -64,10 +71,10 @@ export class OrganizationsService {
 
     const [orgOwnerRole, wsAdminRole] = await Promise.all([
       this.prisma.role.findFirstOrThrow({
-        where: { slug: 'owner', scope: 'ORGANIZATION' },
+        where: { slug: 'org-owner', scope: 'ORGANIZATION' },
       }),
       this.prisma.role.findFirstOrThrow({
-        where: { slug: 'owner', scope: 'WORKSPACE' },
+        where: { slug: 'ws-owner', scope: 'WORKSPACE' },
       }),
     ]);
 
@@ -80,8 +87,9 @@ export class OrganizationsService {
             slug,
             timezone: dto.timezone ?? 'UTC',
             email: dto.email ?? user.email,
-            status: 'PENDING_PAYMENT',
+            status: 'ACTIVE',
             isActive: true,
+            billingStatus: 'TRIAL_ACTIVE',
           },
         });
 
@@ -118,15 +126,12 @@ export class OrganizationsService {
       });
 
       // 6. Initialize Payment
-      const paymentData = await this.billingService.initializePayment(
-        organization.id,
-        dto.planId,
-        user,
-      );
+      // 🚨 FIX: Start the Free Trial instead of initializing Paystack!
+      await this.billingService.startTrial(organization.id, dto.planId);
 
       return {
         organization,
-        payment: paymentData,
+        message: 'Organization created and 14-day Free Trial started.',
       };
     } catch (err) {
       console.log(err);
@@ -164,12 +169,11 @@ export class OrganizationsService {
     const skip = (page - 1) * limit;
     const take = limit;
 
-   const where: Prisma.OrganizationWhereInput = {
+    const where: Prisma.OrganizationWhereInput = {
       members: {
-        some: { userId: userId } 
-      }
+        some: { userId: userId },
+      },
     };
-
 
     if (name) where.name = { contains: name, mode: 'insensitive' };
     if (isActive !== undefined) where.isActive = isActive;
@@ -228,7 +232,7 @@ export class OrganizationsService {
     });
   }
 
-/**
+  /**
    * Returns a high-level snapshot of the organization's usage, limits, and billing.
    * Perfect for the "Settings > Overview" page.
    */
@@ -237,15 +241,15 @@ export class OrganizationsService {
       where: { id: orgId, isActive: true },
       include: {
         subscription: {
-          include: { plan: true }
+          include: { plan: true },
         },
         _count: {
           select: {
             members: true,
             workspaces: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     if (!org) throw new NotFoundException('Organization not found');
@@ -254,9 +258,11 @@ export class OrganizationsService {
     const customLimits = org.subscription?.customLimits as any;
 
     // Calculate effective limits (Custom Enterprise overrides vs Standard Plan)
-    const maxWorkspaces = customLimits?.maxWorkspaces ?? plan?.maxWorkspaces ?? 1;
-    const maxTeamMembers = customLimits?.maxTeamMembers ?? plan?.maxTeamMembers ?? 1;
-    const aiCreditsLimit = customLimits?.monthlyAiCredits ?? plan?.monthlyAiCredits ?? 0;
+    const maxWorkspaces =
+      customLimits?.maxWorkspaces ?? plan?.maxWorkspaces ?? 1;
+    const maxUsers = customLimits?.maxUsers ?? plan?.maxUsers ?? 1; // Was maxTeamMembers
+    const aiCreditsLimit =
+      customLimits?.aiCreditsMonthly ?? plan?.aiCreditsMonthly ?? 0; // Was monthlyAiCredits
 
     return {
       organization: {
@@ -267,7 +273,7 @@ export class OrganizationsService {
       },
       billing: {
         planName: plan?.name ?? 'Free / None',
-        interval: plan?.interval ?? 'NONE',
+        interval: org.subscription?.billingInterval ?? 'NONE',
         isActive: org.subscription?.isActive ?? false,
       },
       usage: {
@@ -278,44 +284,58 @@ export class OrganizationsService {
         },
         teamMembers: {
           used: org._count.members,
-          limit: maxTeamMembers,
-          isNearLimit: org._count.members >= maxTeamMembers,
+          limit: maxUsers,
+          isNearLimit: org._count.members >= maxUsers,
         },
         aiCredits: {
-          used: org.totalCreditsUsed,
+          used: org.subscription?.aiCreditsUsed ?? 0,
           limit: aiCreditsLimit,
-          isNearLimit: org.totalCreditsUsed >= (aiCreditsLimit * 0.9), // 90% warning
-        }
-      }
+          isNearLimit:
+            (org.subscription?.aiCreditsUsed ?? 0) >= aiCreditsLimit * 0.9,
+        },
+      },
     };
   }
 
   // --- HELPERS ---
 
-  //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Run once a day
-  async cleanupAbandonedOrganizations() {
-    const cutoffDate = new Date();
-    cutoffDate.setHours(cutoffDate.getHours() - 48); // 48 Hours ago
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async cleanupSuspendedOrganizations() {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Find orgs that were created > 48 hours ago but never paid
-    const abandoned = await this.prisma.organization.deleteMany({
+    // 🚨 FIX: Align with 30-Day Data Retention Policy
+    // Find orgs that were suspended more than 30 days ago
+    const abandonedOrgs = await this.prisma.organization.findMany({
       where: {
-        status: 'PENDING_PAYMENT',
-        createdAt: { lt: cutoffDate }, // Older than 48 hours
+        status: 'SUSPENDED',
+        updatedAt: { lt: thirtyDaysAgo }, // Has been suspended for 30+ days
       },
+      select: { id: true },
     });
 
-    if (abandoned.count > 0) {
-      this.logger.log(`Cleaned up ${abandoned.count} abandoned organizations.`);
+    if (abandonedOrgs.length > 0) {
+      const orgIds = abandonedOrgs.map((o) => o.id);
+
+      // Because of database relations, it's safer to delete them
+      // Ensure you have onDelete: Cascade set up in your schema!
+      const deleted = await this.prisma.organization.deleteMany({
+        where: { id: { in: orgIds } },
+      });
+
+      this.logger.log(
+        `Data Retention Policy: Permanently deleted ${deleted.count} suspended organizations.`,
+      );
     }
   }
 
-  // Helper
-  private formatBytes(bytes: number, decimals = 2) {
-    if (!+bytes) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
-  }
+    private async generateUniqueOrgSlug(name: string): Promise<string> {
+      const baseSlug = slugify(name, { lower: true, strict: true });
+      let slug = baseSlug;
+      let count = 1;
+      while (await this.prisma.organization.findUnique({ where: { slug } })) {
+        slug = `${baseSlug}-${count++}`;
+      }
+      return slug;
+    }
 }
