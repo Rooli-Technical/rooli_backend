@@ -9,4 +9,13 @@ export class CreatePaymentDto {
   @IsNotEmpty()
   @IsString()
   planId: string;
+
+  @ApiProperty({
+    description: 'The interval of the subscription',
+    enum: ['MONTHLY', 'ANNUAL'],
+    example: 'MONTHLY',
+  })
+  @IsNotEmpty()
+  @IsString()
+  interval: 'MONTHLY' | 'ANNUAL';
 }
