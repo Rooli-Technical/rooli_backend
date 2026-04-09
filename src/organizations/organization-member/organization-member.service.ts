@@ -169,16 +169,6 @@ export class OrganizationMemberService {
   }) {
     const { actorId, organizationId, memberId } = params;
 
-    // 1. Prevent Suicide (Optional, but good UX)
-    // Most apps force you to leave via a separate "Leave Org" button,
-    // rather than "Removing yourself" from the list.
-    if (actorId === memberId) {
-      throw new BadRequestException(
-        'You cannot remove yourself. Use "Leave Organization" instead.',
-      );
-    }
-
-    // 2. Find Member
     const memberToRemove = await this.prisma.organizationMember.findUnique({
       where: { id: memberId },
       include: { role: true },
@@ -188,8 +178,16 @@ export class OrganizationMemberService {
       throw new NotFoundException('Member not found');
     }
 
+    // 2. Prevent Suicide (Apples to Apples comparison)
+    // 🚨 FIX: Compare actorId to the actual userId of the member record
+    if (actorId === memberToRemove.userId) {
+      throw new BadRequestException(
+        'You cannot remove yourself. Use "Leave Organization" instead.',
+      );
+    }
+
     // 3. Prevent Removing Last Owner
-    if (memberToRemove.role.slug === 'owner') {
+    if (memberToRemove.role.slug === 'org-owner') {
       await this.assertNotLastOrgOwner(organizationId, memberId);
     }
 
@@ -221,7 +219,7 @@ export class OrganizationMemberService {
     }
 
     // 2. Safety Check: Are they the last captain?
-    if (member.role.slug === 'owner') {
+    if (member.role.slug === 'org-owner') {
       await this.assertNotLastOrgOwner(organizationId, member.id);
     }
 
@@ -240,7 +238,7 @@ export class OrganizationMemberService {
     memberIdToRemove: string,
   ) {
     const ownerRole = await this.prisma.role.findFirst({
-      where: { scope: RoleScope.ORGANIZATION, slug: 'owner' },
+      where: { scope: RoleScope.ORGANIZATION, slug: 'org-owner' },
     });
 
     if (!ownerRole) return;

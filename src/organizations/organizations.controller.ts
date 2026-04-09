@@ -75,24 +75,6 @@ export class OrganizationsController {
     return this.organizationsService.getAllOrganizations(userId, query);
   }
 
-  @Get(':organizationId/members')
-  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
-  @ApiOperation({ 
-    summary: 'List organization members', 
-    description: 'Returns a paginated list of all members within a specific organization.' 
-  })
-  @ApiResponse({ status: 200, description: 'Members retrieved successfully.' })
-  @ApiResponse({ status: 404, description: 'Organization not found.' })
-  async getMembers(
-    @Param('organizationId') organizationId: string,
-    @Query() query: ListMembersQueryDto,
-  ) {
-    return this.organizationMembersService.listOrganizationMembers({
-      organizationId,
-      query,
-    });
-  }
-
   @Get(':organizationId')
   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.READ)
   @ApiOperation({

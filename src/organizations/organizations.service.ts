@@ -86,7 +86,7 @@ export class OrganizationsService {
             name: dto.name,
             slug,
             timezone: dto.timezone ?? 'UTC',
-            email: dto.email ?? user.email,
+            billingEmail: dto.email ?? user.email,
             status: 'ACTIVE',
             isActive: true,
             billingStatus: 'TRIAL_ACTIVE',
@@ -259,13 +259,24 @@ async deleteOrganization(orgId: string) {
 
     const plan = org.subscription?.plan;
     const customLimits = org.subscription?.customLimits as any;
+    const isTrial = org.subscription?.isTrial === true;
 
     // Calculate effective limits (Custom Enterprise overrides vs Standard Plan)
-    const maxWorkspaces =
-      customLimits?.maxWorkspaces ?? plan?.maxWorkspaces ?? 1;
-    const maxUsers = customLimits?.maxUsers ?? plan?.maxUsers ?? 1; // Was maxTeamMembers
-    const aiCreditsLimit =
-      customLimits?.aiCreditsMonthly ?? plan?.aiCreditsMonthly ?? 0; // Was monthlyAiCredits
+    let maxWorkspaces = customLimits?.maxWorkspaces ?? plan?.maxWorkspaces ?? 1;
+    let maxUsers = customLimits?.maxUsers ?? plan?.maxUsers ?? 1;
+    let aiCreditsLimit = customLimits?.aiCreditsMonthly ?? plan?.aiCreditsMonthly ?? 0;
+    let planName = plan?.name ?? 'Free / None';
+
+    // 2. 🚨 TRIAL OVERRIDE 
+    if (isTrial) {
+      planName = 'Free Trial';
+      maxWorkspaces = 1;
+      maxUsers = 1;
+      aiCreditsLimit = 20;
+    } else {
+      // If NOT on trial, factor in purchased add-ons for Rocket users
+      maxWorkspaces += (org.subscription?.extraWorkspacesPurchased ?? 0);
+    }
 
     return {
       organization: {
@@ -275,9 +286,11 @@ async deleteOrganization(orgId: string) {
         createdAt: org.createdAt,
       },
       billing: {
-        planName: plan?.name ?? 'Free / None',
+        planName, // 👈 Now displays "Free Trial"
         interval: org.subscription?.billingInterval ?? 'NONE',
         isActive: org.subscription?.isActive ?? false,
+        isTrial,  // 👈 Good flag for the frontend to show the countdown banner!
+        trialEndsAt: org.subscription?.trialEndsAt ?? null,
       },
       usage: {
         workspaces: {
