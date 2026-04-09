@@ -23,25 +23,6 @@ export type TierLimits = {
 };
 
 export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
-  CREATOR: {
-    // Queue
-    maxQueueSlots: 10, // enough for a simple weekly schedule
-    maxPostsInQueue: 10,
-    maxAutoScheduleDays: 30,
-    maxBulkPostsPerRequest: 20,
-
-    // Product
-    maxWorkspaces: 1,
-    maxSocialProfiles: 3,
-    maxTeamMembers: 1,
-
-    // AI
-    aiMonthlyGenerations: 50,
-    aiMaxVariants: 1,
-    aiMaxPlatformsAtOnce: 1,
-    aiMaxOutputLength: 500,
-  },
-
   BUSINESS: {
     maxQueueSlots: 50,
     maxPostsInQueue: 100,
