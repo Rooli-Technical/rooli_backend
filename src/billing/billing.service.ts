@@ -14,6 +14,7 @@ import { MailService } from '@/mail/mail.service';
 import { randomUUID } from 'crypto';
 import { BillingInterval } from '@generated/enums';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { Prisma } from '@generated/client';
 
 @Injectable()
 export class BillingService {
@@ -399,6 +400,91 @@ export class BillingService {
   }
 
   // ---------------------------------------------------------
+  // CHANGE PLAN (Instant for Trials, Scheduled for Paid)
+  // ---------------------------------------------------------
+  async changePlan(
+    organizationId: string,
+    newPlanId: string,
+    interval: 'MONTHLY' | 'ANNUAL',
+    user: any,
+  ) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        subscription: { include: { plan: true } },
+        members: true,
+      },
+    });
+
+    if (!org || !org.subscription)
+      throw new BadRequestException('No subscription found');
+
+    const sub = org.subscription;
+    const newPlan = await this.prisma.plan.findUnique({
+      where: { id: newPlanId },
+    });
+    if (!newPlan) throw new NotFoundException('Target plan not found');
+
+    // 1. FREE TRIAL OVERRIDE -> INSTANT CHECKOUT
+    // If they are on a trial, they skip scheduling and go straight to checkout
+    if (sub.isTrial) {
+      return this.initializePayment(org.id, newPlan.id, interval, user);
+    }
+
+    // 2. PAID TO PAID -> PRE-FLIGHT LIMIT CHECKS
+    // Before we let them schedule a downgrade, we must verify they fit the new plan
+    const [userCount, profileCount, workspaceCount] = await Promise.all([
+      this.prisma.organizationMember.count({ where: { organizationId } }),
+      this.prisma.socialProfile.count({
+        where: { workspace: { organizationId }, status: 'CONNECTED' },
+      }),
+      this.prisma.workspace.count({ where: { organizationId } }),
+    ]);
+
+    // Check Users limits (ignoring Unlimited/9999)
+    if (newPlan.maxUsers < 9999 && userCount > newPlan.maxUsers) {
+      throw new BadRequestException(
+        `Please remove ${userCount - newPlan.maxUsers} team members before switching to the ${newPlan.name} plan.`,
+      );
+    }
+
+    // Check Social Profiles limits
+    if (
+      newPlan.maxSocialProfiles < 9999 &&
+      profileCount > newPlan.maxSocialProfiles
+    ) {
+      throw new BadRequestException(
+        `Please disconnect ${profileCount - newPlan.maxSocialProfiles} social profiles before switching to the ${newPlan.name} plan.`,
+      );
+    }
+
+    // Check Workspaces limits
+    if (
+      newPlan.maxWorkspaces < 9999 &&
+      workspaceCount > newPlan.maxWorkspaces
+    ) {
+      throw new BadRequestException(
+        `Please delete ${workspaceCount - newPlan.maxWorkspaces} workspaces before switching to the ${newPlan.name} plan.`,
+      );
+    }
+
+    // 3. SCHEDULE THE CHANGE
+    await this.prisma.subscription.update({
+      where: { organizationId },
+      data: {
+        pendingPlanId: newPlan.id,
+        // Add pendingBillingInterval to your Prisma schema!
+        pendingBillingInterval: interval as BillingInterval,
+      },
+    });
+
+    return {
+      status: 'scheduled',
+      message: `Your plan will automatically change to ${newPlan.name} (${interval}) at the end of your current billing cycle.`,
+    };
+  }
+
+  // ---------------------------------------------------------
   // 7. HANDLE FAILURES (Sets the Dunning Anchor)
   // ---------------------------------------------------------
   async handleFailedPayment(paystackData: any) {
@@ -594,9 +680,13 @@ export class BillingService {
   // ---------------------------------------------------------
   // 2. START FREE TRIAL (Called by Onboarding)
   // ---------------------------------------------------------
-  async startTrial(organizationId: string, planId: string) {
+  async startTrial(
+    organizationId: string,
+    planId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ) {
     // Edge case check (Improvement #3)
-    const existing = await this.prisma.subscription.findUnique({
+    const existing = await tx.subscription.findUnique({
       where: { organizationId },
     });
     if (existing)
@@ -606,7 +696,7 @@ export class BillingService {
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 14);
 
-    return this.prisma.subscription.create({
+    return tx.subscription.create({
       data: {
         organizationId,
         planId,
@@ -728,7 +818,7 @@ export class BillingService {
     }
   }
 
-@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async processAiOverages() {
     // 1. Find subscriptions renewing tomorrow that have overages
     const tomorrow = new Date();
@@ -738,18 +828,20 @@ export class BillingService {
       where: {
         status: 'ACTIVE',
         aiOverageCostCents: { gt: 0 },
-        currentPeriodEnd: { lte: tomorrow } 
+        currentPeriodEnd: { lte: tomorrow },
       },
       include: {
         // 🚨 FIX 2: Fetch the email from the connected Organization!
-        organization: { select: { billingEmail: true } } 
-      }
+        organization: { select: { billingEmail: true } },
+      },
     });
 
     for (const sub of subsWithOverage) {
       // Safety check: We need the authorization code to charge them
       if (!sub.paystackAuthCode) {
-        this.logger.warn(`Skipping overage charge for Org ${sub.organizationId} - No Auth Code`);
+        this.logger.warn(
+          `Skipping overage charge for Org ${sub.organizationId} - No Auth Code`,
+        );
         continue;
       }
 
@@ -775,12 +867,13 @@ export class BillingService {
         // 3. Clear the overage ledger ONLY if the charge succeeds
         await this.prisma.subscription.update({
           where: { id: sub.id },
-          data: { aiOverageCostCents: 0 }
+          data: { aiOverageCostCents: 0 },
         });
-        
       } catch (error: any) {
         const errorMsg = error.response?.data?.message || error.message;
-        this.logger.error(`Failed to charge overage for Org ${sub.organizationId}: ${errorMsg}`);
+        this.logger.error(
+          `Failed to charge overage for Org ${sub.organizationId}: ${errorMsg}`,
+        );
         // If it fails, we keep the overage on the ledger and try again later.
       }
     }
@@ -789,9 +882,11 @@ export class BillingService {
   // ---------------------------------------------------------
   // 9. PROCESS CANCELLATIONS AT PERIOD END
   // ---------------------------------------------------------
-  @Cron(CronExpression.EVERY_HOUR) 
+  @Cron(CronExpression.EVERY_HOUR)
   async processPendingCancellations() {
-    this.logger.log('🧹 Sweeping for subscriptions that have reached the end of their canceled period...');
+    this.logger.log(
+      '🧹 Sweeping for subscriptions that have reached the end of their canceled period...',
+    );
     const now = new Date();
 
     // 1. Find subscriptions marked to cancel where the period has officially ended
@@ -818,7 +913,7 @@ export class BillingService {
           isActive: false,
         },
       }),
-      
+
       // B. Update Organization billing status
       this.prisma.organization.updateMany({
         where: { id: { in: orgIds } },

@@ -653,6 +653,9 @@ model Plan {
   features      Json
   subscriptions Subscription[]
 
+  // For plan-to-plan upgrades (e.g. Business -> Rocket)
+  pendingSubscriptions Subscription[] @relation("PendingSubscriptionPlan")
+
   // list allowed platforms
   allowedPlatforms Platform[]
 
@@ -699,6 +702,10 @@ model Subscription {
   watermarkEnabled Boolean   @default(true)
 
   billingInterval BillingInterval // MONTHLY | ANNUAL
+
+  pendingPlanId        String?
+  pendingBillingInterval BillingInterval?
+  pendingPlan            Plan?   @relation(name: "PendingSubscriptionPlan", fields: [pendingPlanId], references: [id])
 
   aiCreditsUsed      Int @default(0)
   aiOverageCostCents Int @default(0)

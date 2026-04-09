@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Ip,
+  Param,
   Post,
   Query,
   Req,
@@ -29,6 +30,8 @@ import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { ChangePlanDto } from './dto/change-plan.dto';
 
 
 @ApiTags('Billing')
@@ -128,5 +131,48 @@ export class BillingController {
   })
   async cancelSubscription(@Req() req: any) {
     return this.billingService.cancelSubscription(req.user.organizationId);
+  }
+
+  @Post('change-plan')
+  @ApiOperation({
+    summary: 'Change or schedule a plan switch',
+    description: 
+      'If the user is on a trial, this returns a payment initialization URL for instant checkout. ' +
+      'If the user is on a paid plan, it verifies limits (users, profiles, workspaces) and schedules the change for the next billing cycle.',
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Plan successfully scheduled or payment initialized.',
+    schema: {
+      oneOf: [
+        {
+          properties: {
+            status: { type: 'string', example: 'scheduled' },
+            message: { type: 'string', example: 'Your plan will automatically change to Rocket (ANNUAL) at the end of your current billing cycle.' }
+          }
+        },
+        {
+          properties: {
+            authorization_url: { type: 'string', example: 'https://checkout.paystack.com/xyz' },
+            access_code: { type: 'string', example: 'PLN_123' },
+            reference: { type: 'string', example: 'ref_001' }
+          }
+        }
+      ]
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Limit check failed (too many members/profiles) or no subscription found.' })
+  @ApiResponse({ status: 404, description: 'Target plan not found.' })
+  async changePlan(
+    @Param('orgId') orgId: string,
+    @Body() body: ChangePlanDto,
+    @CurrentUser() user: any, // Your custom decorator to get the current user
+  ) {
+    return this.billingService.changePlan(
+      orgId,
+      body.newPlanId,
+      body.interval,
+      user,
+    );
   }
 }

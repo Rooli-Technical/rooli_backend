@@ -111,7 +111,7 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
 
     const selectedPlan = await this.prisma.plan.findUnique({
-      where: { id: dto.planId },
+      where: { tier: 'BUSINESS' },
     });
     if (!selectedPlan) throw new BadRequestException('Invalid Plan selected');
 
@@ -184,7 +184,7 @@ export class AuthService {
       });
 
       // 4. Create Subscription
-      await this.billingService.startTrial(org.id, selectedPlan.id);
+      await this.billingService.startTrial(org.id, selectedPlan.id, tx);
 
       // 5. Update User Context
       const updatedUser = await tx.user.update({

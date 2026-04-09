@@ -21,7 +21,7 @@ export class PlanAccessService {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       include: {
-        subscription: { include: { plan: true } },
+        subscription: { include: { plan: true, pendingPlan: true } },
         _count: { select: { workspaces: true } },
       },
     });
@@ -50,9 +50,13 @@ export class PlanAccessService {
     
     const sub = org.subscription;
     const customLimits = sub.customLimits as any;
-    const limit = customLimits?.maxUsers ?? sub.plan?.maxUsers ?? 1;
+    const activeLimit = sub.plan?.maxUsers ?? 1;
+    // If there is a pending plan, get its limit. Otherwise, use infinity so it doesn't interfere.
+    const pendingLimit = sub.pendingPlan?.maxUsers ?? 999999;
 
-    if (limit === -1 || limit >= 9999) return; // Unlimited
+   const effectiveLimit = Math.min(activeLimit, pendingLimit);
+
+    if (effectiveLimit >= 9999) return;
 
     // 🚀 PERFORMANCE FIX: Run both count queries simultaneously
     const [activeMembers, pendingInvites] = await Promise.all([
@@ -66,9 +70,9 @@ export class PlanAccessService {
       }),
     ]);
 
-    if (activeMembers + pendingInvites >= limit) {
+    if (activeMembers + pendingInvites >= effectiveLimit) {
       throw new ForbiddenException(
-        `Seat limit reached (${limit}). Upgrade your plan to invite more team members.`,
+        `Seat limit reached (${effectiveLimit}). Upgrade your plan to invite more team members.`,
       );
     }
   }
@@ -82,12 +86,15 @@ export class PlanAccessService {
     
     const sub = org.subscription;
     const customLimits = sub.customLimits as any;
-    const limit = customLimits?.maxWorkspaces ?? sub.plan?.maxWorkspaces ?? 1;
+   const activeLimit = sub.plan?.maxWorkspaces ?? 1;
+    const pendingLimit = sub.pendingPlan?.maxWorkspaces ?? 999999;
+    
+    const effectiveLimit = Math.min(activeLimit, pendingLimit);
 
-    if (limit === -1 || limit >= 9999) return;
+    if (effectiveLimit >= 9999) return;
 
     // Check standard limit + any extra add-ons purchased
-    const totalAllowed = limit + (sub.extraWorkspacesPurchased ?? 0);
+    const totalAllowed = effectiveLimit + (sub.extraWorkspacesPurchased ?? 0);
 
     if (org._count.workspaces >= totalAllowed) {
       throw new ForbiddenException(
@@ -151,9 +158,12 @@ export class PlanAccessService {
     const customLimits = sub.customLimits as any;
     
     // 🚨 Match the new schema name: maxSocialProfiles
-    const limit = customLimits?.maxSocialProfiles ?? sub.plan?.maxSocialProfiles ?? 0;
+   const activeLimit = sub.plan?.maxSocialProfiles ?? 0;
+    const pendingLimit = sub.pendingPlan?.maxSocialProfiles ?? 999999;
+    
+    const effectiveLimit = Math.min(activeLimit, pendingLimit);
 
-    if (limit === -1 || limit >= 9999) return; // Unlimited
+    if (effectiveLimit >= 9999) return;
 
     // Count currently connected profiles across the whole organization
     const currentCount = await this.prisma.socialProfile.count({
@@ -163,9 +173,9 @@ export class PlanAccessService {
       },
     });
 
-    if (currentCount + newProfileCount > limit) {
+    if (currentCount + newProfileCount > effectiveLimit) {
       throw new ForbiddenException(
-        `Social profile limit reached. Your plan allows ${limit} profiles. Please upgrade to add more.`
+        `Social profile limit reached. Your plan allows ${effectiveLimit} profiles. Please upgrade to add more.`
       );
     }
   }
