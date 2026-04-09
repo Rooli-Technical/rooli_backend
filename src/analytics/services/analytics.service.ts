@@ -1466,7 +1466,6 @@ export class AnalyticsService {
     const accessToken = await this.encryptionService.decrypt(
       destination.profile.accessToken,
     );
-    console.log(accessToken);
 
     try {
       this.logger.log(
