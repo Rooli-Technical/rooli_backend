@@ -12,48 +12,93 @@ import { Prisma } from '@generated/client';
 export class OrganizationMemberService {
   constructor(private readonly prisma: PrismaService) {}
 
-    async listOrganizationMembers(params: {
-  organizationId: string;
-  query?: ListMembersQueryDto; 
-}) {
-  const { organizationId, query } = params;
+  async listOrganizationMembers(params: {
+    organizationId: string;
+    query?: ListMembersQueryDto;
+  }) {
+    const { organizationId, query } = params;
 
-  // 1. Verify Organization exists
-  const organization = await this.prisma.organization.findUnique({
-    where: { id: organizationId },
-  });
-  if (!organization) throw new NotFoundException('Organization not found');
+    // 1. Verify Organization exists
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    if (!organization) throw new NotFoundException('Organization not found');
 
-  // 2. Pagination Logic
-  const take = Math.min(query?.limit ?? 20, 100);
-  const skip = ((query?.page ?? 1) - 1) * take;
+    // 2. Pagination Logic
+    const take = Math.min(query?.limit ?? 20, 100);
+    const skip = ((query?.page ?? 1) - 1) * take;
 
-  // 3. Search Filter (Email, First Name, Last Name)
-  const search = query?.search?.trim();
-  const where: Prisma.OrganizationMemberWhereInput = {
-    organizationId,
-    ...(search
-      ? {
+    // 3. Search Filter (Email, First Name, Last Name)
+    const search = query?.search?.trim();
+    const where: Prisma.OrganizationMemberWhereInput = {
+      organizationId,
+      ...(search
+        ? {
+            user: {
+              OR: [
+                { email: { contains: search, mode: 'insensitive' } },
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } },
+              ],
+            },
+          }
+        : {}),
+    };
+
+    // 4. Execute Fetch
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.organizationMember.findMany({
+        where,
+        take,
+        skip,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          role: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              scope: true,
+            },
+          }, 
           user: {
-            OR: [
-              { email: { contains: search, mode: 'insensitive' } },
-              { firstName: { contains: search, mode: 'insensitive' } },
-              { lastName: { contains: search, mode: 'insensitive' } },
-            ],
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+              lastActiveAt: true,
+            },
           },
-        }
-      : {}),
-  };
+        },
+      }),
+      this.prisma.organizationMember.count({ where }),
+    ]);
 
-  // 4. Execute Fetch
-  const [items, total] = await this.prisma.$transaction([
-    this.prisma.organizationMember.findMany({
-      where,
-      take,
-      skip,
-      orderBy: { createdAt: 'desc' },
+    return {
+      items,
+      meta: {
+        total,
+        page: query?.page ?? 1,
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
+    };
+  }
+
+  async getOneOrganizationMember(memberId: string, organizationId: string) {
+    const member = await this.prisma.organizationMember.findUnique({
+      where: { id: memberId, organizationId },
       include: {
-        role: true, // The Organization-level role (e.g., Owner, Admin, Member)
+        role: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            scope: true,
+          },
+        },
         user: {
           select: {
             id: true,
@@ -65,21 +110,14 @@ export class OrganizationMemberService {
           },
         },
       },
-    }),
-    this.prisma.organizationMember.count({ where }),
-  ]);
+    });
 
-  return {
-    items,
-    meta: {
-      total,
-      page: query?.page ?? 1,
-      limit: take,
-      totalPages: Math.ceil(total / take),
-    },
-  };
-}
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
 
+    return member;
+  }
 
   async updateRole(params: {
     organizationId: string;

@@ -1,7 +1,7 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -37,7 +37,7 @@ export class OrganizationsService {
       where: { id: userId },
       include: {
         organizationMemberships: {
-          where: { role: { slug: 'owner' } },
+          where: { role: { slug: 'org-owner' } },
         },
       },
     });
@@ -47,7 +47,7 @@ export class OrganizationsService {
     const orgCount = user.organizationMemberships.length;
 
     if (orgCount >= 1) {
-      throw new Error('Free users can only own 1 organization');
+      throw new ForbiddenException('Free users can only own 1 organization');
     }
 
     // 3. Prepare Slug (Respect DTO, Fallback to Name)
@@ -93,9 +93,9 @@ export class OrganizationsService {
           },
         });
 
-        const ownerRole = await tx.role.findFirst({ where: { slug: 'owner' } });
+        const ownerRole = await tx.role.findFirst({ where: { slug: 'org-owner' } });
         if (!ownerRole)
-          throw new InternalServerErrorException("Role 'owner' missing");
+          throw new NotFoundException("Role 'org-owner' missing");
 
         const orgMember = await tx.organizationMember.create({
           data: {
@@ -170,6 +170,7 @@ export class OrganizationsService {
     const take = limit;
 
     const where: Prisma.OrganizationWhereInput = {
+      isActive: true,
       members: {
         some: { userId: userId },
       },
@@ -201,7 +202,7 @@ export class OrganizationsService {
 
   async updateOrganization(orgId: string, dto: UpdateOrganizationDto) {
     return this.prisma.organization.update({
-      where: { id: orgId },
+      where: { id: orgId, isActive: true },
       data: {
         ...dto,
         updatedAt: new Date(),
@@ -209,28 +210,30 @@ export class OrganizationsService {
     });
   }
 
-  async deleteOrganization(orgId: string, userId: string) {
-    // Soft delete organization and related data
-    return this.prisma.$transaction(async (tx) => {
-      // Deactivate organization
-      await tx.organization.update({
-        where: { id: orgId },
-        data: { isActive: false, status: 'SUSPENDED' },
-      });
-
-      // Deactivate all members
-      await tx.organizationMember.updateMany({
-        where: { organizationId: orgId },
-        data: {
-          isActive: false,
-        },
-      });
-      // Cancel any active subscriptions
-      await this.billingService.cancelSubscription(orgId);
-
-      return { success: true, message: 'Organization deleted successfully' };
+async deleteOrganization(orgId: string) {
+  // 1. Perform the DB operations first
+  const result = await this.prisma.$transaction(async (tx) => {
+    await tx.organization.update({
+      where: { id: orgId },
+      data: { isActive: false, status: 'SUSPENDED' },
     });
-  }
+
+    await tx.organizationMember.updateMany({
+      where: { organizationId: orgId },
+      data: { isActive: false },
+    });
+
+    return { success: true, message: 'Organization deactivated' };
+  });
+
+  // 2. Trigger cancellation AFTER transaction, without 'await'
+  // We use .catch to ensure background errors don't crash the process
+  this.billingService.cancelSubscription(orgId).catch((err) => {
+    this.logger.error(`Background subscription cancellation failed for ${orgId}:`, err);
+  });
+
+  return result;
+}
 
   /**
    * Returns a high-level snapshot of the organization's usage, limits, and billing.

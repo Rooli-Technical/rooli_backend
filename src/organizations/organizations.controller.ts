@@ -14,6 +14,7 @@ import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dtos/create-organization.dto';
 import { UpdateOrganizationDto } from './dtos/update-organization.dto';
 import {
+  ApiParam,
   ApiTags,
   ApiOperation,
   ApiResponse,
@@ -63,8 +64,8 @@ export class OrganizationsController {
       },
     },
   })
-  async createOrganization(@Req() req, @Body() dto: CreateOrganizationDto) {
-    return this.organizationsService.createOrganization(req.user.userId, dto);
+  async createOrganization(@CurrentUser('userId') userId: string, @Body() dto: CreateOrganizationDto) {
+    return this.organizationsService.createOrganization(userId, dto);
   }
 
   @Get()
@@ -160,7 +161,7 @@ export class OrganizationsController {
     });
   }
 
-  @Delete(':memberId')
+  @Delete(':organizationId/members/:memberId')
   @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.DELETE)
   @ApiOperation({ summary: 'Remove a member from the entire organization' })
   async remove(
@@ -194,6 +195,39 @@ export class OrganizationsController {
     return this.organizationsService.getOrganizationSummary(organizationId);
   }
 
+@Get(':organizationId/members')
+@RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
+  @ApiOperation({ 
+    summary: 'List organization members', 
+    description: 'Returns a paginated list of members belonging to a specific organization with search capabilities.' 
+  })
+  @ApiParam({ 
+    name: 'organizationId', 
+    description: 'The unique ID of the organization',
+    example: 'cmnrgzxs30000shia1wff9zr3' 
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'List of members retrieved successfully.' 
+  })
+  @ApiResponse({ status: 404, description: 'Organization not found.' })
+  async listMembers(
+    @Param('organizationId') organizationId: string,
+    @Query() query: ListMembersQueryDto,
+  ) {
+    return this.organizationMembersService.listOrganizationMembers({
+      organizationId,
+      query,
+    });
+  }
+  @Get(':organizationId/members/:memberId')
+  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
+  @ApiOperation({ summary: 'Get organization member' })
+  @ApiResponse({ status: 200, description: 'Member retrieved successfully.' }) 
+  async getOrganizationMember( @Param('memberId') memberId: string, @Param('organizationId') organizationId: string) {
+    return this.organizationMembersService.getOneOrganizationMember(memberId, organizationId);
+  }
+
   @Delete(':organizationId')
   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.DELETE)
   @ApiOperation({
@@ -208,7 +242,7 @@ export class OrganizationsController {
       example: { success: true, message: 'Organization deleted successfully' },
     },
   })
-  async deleteOrganization(@Req() req, @Param('organizationId') orgId: string) {
-    return this.organizationsService.deleteOrganization(orgId, req.user.userId);
+  async deleteOrganization( @Param('organizationId') orgId: string) {
+    return this.organizationsService.deleteOrganization(orgId);
   }
 }
