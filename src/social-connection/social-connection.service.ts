@@ -19,7 +19,7 @@ import { TwitterService } from './providers/twitter.service';
 import { RedisService } from '@/redis/redis.service';
 import { InstagramService } from './providers/instagram.service';
 import { TikTokService } from './providers/tiktok.service';
-import { PlanAccessService } from '@/plan-access-service/plan-access.service';
+import { PlanAccessService } from '@/plan-access/plan-access.service';
 
 @Injectable()
 export class SocialConnectionService {
@@ -48,7 +48,10 @@ export class SocialConnectionService {
   ): Promise<string> {
     // 1. CHECK FEATURE ACCESS
     // Stop them here if their plan doesn't support this platform
-    await this.planAccessService.ensurePlatformAllowed(organizationId, platform);
+    await this.planAccessService.ensurePlatformAllowed(
+      organizationId,
+      platform,
+    );
 
     const rawState = Buffer.from(JSON.stringify({ organizationId })).toString(
       'base64',
@@ -92,7 +95,9 @@ export class SocialConnectionService {
       if (cached) organizationId = JSON.parse(cached).organizationId;
 
       if (!cached) {
-        throw new BadRequestException('Twitter authentication session expired. Please try again.');
+        throw new BadRequestException(
+          'Twitter authentication session expired. Please try again.',
+        );
       }
 
       authData = await this.twitter.login(token, verifier);
@@ -113,7 +118,7 @@ export class SocialConnectionService {
       }
 
       // Check billing status right before we upsert the connection
-    await this.planAccessService.ensureActiveBilling(organizationId);
+      await this.planAccessService.ensureActiveBilling(organizationId);
 
       // Exchange
       if (platform === 'FACEBOOK')
@@ -284,7 +289,6 @@ export class SocialConnectionService {
     };
   }
 
-
   async subscribePage(
     connectionId: string,
     pageId: string,
@@ -380,9 +384,7 @@ export class SocialConnectionService {
       return false;
     }
 
-    this.logger.log(
-      `Initiating LinkedIn subscription for Org: ${userUrn}`,
-    );
+    this.logger.log(`Initiating LinkedIn subscription for Org: ${userUrn}`);
 
     // 5. Delegate to your provider
     return await this.linkedin.subscribeOrganizationToWebhook(

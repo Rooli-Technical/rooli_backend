@@ -14,7 +14,7 @@ import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
-import { PlanAccessService } from '@/plan-access-service/plan-access.service';
+import { PlanAccessService } from '@/plan-access/plan-access.service';
 
 @Injectable()
 export class InvitationsService {

@@ -384,9 +384,7 @@ export class BillingService {
         this.prisma.subscription.update({
           where: { organizationId },
           data: {
-            status: 'CANCELED',
             cancelAtPeriodEnd: true,
-            isActive: false,
           },
         }),
         this.prisma.organization.update({
@@ -744,7 +742,7 @@ export class BillingService {
       },
       include: {
         // 🚨 FIX 2: Fetch the email from the connected Organization!
-        organization: { select: { email: true } } 
+        organization: { select: { billingEmail: true } } 
       }
     });
 
@@ -762,7 +760,7 @@ export class BillingService {
             'https://api.paystack.co/transaction/charge_authorization',
             {
               authorization_code: sub.paystackAuthCode,
-              email: sub.organization.email, // Fetched from the include above
+              email: sub.organization.billingEmail, // Fetched from the include above
               amount: sub.aiOverageCostCents, // It's already in cents/kobo!
             },
             {
@@ -786,6 +784,60 @@ export class BillingService {
         // If it fails, we keep the overage on the ledger and try again later.
       }
     }
+  }
+
+  // ---------------------------------------------------------
+  // 9. PROCESS CANCELLATIONS AT PERIOD END
+  // ---------------------------------------------------------
+  @Cron(CronExpression.EVERY_HOUR) 
+  async processPendingCancellations() {
+    this.logger.log('🧹 Sweeping for subscriptions that have reached the end of their canceled period...');
+    const now = new Date();
+
+    // 1. Find subscriptions marked to cancel where the period has officially ended
+    const expiredCancellations = await this.prisma.subscription.findMany({
+      where: {
+        cancelAtPeriodEnd: true,
+        isActive: true,
+        currentPeriodEnd: { lte: now },
+      },
+      select: { id: true, organizationId: true },
+    });
+
+    if (expiredCancellations.length === 0) return;
+
+    const orgIds = expiredCancellations.map((sub) => sub.organizationId);
+
+    // 2. Execute the state transition via Transaction
+    await this.prisma.$transaction([
+      // A. Mark subscription as officially canceled
+      this.prisma.subscription.updateMany({
+        where: { id: { in: expiredCancellations.map((s) => s.id) } },
+        data: {
+          status: 'CANCELED',
+          isActive: false,
+        },
+      }),
+      
+      // B. Update Organization billing status
+      this.prisma.organization.updateMany({
+        where: { id: { in: orgIds } },
+        data: {
+          status: 'SUSPENDED', // Or whatever your base state is for dead accounts
+          billingStatus: 'CANCELED',
+        },
+      }),
+
+      // C. Deactivate Social Profiles to immediately halt the publishing queue
+      this.prisma.socialProfile.updateMany({
+        where: { workspace: { organizationId: { in: orgIds } } },
+        data: { isActive: false },
+      }),
+    ]);
+
+    this.logger.log(
+      `✅ Processed ${expiredCancellations.length} end-of-period cancellations. Publishing halted and accounts locked.`,
+    );
   }
 
   private inferCountry(ipCountry?: string, timeZone?: string) {

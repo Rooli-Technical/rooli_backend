@@ -12,7 +12,7 @@ import {
 import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
 import { ConnectionStatus, Platform } from '@generated/enums';
 import { DomainEventsService } from '@/events/domain-events.service';
-import { PlanAccessService } from '@/plan-access-service/plan-access.service';
+import { PlanAccessService } from '@/plan-access/plan-access.service';
 
 @Injectable()
 export class SocialProfileService {
@@ -26,10 +26,10 @@ export class SocialProfileService {
   ) {}
 
   async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
-   // 1. Get the Workspace to find the Organization ID
+    // 1. Get the Workspace to find the Organization ID
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { organizationId: true }
+      select: { organizationId: true },
     });
     if (!workspace) throw new NotFoundException('Workspace not found');
 
@@ -45,11 +45,16 @@ export class SocialProfileService {
     });
 
     const existingIds = new Set(existingInWorkspace.map((p) => p.platformId));
-    const newProfilesCount = dto.platformIds.filter((id) => !existingIds.has(id)).length;
+    const newProfilesCount = dto.platformIds.filter(
+      (id) => !existingIds.has(id),
+    ).length;
 
     // 4. ENFORCE BILLING PROFILE LIMITS
     if (newProfilesCount > 0) {
-      await this.planAccessService.ensureSocialProfileLimit(orgId, newProfilesCount);
+      await this.planAccessService.ensureSocialProfileLimit(
+        orgId,
+        newProfilesCount,
+      );
     }
 
     // 5. Fetch importable pages once
@@ -57,7 +62,6 @@ export class SocialProfileService {
       dto.connectionId,
       true,
     );
-
 
     const added: any[] = [];
 
@@ -189,15 +193,17 @@ export class SocialProfileService {
    * Soft disconnects the profile from the workspace.
    */
   async removeProfile(workspaceId: string, profileId: string) {
-   const profile = await this.prisma.socialProfile.findFirst({
+    const profile = await this.prisma.socialProfile.findFirst({
       where: { id: profileId, workspaceId },
-      include: { workspace: { select: { organizationId: true } } }
+      include: { workspace: { select: { organizationId: true } } },
     });
 
     if (!profile) throw new NotFoundException('Profile not found');
 
     //  2. DEFENSIVE BILLING CHECK
-    await this.planAccessService.ensureActiveBilling(profile.workspace.organizationId);
+    await this.planAccessService.ensureActiveBilling(
+      profile.workspace.organizationId,
+    );
 
     await this.prisma.socialProfile.update({
       where: { id: profileId },

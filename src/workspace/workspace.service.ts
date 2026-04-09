@@ -10,7 +10,7 @@ import { UpdateWorkspaceDto } from './dtos/update-workspace.dto';
 import { Workspace, Prisma } from '@generated/client';
 import { ListWorkspacesQueryDto } from './dtos/list-workspaces.dto';
 import { AuthService } from '@/auth/auth.service';
-import { PlanAccessService } from '@/plan-access-service/plan-access.service';
+import { PlanAccessService } from '@/plan-access/plan-access.service';
 
 @Injectable()
 export class WorkspaceService {

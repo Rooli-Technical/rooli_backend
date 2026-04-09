@@ -8,7 +8,7 @@ import { LinkedInService } from './providers/linkedin.service';
 import { TwitterService } from './providers/twitter.service';
 import { InstagramService } from './providers/instagram.service';
 import { TikTokService } from './providers/tiktok.service';
-import { PlanAccessModule } from '@/plan-access-service/plan-access.module';
+import { PlanAccessModule } from '@/plan-access/plan-access.module';
 
 @Module({
   imports: [HttpModule, PlanAccessModule],

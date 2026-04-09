@@ -12,7 +12,7 @@ import { AnalyticsRepository } from './services/analytics.repository';
 import { AnalyticsScheduler } from './scheduler/analytics.scheduler';
 import { BullModule } from '@nestjs/bullmq';
 import { TikTokAnalyticsProvider } from './providers/tiktok-anlytics.provider';
-import { PlanAccessModule } from '@/plan-access-service/plan-access.module';
+import { PlanAccessModule } from '@/plan-access/plan-access.module';
 
 @Module({
   imports: [

@@ -33,14 +33,6 @@ export class OnboardingDto {
   @IsString()
   email: string;
 
-  @ApiProperty({
-    description: 'The plan ID to subscribe the organization to upon creation',
-    example: 'plan_1234567890',
-  })
-  @IsNotEmpty()
-  @IsString()
-  planId: string;
-
   @ApiPropertyOptional({
     description: 'The type of users in the organization',
     example: 'INDIVIDUAL',
