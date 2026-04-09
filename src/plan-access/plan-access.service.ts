@@ -85,6 +85,17 @@ export class PlanAccessService {
     const org = await this.getValidatedOrg(organizationId, true);
     
     const sub = org.subscription;
+
+    // 🚨 1. TRIAL OVERRIDE: Strict lock to 1 Workspace
+    if (sub.isTrial) {
+      if (org._count.workspaces >= 1) {
+        throw new ForbiddenException(
+          'Free trials are limited to 1 workspace. Please upgrade to the Rocket plan to create additional workspaces.'
+        );
+      }
+      return; // Exit early! Trial users cannot use pending plans or add-ons.
+    }
+
     const customLimits = sub.customLimits as any;
    const activeLimit = sub.plan?.maxWorkspaces ?? 1;
     const pendingLimit = sub.pendingPlan?.maxWorkspaces ?? 999999;
@@ -97,9 +108,15 @@ export class PlanAccessService {
     const totalAllowed = effectiveLimit + (sub.extraWorkspacesPurchased ?? 0);
 
     if (org._count.workspaces >= totalAllowed) {
-      throw new ForbiddenException(
-        `Workspace limit reached (${totalAllowed}). Please upgrade your plan or purchase an add-on.`,
-      );
+      if (sub.pendingPlanId && activeLimit > pendingLimit) {
+        throw new ForbiddenException(
+           `Creating this workspace exceeds your scheduled downgrade limits. Please cancel your pending downgrade to continue.`
+        );
+      } else {
+        throw new ForbiddenException(
+          `Workspace limit reached (${totalAllowed}). Please upgrade to the Rocket plan to purchase additional workspaces.`
+        );
+      }
     }
   }
 
