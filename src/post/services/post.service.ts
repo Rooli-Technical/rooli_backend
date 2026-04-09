@@ -38,6 +38,9 @@ export class PostService {
   async createPost(user: any, workspaceId: string, dto: CreatePostDto) {
     this.validateFeatures(user, dto);
 
+    // 🚨 Apply Watermark (Passing the single DTO in an array)
+    await this.applyTrialWatermark(workspaceId, [dto]);
+
     const { finalScheduledAt, status } = await this.resolveScheduleAndStatus(
       workspaceId,
       dto,
@@ -218,6 +221,8 @@ export class PostService {
     workspaceId: string,
     dto: BulkCreatePostDto,
   ) {
+    // 🚨 Apply Watermark (Passing the single DTO in an array)
+    await this.applyTrialWatermark(workspaceId, [dto]);
     // 1) Precompute schedules + payloads (fail fast)
     const preparedPosts: Array<{
       dto: any;
@@ -1051,6 +1056,46 @@ export class PostService {
       throw new InternalServerErrorException(
         `Security Error: Could not decrypt credentials for ${dest.profile?.platform}. Please reconnect the account.`,
       );
+    }
+  }
+
+  // --------------------------------------------------------
+  // HELPER: TRIAL WATERMARK
+  // --------------------------------------------------------
+  private async applyTrialWatermark(workspaceId: string, postDtos: any[]) {
+    // 1. Fetch Subscription Status
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: { organization: { include: { subscription: true } } }
+    });
+
+    const isTrial = workspace?.organization?.subscription?.isTrial === true;
+    
+    // Exit immediately if they are on a paid plan
+    if (!isTrial) return; 
+
+    const watermark = `\n\nScheduled with Rooli rooli.co`;
+
+    // 2. Mutate the DTOs in place
+    for (const dto of postDtos) {
+      // A. Main Content
+      if (dto.content) {
+        dto.content = `${dto.content}${watermark}`;
+      }
+
+      // B. Overrides
+      if (dto.overrides && dto.overrides.length > 0) {
+        dto.overrides = dto.overrides.map((override: any) => ({
+          ...override,
+          content: `${override.content}${watermark}`
+        }));
+      }
+
+      // C. Threads
+      if (dto.threads && dto.threads.length > 0) {
+        const lastIndex = dto.threads.length - 1;
+        dto.threads[lastIndex].content = `${dto.threads[lastIndex].content}${watermark}`;
+      }
     }
   }
 }

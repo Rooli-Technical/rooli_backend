@@ -168,8 +168,16 @@ export class WorkspaceService {
       }),
     ]);
 
-    return {
-      data: data.map((ws) => this.mapWorkspaceWithSafeUsers(ws)),
+    const lockMap = await this.getWorkspaceLockStatusMap(organizationId);
+
+   return {
+      data: data.map((ws) => {
+        const safeWorkspace = this.mapWorkspaceWithSafeUsers(ws);
+        return {
+          ...safeWorkspace,
+          isLocked: lockMap.get(ws.id) ?? false, // Frontend will use this to render the padlock
+        };
+      }),
       meta: {
         total,
         page,
@@ -211,7 +219,13 @@ export class WorkspaceService {
 
     if (!workspace) throw new NotFoundException('Workspace not found.');
 
-    return this.mapWorkspaceWithSafeUsers(workspace);
+    const lockMap = await this.getWorkspaceLockStatusMap(orgId);
+    const safeWorkspace = this.mapWorkspaceWithSafeUsers(workspace);
+
+    return {
+      ...safeWorkspace,
+      isLocked: lockMap.get(workspaceId) ?? false,
+    };
   }
 
   /**
@@ -319,6 +333,8 @@ export class WorkspaceService {
       throw new ForbiddenException('Organization is suspended');
     }
 
+    
+
     const { workspace } = membership;
 
     // 3. Update "Sticky Session" (Last Active Workspace)
@@ -327,6 +343,13 @@ export class WorkspaceService {
       data: { lastActiveWorkspaceId: targetWorkspaceId },
       select: { id: true, email: true, refreshTokenVersion: true },
     });
+
+    const lockMap = await this.getWorkspaceLockStatusMap(workspace.organizationId);
+    if (lockMap.get(targetWorkspaceId) === true) {
+      throw new ForbiddenException(
+        'This workspace is temporarily locked due to an unpaid add-on balance. Please update your billing details.'
+      );
+    }
 
     // 4. Generate New Tokens with the FULL context
     const tokens = await this.authService.generateTokens(
@@ -446,5 +469,40 @@ export class WorkspaceService {
         },
       })),
     };
+  }
+
+  // --------------------------------------------------------
+  // HELPER: WORKSPACE LOCK STATUS
+  // --------------------------------------------------------
+  private async getWorkspaceLockStatusMap(organizationId: string): Promise<Map<string, boolean>> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: { subscription: { include: { plan: true } } }
+    });
+
+    const lockMap = new Map<string, boolean>();
+    if (!org || !org.subscription) return lockMap;
+
+    const sub = org.subscription;
+    
+    // If they aren't past due, nothing is locked
+    if (!sub.addonsPastDue) return lockMap;
+
+    const baseLimit = sub.plan?.maxWorkspaces ?? 1;
+    if (baseLimit >= 9999) return lockMap;
+
+    // Fetch all workspaces ordered by creation date
+    const allWorkspaces = await this.prisma.workspace.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true }
+    });
+
+    // Mark anything beyond the base limit as locked
+    allWorkspaces.forEach((ws, index) => {
+      lockMap.set(ws.id, index >= baseLimit);
+    });
+
+    return lockMap;
   }
 }

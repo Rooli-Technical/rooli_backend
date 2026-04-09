@@ -709,6 +709,7 @@ model Subscription {
 
   aiCreditsUsed      Int @default(0)
   aiOverageCostCents Int @default(0)
+  addonsPastDue            Boolean  @default(false)
 
   failedPaymentAttempts Int       @default(0)
   lastPaymentFailedAt   DateTime? // The anchor for Day 0 -> Day 14 sequence
