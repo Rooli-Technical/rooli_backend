@@ -215,7 +215,7 @@ export class AuthService {
       where: { id: user.id },
       data: { refreshToken: hashedRefreshToken },
     });
-console.log(txResult)
+
     //  NEW LOGIC: Did they want to pay upfront?
     let checkoutUrl = null;
     if (dto.upfrontPlanId && dto.billingInterval) {
