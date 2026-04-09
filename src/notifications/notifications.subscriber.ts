@@ -461,18 +461,20 @@ export class NotificationsSubscriber {
   // TICKET EVENTS (The "Red Bell" Database Notifications)
   // ============================================================================
 
-    @OnEvent('ticket.created', { async: true })
+  @OnEvent('ticket.created', { async: true })
   async onTicketCreatedForAdmins(evt: DomainEventPayloadMap['ticket.created']) {
     try {
       // 1. Get all workspace members (Admins/Support Agents)
-      const recipientMemberIds = await this.listWorkspaceMemberIds(evt.workspaceId);
-      
+      const recipientMemberIds = await this.listWorkspaceMemberIds(
+        evt.workspaceId,
+      );
+
       if (!recipientMemberIds.length) return;
 
       // 2. Create the notification for the team
       await this.notifications.createMany({
         workspaceId: evt.workspaceId,
-        memberIds: recipientMemberIds, 
+        memberIds: recipientMemberIds,
         type: NotificationType.SUPPORT_NEW_TICKET,
         title: `New Ticket: #${evt.ticketNumber}`,
         body: `${evt.requesterName} opened: "${evt.title}"`,
@@ -482,7 +484,9 @@ export class NotificationsSubscriber {
         skipDuplicates: true,
       });
     } catch (e: any) {
-      this.logger.warn(`onTicketCreatedForAdmins failed: ${e?.message ?? String(e)}`);
+      this.logger.warn(
+        `onTicketCreatedForAdmins failed: ${e?.message ?? String(e)}`,
+      );
     }
   }
 
@@ -544,6 +548,55 @@ export class NotificationsSubscriber {
     }
   }
 
+  @OnEvent('publishing.post.requires_approval')
+  async onPostRequiresApproval(evt: {
+    workspaceId: string;
+    postId: string;
+    authorName: string;
+    snippet: string;
+  }) {
+    try {
+      // 1. Find all WorkspaceMembers who have the APPROVE permission
+      const eligibleApprovers = await this.prisma.workspaceMember.findMany({
+        where: {
+          workspaceId: evt.workspaceId,
+          role: {
+            // Change 'rolePermissions' to 'permissions'
+            permissions: {
+              some: {
+                permission: {
+                  resource: 'APPROVAL',
+                  action: 'APPROVE',
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+      const recipientMemberIds = eligibleApprovers.map((m) => m.id);
+
+      // If nobody has permission to approve, bail out safely
+      if (!recipientMemberIds.length) return;
+
+      // 2. Send the notification to those specific users
+      await this.notifications.createMany({
+        workspaceId: evt.workspaceId,
+        memberIds: recipientMemberIds,
+        type: 'POST_SCHEDULED', // Or NotificationType.APPROVAL_REQUIRED if you have it
+        title: `Post requires approval`,
+        body: `${evt.authorName} submitted a post for approval: "${evt.snippet}..."`,
+        link: `/publishing/approvals/${evt.postId}`, // Adjust link to your frontend route
+        data: { postId: evt.postId } as Prisma.InputJsonValue,
+        dedupeKey: `post:approval_required:${evt.postId}`,
+        skipDuplicates: true,
+      });
+    } catch (e: any) {
+      this.logger.warn(
+        `onPostRequiresApproval failed: ${e?.message ?? String(e)}`,
+      );
+    }
+  }
 
   // ============================================================================
   // Recipient helpers

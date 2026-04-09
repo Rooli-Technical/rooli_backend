@@ -9,9 +9,10 @@ import { QueueModule } from '@/queue/queue.module';
 import { WorkerModule } from '@/worker/worker.module';
 import { SocialModule } from '@/social/social.module';
 import { EncryptionService } from '@/common/utility/encryption.service';
+import { EventsModule } from '@/events/events.module';
 
 @Module({
-  imports: [WorkerModule, QueueModule, SocialModule],
+  imports: [WorkerModule, QueueModule, SocialModule, EventsModule],
   controllers: [PostController, PostApprovalController],
   providers: [
     PostService,

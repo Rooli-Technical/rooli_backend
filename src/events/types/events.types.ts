@@ -18,7 +18,8 @@ export type DomainEventName =
   | 'notification.created'
   | 'notification.read'
   | 'notification.read_all'
-  | 'system.social_profile.connected';
+  | 'system.social_profile.connected'
+  | 'publishing.post.requires_approval';
 
 export type InboxMessageCreatedEvent = {
   workspaceId: string;
@@ -221,5 +222,12 @@ export type DomainEventPayloadMap = {
     workspaceId: string;
     profileId: string;
     platform: string;
+  };
+
+  'publishing.post.requires_approval': {
+    workspaceId: string;
+    postId: string;
+    authorName: string;
+    snippet: string;
   };
 };

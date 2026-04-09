@@ -21,6 +21,7 @@ import { BulkCreatePostDto } from '../dto/request/bulk-schedule.dto';
 import { QueueSlotService } from '@/queue/queue.service';
 import { SocialFactory } from '@/social/social.factory';
 import { EncryptionService } from '@/common/utility/encryption.service';
+import { DomainEventsService } from '@/events/domain-events.service';
 
 @Injectable()
 export class PostService {
@@ -33,6 +34,7 @@ export class PostService {
     private queueService: QueueSlotService,
     private socialFactory: SocialFactory,
     private encryptionService: EncryptionService,
+    private readonly domainEvents: DomainEventsService,
   ) {}
 
   async createPost(user: any, workspaceId: string, dto: CreatePostDto) {
@@ -90,6 +92,15 @@ export class PostService {
           backoff: { type: 'exponential', delay: 5000 },
         },
       );
+    }
+
+    if (dto.needsApproval) {
+      this.domainEvents.emit('publishing.post.requires_approval', {
+        workspaceId,
+        postId: created.id,
+        authorName: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : 'A team member',
+        snippet: dto.content ? dto.content.substring(0, 60) : 'a new post',
+      });
     }
 
     return created;
