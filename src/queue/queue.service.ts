@@ -747,7 +747,7 @@ export class QueueSlotService {
     if (!ws) throw new NotFoundException('Workspace not found');
 
     const tier = (ws.organization?.subscription?.plan?.tier ??
-      'CREATOR') as keyof typeof TIER_LIMITS;
+      'BUSINESS') as 'BUSINESS' | 'ROCKET' | 'ENTERPRISE';
     const zone = ws.timezone || 'UTC';
     return { tier, zone };
   }
