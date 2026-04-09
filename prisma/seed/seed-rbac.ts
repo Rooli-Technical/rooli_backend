@@ -1,5 +1,9 @@
 import { RoleScope } from '../../generated/prisma/enums';
-import { PermissionAction, PermissionResource, PermissionScope } from '../../src/common/constants/rbac';
+import {
+  PermissionAction,
+  PermissionResource,
+  PermissionScope,
+} from '../../src/common/constants/rbac';
 import { prisma, hasColumn } from './utils';
 
 // --- CONFIGURATION ---
@@ -41,7 +45,193 @@ const SCOPE_RESOURCES: Record<PermissionScope, PermissionResource[]> = {
   ],
 };
 
-export const ALL_ACTIONS = Object.values(PermissionAction) as PermissionAction[];
+const RESOURCE_ACTIONS: Record<PermissionResource, PermissionAction[]> = {
+  // SYSTEM
+  [PermissionResource.SYSTEM_USERS]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.SYSTEM_ORGANIZATIONS]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.SYSTEM_BILLING]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.MANAGE,
+  ],
+
+  // ORGANIZATION
+  [PermissionResource.ORGANIZATION]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.ORG_MEMBERS]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.INVITE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.ORG_BILLING]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.ORG_SETTINGS]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.SUBSCRIPTION]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.INTEGRATION]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.CONNECT,
+    PermissionAction.DISCONNECT,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.INVITATIONS]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.AUDIT_LOGS]: [
+    PermissionAction.READ,
+    PermissionAction.EXPORT,
+  ], // No publishing or creating audit logs!
+
+  // WORKSPACE
+  [PermissionResource.WORKSPACE]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.WORKSPACE_SETTINGS]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.WORKSPACE_MEMBERS]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.INVITE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.PROFILE_ACCESS]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.SOCIAL_PROFILE]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.CONNECT,
+    PermissionAction.DISCONNECT,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.POSTS]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.PUBLISH,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.APPROVAL]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.APPROVE,
+    PermissionAction.REJECT,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.CAMPAIGN]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.CONTENT]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.SCHEDULING]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.ANALYTICS]: [
+    PermissionAction.READ,
+    PermissionAction.EXPORT,
+  ],
+  [PermissionResource.INBOX]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.ASSIGN,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.COMMENTS]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.INTERNAL_COMMENT]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.AI_CONTENT]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.AI_USAGE]: [PermissionAction.READ],
+  [PermissionResource.TEMPLATE]: [
+    PermissionAction.CREATE,
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+    PermissionAction.DELETE,
+    PermissionAction.MANAGE,
+  ],
+  [PermissionResource.NOTIFICATION]: [
+    PermissionAction.READ,
+    PermissionAction.UPDATE,
+  ],
+};
+
+export const ALL_ACTIONS = Object.values(
+  PermissionAction,
+) as PermissionAction[];
 
 export async function seedRBAC() {
   console.log('🌱 Starting RBAC Seed...');
@@ -59,19 +249,26 @@ export async function seedRBAC() {
   // -----------------------------------------------------
   console.log('... Seeding Permissions (bulk createMany)');
 
- // Iterate over the Scope values and cast them properly
-const permissionRows = (Object.values(PermissionScope) as PermissionScope[]).flatMap((scope) => {
-  const resources = SCOPE_RESOURCES[scope] ?? [];
-  return resources.flatMap((resource) =>
-    ALL_ACTIONS.map((action) => ({
-      scope,
-      resource,
-      action,
-      name: `${scope.toLowerCase()}.${resource.toLowerCase()}.${action.toLowerCase()}`,
-      description: `Allow ${action} on ${resource} in ${scope}`,
-    })),
-  );
-});
+  // Iterate over the Scope values and cast them properly
+  const permissionRows = (
+    Object.values(PermissionScope) as PermissionScope[]
+  ).flatMap((scope) => {
+    const resources = SCOPE_RESOURCES[scope] ?? [];
+    return resources.flatMap((resource) => {
+      // Look up the valid actions, fallback to just READ if missing
+      const validActions = RESOURCE_ACTIONS[resource] || [
+        PermissionAction.READ,
+      ];
+
+      return validActions.map((action) => ({
+        scope,
+        resource,
+        action,
+        name: `${scope.toLowerCase()}.${resource.toLowerCase()}.${action.toLowerCase()}`,
+        description: `Allow ${action} on ${resource} in ${scope}`,
+      }));
+    });
+  });
 
   await prisma.permission.createMany({
     data: permissionRows,
@@ -114,80 +311,105 @@ const permissionRows = (Object.values(PermissionScope) as PermissionScope[]).fla
   console.log('... Seeding Roles');
 
   const sysOwner = await upsertSystemRole({
-  scope: RoleScope.SYSTEM,
-  slug: 'system-owner',
-  name: 'System Owner',
-  description: 'Super Admin',
-});
+    scope: RoleScope.SYSTEM,
+    slug: 'system-owner',
+    name: 'System Owner',
+    description: 'Super Admin',
+  });
 
-const orgOwner = await upsertSystemRole({
-  scope: RoleScope.ORGANIZATION,
-  slug: 'org-owner',
-  name: 'Owner',
-  description: 'Full access to organization billing and settings',
-});
+  const orgOwner = await upsertSystemRole({
+    scope: RoleScope.ORGANIZATION,
+    slug: 'org-owner',
+    name: 'Owner',
+    description: 'Full access to organization billing and settings',
+  });
 
-const orgAdmin = await upsertSystemRole({
-  scope: RoleScope.ORGANIZATION,
-  slug: 'org-admin',
-  name: 'Admin',
-  description: 'Can manage billing, members, and integrations',
-});
+  const orgAdmin = await upsertSystemRole({
+    scope: RoleScope.ORGANIZATION,
+    slug: 'org-admin',
+    name: 'Admin',
+    description: 'Can manage billing, members, and integrations',
+  });
 
-const orgMember = await upsertSystemRole({
-  scope: RoleScope.ORGANIZATION,
-  slug: 'org-member',
-  name: 'Member',
-  description: 'Basic membership. Needs workspace access to see content.',
-  isDefault: true,
-});
+  const orgMember = await upsertSystemRole({
+    scope: RoleScope.ORGANIZATION,
+    slug: 'org-member',
+    name: 'Member',
+    description: 'Basic membership. Needs workspace access to see content.',
+    isDefault: true,
+  });
 
-const wsOwner = await upsertSystemRole({
-  scope: RoleScope.WORKSPACE,
-  slug: 'ws-owner',
-  name: 'Workspace Owner',
-  description: 'Full control over workspace content and settings',
-});
+  const wsOwner = await upsertSystemRole({
+    scope: RoleScope.WORKSPACE,
+    slug: 'ws-owner',
+    name: 'Workspace Owner',
+    description: 'Full control over workspace content and settings',
+  });
 
-const wsEditor = await upsertSystemRole({
-  scope: RoleScope.WORKSPACE,
-  slug: 'ws-editor',
-  name: 'Editor',
-  description: 'Can create, edit, delete, and schedule content',
-  isDefault: true,
-});
+  const wsEditor = await upsertSystemRole({
+    scope: RoleScope.WORKSPACE,
+    slug: 'ws-editor',
+    name: 'Editor',
+    description: 'Can create, edit, delete, and schedule content',
+    isDefault: true,
+  });
 
-const wsViewer = await upsertSystemRole({
-  scope: RoleScope.WORKSPACE,
-  slug: 'ws-viewer',
-  name: 'Viewer',
-  description: 'Read-only access to content and analytics',
-});
+  const wsViewer = await upsertSystemRole({
+    scope: RoleScope.WORKSPACE,
+    slug: 'ws-viewer',
+    name: 'Viewer',
+    description: 'Read-only access to content and analytics',
+  });
 
-const wsContributor = await upsertSystemRole({
+  const wsContributor = await upsertSystemRole({
     scope: RoleScope.WORKSPACE,
     slug: 'ws-contributor',
     name: 'Contributor',
-    description: 'Can draft content and leave internal comments. Must submit for approval.',
+    description:
+      'Can draft content and leave internal comments. Must submit for approval.',
   });
 
   const wsClient = await upsertSystemRole({
     scope: RoleScope.WORKSPACE,
-    slug:  'ws-client',
+    slug: 'ws-client',
     name: 'Client',
-    description: 'Read-only access to specific dashboards. Can approve or reject content.',
+    description:
+      'Read-only access to specific dashboards. Can approve or reject content.',
   });
   // -----------------------------------------------------
   // 4) ASSIGN PERMISSIONS (bulk createMany)
   // -----------------------------------------------------
   console.log('... Assigning permissions');
 
-  // System Owner: all SYSTEM permissions
-  await assign(sysOwner.id, await permIds({ scope: PermissionScope.SYSTEM }));
+  // System Owner: system_organizations.manage
+  await assign(
+    sysOwner.id,
+    await permIds({
+      scope: PermissionScope.SYSTEM,
+      resources: [PermissionResource.SYSTEM_ORGANIZATIONS],
+      actions: [PermissionAction.MANAGE],
+    }),
+  );
 
-  // Org Owner: all ORG permissions
-  await assign(orgOwner.id, await permIds({ scope: PermissionScope.ORGANIZATION }));
+  // Org Owner: organization.manage
+  await assign(
+    orgOwner.id,
+    await permIds({
+      scope: PermissionScope.ORGANIZATION,
+      resources: [PermissionResource.ORGANIZATION],
+      actions: [PermissionAction.MANAGE],
+    }),
+  );
 
+  // Workspace Owner: workspace.manage
+  await assign(
+    wsOwner.id,
+    await permIds({
+      scope: PermissionScope.WORKSPACE,
+      resources: [PermissionResource.WORKSPACE],
+      actions: [PermissionAction.MANAGE],
+    }),
+  );
 
   // Org Admin: manage core org resources
   await assign(
@@ -218,13 +440,14 @@ const wsContributor = await upsertSystemRole({
     orgMember.id,
     await permIds({
       scope: PermissionScope.ORGANIZATION,
-      resources: [PermissionResource.ORGANIZATION, PermissionResource.ORG_MEMBERS],
+      resources: [
+        PermissionResource.ORGANIZATION,
+        PermissionResource.ORG_MEMBERS,
+      ],
       actions: [PermissionAction.READ],
     }),
   );
 
-  // Workspace Owner: all WORKSPACE permissions
-  await assign(wsOwner.id, await permIds({ scope: PermissionScope.WORKSPACE }));
 
   // Workspace Editor: CRUD content + schedule + publish
   await assign(
@@ -256,9 +479,9 @@ const wsContributor = await upsertSystemRole({
       scope: PermissionScope.WORKSPACE,
       resources: [PermissionResource.APPROVAL],
       actions: [
-        PermissionAction.APPROVE, 
-        PermissionAction.REJECT, 
-        PermissionAction.READ
+        PermissionAction.APPROVE,
+        PermissionAction.REJECT,
+        PermissionAction.READ,
       ],
     }),
   );
@@ -325,9 +548,9 @@ const wsContributor = await upsertSystemRole({
       scope: PermissionScope.WORKSPACE,
       resources: [PermissionResource.APPROVAL],
       actions: [
-        PermissionAction.APPROVE, 
-        PermissionAction.REJECT, 
-        PermissionAction.READ
+        PermissionAction.APPROVE,
+        PermissionAction.REJECT,
+        PermissionAction.READ,
       ],
     }),
   );
