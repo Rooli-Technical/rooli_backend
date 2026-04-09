@@ -765,7 +765,6 @@ export class BillingService {
       },
       callback_url: `${this.config.get('CALLBACK_URL')}`,
     };
-    console.log(payload)
 
     // 3. Fire the Request
     try {

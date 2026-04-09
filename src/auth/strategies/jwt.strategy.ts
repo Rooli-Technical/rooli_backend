@@ -75,7 +75,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         organizationId: payload.orgId,
       },
       include: {
-        role: { select: { name: true } },
+        role: { 
+          include: {
+            permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+         },
         organization: {
           include: {
             subscription: {
@@ -94,6 +102,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const sub = org.subscription;
     const plan = sub?.plan;
 
+    const mappedPermissions = membership.role.permissions.map((rp) => 
+      `${rp.permission.resource.toLowerCase()}.${rp.permission.action.toLowerCase()}`
+    );
+
 
     return {
       userId: user.id,
@@ -102,6 +114,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       workspaceId: payload.workspaceId,
       workspaceMemberId: payload.workspaceMemberId,
       orgRoleId: membership.roleId,
+      permissions: mappedPermissions,
       roles: [membership.role.name],
       userPlan: plan.tier,
       limits: {

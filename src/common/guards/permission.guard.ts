@@ -25,26 +25,29 @@ export class PermissionsGuard implements CanActivate {
     if (!requiredRule) return true; // no permission needed
 
     const request = context.switchToHttp().getRequest();
-    const userRole = request.currentRole;
-    const userPermissions = request.permissions; // lowercase strings
+    const userRoles = request.user?.roles;
+    const userPermissions = request.user?.permissions; // lowercase strings
 
-    if (!userRole || !userPermissions) {
+    if (!userRoles || !userPermissions) {
       throw new ForbiddenException('No permission context found');
     }
 
     // Owners bypass all
-    if (userRole.slug === 'owner') return true;
+    const isOwner = userRoles.some((role) =>
+      role.toLowerCase().includes('owner'),
+    );
+    if (isOwner) return true;
 
     const resource = requiredRule.resource.toLowerCase();
     const action = requiredRule.action.toLowerCase();
 
     // Wildcard checks
     if (
-      userPermissions.includes('ALL.MANAGE') || // global admin
-      userPermissions.includes(`ALL.${action}`) || // all.read, all.delete
-      userPermissions.includes(`${resource}.ALL`) || // resource.all
-      userPermissions.includes(`${resource}.manage`) || // resource.manage
-      userPermissions.includes(`${resource}.${action}`) // exact
+      userPermissions.includes('all.manage') || // global admin
+      userPermissions.includes(`all.${action}`) || // e.g., allowed to 'read' everything
+      userPermissions.includes(`${resource}.all`) || // e.g., allowed to do everything to 'posts'
+      userPermissions.includes(`${resource}.manage`) || // e.g., allowed to manage 'organization'
+      userPermissions.includes(`${resource}.${action}`) //  EXACT MATCH (e.g., posts.create)
     ) {
       return true;
     }
