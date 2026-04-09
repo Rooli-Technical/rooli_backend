@@ -1,11 +1,11 @@
-import { UserType } from '@generated/enums';
+import { BillingInterval, UserType } from '@generated/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsNotEmpty,
   IsString,
-  IsOptional,
   IsEnum,
   IsEmail,
+  IsOptional,
 } from 'class-validator';
 
 export class OnboardingDto {
@@ -32,6 +32,23 @@ export class OnboardingDto {
   @IsNotEmpty()
   @IsString()
   email: string;
+
+  @ApiPropertyOptional({
+    description: 'The ID of the plan to upgrade to',
+    example: 'plan_123',
+  })
+  @IsString()
+  @IsOptional()
+  upfrontPlanId?: string;
+
+  @ApiPropertyOptional({
+    description: 'The billing interval for the plan',
+    example: 'MONTHLY',
+    enum: ['MONTHLY', 'ANNUAL'],
+  })
+  @IsEnum(BillingInterval)
+  @IsOptional()
+  billingInterval?: 'MONTHLY' | 'ANNUAL';
 
   @ApiPropertyOptional({
     description: 'The type of users in the organization',

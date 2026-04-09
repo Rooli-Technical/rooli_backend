@@ -110,10 +110,9 @@ export class AuthService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    const selectedPlan = await this.prisma.plan.findUnique({
-      where: { tier: 'BUSINESS' },
-    });
-    if (!selectedPlan) throw new BadRequestException('Invalid Plan selected');
+    // Always fetch Business for the baseline trial safety net
+    const baseTrialPlan = await this.prisma.plan.findUnique({ where: { tier: 'BUSINESS' } });
+
 
     const orgName = dto.name;
     const workspaceName = dto.initialWorkspaceName || 'General';
@@ -184,7 +183,7 @@ export class AuthService {
       });
 
       // 4. Create Subscription
-      await this.billingService.startTrial(org.id, selectedPlan.id, tx);
+      await this.billingService.startTrial(org.id, baseTrialPlan.id, tx);
 
       // 5. Update User Context
       const updatedUser = await tx.user.update({
@@ -216,11 +215,31 @@ export class AuthService {
       where: { id: user.id },
       data: { refreshToken: hashedRefreshToken },
     });
+console.log(txResult)
+    //  NEW LOGIC: Did they want to pay upfront?
+    let checkoutUrl = null;
+    if (dto.upfrontPlanId && dto.billingInterval) {
+       try {
+         // Call your existing Paystack initialize method
+         const paymentData = await this.billingService.initializePayment(
+           txResult.org.id, 
+           dto.upfrontPlanId, 
+           dto.billingInterval, 
+           user
+         );
+         checkoutUrl = paymentData.paymentUrl;
+       } catch (error) {
+         // If Paystack fails to generate a link, we don't want to ruin their signup. 
+         // We just swallow the error, they fall back to the Free Trial.
+         console.error("Failed to generate upfront payment link", error);
+       }
+    }
 
     return {
       user: this.toSafeUser(txResult.user),
       ...newTokens,
       activeWorkspaceId: txResult.workspace.id,
+      checkoutUrl,
     };
   }
 

@@ -99,16 +99,19 @@ export class BillingService {
     interval: 'MONTHLY' | 'ANNUAL',
     user: any,
   ) {
+    const finalUserId = user.id || user.userId;
     const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) throw new NotFoundException('Plan not found');
 
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
+      include: { members: true }
     });
     const email = org.billingEmail || user?.email;
     if (!email) throw new BadRequestException('Billing email is required');
 
-    if (user.organizationId !== organizationId) {
+   const isMember = org.members.some((member) => member.userId === finalUserId);
+    if (!isMember) {
       throw new ForbiddenException('Invalid organization context');
     }
 
@@ -762,6 +765,7 @@ export class BillingService {
       },
       callback_url: `${this.config.get('CALLBACK_URL')}`,
     };
+    console.log(payload)
 
     // 3. Fire the Request
     try {
