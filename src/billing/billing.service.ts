@@ -822,63 +822,98 @@ export class BillingService {
     }
   }
 
+// ---------------------------------------------------------
+  // RECURRING ADD-ONS & OVERAGES CRON
+  // Runs daily to charge for overages and extra workspaces before renewal
+  // ---------------------------------------------------------
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async processAiOverages() {
-    // 1. Find subscriptions renewing tomorrow that have overages
+  async processRecurringAddonsAndOverages() {
+    this.logger.log('🧹 Sweeping for Add-ons and AI Overages...');
+    
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const subsWithOverage = await this.prisma.subscription.findMany({
+    // 1. Find subs renewing tomorrow that have overages OR extra workspaces
+    const subsToCharge = await this.prisma.subscription.findMany({
       where: {
         status: 'ACTIVE',
-        aiOverageCostCents: { gt: 0 },
         currentPeriodEnd: { lte: tomorrow },
+        OR: [
+          { aiOverageCostCents: { gt: 0 } },
+          { extraWorkspacesPurchased: { gt: 0 } }
+        ]
       },
       include: {
-        // 🚨 FIX 2: Fetch the email from the connected Organization!
-        organization: { select: { billingEmail: true } },
-      },
+        organization: { select: { id: true, billingEmail: true, currency: true } } 
+      }
     });
 
-    for (const sub of subsWithOverage) {
-      // Safety check: We need the authorization code to charge them
-      if (!sub.paystackAuthCode) {
-        this.logger.warn(
-          `Skipping overage charge for Org ${sub.organizationId} - No Auth Code`,
-        );
-        continue;
-      }
+    const FX_RATE = 1470; // ₦1,470/USD
+    const WORKSPACE_ADDON_USD = 15;
+
+    for (const sub of subsToCharge) {
+      if (!sub.paystackAuthCode) continue; // Safety check
+
+      const targetCurrency = sub.organization.currency || 'NGN';
+      
+      // Calculate Workspace Add-on Cost (Dual Currency)
+      const workspaceAddonBaseUnit = targetCurrency === 'USD'
+        ? sub.extraWorkspacesPurchased * WORKSPACE_ADDON_USD * 100
+        : sub.extraWorkspacesPurchased * WORKSPACE_ADDON_USD * FX_RATE * 100;
+
+      // Calculate Total Amount to charge (Add-on + AI Overages)
+      const totalChargeBaseUnit = workspaceAddonBaseUnit + sub.aiOverageCostCents;
 
       try {
-        // 🚨 FIX 1: Use your HttpService to hit Paystack's Charge Authorization API
-        await firstValueFrom(
+        const reference = `rooli_addon_${sub.organizationId}_${Date.now()}`;
+
+        // 2. Hit Paystack API
+        const { data: paystackResponse } = await firstValueFrom(
           this.httpService.post(
             'https://api.paystack.co/transaction/charge_authorization',
             {
               authorization_code: sub.paystackAuthCode,
-              email: sub.organization.billingEmail, // Fetched from the include above
-              amount: sub.aiOverageCostCents, // It's already in cents/kobo!
+              email: sub.organization.billingEmail, 
+              amount: totalChargeBaseUnit, 
+              currency: targetCurrency,
+              reference: reference,
             },
             {
-              headers: {
-                Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
-                'Content-Type': 'application/json',
-              },
+              headers: { Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}` },
             },
           ),
         );
 
-        // 3. Clear the overage ledger ONLY if the charge succeeds
-        await this.prisma.subscription.update({
-          where: { id: sub.id },
-          data: { aiOverageCostCents: 0 },
-        });
+        // 3. Create Transaction Record & Clear Overage Ledger
+        await this.prisma.$transaction([
+          this.prisma.transaction.create({
+            data: {
+              organizationId: sub.organizationId,
+              txRef: reference,
+              providerTxId: paystackResponse.data.id.toString(),
+              provider: 'PAYSTACK',
+              amount: totalChargeBaseUnit / 100, 
+              currency: targetCurrency,
+              status: 'successful',
+              paymentDate: new Date(),
+              subscriptionId: sub.id,
+              metadata: { 
+                type: 'recurring_addons_and_overages',
+                workspacesPurchased: sub.extraWorkspacesPurchased,
+                aiOverageCost: sub.aiOverageCostCents / 100
+              }
+            },
+          }),
+          // Reset the overage counter (but KEEP the extraWorkspacesPurchased intact!)
+          this.prisma.subscription.update({
+            where: { id: sub.id },
+            data: { aiOverageCostCents: 0 } 
+          })
+        ]);
+        
       } catch (error: any) {
-        const errorMsg = error.response?.data?.message || error.message;
-        this.logger.error(
-          `Failed to charge overage for Org ${sub.organizationId}: ${errorMsg}`,
-        );
-        // If it fails, we keep the overage on the ledger and try again later.
+        this.logger.error(`Failed to charge add-ons for Org ${sub.organizationId}`);
+        // If this fails, you might want to trigger a warning email or pause the add-on features
       }
     }
   }
@@ -937,6 +972,124 @@ export class BillingService {
     this.logger.log(
       `✅ Processed ${expiredCancellations.length} end-of-period cancellations. Publishing halted and accounts locked.`,
     );
+  }
+
+// ---------------------------------------------------------
+  // PURCHASE EXTRA WORKSPACE (Rocket Only, Dual-Currency Prorated)
+  // ---------------------------------------------------------
+  async purchaseExtraWorkspace(organizationId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        subscription: { include: { plan: true } },
+      },
+    });
+
+    if (!org || !org.subscription) {
+      throw new BadRequestException('No active subscription found.');
+    }
+
+    const sub = org.subscription;
+
+    // 1. SPEC GUARDRAIL: Rocket Plan Only
+    if (sub.plan.tier !== 'ROCKET') {
+      throw new ForbiddenException(
+        'Purchasing additional workspaces is only available on the Rocket plan.'
+      );
+    }
+
+    // 2. CURRENCY & PRICING SETUP
+    const targetCurrency = org.currency || 'NGN'; // Defaulting to your system's base
+    const FX_RATE = 1470; // ₦1,470/USD as per spec
+    const EXTRA_WORKSPACE_USD = 15; 
+
+    // Convert to base units (Cents for USD, Kobo for NGN)
+    const basePriceBaseUnit = targetCurrency === 'USD' 
+      ? EXTRA_WORKSPACE_USD * 100 // 1500 Cents
+      : EXTRA_WORKSPACE_USD * FX_RATE * 100; // 2205000 Kobo (₦22,050)
+
+    // 3. PRORATION MATH
+    const now = new Date();
+    const periodEnd = new Date(sub.currentPeriodEnd);
+    const periodStart = new Date(sub.currentPeriodStart);
+    
+    // Total days in their current billing cycle
+    const totalDaysInCycle = Math.round((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Days remaining
+    const daysRemaining = Math.max(0, Math.round((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    
+    // Prorated amount: (Days Remaining / Total Days) * Base Price
+    const proratedAmountBaseUnit = Math.round((daysRemaining / totalDaysInCycle) * basePriceBaseUnit);
+
+    // 4. CHARGE THE USER (One-Click)
+    if (!sub.paystackAuthCode) {
+      throw new BadRequestException('No payment method on file. Please update your billing details.');
+    }
+
+    try {
+      const reference = `rooli_ws_${org.id}_${Date.now()}`;
+      // Hit Paystack API to charge their saved card instantly
+      // 1. Hit Paystack API and capture the response
+      const { data: paystackResponse } = await firstValueFrom(
+        this.httpService.post(
+          'https://api.paystack.co/transaction/charge_authorization',
+          {
+            authorization_code: sub.paystackAuthCode,
+            email: org.billingEmail,
+            amount: proratedAmountBaseUnit, 
+            currency: targetCurrency,       
+            reference: reference, 
+          },
+          {
+            headers: { Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}` },
+          },
+        ),
+      );
+
+      const paystackData = paystackResponse.data;
+
+      // 2. Perform DB Updates in a single transaction
+      await this.prisma.$transaction([
+        // A. Increment the workspace allowance
+        this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: {
+            extraWorkspacesPurchased: { increment: 1 },
+          },
+        }),
+        
+        // B. Create the Transaction Record
+        this.prisma.transaction.create({
+          data: {
+            organizationId: org.id,
+            txRef: reference,
+            providerTxId: paystackData.id.toString(),
+            provider: 'PAYSTACK',
+            amount: proratedAmountBaseUnit / 100, // Convert back to standard ₦ or $
+            currency: targetCurrency,
+            status: 'successful',
+            paymentDate: new Date(),
+            subscriptionId: sub.id, // Link it for easy auditing
+            metadata: { 
+              type: 'add_on_workspace',
+              proratedDays: daysRemaining 
+            }
+          },
+        }),
+      ]);
+
+      return {
+        message: `Additional workspace purchased successfully.`,
+        amountCharged: proratedAmountBaseUnit / 100, // Converted back to ₦ or $ for the UI response
+        currency: targetCurrency,
+        newTotalWorkspacesAllowed: sub.plan.maxWorkspaces + sub.extraWorkspacesPurchased + 1
+      };
+
+    } catch (error: any) {
+      this.logger.error('Failed to charge for extra workspace', error.response?.data || error.message);
+      throw new BadRequestException('Payment failed. Could not add extra workspace.');
+    }
   }
 
   private inferCountry(ipCountry?: string, timeZone?: string) {
