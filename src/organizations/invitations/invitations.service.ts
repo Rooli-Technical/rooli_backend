@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { MailService } from '@/mail/mail.service';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -15,9 +16,13 @@ import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import { SafeUser } from '@/auth/dtos/AuthResponse.dto';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class InvitationsService {
+
+  private readonly logger = new Logger(InvitationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
@@ -469,5 +474,33 @@ export class InvitationsService {
       lastActiveAt: user.lastActiveAt,
       userType: user.userType,
     };
+  }
+
+  @Cron(CronExpression.EVERY_WEEK)
+  async cleanupOldInvitations() {
+    this.logger.log('Starting data retention cleanup: Old Invitations...');
+
+    // 1. Calculate the date exactly 90 days ago
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    try {
+      // 2. Perform a bulk delete
+      // We safely target anything that is NOT "ACCEPTED" (e.g., PENDING, REVOKED, DECLINED, EXPIRED)
+      const result = await this.prisma.invitation.deleteMany({
+        where: {
+          createdAt: {
+            lt: ninetyDaysAgo, // "Less than" means older than 90 days
+          },
+          status: {
+            not: 'ACCEPTED', // Keep accepted ones for your permanent audit trail!
+          },
+        },
+      });
+
+      this.logger.log(`Cleanup complete. Deleted ${result.count} dead invitations.`);
+    } catch (error) {
+      this.logger.error('Failed to cleanup old invitations', error);
+    }
   }
 }
