@@ -66,7 +66,7 @@ export class ContextGuard implements CanActivate {
       }
 
       // Step 3: Fire-and-forget update
-      this.updateLastActive(user.userId, workspaceId).catch(() => {});
+      await this.updateLastActive(user.userId, workspaceId).catch(() => {});
 
       // 🚨 CRITICAL FIX: Use workspace role if it exists, otherwise fallback to org role
       const activeRole = wsMember.role || wsMember.member.role;
