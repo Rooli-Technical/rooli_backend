@@ -56,7 +56,7 @@ export class InvitationsController {
   }
 
   @Patch(':invitationId/resend')
-  @RequirePermission(PermissionResource.INVITATIONS, PermissionAction.UPDATE)
+  @RequirePermission(PermissionResource.INVITATIONS, PermissionAction.CREATE)
   @ApiOperation({
     summary: 'Resend an invitation',
     description: 'Regenerates the token and resets the 7-day expiry.',

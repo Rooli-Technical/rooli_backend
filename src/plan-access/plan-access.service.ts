@@ -5,9 +5,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { FeatureKey } from './types/plan-access.types';
-import { Platform } from '@generated/enums';
-
-
 
 @Injectable()
 export class PlanAccessService {
@@ -17,7 +14,10 @@ export class PlanAccessService {
    * 0. THE MASTER HELPER
    * Fetches the Org, Sub, and Plan, and handles all billing status checks in one place.
    */
-  private async getValidatedOrg(organizationId: string, enforceActiveBilling = true) {
+  private async getValidatedOrg(
+    organizationId: string,
+    enforceActiveBilling = true,
+  ) {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       include: {
@@ -27,14 +27,19 @@ export class PlanAccessService {
     });
 
     if (!org) throw new NotFoundException('Organization not found');
-    if (!org.subscription) throw new ForbiddenException('No active subscription found');
+    if (!org.subscription)
+      throw new ForbiddenException('No active subscription found');
 
     if (enforceActiveBilling) {
       if (org.billingStatus === 'SUSPENDED') {
-        throw new ForbiddenException('Account suspended. Please update payment method.');
+        throw new ForbiddenException(
+          'Account suspended. Please update payment method.',
+        );
       }
       if (org.billingStatus === 'READ_ONLY') {
-        throw new ForbiddenException('Account is read-only. Please update payment method.');
+        throw new ForbiddenException(
+          'Account is read-only. Please update payment method.',
+        );
       }
     }
 
@@ -47,15 +52,23 @@ export class PlanAccessService {
   async ensureSeatAvailable(organizationId: string, excludeEmail?: string) {
     // Fetch and validate in one line
     const org = await this.getValidatedOrg(organizationId, true);
-    
+
     const sub = org.subscription;
-    const customLimits = sub.customLimits as any;
-    const activeLimit = sub.plan?.maxUsers ?? 1;
-    // If there is a pending plan, get its limit. Otherwise, use infinity so it doesn't interfere.
-    const pendingLimit = sub.pendingPlan?.maxUsers ?? 999999;
 
-   const effectiveLimit = Math.min(activeLimit, pendingLimit);
+    // 1. Determine the effective limit
+    let effectiveLimit = 1;
 
+    // 🚨 TRIAL OVERRIDE: Strict lock to 1 User
+    if (sub.isTrial) {
+      effectiveLimit = 1;
+    } else {
+      // 2. PAID-TO-PAID LOGIC
+      const activeLimit = sub.plan?.maxUsers ?? 1;
+      const pendingLimit = sub.pendingPlan?.maxUsers ?? 999999;
+      effectiveLimit = Math.min(activeLimit, pendingLimit);
+    }
+
+    // Unlimited check (Enterprise)
     if (effectiveLimit >= 9999) return;
 
     // 🚀 PERFORMANCE FIX: Run both count queries simultaneously
@@ -65,15 +78,22 @@ export class PlanAccessService {
         where: {
           organizationId,
           status: 'PENDING',
-          ...(excludeEmail ? { email: { not: excludeEmail } } : {}), // Elegant conditional where
+          ...(excludeEmail ? { email: { not: excludeEmail } } : {}),
         },
       }),
     ]);
 
+    // 3. Enforce the limit
     if (activeMembers + pendingInvites >= effectiveLimit) {
-      throw new ForbiddenException(
-        `Seat limit reached (${effectiveLimit}). Upgrade your plan to invite more team members.`,
-      );
+      if (sub.isTrial) {
+        throw new ForbiddenException(
+          'Free trials are limited to 1 user. Please upgrade to the Business or Rocket plan to invite team members.',
+        );
+      } else {
+        throw new ForbiddenException(
+          `Seat limit reached (${effectiveLimit}). Upgrade your plan to invite more team members.`,
+        );
+      }
     }
   }
 
@@ -83,23 +103,23 @@ export class PlanAccessService {
   async ensureWorkspaceLimit(organizationId: string) {
     // Fetch and validate in one line
     const org = await this.getValidatedOrg(organizationId, true);
-    
+
     const sub = org.subscription;
 
     // 🚨 1. TRIAL OVERRIDE: Strict lock to 1 Workspace
     if (sub.isTrial) {
       if (org._count.workspaces >= 1) {
         throw new ForbiddenException(
-          'Free trials are limited to 1 workspace. Please upgrade to the Rocket plan to create additional workspaces.'
+          'Free trials are limited to 1 workspace. Please upgrade to the Rocket plan to create additional workspaces.',
         );
       }
       return; // Exit early! Trial users cannot use pending plans or add-ons.
     }
 
     const customLimits = sub.customLimits as any;
-   const activeLimit = sub.plan?.maxWorkspaces ?? 1;
+    const activeLimit = sub.plan?.maxWorkspaces ?? 1;
     const pendingLimit = sub.pendingPlan?.maxWorkspaces ?? 999999;
-    
+
     const effectiveLimit = Math.min(activeLimit, pendingLimit);
 
     if (effectiveLimit >= 9999) return;
@@ -110,11 +130,11 @@ export class PlanAccessService {
     if (org._count.workspaces >= totalAllowed) {
       if (sub.pendingPlanId && activeLimit > pendingLimit) {
         throw new ForbiddenException(
-           `Creating this workspace exceeds your scheduled downgrade limits. Please cancel your pending downgrade to continue.`
+          `Creating this workspace exceeds your scheduled downgrade limits. Please cancel your pending downgrade to continue.`,
         );
       } else {
         throw new ForbiddenException(
-          `Workspace limit reached (${totalAllowed}). Please upgrade to the Rocket plan to purchase additional workspaces.`
+          `Workspace limit reached (${totalAllowed}). Please upgrade to the Rocket plan to purchase additional workspaces.`,
         );
       }
     }
@@ -127,7 +147,7 @@ export class PlanAccessService {
     // Note: We pass `false` here because a Read-Only user should still be able
     // to *view* features they paid for, they just can't mutate data with them.
     const org = await this.getValidatedOrg(organizationId, false);
-    
+
     const features = org.subscription.plan?.features as Record<string, boolean>;
 
     if (!features || features[featureKey] !== true) {
@@ -137,11 +157,13 @@ export class PlanAccessService {
     }
   }
 
-
- /**
+  /**
    * 4. PLATFORM ACCESS ENFORCEMENT
    */
-  async ensurePlatformAllowed(organizationId: string, platform: string /* or Platform */) {
+  async ensurePlatformAllowed(
+    organizationId: string,
+    platform: string /* or Platform */,
+  ) {
     // We pass `true` because connecting a new social account is a MUTATION.
     // If they are in Read-Only mode or Suspended, they shouldn't be able to do this.
     const org = await this.getValidatedOrg(organizationId, true);
@@ -152,7 +174,7 @@ export class PlanAccessService {
     //  Trial override: Override the plan's default platforms if they are on a trial
     if (isTrial) {
       // Adjust this array to exactly match whatever your spec dictates for trials!
-      allowedPlatforms = ['FACEBOOK', 'INSTAGRAM', 'TIKTOK']; 
+      allowedPlatforms = ['FACEBOOK', 'INSTAGRAM', 'TIKTOK'];
     }
 
     if (!allowedPlatforms.includes(platform as any)) {
@@ -168,16 +190,19 @@ export class PlanAccessService {
   /**
    * 5. SOCIAL PROFILE LIMIT ENFORCEMENT
    */
-  async ensureSocialProfileLimit(organizationId: string, newProfileCount: number = 1) {
+  async ensureSocialProfileLimit(
+    organizationId: string,
+    newProfileCount: number = 1,
+  ) {
     const org = await this.getValidatedOrg(organizationId, true);
-    
+
     const sub = org.subscription;
     const customLimits = sub.customLimits as any;
-    
+
     // 🚨 Match the new schema name: maxSocialProfiles
-   const activeLimit = sub.plan?.maxSocialProfiles ?? 0;
+    const activeLimit = sub.plan?.maxSocialProfiles ?? 0;
     const pendingLimit = sub.pendingPlan?.maxSocialProfiles ?? 999999;
-    
+
     const effectiveLimit = Math.min(activeLimit, pendingLimit);
 
     if (effectiveLimit >= 9999) return;
@@ -192,7 +217,7 @@ export class PlanAccessService {
 
     if (currentCount + newProfileCount > effectiveLimit) {
       throw new ForbiddenException(
-        `Social profile limit reached. Your plan allows ${effectiveLimit} profiles. Please upgrade to add more.`
+        `Social profile limit reached. Your plan allows ${effectiveLimit} profiles. Please upgrade to add more.`,
       );
     }
   }
