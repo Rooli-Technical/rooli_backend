@@ -25,7 +25,7 @@ export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
 
   @Post()
-  @RequirePermission(PermissionResource.WORKSPACE, PermissionAction.CREATE)
+  @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.MANAGE)
   @ApiOperation({ summary: 'Create a new workspace' })
   @ApiParam({ name: 'orgId', description: 'Organization ID' })
   @ApiResponse({ status: 201, description: 'Workspace created successfully' })
@@ -73,18 +73,18 @@ export class WorkspaceController {
   async update(
     @Param('workspaceId') workspaceId: string,
     @Body() dto: UpdateWorkspaceDto,
-    @CurrentUser('organizationId') organizationId: string,
+    @Param('orgId') orgId: string
   ) {
-    return this.workspaceService.updateWorkspace(workspaceId, dto, organizationId);
+    return this.workspaceService.updateWorkspace(workspaceId, dto, orgId);
   }
 
 
   @Delete(':workspaceId')
-  @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.DELETE)
+  @RequirePermission(PermissionResource.WORKSPACE, PermissionAction.MANAGE)
   @ApiOperation({ summary: 'Delete a workspace' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
-  async delete(@Param('workspaceId') workspaceId: string, @CurrentUser('organizationId') organizationId: string) {
-    return this.workspaceService.deleteWorkspace(workspaceId, organizationId);
+  async delete(@Param('workspaceId') workspaceId: string, @Param('orgId') orgId: string) {
+    return this.workspaceService.deleteWorkspace(workspaceId, orgId);
   }
 
 
