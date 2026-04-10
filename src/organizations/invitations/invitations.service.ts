@@ -258,7 +258,7 @@ export class InvitationsService {
         if (invite.workspaceId) {
           const defaultRole = await tx.role.findFirst({
             where: {
-              slug: 'member',
+              slug: 'org-member',
               scope: 'ORGANIZATION',
               organizationId: null,
             },
