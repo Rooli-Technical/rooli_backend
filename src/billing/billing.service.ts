@@ -56,7 +56,7 @@ export class BillingService {
         badge: plan.badge,
         tier: plan.tier,
         description: plan.description,
-        features: plan.features,
+        features: this.formatFeatures(plan.features),
 
         limits: {
           workspaces: plan.maxWorkspaces,
@@ -532,6 +532,41 @@ export class BillingService {
       }
     }
     this.logger.warn(`Payment failed: ${gateway_response}. Dunning started.`);
+  }
+
+  private formatFeatures(features: any): string[] {
+    if (!features || typeof features !== 'object') return [];
+
+    const formattedList: string[] = [];
+
+    // 1. Handle special string-based features (like analytics)
+    if (features.analytics) {
+      formattedList.push(
+        features.analytics === 'basic' ? 'Basic Analytics' : 'Advanced Analytics'
+      );
+    }
+
+    // 2. Map your boolean features to human-readable labels
+    const booleanFeatureMap: Record<string, string> = {
+      bulkScheduling: 'Bulk Scheduling',
+      postApprovals: 'Post Approvals',
+      repurposeContent: 'Content Repurposing',
+      bulkAI: 'Bulk AI Generation',
+      whiteLabelReports: 'White-label Analytics Reports',
+      clientPortal: 'Dedicated Client Portal',
+      prioritySupport: 'Priority Customer Support',
+      campaignPlanning: 'Advanced Campaign Planning',
+      sla: 'Custom SLA Guarantee',
+    };
+
+    // Loop through the map and add the label if the feature is true
+    for (const [key, label] of Object.entries(booleanFeatureMap)) {
+      if (features[key] === true) {
+        formattedList.push(label);
+      }
+    }
+
+    return formattedList;
   }
 
   // ---------------------------------------------------------
