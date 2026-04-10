@@ -10,6 +10,7 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
 import { OrganizationMemberService } from './organization-member/organization-member.service';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
 import { PlanAccessModule } from '@/plan-access/plan-access.module';
+import { PublicInvitationsController } from './invitations/controllers/public-invitation.controller';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { PlanAccessModule } from '@/plan-access/plan-access.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [OrganizationsController, InvitationsController],
+  controllers: [OrganizationsController, InvitationsController, PublicInvitationsController],
   providers: [
     OrganizationsService,
     InvitationsService,
