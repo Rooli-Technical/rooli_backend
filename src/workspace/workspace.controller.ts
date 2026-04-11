@@ -70,6 +70,7 @@ export class WorkspaceController {
   @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.UPDATE)
   @ApiOperation({ summary: 'Update workspace details' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
+  @ApiParam({ name: 'orgId', description: 'Organization ID' })
   async update(
     @Param('workspaceId') workspaceId: string,
     @Body() dto: UpdateWorkspaceDto,
