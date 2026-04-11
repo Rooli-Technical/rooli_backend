@@ -1126,6 +1126,56 @@ export class BillingService {
     }
   }
 
+  // ---------------------------------------------------------
+  // CANCEL EXTRA WORKSPACE ADD-ON
+  // ---------------------------------------------------------
+  async cancelExtraWorkspace(organizationId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        subscription: { include: { plan: true } },
+        _count: { select: { workspaces: true } }, // 👈 We need to know how many they are actually using!
+      },
+    });
+
+    if (!org || !org.subscription) {
+      throw new BadRequestException('No active subscription found.');
+    }
+
+    const sub = org.subscription;
+
+    // 1. Ensure they actually have an add-on to cancel
+    if (sub.extraWorkspacesPurchased <= 0) {
+      throw new BadRequestException("You do not have any extra workspaces to cancel.");
+    }
+
+    // 2. Calculate what their limit will drop to
+    const baseLimit = sub.plan.maxWorkspaces;
+    const newTotalLimit = baseLimit + sub.extraWorkspacesPurchased - 1;
+
+    // 3. THE USAGE GUARDRAIL
+    // If they have 6 workspaces, they can't drop their limit to 5!
+    if (org._count.workspaces > newTotalLimit) {
+      throw new BadRequestException(
+        `You currently have ${org._count.workspaces} active workspaces. Please delete at least 1 workspace before canceling this add-on.`
+      );
+    }
+
+    // 4. Safely decrement the billing ledger
+    await this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: {
+        extraWorkspacesPurchased: { decrement: 1 },
+      },
+    });
+
+    return {
+      message: 'Workspace add-on successfully canceled. You will not be billed for it on your next cycle.',
+      newTotalWorkspacesAllowed: newTotalLimit,
+      extraWorkspacesRemaining: sub.extraWorkspacesPurchased - 1,
+    };
+  }
+
   private inferCountry(ipCountry?: string, timeZone?: string) {
     if (timeZone === 'Africa/Lagos') return 'NG';
     if (ipCountry) return ipCountry;

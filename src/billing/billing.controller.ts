@@ -199,4 +199,40 @@ export class BillingController {
   ) {
     return this.billingService.purchaseExtraWorkspace(orgId);
   }
+
+  @Delete('workspaces/extra')
+  @ApiBearerAuth()
+  @RequirePermission(PermissionResource.SUBSCRIPTION, PermissionAction.MANAGE) 
+  @ApiOperation({ 
+    summary: 'Cancel Extra Workspace Add-on', 
+    description: 'Cancels the auto-renewal of an extra workspace add-on. The organization will stop being charged for extra workspaces starting from the next billing cycle. This action is only allowed if the organization has enough workspaces remaining within their base plan limit.' 
+  })
+  @ApiParam({ 
+    name: 'orgId', 
+    description: 'The unique ID of the organization' 
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Workspace add-on successfully canceled.',
+    schema: {
+      example: {
+        message: 'Workspace add-on successfully canceled. You will not be billed for it on your next cycle.',
+        newTotalWorkspacesAllowed: 3,
+        extraWorkspacesRemaining: 0
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'No active subscription found or no extra workspaces purchased.' 
+  })
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Usage limit exceeded. Please delete active workspaces before canceling the add-on.' 
+  })
+  async cancelExtraWorkspace(
+    @Param('orgId') orgId: string,
+  ) {
+    return this.billingService.cancelExtraWorkspace(orgId);
+  }
 }
