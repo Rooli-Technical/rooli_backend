@@ -572,7 +572,7 @@ export class BillingService {
   // ---------------------------------------------------------
   // 8. THE DUNNING CRON JOB
   // ---------------------------------------------------------
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async executeDunningAndTrials() {
     this.logger.log('🕵️ Executing Dunning & Trial State Machine...');
     const now = new Date();
@@ -860,7 +860,7 @@ export class BillingService {
   // RECURRING ADD-ONS & OVERAGES CRON
   // Runs daily to charge for overages and extra workspaces before renewal
   // ---------------------------------------------------------
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async processRecurringAddonsAndOverages() {
     this.logger.log('🧹 Sweeping for Add-ons and AI Overages...');
     
@@ -955,7 +955,7 @@ export class BillingService {
   // ---------------------------------------------------------
   // 9. PROCESS CANCELLATIONS AT PERIOD END
   // ---------------------------------------------------------
-  @Cron(CronExpression.EVERY_HOUR)
+  //@Cron(CronExpression.EVERY_HOUR)
   async processPendingCancellations() {
     this.logger.log(
       '🧹 Sweeping for subscriptions that have reached the end of their canceled period...',

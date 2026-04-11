@@ -315,7 +315,7 @@ async deleteOrganization(orgId: string) {
 
   // --- HELPERS ---
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async cleanupSuspendedOrganizations() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

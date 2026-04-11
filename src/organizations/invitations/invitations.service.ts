@@ -476,7 +476,7 @@ export class InvitationsService {
     };
   }
 
-  @Cron(CronExpression.EVERY_WEEK)
+  //@Cron(CronExpression.EVERY_WEEK)
   async cleanupOldInvitations() {
     this.logger.log('Starting data retention cleanup: Old Invitations...');
 
