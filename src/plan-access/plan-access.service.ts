@@ -110,7 +110,8 @@ export class PlanAccessService {
     if (sub.isTrial) {
       if (org._count.workspaces >= 1) {
         throw new ForbiddenException(
-          'Free trials are limited to 1 workspace. Please upgrade to the Rocket plan to create additional workspaces.',
+          // 🚨 FIX 1: Tell them to upgrade to ANY paid plan, not just Rocket
+          'Free trials are limited to 1 workspace. Please upgrade to a paid plan to add more workspaces.',
         );
       }
       return; // Exit early! Trial users cannot use pending plans or add-ons.
@@ -134,7 +135,8 @@ export class PlanAccessService {
         );
       } else {
         throw new ForbiddenException(
-          `Workspace limit reached (${totalAllowed}). Please upgrade to the Rocket plan to purchase additional workspaces.`,
+          // 🚨 FIX 2: Since they are already on Business/Rocket, just tell them to buy the add-on!
+          `Workspace limit reached (${totalAllowed}). Please purchase an additional workspace to continue.`,
         );
       }
     }

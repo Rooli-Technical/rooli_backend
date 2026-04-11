@@ -1025,10 +1025,10 @@ export class BillingService {
 
     const sub = org.subscription;
 
-    // 1. SPEC GUARDRAIL: Rocket Plan Only
-    if (sub.plan.tier !== 'ROCKET') {
+   // 1. SPEC GUARDRAIL: Business & Rocket Plans Only
+    if (!['BUSINESS', 'ROCKET'].includes(sub.plan.tier)) {
       throw new ForbiddenException(
-        'Purchasing additional workspaces is only available on the Rocket plan.'
+        'Purchasing additional workspaces is only available on the Business and Rocket plans.'
       );
     }
 
