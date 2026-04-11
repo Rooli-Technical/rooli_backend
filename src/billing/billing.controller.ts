@@ -20,6 +20,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PlanDto } from './dto/plan-response.dto';
@@ -28,14 +29,17 @@ import { BypassSubscription } from '@/common/decorators/bypass-subscription.deco
 import { Throttle } from '@nestjs/throttler';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { ContextGuard } from '@/common/guards/context.guard';
-import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+import {
+  PermissionResource,
+  PermissionAction,
+  PermissionScope,
+} from '@/common/constants/rbac';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { ChangePlanDto } from './dto/change-plan.dto';
 
-
 @ApiTags('Billing')
-@BypassSubscription() 
+@BypassSubscription()
 @UseGuards(ContextGuard, PermissionsGuard)
 @Controller('organizations/:orgId/billing')
 export class BillingController {
@@ -104,34 +108,47 @@ export class BillingController {
   }
 
   @Post('change-plan')
+  @ApiBearerAuth()
+  @RequirePermission(PermissionResource.ORG_BILLING, PermissionAction.MANAGE)
   @ApiOperation({
     summary: 'Change or schedule a plan switch',
-    description: 
+    description:
       'If the user is on a trial, this returns a payment initialization URL for instant checkout. ' +
       'If the user is on a paid plan, it verifies limits (users, profiles, workspaces) and schedules the change for the next billing cycle.',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Plan successfully scheduled or payment initialized.',
     schema: {
       oneOf: [
         {
           properties: {
             status: { type: 'string', example: 'scheduled' },
-            message: { type: 'string', example: 'Your plan will automatically change to Rocket (ANNUAL) at the end of your current billing cycle.' }
-          }
+            message: {
+              type: 'string',
+              example:
+                'Your plan will automatically change to Rocket (ANNUAL) at the end of your current billing cycle.',
+            },
+          },
         },
         {
           properties: {
-            authorization_url: { type: 'string', example: 'https://checkout.paystack.com/xyz' },
+            authorization_url: {
+              type: 'string',
+              example: 'https://checkout.paystack.com/xyz',
+            },
             access_code: { type: 'string', example: 'PLN_123' },
-            reference: { type: 'string', example: 'ref_001' }
-          }
-        }
-      ]
-    }
+            reference: { type: 'string', example: 'ref_001' },
+          },
+        },
+      ],
+    },
   })
-  @ApiResponse({ status: 400, description: 'Limit check failed (too many members/profiles) or no subscription found.' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Limit check failed (too many members/profiles) or no subscription found.',
+  })
   @ApiResponse({ status: 404, description: 'Target plan not found.' })
   async changePlan(
     @Param('orgId') orgId: string,
@@ -144,5 +161,42 @@ export class BillingController {
       body.interval,
       user,
     );
+  }
+
+  @Post('workspaces/extra')
+  @ApiBearerAuth()
+  @RequirePermission(PermissionResource.SUBSCRIPTION, PermissionAction.MANAGE) 
+  @ApiOperation({ 
+    summary: 'Purchase Extra Workspace', 
+    description: 'Instantly charges the saved payment method for an additional workspace. Cost is automatically prorated based on the days left in the current billing cycle. (Available on Business and Rocket plans only).' 
+  })
+  @ApiParam({ 
+    name: 'orgId', 
+    description: 'The unique ID of the organization' 
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Workspace purchased successfully',
+    schema: {
+      example: {
+        message: 'Additional workspace purchased successfully.',
+        amountCharged: 15,
+        currency: 'USD',
+        newTotalWorkspacesAllowed: 4
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Payment failed, no saved card found, or no active subscription.' 
+  })
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Organization is not on the Business or Rocket plan.' 
+  })
+  async purchaseExtraWorkspace(
+    @Param('orgId') orgId: string,
+  ) {
+    return this.billingService.purchaseExtraWorkspace(orgId);
   }
 }

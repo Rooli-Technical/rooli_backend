@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import {
@@ -55,39 +65,44 @@ export class WorkspaceController {
     );
   }
 
-
   @Get(':workspaceId')
   @RequirePermission(PermissionResource.WORKSPACE, PermissionAction.READ)
   @ApiOperation({ summary: 'Get workspace by ID' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
   @ApiResponse({ status: 404, description: 'Workspace not found' })
-  async findOne(@Param('orgId') orgId: string, @Param('workspaceId') workspaceId: string) {
+  async findOne(
+    @Param('orgId') orgId: string,
+    @Param('workspaceId') workspaceId: string,
+  ) {
     return this.workspaceService.getWorkspace(orgId, workspaceId);
   }
 
-
   @Patch(':workspaceId')
-  @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.UPDATE)
+  @RequirePermission(
+    PermissionResource.WORKSPACE_SETTINGS,
+    PermissionAction.UPDATE,
+  )
   @ApiOperation({ summary: 'Update workspace details' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
   @ApiParam({ name: 'orgId', description: 'Organization ID' })
   async update(
     @Param('workspaceId') workspaceId: string,
     @Body() dto: UpdateWorkspaceDto,
-    @Param('orgId') orgId: string
+    @Param('orgId') orgId: string,
   ) {
     return this.workspaceService.updateWorkspace(workspaceId, dto, orgId);
   }
-
 
   @Delete(':workspaceId')
   @RequirePermission(PermissionResource.WORKSPACE, PermissionAction.MANAGE)
   @ApiOperation({ summary: 'Delete a workspace' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
-  async delete(@Param('workspaceId') workspaceId: string, @Param('orgId') orgId: string) {
+  async delete(
+    @Param('workspaceId') workspaceId: string,
+    @Param('orgId') orgId: string,
+  ) {
     return this.workspaceService.deleteWorkspace(workspaceId, orgId);
   }
-
 
   @Post(':workspaceId/switch')
   @ApiOperation({
