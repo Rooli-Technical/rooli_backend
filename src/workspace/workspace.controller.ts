@@ -41,11 +41,11 @@ export class WorkspaceController {
   @ApiResponse({ status: 201, description: 'Workspace created successfully' })
   @ApiResponse({ status: 403, description: 'Workspace limit reached' })
   async create(
-    @CurrentUser() user: { userId: string },
+    @CurrentUser('userId') userId: string,
     @Param('orgId') orgId: string,
     @Body() dto: CreateWorkspaceDto,
   ) {
-    return this.workspaceService.createWorkspace(user.userId, orgId, dto);
+    return this.workspaceService.createWorkspace(userId, orgId, dto);
   }
 
   @Get()

@@ -46,9 +46,8 @@ export class WorkspaceMemberService {
       );
     }
 
-    // 5) Create workspace member (idempotent-ish)
     // 5) Create or Update workspace member (True Idempotency)
-    return await this.prisma.workspaceMember.upsert({
+    const workspaceMember = await this.prisma.workspaceMember.upsert({
       where: {
         workspaceId_memberId: {
           workspaceId: workspace.id,
@@ -84,6 +83,8 @@ export class WorkspaceMemberService {
         workspace: { select: { id: true, name: true, slug: true } },
       },
     });
+
+    return this.mapWorkspaceMemberResponse(workspaceMember);
   }
 
   async removeMember(params: {
@@ -304,9 +305,9 @@ export class WorkspaceMemberService {
    * Checks both Explicit Roles (Workspace Override) and Implicit Roles (Org Owner).
    */
   private async assertNotLastOwner(workspaceId: string, memberToRemove: any) {
-    const isExplicitOwner = memberToRemove.role?.slug === 'owner';
+    const isExplicitOwner = memberToRemove.role?.slug === 'ws-owner';
     const isImplicitOwner =
-      !memberToRemove.roleId && memberToRemove.member.role.slug === 'owner';
+      !memberToRemove.roleId && memberToRemove.member.role.slug === 'org-owner';
 
     if (!isExplicitOwner && !isImplicitOwner) return; // Not an owner, safe to remove
 
@@ -317,10 +318,10 @@ export class WorkspaceMemberService {
         NOT: { id: memberToRemove.id }, // Exclude the target
         deletedAt: null, // Ensure we only count active members
         OR: [
-          { role: { slug: 'owner' } }, // Explicit Workspace Owners
+          { role: { slug: 'ws-owner' } }, // Explicit Workspace Owners
           {
             roleId: null, // Inheriting...
-            member: { role: { slug: 'owner' } }, // ...the Org Owner role
+            member: { role: { slug: 'org-owner' } }, // ...the Org Owner role
           },
         ],
       },
