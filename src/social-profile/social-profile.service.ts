@@ -200,10 +200,6 @@ export class SocialProfileService {
 
     if (!profile) throw new NotFoundException('Profile not found');
 
-    //  2. DEFENSIVE BILLING CHECK
-    await this.planAccessService.ensureActiveBilling(
-      profile.workspace.organizationId,
-    );
 
     await this.prisma.socialProfile.update({
       where: { id: profileId },
