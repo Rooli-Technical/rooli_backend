@@ -192,22 +192,13 @@ export class PlanAccessService {
   /**
    * 5. SOCIAL PROFILE LIMIT ENFORCEMENT
    */
-  async ensureSocialProfileLimit(
+async ensureSocialProfileLimit(
     organizationId: string,
     newProfileCount: number = 1,
   ) {
     const org = await this.getValidatedOrg(organizationId, true);
 
     const sub = org.subscription;
-    const customLimits = sub.customLimits as any;
-
-    // 🚨 Match the new schema name: maxSocialProfiles
-    const activeLimit = sub.plan?.maxSocialProfiles ?? 0;
-    const pendingLimit = sub.pendingPlan?.maxSocialProfiles ?? 999999;
-
-    const effectiveLimit = Math.min(activeLimit, pendingLimit);
-
-    if (effectiveLimit >= 9999) return;
 
     // Count currently connected profiles across the whole organization
     const currentCount = await this.prisma.socialProfile.count({
@@ -217,9 +208,34 @@ export class PlanAccessService {
       },
     });
 
-    if (currentCount + newProfileCount > effectiveLimit) {
+    // 🚨 2. TRIAL OVERRIDE: Strict lock to 3 Profiles
+    if (sub.isTrial) {
+      if (currentCount + newProfileCount > 3) {
+        throw new ForbiddenException(
+          'Free trials are limited to 3 social profiles. Please upgrade to a paid plan to connect more.',
+        );
+      }
+      return; // Exit early! Trial users cannot use add-ons or pending plans.
+    }
+
+    // 🚨 Match the new schema name: maxSocialProfiles
+    const activeLimit = sub.plan?.maxSocialProfiles ?? 0;
+    const pendingLimit = sub.pendingPlan?.maxSocialProfiles ?? 999999;
+
+    const effectiveLimit = Math.min(activeLimit, pendingLimit);
+
+    if (effectiveLimit >= 9999) return;
+
+    // 🚨 THE FIX: Calculate the bonus profiles from add-ons (4 per extra workspace)
+    const bonusProfiles = (sub.extraWorkspacesPurchased ?? 0) * 4;
+    const totalAllowed = effectiveLimit + bonusProfiles;
+
+
+    // 🚨 THE FIX: Check against 'totalAllowed' instead of 'effectiveLimit'
+    if (currentCount + newProfileCount > totalAllowed) {
       throw new ForbiddenException(
-        `Social profile limit reached. Your plan allows ${effectiveLimit} profiles. Please upgrade to add more.`,
+        // Update the error message so they know they can just buy a workspace to get more profiles!
+        `Social profile limit reached. Your plan allows a total of ${totalAllowed} profiles. Please purchase an additional workspace or upgrade your plan to add more.`,
       );
     }
   }
