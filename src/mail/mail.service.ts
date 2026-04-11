@@ -241,4 +241,53 @@ export class MailService {
       html,
     );
   }
+
+  async sendReconnectWarningEmail(
+    email: string,
+    userName: string,
+    platform: string,
+    platformUsername: string,
+  ) {
+    // URL directing them to the social integrations page to reconnect
+    const integrationsUrl = `${this.configService.get('FRONTEND_URL')}/settings/integrations`;
+
+    const context = {
+      userName: userName || 'there',
+      platform,
+      platformUsername,
+      integrationsUrl,
+      year: new Date().getFullYear(),
+    };
+
+    const html = await this.compileTemplate('reconnect-warning', context);
+
+    await this.sendZeptoMail(
+      email,
+      `Action Required: Your ${platform} connection is expiring soon`,
+      html,
+    );
+  }
+
+  async sendConnectionBrokenEmail(
+    email: string,
+    userName: string,
+    brokenPlatforms: string[],
+  ) {
+    const integrationsUrl = `${this.configService.get('FRONTEND_URL')}/settings/integrations`;
+
+    const context = {
+      userName: userName || 'there',
+      brokenPlatforms, // This is an array passed from your Cron job
+      integrationsUrl,
+      year: new Date().getFullYear(),
+    };
+
+    const html = await this.compileTemplate('connection-broken', context);
+
+    await this.sendZeptoMail(
+      email,
+      'Alert: Social media connection lost on Rooli',
+      html,
+    );
+  }
 }

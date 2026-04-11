@@ -1,0 +1,87 @@
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <title>Connection Lost</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f9fafb;
+        padding: 20px;
+        color: #111827;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+      h2 {
+        color: #dc2626;
+      } /* Red heading for urgency */
+      p {
+        line-height: 1.6;
+      }
+      .alert-box {
+        padding: 12px;
+        background: #fef2f2;
+        border-left: 4px solid #dc2626;
+        margin: 20px 0;
+      }
+      .platform-list {
+        font-weight: bold;
+        padding-left: 20px;
+      }
+      .button {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 12px 20px;
+        background-color: #2563eb;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: bold;
+      }
+      .footer {
+        margin-top: 30px;
+        font-size: 12px;
+        color: #6b7280;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <h2>Connection Lost</h2>
+
+      <p>Hello {{userName}},</p>
+
+      <div class='alert-box'>
+        <p style='margin: 0;'>
+          We have lost authorization to publish to the following platforms on
+          your behalf:
+        </p>
+        <ul class='platform-list'>
+          {{#each brokenPlatforms}}
+            <li>{{this}}</li>
+          {{/each}}
+        </ul>
+      </div>
+
+      <p>
+        This usually happens if a password was changed, permissions were
+        revoked, or the platform required a mandatory re-authentication. Any
+        posts scheduled for these platforms will fail until the connection is
+        restored.
+      </p>
+
+      <a href='{{integrationsUrl}}' class='button' style='color: #ffffff;'>Go to
+        Integrations</a>
+
+      <div class='footer'>
+        <p>© {{year}} Rooli. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

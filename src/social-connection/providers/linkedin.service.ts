@@ -174,6 +174,34 @@ export class LinkedInService {
     }
   }
 
+  // 4. REFRESH TOKEN (For the Midnight Sweeper)
+  async refreshToken(currentRefreshToken: string) {
+    try {
+      const { data } = await lastValueFrom(
+        this.httpService.post(
+          `${this.AUTH_URL}/accessToken`,
+          new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: currentRefreshToken,
+            client_id: this.config.get('LINKEDIN_CLIENT_ID'),
+            client_secret: this.config.get('LINKEDIN_CLIENT_SECRET'),
+          }),
+          { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+        ),
+      );
+
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token, // LinkedIn gives a new rolling refresh token
+        expiresAt: new Date(Date.now() + data.expires_in * 1000),
+        refreshExpiresAt: new Date(Date.now() + data.refresh_token_expires_in * 1000),
+      };
+    } catch (error: any) {
+      this.logger.error('LinkedIn Token Refresh Failed', error.response?.data);
+      throw new BadRequestException('Failed to refresh LinkedIn token');
+    }
+  }
+
   // -----------------------------------------------------------------------
   // PRIVATE HELPERS
   // -----------------------------------------------------------------------

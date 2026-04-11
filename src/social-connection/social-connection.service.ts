@@ -20,6 +20,7 @@ import { RedisService } from '@/redis/redis.service';
 import { InstagramService } from './providers/instagram.service';
 import { TikTokService } from './providers/tiktok.service';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
+import { MailService } from '@/mail/mail.service';
 
 @Injectable()
 export class SocialConnectionService {
@@ -36,6 +37,7 @@ export class SocialConnectionService {
     private readonly tiktok: TikTokService,
     private readonly redisService: RedisService,
     private readonly planAccessService: PlanAccessService,
+    private readonly emailService: MailService,
   ) {}
 
   /**
@@ -146,6 +148,8 @@ export class SocialConnectionService {
           ? await this.encryptionService.encrypt(authData.refreshToken)
           : null,
         tokenExpiresAt: authData.expiresAt,
+        refreshExpiresAt: authData.refreshExpiresAt,
+        reconnectWarningSentAt: null,
         updatedAt: new Date(),
         status: ConnectionStatus.CONNECTED,
       },
@@ -159,6 +163,7 @@ export class SocialConnectionService {
           ? await this.encryptionService.encrypt(authData.refreshToken)
           : null,
         tokenExpiresAt: authData.expiresAt,
+        refreshExpiresAt: authData.refreshExpiresAt,
       },
     });
 
@@ -392,5 +397,233 @@ export class SocialConnectionService {
       userUrn,
       token,
     );
+  }
+
+  // ---------------------------------------------------------
+  // 5. THE TOKEN REFRESH SWEEPER (Cron Job)
+  // ---------------------------------------------------------
+  //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async refreshExpiringTokens() {
+    this.logger.log('🧹 Sweeping for expiring Social OAuth tokens...');
+
+    const now = new Date();
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(now.getDate() + 3);
+
+    // 1. Find all active connections where the token is about to expire
+    const expiringConnections = await this.prisma.socialConnection.findMany({
+      where: {
+        status: 'CONNECTED',
+        tokenExpiresAt: {
+          lte: threeDaysFromNow,
+          gt: now,
+        },
+        refreshToken: { not: null },
+      },
+    });
+
+    if (expiringConnections.length === 0) {
+      this.logger.log('✅ No tokens require refreshing today.');
+      return;
+    }
+
+    let successCount = 0;
+    
+    // 🚨 Array to hold the failures for our bulk emailer!
+    const failedConnectionsToNotify: any[] = [];
+
+    // 2. Loop through and refresh them
+    for (const connection of expiringConnections) {
+      try {
+        const rawRefreshToken = await this.encryptionService.decrypt(
+          connection.refreshToken! // We know it's not null from the query
+        );
+
+        let newTokens: { accessToken: string; refreshToken?: string; expiresAt: Date, refreshExpiresAt?: Date };
+
+        // Call the provider
+        switch (connection.platform) {
+          case 'LINKEDIN':
+            newTokens = await this.linkedin.refreshToken(rawRefreshToken);
+            break;
+          case 'TIKTOK':
+            newTokens = await this.tiktok.refreshToken(rawRefreshToken);
+            break;
+          case 'INSTAGRAM':
+            // Note: IG uses current access token to refresh, not the refresh token
+            const currentAccessToken = await this.encryptionService.decrypt(connection.accessToken);
+            newTokens = await this.instagram.refreshToken(currentAccessToken);
+            break;
+          default:
+            continue; 
+        }
+
+        // Encrypt the new values
+        const encryptedAccessToken = await this.encryptionService.encrypt(newTokens.accessToken);
+        const encryptedRefreshToken = newTokens.refreshToken 
+          ? await this.encryptionService.encrypt(newTokens.refreshToken) 
+          : connection.refreshToken;
+
+        // UPDATE BOTH TABLES SIMULTANEOUSLY
+        // We use a Prisma Transaction to ensure both tables stay perfectly in sync
+        await this.prisma.$transaction([
+          // A. Update the parent Connection
+          this.prisma.socialConnection.update({
+            where: { id: connection.id },
+            data: {
+              accessToken: encryptedAccessToken,
+              refreshToken: encryptedRefreshToken,
+              tokenExpiresAt: newTokens.expiresAt,
+              refreshExpiresAt: newTokens.refreshExpiresAt || connection.refreshExpiresAt,
+              updatedAt: new Date(),
+            },
+          }),
+          // B. Cascade the fresh token to ALL Workspaces using this profile!
+          this.prisma.socialProfile.updateMany({
+            where: { socialConnectionId: connection.id },
+            data: {
+              accessToken: encryptedAccessToken,
+              updatedAt: new Date(),
+            }
+          })
+        ]);
+
+        successCount++;
+
+      } catch (error) {
+        this.logger.error(`Token refresh failed for Connection: ${connection.id}`, error);
+        
+        // REACTIVE HANDLING: The token is permanently dead.
+        // Sever the connection in BOTH tables
+        await this.prisma.$transaction([
+          this.prisma.socialConnection.update({
+            where: { id: connection.id },
+            data: { status: 'DISCONNECTED' },
+          }),
+          this.prisma.socialProfile.updateMany({
+            where: { socialConnectionId: connection.id },
+            data: { status: 'DISCONNECTED' },
+          })
+        ]);
+
+        // Push to the array instead of sending the email instantly
+        failedConnectionsToNotify.push(connection);
+      }
+    }
+
+    this.logger.log(`🔄 Token Refresh Complete. Success: ${successCount}. Failures: ${failedConnectionsToNotify.length}`);
+
+    // 3. Fire off the bulk emails AFTER the loop has safely finished all DB work
+    if (failedConnectionsToNotify.length > 0) {
+      this.logger.log(`Processing ${failedConnectionsToNotify.length} failure notifications...`);
+      await this.sendBulkFailureNotifications(failedConnectionsToNotify);
+    }
+  }
+  // ---------------------------------------------------------
+  // 6. THE RECONNECT WARNING SWEEPER (Cron Job)
+  // ---------------------------------------------------------
+  //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async warnExpiringRefreshTokens() {
+    this.logger.log('🕵️ Checking for Refresh Tokens nearing their 1-year death date...');
+
+    const now = new Date();
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(now.getDate() + 7);
+
+    // 1. Find connections dying in the next 7 days that WE HAVEN'T WARNED YET
+    const expiringConnections = await this.prisma.socialConnection.findMany({
+      where: {
+        status: 'CONNECTED',
+        refreshExpiresAt: {
+          lte: sevenDaysFromNow, // Less than 7 days left
+          gt: now,               // But not completely dead yet
+        },
+        reconnectWarningSentAt: null, // 👈 Crucial! Only fetch ones we haven't emailed about
+      },
+      include: {
+        organization: {
+          include: {
+            members: {
+              where: { role: { slug: 'org-owner' } }, // Get the Org Owner
+              include: { user: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    if (expiringConnections.length === 0) return;
+
+    // 2. Loop through and alert the owners
+    for (const connection of expiringConnections) {
+      const owner = connection.organization?.members[0]?.user;
+      
+      if (owner) {
+        try {
+          // Send the Email
+          await this.emailService.sendReconnectWarningEmail(
+            owner.email,
+            owner.firstName,
+            connection.platform, // e.g., "TikTok"
+            connection.platformUsername, // e.g., "@rooli_agency"
+          );
+
+          // Mark it as sent so they don't get 7 emails in a row!
+          await this.prisma.socialConnection.update({
+            where: { id: connection.id },
+            data: { reconnectWarningSentAt: new Date() },
+          });
+
+          this.logger.log(`Warning email sent to ${owner.email} for ${connection.platform}`);
+        } catch (error) {
+          this.logger.error(`Failed to send reconnect warning for Connection ${connection.id}`, error);
+        }
+      }
+    }
+  }
+
+ private async sendBulkFailureNotifications(failedConnections: any[]) {
+    // 1. Group the failed connections by Organization ID
+    // So if a user has 3 broken connections, they only get 1 email!
+    const groupedByOrg = failedConnections.reduce((acc, conn) => {
+      if (!acc[conn.organizationId]) acc[conn.organizationId] = [];
+      acc[conn.organizationId].push(conn.platform);
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    // 2. Fetch all affected Org Owners in a SINGLE database query
+    const orgIds = Object.keys(groupedByOrg);
+    const affectedOrgs = await this.prisma.organization.findMany({
+      where: { id: { in: orgIds } },
+      include: {
+        members: {
+          where: { role: { slug: 'org-owner' } },
+          include: { user: true },
+          take: 1,
+        },
+      },
+    });
+
+    // 3. Prepare all the email promises
+    const emailPromises = affectedOrgs.map((org) => {
+      const owner = org.members[0]?.user;
+      const brokenPlatforms = groupedByOrg[org.id]; // e.g., ['LINKEDIN', 'TIKTOK']
+
+      if (owner) {
+        // You'll need to update your email template to accept an array of platforms!
+        return this.emailService.sendConnectionBrokenEmail(
+          owner.email,
+          owner.firstName,
+          brokenPlatforms, 
+        );
+      }
+      return Promise.resolve(); // Ignore if no owner found
+    });
+
+    // 4. Send them all concurrently! 
+    // allSettled ensures that if one email fails to send, the others still go through.
+    await Promise.allSettled(emailPromises);
+    this.logger.log('✅ Finished sending bulk failure notifications.');
   }
 }

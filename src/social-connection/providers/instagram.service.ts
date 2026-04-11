@@ -143,6 +143,27 @@ export class InstagramService {
     }
   }
 
+  async refreshToken(currentLongLivedToken: string) {
+    try {
+      const { data } = await lastValueFrom(
+        this.httpService.get(`${this.GRAPH_HOST}/refresh_access_token`, {
+          params: {
+            grant_type: 'ig_refresh_token',
+            access_token: currentLongLivedToken,
+          },
+        }),
+      );
+
+      return {
+        accessToken: data.access_token,
+        expiresAt: new Date(Date.now() + data.expires_in * 1000),
+      };
+    } catch (error: any) {
+      this.logger.error('Failed to refresh Instagram Native Token', error.message);
+      throw new BadRequestException('Token refresh failed');
+    }
+  }
+
   async disconnect(accessToken: string): Promise<void> {
     try {
       await lastValueFrom(

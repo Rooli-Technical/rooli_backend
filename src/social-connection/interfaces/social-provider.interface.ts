@@ -3,6 +3,7 @@ export interface OAuthResult {
   providerUsername?: string;
   accessToken: string;
   refreshToken?: string;
+  refreshExpiresAt?: Date;
   expiresAt?: Date;
   scopes: string[];
 }

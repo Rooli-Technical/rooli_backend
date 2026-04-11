@@ -277,6 +277,9 @@ model SocialConnection {
   refreshToken   String?   @db.Text // Encrypted  //twitter access secret
   tokenExpiresAt DateTime?
 
+  refreshExpiresAt       DateTime? // 👈 Tracks when they must physically log in again
+  reconnectWarningSentAt DateTime?  // 👈 Prevents duplicate warning emails
+
   // Relations
   organization Organization    @relation(fields: [organizationId], references: [id])
   profiles     SocialProfile[] // One Login -> Many Pages
@@ -621,7 +624,7 @@ model PublishingMetric {
 model Plan {
   id          String   @id @default(cuid())
   name        String // e.g., "Business", "Rocket", "Enterprise"
-  tier        PlanTier  @unique // ENUM: BUSINESS, ROCKET, ENTERPRISE
+  tier        PlanTier @unique // ENUM: BUSINESS, ROCKET, ENTERPRISE
   description String?
   isActive    Boolean  @default(true)
 
@@ -696,25 +699,25 @@ model Subscription {
 
   extraWorkspacesPurchased Int @default(0)
 
-  isTrial          Boolean  @default(true)
+  isTrial          Boolean   @default(true)
   trialStartAt     DateTime?
   trialEndsAt      DateTime?
   watermarkEnabled Boolean   @default(true)
 
   billingInterval BillingInterval // MONTHLY | ANNUAL
 
-  pendingPlanId        String?
+  pendingPlanId          String?
   pendingBillingInterval BillingInterval?
-  pendingPlan            Plan?   @relation(name: "PendingSubscriptionPlan", fields: [pendingPlanId], references: [id])
+  pendingPlan            Plan?            @relation(name: "PendingSubscriptionPlan", fields: [pendingPlanId], references: [id])
 
-  aiCreditsUsed      Int @default(0)
-  aiOverageCostCents Int @default(0)
-  addonsPastDue            Boolean  @default(false)
+  aiCreditsUsed      Int     @default(0)
+  aiOverageCostCents Int     @default(0)
+  addonsPastDue      Boolean @default(false)
 
   failedPaymentAttempts Int       @default(0)
   lastPaymentFailedAt   DateTime? // The anchor for Day 0 -> Day 14 sequence
 
-  lastCreditResetAt DateTime  @default(now())
+  lastCreditResetAt DateTime @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1576,12 +1579,12 @@ enum SubscriptionStatus {
 }
 
 enum BillingStatus {
-  TRIAL_ACTIVE        // Trial ongoing
-  ACTIVE              // Paid + valid
-  GRACE_PERIOD        // Payment failed but still usable (Day 0–7)
-  READ_ONLY           // Locked (Day 8+)
-  SUSPENDED           // Fully blocked (Day 14+)
-  CANCELED            // User canceled but still in paid period
+  TRIAL_ACTIVE // Trial ongoing
+  ACTIVE // Paid + valid
+  GRACE_PERIOD // Payment failed but still usable (Day 0–7)
+  READ_ONLY // Locked (Day 8+)
+  SUSPENDED // Fully blocked (Day 14+)
+  CANCELED // User canceled but still in paid period
 }
 
 enum ConnectionStatus {

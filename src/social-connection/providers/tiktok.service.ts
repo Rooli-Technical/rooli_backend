@@ -149,6 +149,52 @@ export class TikTokService {
   }
 
   // -------------------------------------------------------
+  // 5. REFRESH TOKEN (Called by the Midnight Cron Job)
+  // -------------------------------------------------------
+  async refreshToken(currentRefreshToken: string) {
+    const clientKey = this.config.get<string>('TIKTOK_CLIENT_KEY');
+    const clientSecret = this.config.get<string>('TIKTOK_CLIENT_SECRET');
+
+    try {
+      const params = new URLSearchParams();
+      params.append('client_key', clientKey!);
+      params.append('client_secret', clientSecret!);
+      params.append('grant_type', 'refresh_token');
+      params.append('refresh_token', currentRefreshToken);
+
+      const { data: tokenData } = await lastValueFrom(
+        this.httpService.post(
+          `${this.API_URL}/oauth/token/`,
+          params.toString(),
+          {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          },
+        ),
+      );
+
+      // TikTok v2 wraps successful data or errors
+      if (tokenData.error && tokenData.error !== '0') {
+        throw new Error(tokenData.error_description || 'Token refresh failed');
+      }
+
+      return {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+        refreshExpiresAt: new Date(
+          Date.now() + tokenData.refresh_expires_in * 1000,
+        ),
+      };
+    } catch (error: any) {
+      this.logger.error(
+        'TikTok Token Refresh Failed',
+        error.response?.data || error.message,
+      );
+      throw new BadRequestException('Failed to refresh TikTok token');
+    }
+  }
+
+  // -------------------------------------------------------
   // 4. DISCONNECT
   // -------------------------------------------------------
   async disconnect(accessToken: string): Promise<void> {
