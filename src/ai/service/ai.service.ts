@@ -522,11 +522,12 @@ export class AiService {
           remainingCredits: quota.remainingCredits,
           isNearLimit: quota.isNearLimit,
           overageIncurred: quota.overageIncurred,
+          currentOverageAccruedUsd: quota.currentOverageAccruedCents / 100,
         },
       };
     } catch (error) {
       // 4. Atomic Refund if the AI provider crashes
-      await this.quota.refundQuota(workspaceId, cost);
+      await this.quota.refundQuota(workspaceId, cost, quota.overageCostAdded);
 
       if (error instanceof HttpException) throw error;
       console.error('AI Execution Error:', error);

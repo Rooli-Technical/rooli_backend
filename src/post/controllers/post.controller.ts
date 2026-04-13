@@ -139,7 +139,7 @@ export class PostController {
     return this.postService.bulkSchedulePosts(user, workspaceId, body);
   }
 
-  @Patch(':id/edit')
+  @Patch(':postId/edit')
   @RequirePermission(PermissionResource.POSTS, PermissionAction.UPDATE)
   @ApiOperation({ 
     summary: 'Edit a published post content', 
@@ -159,23 +159,23 @@ export class PostController {
     },
   })
   async editPost(
-    @Param('id') postId: string,
+    @Param('postId') postId: string,
     @Body('newContent') newContent: string,
-    @CurrentUser('workspaceId') workspaceId: string,
+    @Param('workspaceId') workspaceId: string,
   ) {
     return this.postService.editPublishedPost(workspaceId, postId, newContent);
   }
 
-  @Delete(':id/remote')
+  @Delete(':postId/remote')
   @RequirePermission(PermissionResource.POSTS, PermissionAction.DELETE)
   @ApiOperation({ 
     summary: 'Delete a published post from platforms', 
     description: 'Deletes the post from external social media platforms (Facebook) and marks it as deleted in the database.' 
   })
-  @ApiParam({ name: 'id', description: 'The internal Database ID of the post' })
+  @ApiParam({ name: 'postId', description: 'The internal Database ID of the post' })
   async deleteRemotePost(
-    @Param('id') postId: string,
-    @CurrentUser('workspaceId') workspaceId: string,
+    @Param('postId') postId: string,
+    @Param('workspaceId') workspaceId: string,
   ) {
     return this.postService.deletePublishedPost(workspaceId, postId);
   }

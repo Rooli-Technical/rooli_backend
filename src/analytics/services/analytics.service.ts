@@ -25,6 +25,7 @@ import { DateTime } from 'luxon';
 import { TikTokAnalyticsProvider } from '../providers/tiktok-anlytics.provider';
 import axios from 'axios';
 import * as JSONBig from 'json-bigint';
+import { Prisma } from '@generated/client';
 
 @Injectable()
 export class AnalyticsService {
@@ -1145,7 +1146,7 @@ export class AnalyticsService {
     INNER JOIN (
       SELECT "socialProfileId", MAX(date) AS max_date
       FROM "AccountAnalytics"
-      WHERE "socialProfileId" = ANY(${profileIds})
+      WHERE "socialProfileId" IN (${Prisma.join(profileIds)})
       GROUP BY "socialProfileId"
     ) latest
     ON a."socialProfileId" = latest."socialProfileId"

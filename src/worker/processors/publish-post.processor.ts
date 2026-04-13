@@ -37,6 +37,13 @@ export class PublishPostProcessor extends WorkerHost {
 
     if (!post) return;
 
+    if (post.status !== 'SCHEDULED') {
+      this.logger.warn(
+        `Job ${job.id} aborted: Post ${postId} is in status ${post.status}.`,
+      );
+      return;
+    }
+
     // Publish per destination (isolated execution)
     // This avoids needing a replyId map.
     for (const dest of post.destinations) {
@@ -423,7 +430,12 @@ export class PublishPostProcessor extends WorkerHost {
     if (post.status !== nextStatus) {
       await this.prisma.post.update({
         where: { id: postId },
-        data: { status: nextStatus },
+        data: {
+          status: nextStatus,
+          ...(nextStatus === 'PUBLISHED' || nextStatus === 'PARTIAL'
+            ? { publishedAt: new Date() }
+            : {}),
+        },
       });
     }
   }

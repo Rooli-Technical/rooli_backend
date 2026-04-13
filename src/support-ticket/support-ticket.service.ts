@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -143,8 +144,32 @@ export class SupportTicketService {
       this.prisma.ticket.count({ where }),
     ]);
 
+    const formattedItems = items.map(ticket => ({
+      id: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: ticket.title,
+      status: ticket.status,
+      priority: ticket.priority,
+      category: ticket.category,
+      updatedAt: ticket.updatedAt,
+      requester: ticket.requester
+        ? {
+            id: ticket.requester.id,
+            name: `${ticket.requester.member.user.firstName} ${ticket.requester.member.user.lastName}`.trim(),
+            email: ticket.requester.member.user.email,
+          }
+        : null,
+      assignee: ticket.assignee
+        ? {
+            id: ticket.assignee.id,
+            name: `${ticket.assignee.firstName} ${ticket.assignee.lastName}`.trim(),
+            avatarUrl: ticket.assignee.avatar?.url || null,
+          }
+        : null,
+    }));
+
     return {
-      items,
+      items: formattedItems,
       meta: {
         total,
         page,
@@ -362,13 +387,31 @@ export class SupportTicketService {
     requesterId: string,
   ) {
     try {
-      const ticket = await this.prisma.ticket.update({
-        where: { id: ticketId, workspaceId, requesterId },
-        data: {
-          status: TicketStatus.CLOSED,
-          closedAt: new Date(),
-        },
-      });
+      // 1. Verify ownership and existence first
+    const existing = await this.prisma.ticket.findUnique({
+      where: { id: ticketId }
+    });
+
+    if (!existing || existing.workspaceId !== workspaceId) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    if (existing.requesterId !== requesterId) {
+      throw new ForbiddenException('You can only close your own tickets');
+    }
+
+    if (existing.status === TicketStatus.CLOSED) {
+      throw new BadRequestException('Ticket is already closed');
+    }
+
+    // 2. Safe to update
+    const ticket = await this.prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        status: TicketStatus.CLOSED,
+        closedAt: new Date(),
+      },
+    });
 
       this.domainEvents.emit('ticket.updated', {
         workspaceId,

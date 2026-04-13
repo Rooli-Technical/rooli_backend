@@ -526,8 +526,9 @@ export class QueueSlotService {
     const posts = await this.prisma.post.findMany({
       where: {
         workspaceId,
-        status: { in: [PostStatus.SCHEDULED] as any },
+        status: { in: [PostStatus.SCHEDULED, PostStatus.PENDING_APPROVAL] as any },
         scheduledAt: { gte: from.toJSDate(), lt: end.toJSDate() },
+        parentPostId: null,
       } as any,
       select: { scheduledAt: true },
     });
@@ -535,7 +536,12 @@ export class QueueSlotService {
     const map = new Map<number, number>();
     for (const p of posts) {
       if (!p.scheduledAt) continue;
-      const key = p.scheduledAt.getTime();
+
+      const flooredDate = new Date(p.scheduledAt);
+
+      flooredDate.setSeconds(0, 0);
+
+      const key = flooredDate.getTime();
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return map;
@@ -712,6 +718,8 @@ export class QueueSlotService {
         scheduledAt: null,
       },
     });
+
+    await Promise.allSettled(ids.map((id) => this.removePostJob(id)));
 
     return { count: result.count };
   }

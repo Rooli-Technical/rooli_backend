@@ -118,11 +118,15 @@ export class AiQuotaService {
       const remainingCredits = Math.max(0, limit - newTotalUsed);
       const isNearLimit = newTotalUsed >= limit * 0.8 && newTotalUsed <= limit; // 80% warning
 
+      const newTotalOverageCents = sub.aiOverageCostCents + overageCostToAdd;
+
       return {
         allowed: true,
         remainingCredits,
         isNearLimit,
         overageIncurred,
+        overageCostAdded: overageCostToAdd,
+        currentOverageAccruedCents: newTotalOverageCents,
         cost,
       };
     });
@@ -131,7 +135,11 @@ export class AiQuotaService {
   /**
    * ⏪ REFUND QUOTA (Used if AI provider fails AFTER we charged them)
    */
-  async refundQuota(workspaceId: string, cost: number) {
+  async refundQuota(
+    workspaceId: string,
+    cost: number,
+    overageRefundCents: number = 0,
+  ) {
     const ws = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { organizationId: true },
@@ -141,7 +149,12 @@ export class AiQuotaService {
     // Simple decrement. (In a perfect world, you'd calculate overage refunds too, but this is fine for error recovery)
     await this.prisma.subscription.updateMany({
       where: { organizationId: ws.organizationId },
-      data: { aiCreditsUsed: { decrement: cost } },
+      data: {
+        aiCreditsUsed: { decrement: cost },
+        ...(overageRefundCents > 0
+          ? { aiOverageCostCents: { decrement: overageRefundCents } }
+          : {}),
+      },
     });
   }
 

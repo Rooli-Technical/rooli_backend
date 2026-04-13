@@ -28,7 +28,6 @@ import { RequirePermission } from '@/common/decorators/require-permission.decora
 @Controller('workspaces/:workspaceId/approvals')
 @ApiBearerAuth()
 @UseGuards(ContextGuard, PermissionsGuard, FeatureGuard)
-@RequireFeature('approvalWorkflow')
 export class PostApprovalController {
   constructor(private readonly postService: PostService) {}
 
@@ -54,7 +53,6 @@ export class PostApprovalController {
     resource: AuditResourceType.POST,
   })
   @Patch(':approvalId')
-  @RequirePermission(PermissionResource.APPROVAL, PermissionAction.MANAGE)
   review(
     @Req() req,
     @Param('workspaceId') wsId: string,

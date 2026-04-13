@@ -1,5 +1,5 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { PostStatus, Prisma, User } from '@generated/client';
+import { PlanTier, PostStatus, Prisma, User } from '@generated/client';
 import {
   BadRequestException,
   ForbiddenException,
@@ -38,7 +38,7 @@ export class PostService {
   ) {}
 
   async createPost(user: any, workspaceId: string, dto: CreatePostDto) {
-    this.validateFeatures(user, dto);
+    await this.validateFeatures(user, dto, workspaceId);
 
     // 🚨 Apply Watermark (Passing the single DTO in an array)
     await this.applyTrialWatermark(workspaceId, [dto]);
@@ -109,23 +109,78 @@ export class PostService {
   /**
    * Helper to check Pricing Limits
    */
-  private validateFeatures(user: User, dto: CreatePostDto) {
-    // We navigate safely in case 'features' is not flattened
-    const features =
-      user['features'] ||
-      user['organization']?.subscription?.plan?.features ||
-      {};
+private async validateFeatures(
+    user: any,
+    dto: CreatePostDto | BulkCreatePostDto,
+    workspaceId: string,
+  ) {
+    // 1. Fetch Workspace, Plan Features, and User Role in ONE query
+    const ws = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: {
+        organization: {
+          include: {
+            subscription: { include: { plan: true } },
+            // Grab the specific member record for the user making this request
+            members: {
+              where: { userId: user.id },
+              include: { role: true }, 
+            },
+          },
+        },
+      },
+    });
 
-    // Check Approval Access
-    if (dto.needsApproval && !features.approvalWorkflow) {
-      throw new ForbiddenException(
-        'Upgrade to Business Plan to use Approval Workflows',
-      );
+    if (!ws) throw new NotFoundException('Workspace not found');
+
+    const plan = ws.organization?.subscription?.plan;
+    const features = (plan?.features as any) || {};
+    const tier = plan?.tier as PlanTier;
+    
+    // Fallback to 'contributor' if role isn't found
+    const userRoleSlug = ws.organization?.members[0]?.role?.slug?.toLowerCase() || 'contributor';
+
+    // ==========================================
+    // RULE 1: CAMPAIGN FEATURE CHECK
+    // ==========================================
+    const hasCampaign = 'campaignId' in dto 
+      ? !!dto.campaignId 
+      : ('posts' in dto ? dto.posts.some((p) => p.campaignId) : false);
+
+    if (hasCampaign && !features.hasCampaigns) {
+      throw new ForbiddenException('Upgrade to Rocket Plan to use Campaigns');
     }
 
-    // Check Campaign Access
-    if (dto.campaignId && !features.hasCampaigns) {
-      throw new ForbiddenException('Upgrade to Rocket Plan to use Campaigns');
+    // ==========================================
+    // RULE 2: APPROVAL ENFORCEMENT
+    // ==========================================
+    const premiumTiers = ['BUSINESS', 'ROCKET', 'ENTERPRISE'];
+    const isPremium = premiumTiers.includes(tier);
+
+    // Identify lower-level employees (Adjust these slugs based on your DB!)
+    const isLowerLevelEmployee = ['contributor', 'editor'].includes(userRoleSlug);
+    const mustHaveApproval = isPremium && isLowerLevelEmployee;
+
+    // Helper function to process a single post object
+    const enforceApprovalLogic = (postDto: any) => {
+      // A. Force overrides based on hierarchy
+      if (mustHaveApproval) {
+        postDto.needsApproval = true; // Force employees into approval
+      } else if (!isPremium || !features.approvalWorkflow) {
+        postDto.needsApproval = false; // Strip it from Free/Creator plans
+      }
+
+      // B. Security check: If they somehow kept needsApproval=true but don't have the feature
+      if (postDto.needsApproval && !features.approvalWorkflow) {
+        throw new ForbiddenException('Upgrade to Business Plan to use Approval Workflows');
+      }
+    };
+
+    // Apply logic depending on whether it's Bulk or Single DTO
+    if ('posts' in dto) {
+      dto.posts.forEach((post) => enforceApprovalLogic(post));
+    } else {
+      enforceApprovalLogic(dto);
     }
   }
 
@@ -232,6 +287,7 @@ export class PostService {
     workspaceId: string,
     dto: BulkCreatePostDto,
   ) {
+    await this.validateFeatures(user, dto, workspaceId);
     // 🚨 Apply Watermark (Passing the single DTO in an array)
     await this.applyTrialWatermark(workspaceId, [dto]);
     // 1) Precompute schedules + payloads (fail fast)
@@ -819,16 +875,39 @@ export class PostService {
     });
   }
 
-  private async resolveScheduleAndStatus(
+private async resolveScheduleAndStatus(
     workspaceId: string,
     dto: CreatePostDto,
   ) {
     let finalScheduledAt: Date | null = null;
 
+    // 1. Determine the Target Platform based on the provided Profile IDs
+    let targetPlatform = null;
+    
+    if (dto.isAutoSchedule && dto.socialProfileIds?.length > 0) {
+      // Fetch the unique platforms for the selected profiles
+      const profiles = await this.prisma.socialProfile.findMany({
+        where: { 
+          id: { in: dto.socialProfileIds }, 
+          workspaceId 
+        },
+        select: { platform: true },
+        distinct: ['platform'], // Only returns unique platforms
+      });
+
+      // If every profile they selected belongs to the EXACT SAME platform, use it!
+      // Otherwise, keep it null so it uses a "Universal" slot.
+      if (profiles.length === 1) {
+        targetPlatform = profiles[0].platform;
+      }
+    }
+
+    // 2. Schedule Logic
     if (dto.isAutoSchedule) {
       const slots = await this.queueService.getNextAvailableSlots(
         workspaceId,
         1,
+        targetPlatform
       );
 
       if (!slots || slots.length === 0) {
@@ -847,6 +926,7 @@ export class PostService {
       }
     }
 
+    // 3. Status Logic
     const status: PostStatus = dto.needsApproval
       ? 'PENDING_APPROVAL'
       : finalScheduledAt
