@@ -145,9 +145,11 @@ export class AuditService {
       }),
       this.prisma.auditLog.count({ where }),
     ]);
+   
 
+    const formattedItems = await this.formatAuditLogs(items);
     return {
-      items,
+      items: formattedItems,
       meta: {
         total,
         page: query.page ?? 1,
@@ -155,5 +157,139 @@ export class AuditService {
         pages: Math.ceil(total / take),
       },
     };
+  }
+
+async formatAuditLogs(items: any[]) {
+    const formattedItems = items.map(log => {
+      const actorName = log.actorUser 
+        ? `${log.actorUser.firstName} ${log.actorUser.lastName}` 
+        : 'System';
+      
+      // 🛠️ The Translator Default
+      let message = `${actorName} performed an action.`; 
+      const detailsBody = (log.details as any)?.body || {};
+      const action = log.action;
+
+      switch (log.resourceType) {
+        // ==========================================
+        // TEAM & ACCESS
+        // ==========================================
+        case 'INVITATION':
+          if (action === 'CREATE') message = `${actorName} invited ${detailsBody.email || 'a new user'}.`;
+          if (action === 'DELETE') message = `${actorName} revoked an invitation.`;
+          break;
+
+        case 'MEMBER':
+          if (action === 'UPDATE') message = `${actorName} updated a team member's role.`;
+          if (action === 'DELETE') message = `${actorName} removed a team member.`;
+          break;
+
+        case 'ROLE':
+          if (action === 'CREATE') message = `${actorName} created the custom role "${detailsBody.name || ''}".`;
+          if (action === 'UPDATE') message = `${actorName} updated a custom role.`;
+          if (action === 'DELETE') message = `${actorName} deleted a custom role.`;
+          break;
+
+        case 'AUTH':
+          if (action === 'LOGIN') message = `${actorName} logged in.`;
+          if (action === 'LOGOUT') message = `${actorName} logged out.`;
+          break;
+
+        // ==========================================
+        // WORKSPACE & SOCIAL ACCOUNTS
+        // ==========================================
+        case 'WORKSPACE':
+          // Catching your specific social connection payload
+          if (detailsBody.platform) {
+            message = `${actorName} connected a ${detailsBody.platform} account.`;
+          } else {
+            if (action === 'CREATE') message = `${actorName} created a new workspace.`;
+            if (action === 'UPDATE') message = `${actorName} updated the workspace settings.`;
+            if (action === 'DELETE') message = `${actorName} deleted a workspace.`;
+          }
+          break;
+
+        case 'SOCIAL_ACCOUNT': // Just in case you log these separately later
+          if (action === 'CREATE') message = `${actorName} connected a new social account.`;
+          if (action === 'DELETE') message = `${actorName} disconnected a social account.`;
+          if (action === 'UPDATE') message = `${actorName} re-authenticated a social account.`;
+          break;
+
+        // ==========================================
+        // PUBLISHING ENGINE (POSTS & QUEUES)
+        // ==========================================
+        case 'POST':
+          if (action === 'CREATE') {
+            message = detailsBody.isAutoSchedule 
+              ? `${actorName} auto-scheduled a new post.` 
+              : `${actorName} created a new post.`;
+          }
+          if (action === 'UPDATE') message = `${actorName} edited a scheduled post.`;
+          if (action === 'DELETE') message = `${actorName} deleted a post.`;
+          if (action === 'BULK_ACTION') message = `${actorName} bulk-scheduled multiple posts.`;
+          break;
+
+        case 'QUEUE_SLOT':
+          if (action === 'CREATE') message = `${actorName} added a new posting time slot.`;
+          if (action === 'UPDATE') message = `${actorName} modified a queue schedule.`;
+          if (action === 'DELETE') message = `${actorName} removed a posting time slot.`;
+          if (action === 'BULK_ACTION') message = `${actorName} generated a default queue schedule.`;
+          break;
+
+        case 'APPROVAL':
+          if (action === 'CREATE') message = `${actorName} submitted a post for approval.`;
+          if (action === 'APPROVE') message = `${actorName} approved a pending post.`;
+          if (action === 'REJECT') message = `${actorName} rejected a pending post.`;
+          if (action === 'DELETE') message = `${actorName} canceled an approval request.`;
+          break;
+
+        // ==========================================
+        // AI & MEDIA
+        // ==========================================
+        case 'AI': // Assuming you add this to your enum
+          if (action === 'EXECUTE' || action === 'CREATE') {
+            message = `${actorName} generated AI content.`;
+          }
+          break;
+
+        // ==========================================
+        // BILLING & ORGANIZATION
+        // ==========================================
+        case 'BILLING':
+          if (action === 'UPDATE') message = `${actorName} updated the billing subscription.`;
+          if (action === 'CREATE') message = `${actorName} subscribed to a new plan.`;
+          break;
+
+        case 'ORGANIZATION':
+          if (action === 'UPDATE') message = `${actorName} updated the organization settings.`;
+          break;
+
+        // ==========================================
+        // SUPPORT TICKETS
+        // ==========================================
+        case 'TICKET': // Assuming you add this to your enum
+          if (action === 'CREATE') message = `${actorName} submitted a support ticket.`;
+          if (action === 'UPDATE') message = `${actorName} closed a support ticket.`;
+          break;
+          
+        case 'COMMENT':
+          if (action === 'CREATE') message = `${actorName} added a comment to a ticket.`;
+          break;
+      }
+
+      // Return a clean, UI-ready object
+      return {
+        id: log.id,
+        message,
+        actorName,
+        action: log.action,
+        resourceType: log.resourceType,
+        ipAddress: log.ipAddress,
+        createdAt: log.createdAt,
+        rawDetails: log.details
+      };
+    });
+
+    return formattedItems;
   }
 }
