@@ -32,17 +32,24 @@ export class AuditInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    const skipAudit = this.reflector.get<boolean>(
+      'skip_audit', 
+      context.getHandler()
+    );
+    if (skipAudit) {
+      return next.handle();
+    }
+
     const user = (req as any).user;
     const orgId = (req as any).orgId ?? (req as any).orgMember?.organizationId;
 
     if (!user || !orgId) return next.handle();
 
-    // 🚨 FIX 1: Extract Workspace ID (Checks Headers, Params, then Body)
-    const workspaceId = 
-      req.headers['x-workspace-id'] || 
-      req.params?.workspaceId || 
-      req.body?.workspaceId || 
-      null;
+    // FIX 1: Extract Workspace ID (Checks Headers, Params, then Body)
+    let headerWsId = req.headers['x-workspace-id'];
+    if (Array.isArray(headerWsId)) headerWsId = headerWsId[0];
+
+    const workspaceId = headerWsId || req.params?.workspaceId || req.body?.workspaceId || null;
 
     const decoration = this.reflector.get(AUDIT_CONTEXT_KEY, context.getHandler());
     const action = decoration?.action ?? this.mapMethodToAction(method);
@@ -66,7 +73,7 @@ export class AuditInterceptor implements NestInterceptor {
           resourceType,
           resourceId,
           details: {
-            body: this.sanitizeBody(req.body), 
+            body: req.body, 
             query: req.query,
             params: req.params,
           },
@@ -77,22 +84,6 @@ export class AuditInterceptor implements NestInterceptor {
     );
   }
 
-  // 🛡️ THE SANITIZER: Keeps passwords and tokens out of your audit logs
-  private sanitizeBody(body: any): any {
-    if (!body || typeof body !== 'object') return body;
-    
-    const sanitized = { ...body };
-    const sensitiveKeys = ['password', 'accessToken', 'refreshToken', 'token', 'secret', 'otp'];
-    
-    for (const key of Object.keys(sanitized)) {
-      if (sensitiveKeys.includes(key)) {
-        sanitized[key] = '***REDACTED***';
-      } else if (typeof sanitized[key] === 'object') {
-        sanitized[key] = this.sanitizeBody(sanitized[key]); 
-      }
-    }
-    return sanitized;
-  }
 
   private mapMethodToAction(method: string): AuditAction {
     switch (method) {

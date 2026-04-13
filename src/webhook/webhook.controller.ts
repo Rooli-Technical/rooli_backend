@@ -26,9 +26,11 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { LinkedInWebhookGuard } from './guards/linkedin.guard';
 import { TikTokWebhookGuard } from './guards/tiktok.guard';
 import { TwitterWebhookGuard } from './guards/twitter.guard';
+import { SkipAudit } from '@/audit/decorators/skip-audit.decorator';
 
 @Controller('webhooks')
 @Public()
+@SkipAudit()
 export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 

@@ -1879,7 +1879,7 @@ enum AuditAction {
   EXECUTE
   APPROVE
   REJECT
-  bulk_action
+  BULK_ACTION
 }
 
 enum AuditResourceType {

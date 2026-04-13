@@ -34,6 +34,7 @@ import { ConfigService } from '@nestjs/config';
 import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
 import { AuditContext } from '@/audit/decorators/audit.decorator';
 import { AuditAction, AuditResourceType } from '@generated/enums';
+import { SkipAudit } from '@/audit/decorators/skip-audit.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -73,6 +74,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @SkipAudit()
   @Public()
   @ApiOperation({
     summary: 'Refresh JWT tokens',
