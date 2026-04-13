@@ -25,7 +25,7 @@ export class SocialProfileController {
   constructor(private readonly profileService: SocialProfileService) {}
 
   @Post()
-  @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.MANAGE) // Only Admins/Owners connect pages
+  @RequirePermission(PermissionResource.SOCIAL_PROFILE, PermissionAction.CONNECT)
   @ApiOperation({
     summary: 'Bulk Add social profiles to workspace',
     description:
@@ -45,7 +45,7 @@ export class SocialProfileController {
   }
 
   @Get()
-  @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.READ) // Everyone can see what pages exist
+  @RequirePermission(PermissionResource.SOCIAL_PROFILE, PermissionAction.READ)
   @ApiOperation({
     summary: 'List workspace social profiles',
     description: 'Returns all social media profiles connected to a workspace.',
@@ -71,7 +71,7 @@ export class SocialProfileController {
   }
 
   @Delete(':profileId')
-  @RequirePermission(PermissionResource.WORKSPACE_SETTINGS, PermissionAction.MANAGE) // Only Admins/Owners delete pages
+  @RequirePermission(PermissionResource.SOCIAL_PROFILE, PermissionAction.DISCONNECT)
   @ApiOperation({
     summary: 'Remove social profile from workspace',
     description:

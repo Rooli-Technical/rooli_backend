@@ -450,7 +450,6 @@ export class SocialConnectionService {
             newTokens = await this.tiktok.refreshToken(rawRefreshToken);
             break;
           case 'INSTAGRAM':
-            // Note: IG uses current access token to refresh, not the refresh token
             const currentAccessToken = await this.encryptionService.decrypt(connection.accessToken);
             newTokens = await this.instagram.refreshToken(currentAccessToken);
             break;
