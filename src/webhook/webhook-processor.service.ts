@@ -80,9 +80,44 @@ export class WebhooksProcessor extends WorkerHost {
       // 2. Event Handling Switch
       switch (event) {
         case 'charge.success':
-          // RENEWAL or NEW SIGNUP: This is the most important one.
-          // It extends the currentPeriodEnd in the DB.
-          await this.billingService.activateSubscription(payload);
+          const purpose = data.metadata?.purpose;
+
+          if (purpose === 'update_card') {
+            // 🛡️ THE USER IS JUST SWAPPING CARDS
+            const newAuthCode = data.authorization?.authorization_code;
+
+            await this.prisma.$transaction([
+              // 1. Save the new card token
+              this.prisma.subscription.update({
+                where: { organizationId },
+                data: {
+                  paystackAuthCode: newAuthCode,
+                  status: 'ACTIVE', // Instantly cure any PAST_DUE dunning state!
+                  lastPaymentFailedAt: null,
+                  failedPaymentAttempts: 0,
+                },
+              }),
+              this.prisma.organization.update({
+                where: { id: organizationId },
+                data: { billingStatus: 'ACTIVE' },
+              }),
+              // 2. Mark the 50 NGN auth transaction as successful
+              this.prisma.transaction.updateMany({
+                where: { txRef: reference, status: 'pending' },
+                data: {
+                  status: 'successful',
+                  providerTxId: data.id.toString(),
+                },
+              }),
+            ]);
+
+            this.logger.log(
+              `Card successfully replaced for Org: ${organizationId}`,
+            );
+          } else {
+            // 💰 IT'S A NORMAL SUBSCRIPTION RENEWAL OR SIGNUP
+            await this.billingService.activateSubscription(payload);
+          }
           break;
 
         case 'subscription.create':
@@ -93,9 +128,40 @@ export class WebhooksProcessor extends WorkerHost {
         // 🚨 THE DUNNING TRIGGERS (Day 0)
         case 'charge.failed':
         case 'invoice.payment_failed':
-          // This calls the method that sets: status: 'PAST_DUE', lastPaymentFailedAt: new Date()
-          // Your cron job will take over from here!
-          await this.billingService.handleFailedPayment(data);
+          const type = data.metadata?.type;
+          const failurePurpose = data.metadata?.purpose; // Catch the 'update_card' intent
+
+          if (type === 'add_on_workspace') {
+            // 1. ONE-OFF WORKSPACE PURCHASE FAILED
+            // Just mark the transaction as failed. Do not touch the subscription status.
+            await this.prisma.transaction.updateMany({
+              where: { txRef: data.reference, status: 'pending' },
+              data: { status: 'failed' },
+            });
+            this.logger.warn(
+              `Workspace add-on charge failed for Ref: ${data.reference}`,
+            );
+          } else if (failurePurpose === 'update_card') {
+            // 2. 🛡️ CARD UPDATE AUTHORIZATION FAILED
+            // The user typed a bad card. Mark the 50 NGN auth transaction as failed.
+            // DO NOT suspend their account, they might still have an active base plan!
+            await this.prisma.transaction.updateMany({
+              where: { txRef: data.reference, status: 'pending' },
+              data: { status: 'failed' },
+            });
+            this.logger.warn(
+              `Card replacement authorization failed for Ref: ${data.reference}`,
+            );
+          } else if (type === 'recurring_addons_and_overages') {
+            // 3. (Optional) RECURRING ADD-ONS CRON FAILED
+            // If you pass this metadata in your cron job, you can choose to handle it here.
+            // Standard practice: Treat this like a base invoice failure and trigger dunning.
+            await this.billingService.handleFailedPayment(data);
+          } else {
+            // 4. BASE SUBSCRIPTION RENEWAL FAILED
+            // It's a genuine renewal failure. Trigger the dunning process!
+            await this.billingService.handleFailedPayment(data);
+          }
           break;
 
         // 🚨 THE CANCELLATION TRIGGERS

@@ -1685,7 +1685,7 @@ enum PlanStatus {
 
 enum BillingInterval {
   MONTHLY
-  YEARLY
+  ANNUAL
 }
 
 enum InvoiceStatus {
@@ -1700,6 +1700,8 @@ enum OrganizationStatus {
   PENDING_PAYMENT // Created but not paid yet
   ACTIVE // Paid and running
   SUSPENDED // Ban or failed payments
+  PAYMENT_METHOD_REQUIRED
+  PAST_DUE
 }
 
 enum MessageStatus {

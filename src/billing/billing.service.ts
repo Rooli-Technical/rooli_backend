@@ -105,12 +105,14 @@ export class BillingService {
 
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
-      include: { members: true }
+      include: { members: true },
     });
     const email = org.billingEmail || user?.email;
     if (!email) throw new BadRequestException('Billing email is required');
 
-   const isMember = org.members.some((member) => member.userId === finalUserId);
+    const isMember = org.members.some(
+      (member) => member.userId === finalUserId,
+    );
     if (!isMember) {
       throw new ForbiddenException('Invalid organization context');
     }
@@ -542,7 +544,9 @@ export class BillingService {
     // 1. Handle special string-based features (like analytics)
     if (features.analytics) {
       formattedList.push(
-        features.analytics === 'basic' ? 'Basic Analytics' : 'Advanced Analytics'
+        features.analytics === 'basic'
+          ? 'Basic Analytics'
+          : 'Advanced Analytics',
       );
     }
 
@@ -856,14 +860,14 @@ export class BillingService {
     }
   }
 
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
   // RECURRING ADD-ONS & OVERAGES CRON
   // Runs daily to charge for overages and extra workspaces before renewal
   // ---------------------------------------------------------
   //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async processRecurringAddonsAndOverages() {
     this.logger.log('🧹 Sweeping for Add-ons and AI Overages...');
-    
+
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -874,29 +878,45 @@ export class BillingService {
         currentPeriodEnd: { lte: tomorrow },
         OR: [
           { aiOverageCostCents: { gt: 0 } },
-          { extraWorkspacesPurchased: { gt: 0 } }
-        ]
+          { extraWorkspacesPurchased: { gt: 0 } },
+        ],
       },
       include: {
-        organization: { select: { id: true, billingEmail: true, currency: true } } 
-      }
+        organization: {
+          select: { id: true, billingEmail: true, currency: true },
+        },
+      },
     });
 
     const FX_RATE = 1470; // ₦1,470/USD
     const WORKSPACE_ADDON_USD = 15;
 
     for (const sub of subsToCharge) {
-      if (!sub.paystackAuthCode) continue; // Safety check
+      if (!sub.paystackAuthCode) {
+        this.logger.error(`🚨 Missing auth code for org ${sub.organizationId}`);
+
+        await this.prisma.organization.update({
+          where: { id: sub.organizationId },
+          data: {
+            status: 'PAYMENT_METHOD_REQUIRED',
+            readOnly: true,
+          },
+        });
+
+        continue;
+      } // Safety check
 
       const targetCurrency = sub.organization.currency || 'NGN';
-      
+
       // Calculate Workspace Add-on Cost (Dual Currency)
-      const workspaceAddonBaseUnit = targetCurrency === 'USD'
-        ? sub.extraWorkspacesPurchased * WORKSPACE_ADDON_USD * 100
-        : sub.extraWorkspacesPurchased * WORKSPACE_ADDON_USD * FX_RATE * 100;
+      const workspaceAddonBaseUnit =
+        targetCurrency === 'USD'
+          ? sub.extraWorkspacesPurchased * WORKSPACE_ADDON_USD * 100
+          : sub.extraWorkspacesPurchased * WORKSPACE_ADDON_USD * FX_RATE * 100;
 
       // Calculate Total Amount to charge (Add-on + AI Overages)
-      const totalChargeBaseUnit = workspaceAddonBaseUnit + sub.aiOverageCostCents;
+      const totalChargeBaseUnit =
+        workspaceAddonBaseUnit + sub.aiOverageCostCents;
 
       try {
         const reference = `rooli_addon_${sub.organizationId}_${Date.now()}`;
@@ -907,13 +927,15 @@ export class BillingService {
             'https://api.paystack.co/transaction/charge_authorization',
             {
               authorization_code: sub.paystackAuthCode,
-              email: sub.organization.billingEmail, 
-              amount: totalChargeBaseUnit, 
+              email: sub.organization.billingEmail,
+              amount: totalChargeBaseUnit,
               currency: targetCurrency,
               reference: reference,
             },
             {
-              headers: { Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}` },
+              headers: {
+                Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+              },
             },
           ),
         );
@@ -926,28 +948,54 @@ export class BillingService {
               txRef: reference,
               providerTxId: paystackResponse.data.id.toString(),
               provider: 'PAYSTACK',
-              amount: totalChargeBaseUnit / 100, 
+              amount: totalChargeBaseUnit / 100,
               currency: targetCurrency,
               status: 'successful',
               paymentDate: new Date(),
               subscriptionId: sub.id,
-              metadata: { 
+              metadata: {
                 type: 'recurring_addons_and_overages',
                 workspacesPurchased: sub.extraWorkspacesPurchased,
-                aiOverageCost: sub.aiOverageCostCents / 100
-              }
+                aiOverageCost: sub.aiOverageCostCents / 100,
+              },
             },
           }),
           // Reset the overage counter (but KEEP the extraWorkspacesPurchased intact!)
           this.prisma.subscription.update({
             where: { id: sub.id },
-            data: { aiOverageCostCents: 0 } 
-          })
+            data: { aiOverageCostCents: 0 },
+          }),
         ]);
-        
       } catch (error: any) {
-        this.logger.error(`Failed to charge add-ons for Org ${sub.organizationId}`);
-        // If this fails, you might want to trigger a warning email or pause the add-on features
+        const httpStatus = error.response?.status || 500;
+        this.logger.error(`Failed to charge add-ons for Org ${sub.organizationId}: ${error.message}`);
+
+        // 🛡️ ENTERPRISE GUARDRAIL: Is Paystack down?
+        if (httpStatus >= 500) {
+          this.logger.warn(`Paystack API unavailable (5xx Error). Skipping Org ${sub.organizationId} until tomorrow.`);
+          continue; // Skip to the next subscription. Do NOT suspend the user.
+        }
+
+        // 🚨 IT'S A REAL FAILURE (4xx Error: Card declined, expired, insufficient funds)
+        await this.prisma.$transaction([
+          this.prisma.subscription.update({
+            where: { id: sub.id },
+            data: { 
+              status: 'PAST_DUE',
+              lastPaymentFailedAt: new Date(),
+              failedPaymentAttempts: { increment: 1 }
+            }
+          }),
+          // Optional: You can let your Day 8 Dunning cron handle readOnly, 
+          // or enforce a soft lock here. Standard practice is to leave it active 
+          // but PAST_DUE so they have 7 days to fix it.
+        ]);
+
+        // Alert the owner immediately
+        const ownerEmail = sub.organization.billingEmail;
+        if (ownerEmail) {
+           await this.emailService.sendPaymentFailedEmail(ownerEmail, "Your recurring add-ons and overages");
+        }
       }
     }
   }
@@ -1008,7 +1056,7 @@ export class BillingService {
     );
   }
 
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
   // PURCHASE EXTRA WORKSPACE (Rocket Only, Dual-Currency Prorated)
   // ---------------------------------------------------------
   async purchaseExtraWorkspace(organizationId: string) {
@@ -1025,40 +1073,50 @@ export class BillingService {
 
     const sub = org.subscription;
 
-   // 1. SPEC GUARDRAIL: Business & Rocket Plans Only
+    // 1. SPEC GUARDRAIL: Business & Rocket Plans Only
     if (!['BUSINESS', 'ROCKET'].includes(sub.plan.tier)) {
       throw new ForbiddenException(
-        'Purchasing additional workspaces is only available on the Business and Rocket plans.'
+        'Purchasing additional workspaces is only available on the Business and Rocket plans.',
       );
     }
 
     // 2. CURRENCY & PRICING SETUP
     const targetCurrency = org.currency || 'NGN'; // Defaulting to your system's base
     const FX_RATE = 1470; // ₦1,470/USD as per spec
-    const EXTRA_WORKSPACE_USD = 15; 
+    const EXTRA_WORKSPACE_USD = 15;
 
     // Convert to base units (Cents for USD, Kobo for NGN)
-    const basePriceBaseUnit = targetCurrency === 'USD' 
-      ? EXTRA_WORKSPACE_USD * 100 // 1500 Cents
-      : EXTRA_WORKSPACE_USD * FX_RATE * 100; // 2205000 Kobo (₦22,050)
+    const basePriceBaseUnit =
+      targetCurrency === 'USD'
+        ? EXTRA_WORKSPACE_USD * 100 // 1500 Cents
+        : EXTRA_WORKSPACE_USD * FX_RATE * 100; // 2205000 Kobo (₦22,050)
 
     // 3. PRORATION MATH
     const now = new Date();
     const periodEnd = new Date(sub.currentPeriodEnd);
     const periodStart = new Date(sub.currentPeriodStart);
-    
+
     // Total days in their current billing cycle
-    const totalDaysInCycle = Math.round((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const totalDaysInCycle = Math.round(
+      (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
     // Days remaining
-    const daysRemaining = Math.max(0, Math.round((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-    
+    const daysRemaining = Math.max(
+      0,
+      Math.round((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    );
+
     // Prorated amount: (Days Remaining / Total Days) * Base Price
-    const proratedAmountBaseUnit = Math.round((daysRemaining / totalDaysInCycle) * basePriceBaseUnit);
+    const proratedAmountBaseUnit = Math.round(
+      (daysRemaining / totalDaysInCycle) * basePriceBaseUnit,
+    );
 
     // 4. CHARGE THE USER (One-Click)
     if (!sub.paystackAuthCode) {
-      throw new BadRequestException('No payment method on file. Please update your billing details.');
+      throw new BadRequestException(
+        'No payment method on file. Please update your billing details.',
+      );
     }
 
     try {
@@ -1071,12 +1129,14 @@ export class BillingService {
           {
             authorization_code: sub.paystackAuthCode,
             email: org.billingEmail,
-            amount: proratedAmountBaseUnit, 
-            currency: targetCurrency,       
-            reference: reference, 
+            amount: proratedAmountBaseUnit,
+            currency: targetCurrency,
+            reference: reference,
           },
           {
-            headers: { Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}` },
+            headers: {
+              Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+            },
           },
         ),
       );
@@ -1092,7 +1152,7 @@ export class BillingService {
             extraWorkspacesPurchased: { increment: 1 },
           },
         }),
-        
+
         // B. Create the Transaction Record
         this.prisma.transaction.create({
           data: {
@@ -1105,10 +1165,10 @@ export class BillingService {
             status: 'successful',
             paymentDate: new Date(),
             subscriptionId: sub.id, // Link it for easy auditing
-            metadata: { 
+            metadata: {
               type: 'add_on_workspace',
-              proratedDays: daysRemaining 
-            }
+              proratedDays: daysRemaining,
+            },
           },
         }),
       ]);
@@ -1117,13 +1177,72 @@ export class BillingService {
         message: `Additional workspace purchased successfully.`,
         amountCharged: proratedAmountBaseUnit / 100, // Converted back to ₦ or $ for the UI response
         currency: targetCurrency,
-        newTotalWorkspacesAllowed: sub.plan.maxWorkspaces + sub.extraWorkspacesPurchased + 1
+        newTotalWorkspacesAllowed:
+          sub.plan.maxWorkspaces + sub.extraWorkspacesPurchased + 1,
       };
-
     } catch (error: any) {
-      this.logger.error('Failed to charge for extra workspace', error.response?.data || error.message);
-      throw new BadRequestException('Payment failed. Could not add extra workspace.');
+      this.logger.error(
+        'Failed to charge for extra workspace',
+        error.response?.data || error.message,
+      );
+      throw new BadRequestException(
+        'Payment failed. Could not add extra workspace.',
+      );
     }
+  }
+
+async replaceCard(organizationId: string, user: any) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: { subscription: true },
+    });
+
+    if (!org || !org.subscription) throw new BadRequestException('No active subscription');
+
+    const targetCurrency = org.currency || 'NGN';
+    // Charge a tiny authorization amount just to validate the card
+    const authAmountBaseUnit = targetCurrency === 'USD' ? 50 : 5000; // 50 Cents or 50 NGN
+    const reference = `rooli_update_card_${org.id}_${randomUUID()}`;
+
+    // 1. Create a pending transaction so our webhook knows what this is for
+    await this.prisma.transaction.create({
+      data: {
+        organizationId: org.id,
+        txRef: reference,
+        providerTxId: 'pending',
+        provider: 'PAYSTACK',
+        amount: authAmountBaseUnit / 100, 
+        currency: targetCurrency,
+        status: 'pending',
+        paymentDate: new Date(),
+        metadata: { purpose: 'update_card' }, // 👈 Crucial identifier
+      },
+    });
+
+    // 2. Initialize Paystack
+    const payload = {
+      email: org.billingEmail || user.email,
+      amount: authAmountBaseUnit,
+      reference,
+      currency: targetCurrency,
+      metadata: {
+        organizationId: org.id,
+        purpose: 'update_card', // 👈 Crucial identifier
+      },
+      callback_url: `${this.config.get('CALLBACK_URL')}/settings/billing`, // Send them back to settings
+    };
+
+    const { data } = await firstValueFrom(
+      this.httpService.post(
+        `${this.PAYSTACK_BASE_URL}/transaction/initialize`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}` },
+        },
+      ),
+    );
+
+    return { paymentUrl: data.data.authorization_url, reference };
   }
 
   // ---------------------------------------------------------
@@ -1146,7 +1265,9 @@ export class BillingService {
 
     // 1. Ensure they actually have an add-on to cancel
     if (sub.extraWorkspacesPurchased <= 0) {
-      throw new BadRequestException("You do not have any extra workspaces to cancel.");
+      throw new BadRequestException(
+        'You do not have any extra workspaces to cancel.',
+      );
     }
 
     // 2. Calculate what their limit will drop to
@@ -1157,7 +1278,7 @@ export class BillingService {
     // If they have 6 workspaces, they can't drop their limit to 5!
     if (org._count.workspaces > newTotalLimit) {
       throw new BadRequestException(
-        `You currently have ${org._count.workspaces} active workspaces. Please delete at least 1 workspace before canceling this add-on.`
+        `You currently have ${org._count.workspaces} active workspaces. Please delete at least 1 workspace before canceling this add-on.`,
       );
     }
 
@@ -1170,7 +1291,8 @@ export class BillingService {
     });
 
     return {
-      message: 'Workspace add-on successfully canceled. You will not be billed for it on your next cycle.',
+      message:
+        'Workspace add-on successfully canceled. You will not be billed for it on your next cycle.',
       newTotalWorkspacesAllowed: newTotalLimit,
       extraWorkspacesRemaining: sub.extraWorkspacesPurchased - 1,
     };

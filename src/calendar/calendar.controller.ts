@@ -15,8 +15,6 @@ import { FeatureGuard } from '@/common/guards/feature.guard';
 @ApiTags('Calendar')
 @ApiBearerAuth()
 @Controller('/workspaces/:workspaceId/calendar')
-@UseGuards(FeatureGuard)
-@RequireFeature('visualCalendar')
 export class CalendarController {
   constructor(private readonly calendarService: CalendarService) {}
 
