@@ -9,7 +9,7 @@ import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
-  @Get()
+  @Get('organization/:organizationId')
   @ApiOperation({ summary: 'List organization audit logs' })
   @ApiBearerAuth()
   @RequirePermission(PermissionResource.AUDIT_LOGS, PermissionAction.READ)

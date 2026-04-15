@@ -151,7 +151,7 @@ export class OrganizationsService {
 
   async getOrganization(orgId: string) {
     const org = await this.prisma.organization.findUnique({
-      where: { id: orgId, isActive: true },
+      where: { id: orgId, isActive: true, status: 'ACTIVE' },
       include: {
         _count: {
           select: { members: true },
@@ -171,6 +171,7 @@ export class OrganizationsService {
 
     const where: Prisma.OrganizationWhereInput = {
       isActive: true,
+      status: 'ACTIVE',
       members: {
         some: { userId: userId },
       },

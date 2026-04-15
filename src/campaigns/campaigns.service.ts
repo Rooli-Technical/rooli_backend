@@ -111,6 +111,7 @@ export class CampaignService {
                 linkedInStats: true,
                 facebookStats: true,
                 instagramStats: true,
+                tiktokStats: true,
               },
             },
           },
@@ -168,6 +169,10 @@ export class CampaignService {
             case 'INSTAGRAM':
               stats.totalShares += snapshot.instagramStats?.shares || 0;
               // IG doesn't have link clicks on regular feed posts usually, but you can map it if needed
+              break;
+            case 'TIKTOK':
+              stats.totalShares += snapshot.tiktokStats?.shares || 0;
+              stats.totalClicks += snapshot.tiktokStats?.videoViews || 0;
               break;
           }
         }
