@@ -100,6 +100,14 @@ export class OrganizationsController {
     return this.organizationsService.getOrganization(orgId);
   }
 
+  @Patch(':organizationId/activate')
+  @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.UPDATE)
+  @ApiOperation({ summary: 'Reactivate a previously deactivated organization' })
+  @ApiResponse({ status: 200, description: 'Organization reactivated successfully' })
+  async activateOrganization(@Param('organizationId') orgId: string) {
+    return this.organizationsService.activateOrganization(orgId);
+  }
+
   @Patch(':organizationId')
   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.UPDATE)
   @ApiOperation({
