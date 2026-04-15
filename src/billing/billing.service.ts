@@ -75,14 +75,16 @@ export class BillingService {
         ? plan.annualPriceNgn / 100
         : plan.annualPriceUsd / 100;
 
+
             // 2. Calculate the UI metrics dynamically
       const originalAnnualPrice = monthlyPrice * 12;
+
+     // Calculate exactly how much cash they keep in their pocket
+      const amountSaved = Math.max(0, originalAnnualPrice - annualPrice);
       
       let discountPercentage = 0;
-      if (originalAnnualPrice > 0 && originalAnnualPrice > annualPrice) {
-        discountPercentage = Math.round(
-          ((originalAnnualPrice - annualPrice) / originalAnnualPrice) * 100
-        );
+      if (originalAnnualPrice > 0 && amountSaved > 0) {
+        discountPercentage = Math.round((amountSaved / originalAnnualPrice) * 100);
       }
 
       return {
@@ -105,6 +107,7 @@ export class BillingService {
           monthly: monthlyPrice,
           annual: annualPrice,
           originalAnnual: originalAnnualPrice, // e.g. 144 (For the UI strikethrough)
+          amountSaved,
           discountPercentage,
         },
       };
