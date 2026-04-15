@@ -112,7 +112,8 @@ export class PlanAccessService {
     // 🚨 1. TRIAL OVERRIDE: Strict lock to 1 Workspace
     if (sub.isTrial) {
       if (org._count.workspaces >= 1) {
-        throw new ForbiddenException(
+        throw new RequiresUpgradeException(
+          'Workspace Limit',
           // 🚨 FIX 1: Tell them to upgrade to ANY paid plan, not just Rocket
           'Free trials are limited to 1 workspace. Please upgrade to a paid plan to add more workspaces.',
         );
@@ -206,7 +207,9 @@ export class PlanAccessService {
         ? `${platform} is not available during the Free Trial. Please upgrade your plan to unlock this platform.`
         : `Your current plan does not support connecting ${platform} accounts. Please upgrade.`;
 
-      throw new ForbiddenException(errorMessage);
+      throw new RequiresUpgradeException(
+        'Platform Access',
+        errorMessage);
     }
   }
 
@@ -232,7 +235,8 @@ export class PlanAccessService {
     // 🚨 2. TRIAL OVERRIDE: Strict lock to 3 Profiles
     if (sub.isTrial) {
       if (currentCount + newProfileCount > 3) {
-        throw new ForbiddenException(
+        throw new RequiresUpgradeException(
+          'Social Profile Limit',
           'Free trials are limited to 3 social profiles. Please upgrade to a paid plan to connect more.',
         );
       }
@@ -253,7 +257,8 @@ export class PlanAccessService {
 
     // 🚨 THE FIX: Check against 'totalAllowed' instead of 'effectiveLimit'
     if (currentCount + newProfileCount > totalAllowed) {
-      throw new ForbiddenException(
+      throw new RequiresUpgradeException(
+        'Social Profile Limit',
         // Update the error message so they know they can just buy a workspace to get more profiles!
         `Social profile limit reached. Your plan allows a total of ${totalAllowed} profiles. Please purchase an additional workspace or upgrade your plan to add more.`,
       );

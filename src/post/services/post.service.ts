@@ -23,6 +23,7 @@ import { SocialFactory } from '@/social/social.factory';
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { DomainEventsService } from '@/events/domain-events.service';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
+import { RequiresUpgradeException } from '@/common/exceptions/requires-upgrade.exception';
 
 @Injectable()
 export class PostService {
@@ -163,7 +164,9 @@ private async validateFeatures(
 
       // B. Security check: If they somehow kept needsApproval=true but don't have the feature
       if (postDto.needsApproval && !features.approvalWorkflow) {
-        throw new ForbiddenException('Upgrade to Business Plan to use Approval Workflows');
+        throw new RequiresUpgradeException(
+          'Approval Workflows',
+          'Upgrade to Business Plan to use Approval Workflows');
       }
     };
 

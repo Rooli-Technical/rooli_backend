@@ -18,6 +18,7 @@ import { TIER_LIMITS } from './constants/tier-limits';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
+import { RequiresUpgradeException } from '@/common/exceptions/requires-upgrade.exception';
 
 
 type Slot = {
@@ -310,7 +311,8 @@ export class QueueSlotService {
     const newPostsCount = dto.postIds.length;
 
     if (currentQueueCount + newPostsCount > limits.maxPostsInQueue) {
-      throw new ForbiddenException(
+      throw new RequiresUpgradeException(
+        'Queue Scheduling',
         `Queue limit reached. Your plan allows ${limits.maxPostsInQueue} queued posts. You currently have ${currentQueueCount}. Upgrade to add more.`,
       );
     }
