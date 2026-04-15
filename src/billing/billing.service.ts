@@ -65,6 +65,7 @@ export class BillingService {
       },
     };
 
+
     const plans = _plans.map((plan) => {
       // Because your DB stores Kobo/Cents, we divide by 100 for the UI to display cleanly.
       const monthlyPrice = isNigeria
@@ -73,6 +74,16 @@ export class BillingService {
       const annualPrice = isNigeria
         ? plan.annualPriceNgn / 100
         : plan.annualPriceUsd / 100;
+
+            // 2. Calculate the UI metrics dynamically
+      const originalAnnualPrice = monthlyPrice * 12;
+      
+      let discountPercentage = 0;
+      if (originalAnnualPrice > 0 && originalAnnualPrice > annualPrice) {
+        discountPercentage = Math.round(
+          ((originalAnnualPrice - annualPrice) / originalAnnualPrice) * 100
+        );
+      }
 
       return {
         id: plan.id,
@@ -93,6 +104,8 @@ export class BillingService {
           currency: isNigeria ? 'NGN' : 'USD',
           monthly: monthlyPrice,
           annual: annualPrice,
+          originalAnnual: originalAnnualPrice, // e.g. 144 (For the UI strikethrough)
+          discountPercentage,
         },
       };
     });
