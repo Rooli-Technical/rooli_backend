@@ -143,17 +143,6 @@ private async validateFeatures(
     const userRoleSlug = ws.organization?.members[0]?.role?.slug?.toLowerCase() || 'contributor';
 
     // ==========================================
-    // RULE 1: CAMPAIGN FEATURE CHECK
-    // ==========================================
-    const hasCampaign = 'campaignId' in dto 
-      ? !!dto.campaignId 
-      : ('posts' in dto ? dto.posts.some((p) => p.campaignId) : false);
-
-    if (hasCampaign && !features.hasCampaigns) {
-      throw new ForbiddenException('Upgrade to Rocket Plan to use Campaigns');
-    }
-
-    // ==========================================
     // RULE 2: APPROVAL ENFORCEMENT
     // ==========================================
     const premiumTiers = ['BUSINESS', 'ROCKET', 'ENTERPRISE'];

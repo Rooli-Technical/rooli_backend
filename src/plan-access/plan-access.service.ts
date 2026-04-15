@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { FeatureKey } from './types/plan-access.types';
+import { RequiresUpgradeException } from '@/common/exceptions/requires-upgrade.exception';
 
 @Injectable()
 export class PlanAccessService {
@@ -86,11 +87,13 @@ export class PlanAccessService {
     // 3. Enforce the limit
     if (activeMembers + pendingInvites >= effectiveLimit) {
       if (sub.isTrial) {
-        throw new ForbiddenException(
+        throw new RequiresUpgradeException(
+          'Team Collaboration',
           'Free trials are limited to 1 user. Please upgrade to the Business or Rocket plan to invite team members.',
         );
       } else {
-        throw new ForbiddenException(
+        throw new RequiresUpgradeException(
+          'Team Collaboration',
           `Seat limit reached (${effectiveLimit}). Upgrade your plan to invite more team members.`,
         );
       }
@@ -164,9 +167,7 @@ export class PlanAccessService {
       ];
 
       if (lockedFeatures.includes(featureKey)) {
-        throw new ForbiddenException(
-          `The ${String(featureKey)} feature is locked on your current plan. Please upgrade to a paid plan to unlock.`,
-        );
+        throw new RequiresUpgradeException(String(featureKey));
       }
       const features = org.subscription.plan?.features as Record<
         string,
@@ -174,9 +175,7 @@ export class PlanAccessService {
       >;
 
       if (!features || features[featureKey] !== true) {
-        throw new ForbiddenException(
-          `Your current plan does not include access to: ${String(featureKey)}. Please upgrade.`,
-        );
+        throw new RequiresUpgradeException(String(featureKey));
       }
     }
   }

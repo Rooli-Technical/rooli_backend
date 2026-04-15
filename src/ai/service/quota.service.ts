@@ -1,3 +1,4 @@
+import { RequiresUpgradeException } from '@/common/exceptions/requires-upgrade.exception';
 import { PrismaService } from '@/prisma/prisma.service';
 import {
   Injectable,
@@ -45,8 +46,11 @@ export class AiQuotaService {
 
       const sub = org.subscription;
 
-      if (sub.status === 'EXPIRED') {
-        throw new ForbiddenException('Trial expired. Please upgrade.');
+   if (sub.status === 'EXPIRED') {
+        throw new RequiresUpgradeException(
+          'Active Subscription', 
+          'Your free trial has expired. Please upgrade to a paid plan to continue using Rooli.'
+        );
       }
 
       const customLimits = sub.customLimits as any;
@@ -71,7 +75,8 @@ export class AiQuotaService {
       if (newTotalUsed > limit && limit < 999999) {
         // Hard block for trials!
         if (sub.status === 'TRIALING') {
-          throw new ForbiddenException(
+          throw new RequiresUpgradeException(
+            'AI Generation',
             'Free Trial AI limit reached (20/20). Please upgrade your plan to continue using AI.',
           );
         }
@@ -91,7 +96,8 @@ export class AiQuotaService {
             overageCap > 0 &&
             sub.aiOverageCostCents + overageCostToAdd > overageCap
           ) {
-            throw new ForbiddenException(
+            throw new RequiresUpgradeException(
+              'AI Generation',
               `AI Overage Cap ($${overageCap / 100}) reached. Please upgrade your plan.`,
             );
           }

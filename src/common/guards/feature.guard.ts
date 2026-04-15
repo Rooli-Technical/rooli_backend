@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { FEATURE_KEY } from '../decorators/require-feature.decorator';
+import { RequiresUpgradeException } from '../exceptions/requires-upgrade.exception';
 
 @Injectable()
 export class FeatureGuard implements CanActivate {
@@ -23,7 +24,7 @@ export class FeatureGuard implements CanActivate {
 
     // Check directly against the user object (populated by AuthStrategy)
     if (!user.features || user.features[requiredFeature] !== true) {
-      throw new ForbiddenException(`Upgrade required for ${requiredFeature}`);
+      throw new RequiresUpgradeException(requiredFeature);
     }
 
     return true;
