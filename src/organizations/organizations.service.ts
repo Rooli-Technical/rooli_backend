@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -231,6 +232,81 @@ async deleteOrganization(orgId: string) {
   // We use .catch to ensure background errors don't crash the process
   this.billingService.cancelSubscription(orgId).catch((err) => {
     this.logger.error(`Background subscription cancellation failed for ${orgId}:`, err);
+  });
+
+  return result;
+}
+
+async activateOrganization(orgId: string) {
+  const org = await this.getOrganization(orgId);
+  const sub = await this.prisma.subscription.findUnique({ where: { organizationId: orgId } });
+
+  const now = new Date();
+  let needsPayment = false;
+
+  // ==========================================
+  // 1. EXTERNAL NETWORK CALLS (OUTSIDE DB TRANSACTION)
+  // ==========================================
+  if (sub && sub.currentPeriodEnd > now) {
+    // CASE A: They have active time left. Let's tell Paystack to resume auto-billing.
+    if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+      try {
+        // You'll need to implement this method to hit Paystack's /subscription/enable endpoint
+        await this.billingService.enablePaystackSubscription(sub.paystackSubscriptionCode, sub.paystackEmailToken);
+      } catch (error) {
+        this.logger.error(`Failed to enable Paystack sub for Org ${orgId}`, error.message);
+        throw new BadRequestException('Could not reactivate subscription with the payment provider. Please contact support.');
+      }
+    }
+  } else {
+    // CASE B: Their time is up.
+    needsPayment = true;
+  }
+
+  // ==========================================
+  // 2. FAST DATABASE TRANSACTION
+  // ==========================================
+  const result = await this.prisma.$transaction(async (tx) => {
+    
+    if (!needsPayment && sub) {
+      // Restore Subscription State
+      await tx.subscription.update({
+        where: { organizationId: orgId },
+        data: { cancelAtPeriodEnd: false, status: 'ACTIVE' }
+      });
+
+      // 🛡️ CRITICAL: Reactivate their Social Profiles so the publishing queue resumes
+      await tx.socialProfile.updateMany({
+        where: { workspace: { organizationId: orgId } },
+        data: { isActive: true },
+      });
+    }
+
+    // Reactivate the Org 
+    await tx.organization.update({
+      where: { id: orgId },
+      data: { 
+        isActive: true, 
+        // If they need payment, leave readOnly true so they are forced to the billing page
+        readOnly: needsPayment ? true : false, 
+        status: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
+        billingStatus: needsPayment ? 'CANCELED' : 'ACTIVE' 
+      },
+    });
+
+    // Reactivate Team Members
+    await tx.organizationMember.updateMany({
+      where: { organizationId: orgId },
+      data: { isActive: true },
+    });
+
+    return { 
+      success: true, 
+      message: needsPayment 
+        ? 'Organization reactivated. Please update your payment method to restore full access.' 
+        : 'Organization fully restored and subscription resumed.',
+      needsPayment
+    };
   });
 
   return result;

@@ -574,6 +574,45 @@ export class BillingService {
   }
 
   // ---------------------------------------------------------
+  // REACTIVATE PAYSTACK SUBSCRIPTION
+  // ---------------------------------------------------------
+  async enablePaystackSubscription(subscriptionCode: string, emailToken: string) {
+    try {
+      const payload = {
+        code: subscriptionCode,
+        token: emailToken,
+      };
+
+      const { data } = await firstValueFrom(
+        this.httpService.post(
+          `${this.PAYSTACK_BASE_URL}/subscription/enable`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+            },
+          },
+        ),
+      );
+
+      this.logger.log(`✅ Successfully re-enabled Paystack subscription: ${subscriptionCode}`);
+      return data;
+      
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed to enable Paystack subscription ${subscriptionCode}`,
+        error.response?.data || error.message,
+      );
+      
+      // We throw an exception here so the calling method (activateOrganization) 
+      // knows to abort the database transaction.
+      throw new BadRequestException(
+        'Failed to reactivate the subscription with the payment gateway. Please contact support.',
+      );
+    }
+  }
+
+  // ---------------------------------------------------------
   // 8. THE DUNNING CRON JOB
   // ---------------------------------------------------------
   //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
