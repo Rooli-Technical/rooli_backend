@@ -9,8 +9,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { GetCalendarQueryDto } from './dtos/get-calendar.dto';
-import { RequireFeature } from '@/common/decorators/require-feature.decorator';
-import { FeatureGuard } from '@/common/guards/feature.guard';
+
 
 @ApiTags('Calendar')
 @ApiBearerAuth()

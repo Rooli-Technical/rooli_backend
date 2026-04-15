@@ -1,5 +1,3 @@
-import { RequireFeature } from '@/common/decorators/require-feature.decorator';
-import { FeatureGuard } from '@/common/guards/feature.guard';
 import {
   Body,
   Controller,
@@ -44,7 +42,6 @@ const sharedMemoryStorage = memoryStorage();
 @ApiTags('Media Library')
 @Controller('workspaces/:workspaceId/media')
 @ApiBearerAuth()
-@UseGuards(FeatureGuard)
 export class PostMediaController {
   constructor(private readonly mediaService: PostMediaService) {}
 
@@ -216,7 +213,6 @@ export class PostMediaController {
   }
 
   @Post('folders')
-  @RequireFeature('mediaLibrary')
   @ApiOperation({
     summary: 'Create a new folder in the media library (Rocket Plan)',
   })

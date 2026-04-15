@@ -22,6 +22,7 @@ import { QueueSlotService } from '@/queue/queue.service';
 import { SocialFactory } from '@/social/social.factory';
 import { EncryptionService } from '@/common/utility/encryption.service';
 import { DomainEventsService } from '@/events/domain-events.service';
+import { PlanAccessService } from '@/plan-access/plan-access.service';
 
 @Injectable()
 export class PostService {
@@ -35,6 +36,7 @@ export class PostService {
     private socialFactory: SocialFactory,
     private encryptionService: EncryptionService,
     private readonly domainEvents: DomainEventsService,
+    private readonly planAccessService: PlanAccessService,
   ) {}
 
   async createPost(user: any, workspaceId: string, dto: CreatePostDto) {
@@ -287,6 +289,7 @@ private async validateFeatures(
     workspaceId: string,
     dto: BulkCreatePostDto,
   ) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'bulkScheduling');
     await this.validateFeatures(user, dto, workspaceId);
     // 🚨 Apply Watermark (Passing the single DTO in an array)
     await this.applyTrialWatermark(workspaceId, [dto]);

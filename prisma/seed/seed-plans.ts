@@ -1,9 +1,5 @@
-import {
-  PlanTier,
-  Platform,
-} from '../../generated/prisma/client';
+import { PlanTier, Platform } from '../../generated/prisma/client';
 import { prisma } from './utils';
-
 
 export async function seedPlans() {
   const plans = [
@@ -31,12 +27,19 @@ export async function seedPlans() {
       aiOverageRateCents: 2,
       aiOverageCapCents: 2000,
 
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'] as Platform[],
+      allowedPlatforms: [
+        'FACEBOOK',
+        'INSTAGRAM',
+        'LINKEDIN',
+        'TWITTER',
+        'TIKTOK',
+      ] as Platform[],
 
       features: {
         analytics: 'basic',
         bulkScheduling: true,
         postApprovals: true,
+        queueScheduling: true,
         repurposeContent: true,
         campaignPlanning: true,
       },
@@ -68,7 +71,13 @@ export async function seedPlans() {
       aiOverageRateCents: 2,
       aiOverageCapCents: 5000,
 
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'] as Platform[],
+      allowedPlatforms: [
+        'FACEBOOK',
+        'INSTAGRAM',
+        'LINKEDIN',
+        'TWITTER',
+        'TIKTOK',
+      ] as Platform[],
 
       features: {
         analytics: 'advanced',
@@ -80,6 +89,7 @@ export async function seedPlans() {
         prioritySupport: true,
         repurposeContent: true,
         campaignPlanning: true,
+        queueScheduling: true,
       },
 
       isActive: true,
@@ -108,7 +118,13 @@ export async function seedPlans() {
       aiOverageRateCents: 0,
       aiOverageCapCents: null,
 
-      allowedPlatforms: ['FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TWITTER', 'TIKTOK'] as Platform[],
+      allowedPlatforms: [
+        'FACEBOOK',
+        'INSTAGRAM',
+        'LINKEDIN',
+        'TWITTER',
+        'TIKTOK',
+      ] as Platform[],
 
       features: {
         analytics: 'advanced',
@@ -121,6 +137,7 @@ export async function seedPlans() {
         prioritySupport: true,
         repurposeContent: true,
         sla: true,
+        queueScheduling: true,
       },
 
       isActive: true,

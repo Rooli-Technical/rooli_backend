@@ -1,4 +1,3 @@
-import { RequireFeature } from '@/common/decorators/require-feature.decorator';
 import { FeatureGuard } from '@/common/guards/feature.guard';
 import {
   Controller,

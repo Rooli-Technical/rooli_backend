@@ -5,4 +5,8 @@ export type FeatureKey =
   | 'clientPortal'
   | 'prioritySupport'
   | 'campaignPlanning'
-  | 'repurposeContent';
+  | 'repurposeContent'
+  | 'queueScheduling'
+  | 'mediaLibrary'
+  | 'aiAdvanced'
+  | 'aiBulkGenerate';

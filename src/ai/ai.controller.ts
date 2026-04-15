@@ -21,8 +21,6 @@ import { GenerateCaptionDto } from './dto/generate-caption.dto';
 import { GenerateVariantsDto } from './dto/generate-variant.dto';
 import { RepurposeContentDto } from './dto/repurpose-content.dto';
 import { AiQuotaService } from './service/quota.service';
-import { RequireFeature } from '@/common/decorators/require-feature.decorator';
-import { FeatureGuard } from '@/common/guards/feature.guard';
 import { GenerateHashtagsDto } from './dto/generate-hashtag.dto';
 import { GenerateHolidayPostDto } from './dto/generate-holiday-post.dto';
 import { OptimizeContentDto } from './dto/optimize-content.dto';
@@ -74,15 +72,12 @@ export class AiController {
   }
 
   @Post('repurpose')
-  @UseGuards(FeatureGuard)
-  @RequireFeature('aiAdvanced')
   @ApiOperation({
     summary: 'Repurpose URL or Text (Business+)',
     description:
       'Scrapes a URL or takes text and transforms it into a new post format.',
   })
   async repurpose(
-    @Req() req,
     @Body() dto: RepurposeContentDto,
     @Param('workspaceId') workspaceId: string,
   ) {
@@ -91,8 +86,6 @@ export class AiController {
 
   @Post('image')
   @ApiOperation({ summary: 'Generate AI Image (Business+)' })
-  @UseGuards(FeatureGuard)
-  @RequireFeature('aiAdvanced')
   async generateImage(
     @Param('workspaceId') workspaceId: string,
     @Req() req,
@@ -133,8 +126,6 @@ export class AiController {
   }
 
   @Post('bulk')
-  @UseGuards(FeatureGuard)
-  @RequireFeature('aiBulkGenerate')
   @ApiOperation({
     summary: 'Bulk Calendar Generation (Rocket only)',
     description:

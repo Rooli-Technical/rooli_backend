@@ -20,14 +20,10 @@ import {
 import { CreateCampaignDto } from './dto/request/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/request/update-campaign.dto';
 import { CampaignStatus } from '@generated/enums';
-import { RequireFeature } from '@/common/decorators/require-feature.decorator';
-import { FeatureGuard } from '@/common/guards/feature.guard';
 
 @ApiTags('Campaigns')
 @ApiBearerAuth()
 @Controller('/workspaces/:workspaceId/campaigns')
-@UseGuards(FeatureGuard)
-@RequireFeature('hasCampaigns')
 export class CampaignController {
   constructor(private readonly service: CampaignService) {}
 

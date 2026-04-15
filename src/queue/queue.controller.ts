@@ -7,11 +7,8 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { QueueSlotService } from './queue.service';
-import { FeatureGuard } from '@/common/guards/feature.guard';
-import { RequireFeature } from '@/common/decorators/require-feature.decorator';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -30,8 +27,6 @@ import { GenerateDefaultSlotsDto } from './dtos/generate-default-slot.dto';
 
 @ApiTags('Queue Slots')
 @ApiBearerAuth()
-@UseGuards(FeatureGuard)
-@RequireFeature('queueScheduling')
 @Controller('workspaces/:workspaceId')
 export class QueueSlotController {
   constructor(private readonly service: QueueSlotService) {}

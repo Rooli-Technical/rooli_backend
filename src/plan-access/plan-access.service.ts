@@ -155,7 +155,12 @@ export class PlanAccessService {
       // 🚨 Specific lock for Campaigns and Queue Slots (bulkScheduling)
       const lockedFeatures: FeatureKey[] = [
         'campaignPlanning',
-        'bulkScheduling',
+        'queueScheduling',
+        'mediaLibrary',
+        'aiAdvanced',
+        'aiBulkGenerate',
+        'repurposeContent',
+        'prioritySupport',
       ];
 
       if (lockedFeatures.includes(featureKey)) {

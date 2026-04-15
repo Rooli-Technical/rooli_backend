@@ -330,6 +330,7 @@ export class AiService {
     userId: string,
     dto: { prompt: string; style?: string },
   ) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'aiAdvanced');
     const cost = this.getFeatureCost(AiFeature.IMAGE, 1);
 
     return this.executeWithQuota(workspaceId, cost, async () => {

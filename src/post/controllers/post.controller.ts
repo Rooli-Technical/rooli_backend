@@ -11,8 +11,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { PostService } from '../services/post.service';
-import { RequireFeature } from '@/common/decorators/require-feature.decorator';
-import { FeatureGuard } from '@/common/guards/feature.guard';
 import { CreatePostDto } from '../dto/request/create-post.dto';
 import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
 import {
@@ -38,7 +36,7 @@ import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
 
 @Controller('workspaces/:workspaceId/posts')
 @ApiBearerAuth()
-@UseGuards(ContextGuard, PermissionsGuard, FeatureGuard)
+@UseGuards(ContextGuard, PermissionsGuard)
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
@@ -124,7 +122,6 @@ export class PostController {
 
   @Post('bulk/execute')
   @RequirePermission(PermissionResource.POSTS, PermissionAction.CREATE)
-  @RequireFeature('bulkScheduling')
   @ApiOperation({
     summary: 'Execute bulk schedule after CSV validation',
     description: 'Creates scheduled posts and destinations in the workspace.',

@@ -42,7 +42,7 @@ export class QueueSlotService {
   // 1) CRUD
   // =========================================================
   async createQueueSlot(workspaceId: string, dto: CreateQueueSlotDto) {
-    await this.planAccessService.ensureFeatureAccess(workspaceId, 'bulkScheduling');
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     this.normalizeDay(dto.dayOfWeek);
     this.parseTimeHHmm(dto.time);
 
@@ -85,6 +85,7 @@ export class QueueSlotService {
   }
 
   async listQueueSlots(workspaceId: string, platform?: Platform | null) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     return await this.prisma.queueSlot.findMany({
       where: {
         workspaceId,
@@ -99,6 +100,7 @@ export class QueueSlotService {
   }
 
   async getQueueSlot(workspaceId: string, slotId: string) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     const slot = await this.prisma.queueSlot.findFirst({
       where: { id: slotId, workspaceId } as any,
     });
@@ -111,6 +113,7 @@ export class QueueSlotService {
     slotId: string,
     dto: UpdateQueueSlotDto,
   ) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     const existing = await this.getQueueSlot(workspaceId, slotId);
 
     const dayOfWeek = dto.dayOfWeek ?? (existing as any).dayOfWeek;
@@ -163,6 +166,7 @@ export class QueueSlotService {
   }
 
   async deleteQueueSlot(workspaceId: string, slotId: string) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     const slot = await this.getQueueSlot(workspaceId, slotId);
 
     await this.prisma.queueSlot.delete({ where: { id: slotId } as any });
@@ -181,6 +185,7 @@ export class QueueSlotService {
     platform?: Platform | null,
     fromIso?: string,
   ) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     const { zone } = await this.getWorkspaceTierAndZone(workspaceId);
 
     const from = fromIso
@@ -217,6 +222,7 @@ export class QueueSlotService {
    * POST preview next N candidate times
    */
   async previewNextSlots(workspaceId: string, dto: PreviewQueueDto) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     const { zone } = await this.getWorkspaceTierAndZone(workspaceId);
 
     const from = dto.from
@@ -379,6 +385,7 @@ export class QueueSlotService {
    * Strong opinion: only rebuild drafts/queued, not already published.
    */
   async rebuildQueue(workspaceId: string, dto: RebuildQueueDto) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     const { zone } = await this.getWorkspaceTierAndZone(workspaceId);
     const platform = dto.platform ?? null;
 
@@ -649,7 +656,7 @@ export class QueueSlotService {
     days: number[] = [1, 2, 3, 4, 5],
     platform?: Platform | null,
   ) {
-    await this.planAccessService.ensureFeatureAccess(workspaceId, 'bulkScheduling');
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'queueScheduling');
     const { tier } = await this.getWorkspaceTierAndZone(workspaceId);
     const limits = TIER_LIMITS[tier];
 
