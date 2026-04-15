@@ -1168,7 +1168,7 @@ private async resolveScheduleAndStatus(
     // Exit immediately if they are on a paid plan
     if (!isTrial) return; 
 
-    const watermark = `\n\nScheduled with Rooli rooli.co`;
+    const watermark = `\n\nScheduled with Rooli-rooli.co`;
 
     // 2. Mutate the DTOs in place
     for (const dto of postDtos) {
