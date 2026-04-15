@@ -17,6 +17,8 @@ import { Prisma } from '@generated/client';
 import { TIER_LIMITS } from './constants/tier-limits';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { PlanAccessService } from '@/plan-access/plan-access.service';
+
 
 type Slot = {
   id: string;
@@ -33,12 +35,14 @@ export class QueueSlotService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue('publishing-queue') private publishingQueue: Queue,
+    private readonly planAccessService: PlanAccessService,
   ) {}
 
   // =========================================================
   // 1) CRUD
   // =========================================================
   async createQueueSlot(workspaceId: string, dto: CreateQueueSlotDto) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'bulkScheduling');
     this.normalizeDay(dto.dayOfWeek);
     this.parseTimeHHmm(dto.time);
 
@@ -645,6 +649,7 @@ export class QueueSlotService {
     days: number[] = [1, 2, 3, 4, 5],
     platform?: Platform | null,
   ) {
+    await this.planAccessService.ensureFeatureAccess(workspaceId, 'bulkScheduling');
     const { tier } = await this.getWorkspaceTierAndZone(workspaceId);
     const limits = TIER_LIMITS[tier];
 

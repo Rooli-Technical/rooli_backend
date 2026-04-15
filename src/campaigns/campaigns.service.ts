@@ -7,12 +7,24 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateCampaignDto } from './dto/request/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/request/update-campaign.dto';
 import { PublishStatus } from '@generated/enums';
+import { PlanAccessService } from '@/plan-access/plan-access.service';
+
 
 @Injectable()
 export class CampaignService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly planAccessService: PlanAccessService) {}
 
   async create(workspaceId: string, dto: CreateCampaignDto) {
+    //get org from workspace
+    const workspace = await this.prisma.workspace.findFirst({
+      where: { id: workspaceId },
+      include: { organization: true },
+    });
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
+    }
+    await this.planAccessService.ensureFeatureAccess(workspace.organization.id, 'campaignPlanning');
+
     if (dto.startDate && dto.endDate) {
       if (new Date(dto.endDate) < new Date(dto.startDate)) {
         throw new BadRequestException('End date cannot be before start date');

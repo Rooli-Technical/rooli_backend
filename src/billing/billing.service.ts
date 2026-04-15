@@ -36,12 +36,36 @@ export class BillingService {
     const country = this.inferCountry(geo?.country, timeZone);
     const isNigeria = country === 'NG';
 
-    const plans = await this.prisma.plan.findMany({
+    const _plans = await this.prisma.plan.findMany({
       where: { isActive: true },
       orderBy: { monthlyPriceUsd: 'asc' }, // Order by tier level
     });
 
-    return plans.map((plan) => {
+    // 2. Hardcode the Free Plan
+    const freePlan = {
+      id: 'free-tier-static', // Static ID since it's not in DB
+      name: 'Free',
+      badge: 'Start for Free',
+      tier: 'FREE', // Ensure this matches your PlanTier enum
+      description: 'Perfect for individuals and hobbyists',
+      features: [
+        'Post Scheduling',
+        'Basic Analytics',
+      ],
+      limits: {
+        workspaces: 1,
+        socialProfiles: 3, // As requested
+        users: 1,          // As requested
+        aiCredits: 20,
+      },
+      pricing: {
+        currency: isNigeria ? 'NGN' : 'USD',
+        monthly: 0,
+        annual: 0,
+      },
+    };
+
+    const plans = _plans.map((plan) => {
       // Because your DB stores Kobo/Cents, we divide by 100 for the UI to display cleanly.
       const monthlyPrice = isNigeria
         ? plan.monthlyPriceNgn / 100
@@ -72,6 +96,8 @@ export class BillingService {
         },
       };
     });
+
+    return [freePlan, ...plans];
   }
 
   async getSubscription(organizationId: string) {

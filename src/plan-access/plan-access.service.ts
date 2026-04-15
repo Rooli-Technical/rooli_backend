@@ -150,12 +150,29 @@ export class PlanAccessService {
     // to *view* features they paid for, they just can't mutate data with them.
     const org = await this.getValidatedOrg(organizationId, false);
 
-    const features = org.subscription.plan?.features as Record<string, boolean>;
+    // 🚨 TRIAL OVERRIDE: Strict lock to 1 Workspace
+    if (org.subscription.isTrial) {
+      // 🚨 Specific lock for Campaigns and Queue Slots (bulkScheduling)
+      const lockedFeatures: FeatureKey[] = [
+        'campaignPlanning',
+        'bulkScheduling',
+      ];
 
-    if (!features || features[featureKey] !== true) {
-      throw new ForbiddenException(
-        `Your current plan does not include access to: ${String(featureKey)}. Please upgrade.`,
-      );
+      if (lockedFeatures.includes(featureKey)) {
+        throw new ForbiddenException(
+          `The ${String(featureKey)} feature is locked on your current plan. Please upgrade to a paid plan to unlock.`,
+        );
+      }
+      const features = org.subscription.plan?.features as Record<
+        string,
+        boolean
+      >;
+
+      if (!features || features[featureKey] !== true) {
+        throw new ForbiddenException(
+          `Your current plan does not include access to: ${String(featureKey)}. Please upgrade.`,
+        );
+      }
     }
   }
 
@@ -192,7 +209,7 @@ export class PlanAccessService {
   /**
    * 5. SOCIAL PROFILE LIMIT ENFORCEMENT
    */
-async ensureSocialProfileLimit(
+  async ensureSocialProfileLimit(
     organizationId: string,
     newProfileCount: number = 1,
   ) {
@@ -229,7 +246,6 @@ async ensureSocialProfileLimit(
     // 🚨 THE FIX: Calculate the bonus profiles from add-ons (4 per extra workspace)
     const bonusProfiles = (sub.extraWorkspacesPurchased ?? 0) * 4;
     const totalAllowed = effectiveLimit + bonusProfiles;
-
 
     // 🚨 THE FIX: Check against 'totalAllowed' instead of 'effectiveLimit'
     if (currentCount + newProfileCount > totalAllowed) {

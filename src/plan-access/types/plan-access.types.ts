@@ -4,4 +4,5 @@ export type FeatureKey =
   | 'bulkAI'
   | 'clientPortal'
   | 'prioritySupport'
+  | 'campaignPlanning'
   | 'repurposeContent';
