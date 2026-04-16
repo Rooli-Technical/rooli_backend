@@ -400,7 +400,8 @@ export class BillingService {
     });
   }
 
-  // ---------------------------------------------------------
+
+// ---------------------------------------------------------
   // 6. CANCEL SUBSCRIPTION
   // ---------------------------------------------------------
   async cancelSubscription(organizationId: string) {
@@ -408,42 +409,61 @@ export class BillingService {
       where: { organizationId },
     });
 
-    if (!sub?.paystackSubscriptionCode || !sub?.paystackEmailToken) {
-      throw new BadRequestException('Missing subscription credentials');
+    if (!sub) {
+      await this.prisma.organization.update({
+        where: { id: organizationId },
+        data: { billingStatus: 'CANCELED' }, // Instant kill, no period end to wait for
+      });
+      return { message: 'Organization canceled (No active subscription found)' };
     }
 
-    try {
-      await firstValueFrom(
-        this.httpService.post(
-          `${this.PAYSTACK_BASE_URL}/subscription/disable`,
-          {
-            code: sub.paystackSubscriptionCode,
-            token: sub.paystackEmailToken,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+    // 🚨 1. THE OVERAGE SWEEP (Your brilliant audit rule!)
+    if (sub.aiOverageCostCents > 0 && sub.paystackAuthCode) {
+      try {
+        await this.chargeFinalOverages(sub); 
+      } catch (e) {
+        // If it fails, log it, but DO NOT stop the cancellation process.
+        this.logger.error(`Failed to sweep final overages for Org ${organizationId}`, e);
+      }
+    }
+
+    // 🚨 2. SAFE PAYSTACK CALL (Only if they actually have an active Paystack sub)
+    if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+      try {
+        await firstValueFrom(
+          this.httpService.post(
+            `${this.PAYSTACK_BASE_URL}/subscription/disable`,
+            {
+              code: sub.paystackSubscriptionCode,
+              token: sub.paystackEmailToken,
             },
-          },
-        ),
-      );
-
-      return await this.prisma.$transaction([
-        this.prisma.subscription.update({
-          where: { organizationId },
-          data: {
-            cancelAtPeriodEnd: true,
-          },
-        }),
-        this.prisma.organization.update({
-          where: { id: organizationId },
-          data: { billingStatus: 'CANCELED' },
-        }),
-      ]);
-    } catch (e) {
-      this.logger.error(e.response?.data);
-      throw new BadRequestException('Cancellation failed');
+            {
+              headers: {
+                Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+              },
+            },
+          ),
+        );
+      } catch (e) {
+        this.logger.error(e.response?.data);
+        throw new BadRequestException('Failed to disable subscription in Paystack');
+      }
     }
+
+    // 🚨 3. THE DB TRANSACTION WITH THE NEW ENUM
+    return await this.prisma.$transaction([
+      this.prisma.subscription.update({
+        where: { organizationId },
+        data: {
+          cancelAtPeriodEnd: true, 
+        },
+      }),
+      this.prisma.organization.update({
+        where: { id: organizationId },
+        // They keep full access until the cron job kills it on the final day!
+        data: { billingStatus: 'PENDING_CANCELLATION' }, 
+      }),
+    ]);
   }
 
   // ---------------------------------------------------------
@@ -1377,6 +1397,96 @@ async replaceCard(organizationId: string, user: any) {
       newTotalWorkspacesAllowed: newTotalLimit,
       extraWorkspacesRemaining: sub.extraWorkspacesPurchased - 1,
     };
+  }
+
+  // ---------------------------------------------------------
+  // FINAL OVERAGE SWEEP (Called during cancellation)
+  // ---------------------------------------------------------
+  async chargeFinalOverages(sub: any) {
+    // 1. Double-check that there is actually money owed and a card on file
+    if (sub.aiOverageCostCents <= 0 || !sub.paystackAuthCode) {
+      return; 
+    }
+
+    // 2. Fetch the Organization to get the Billing Email & Currency
+    // (In case the parent method didn't include it in the `sub` object)
+    const org = sub.organization || await this.prisma.organization.findUnique({
+      where: { id: sub.organizationId },
+      select: { billingEmail: true, currency: true }
+    });
+
+    if (!org?.billingEmail) {
+      this.logger.error(`Cannot charge overages: missing billing email for Org ${sub.organizationId}`);
+      throw new Error('Missing billing email');
+    }
+
+    const targetCurrency = org.currency || 'NGN';
+    const amountToChargeBaseUnit = sub.aiOverageCostCents; // This is already in Kobo/Cents
+    const reference = `rooli_final_sweep_${sub.organizationId}_${Date.now()}`;
+
+    try {
+      this.logger.log(`Attempting final overage sweep of ${amountToChargeBaseUnit} for Org ${sub.organizationId}...`);
+
+      // 3. Hit Paystack API to charge the saved card
+      const { data: paystackResponse } = await firstValueFrom(
+        this.httpService.post(
+          'https://api.paystack.co/transaction/charge_authorization',
+          {
+            authorization_code: sub.paystackAuthCode,
+            email: org.billingEmail,
+            amount: amountToChargeBaseUnit,
+            currency: targetCurrency,
+            reference: reference,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+            },
+          },
+        ),
+      );
+
+      const paystackData = paystackResponse.data;
+
+      // 4. Update the Database
+      await this.prisma.$transaction([
+        // A. Create the Transaction Record
+        this.prisma.transaction.create({
+          data: {
+            organizationId: sub.organizationId,
+            txRef: reference,
+            providerTxId: paystackData.id.toString(),
+            provider: 'PAYSTACK',
+            amount: amountToChargeBaseUnit / 100, // Convert back to whole NGN/USD
+            currency: targetCurrency,
+            status: 'successful',
+            paymentDate: new Date(),
+            subscriptionId: sub.id,
+            metadata: {
+              type: 'final_overage_sweep',
+              aiOverageCost: amountToChargeBaseUnit / 100,
+            },
+          },
+        }),
+        
+        // B. Reset the overage ledger to 0
+        this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: { aiOverageCostCents: 0 },
+        }),
+      ]);
+
+      this.logger.log(`✅ Successfully swept final overages for Org ${sub.organizationId}`);
+      
+    } catch (error: any) {
+      // We throw an error so `cancelSubscription`'s catch block can log it.
+      // At this stage, if it fails, the revenue is lost—but we don't want to block the cancellation.
+      this.logger.error(
+        `❌ Failed to charge final overages for Org ${sub.organizationId}`,
+        error.response?.data || error.message,
+      );
+      throw new Error('Final overage charge failed');
+    }
   }
 
   private inferCountry(ipCountry?: string, timeZone?: string) {

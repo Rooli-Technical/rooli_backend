@@ -23,6 +23,12 @@ export class ContextGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
+    // 🚨 NEW: Check if this route allows suspended organizations
+    const allowSuspended = this.reflector.getAllAndOverride<boolean>(
+      'allowSuspended',
+      [context.getHandler(), context.getClass()]
+    );
+
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
@@ -61,7 +67,8 @@ export class ContextGuard implements CanActivate {
       }
 
       // Step 2: Check Suspension
-      if (wsMember.member.organization.status === 'SUSPENDED') {
+      // 🚨 THE FIX: Only throw if the route doesn't allow suspended orgs!
+      if (wsMember.member.organization.status === 'SUSPENDED' && !allowSuspended) {
         throw new ForbiddenException('Organization is suspended');
       }
 
@@ -108,10 +115,10 @@ export class ContextGuard implements CanActivate {
 
       if (!orgMember) throw new ForbiddenException('Not a member of this organization');
 
-      if (orgMember.organization.status === 'SUSPENDED') {
+     if (orgMember.organization.status === 'SUSPENDED' && !allowSuspended) {
         throw new ForbiddenException('Organization is suspended');
       }
-
+      
       request.currentContext = 'ORGANIZATION';
       request.orgId = organizationId;
       request.orgMember = orgMember;

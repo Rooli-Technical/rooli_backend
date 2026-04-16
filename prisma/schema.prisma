@@ -1569,22 +1569,24 @@ model TicketComment {
   @@index([ticketId])
 }
 
-enum SubscriptionStatus {
-  TRIALING
-  ACTIVE
-  PAST_DUE
-  SUSPENDED
-  CANCELED
-  EXPIRED
+enum BillingStatus {
+  TRIAL_ACTIVE              // Trial ongoing
+  ACTIVE                    // Paid + valid
+  GRACE_PERIOD              // Payment failed but still usable (Dunning Day 0–7)
+  READ_ONLY                 // Locked, can only view data (Dunning Day 8–13)
+  SUSPENDED                 // Fully blocked (Dunning Day 14+)
+  PENDING_CANCELLATION      // User canceled, but still has days left in billing cycle
+  CANCELED                  // Billing cycle ended, account is dead
+  PAYMENT_METHOD_REQUIRED   // Trial ended OR card was completely removed. Hard lock.
 }
 
-enum BillingStatus {
-  TRIAL_ACTIVE // Trial ongoing
-  ACTIVE // Paid + valid
-  GRACE_PERIOD // Payment failed but still usable (Day 0–7)
-  READ_ONLY // Locked (Day 8+)
-  SUSPENDED // Fully blocked (Day 14+)
-  CANCELED // User canceled but still in paid period
+enum SubscriptionStatus {
+  TRIALING     // Matches TRIAL_ACTIVE
+  ACTIVE       // Matches ACTIVE & PENDING_CANCELLATION
+  PAST_DUE     // Matches GRACE_PERIOD & READ_ONLY
+  SUSPENDED    // Matches SUSPENDED
+  CANCELED     // Matches CANCELED
+  EXPIRED      // Matches PAYMENT_METHOD_REQUIRED (Trial ran out)
 }
 
 enum ConnectionStatus {
@@ -1702,6 +1704,8 @@ enum OrganizationStatus {
   SUSPENDED // Ban or failed payments
   PAYMENT_METHOD_REQUIRED
   PAST_DUE
+  BANNED
+  SUSPENDED_BY_ADMIN
 }
 
 enum MessageStatus {

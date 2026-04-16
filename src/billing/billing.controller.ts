@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Ip,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -234,5 +235,47 @@ export class BillingController {
     @Param('orgId') orgId: string,
   ) {
     return this.billingService.cancelExtraWorkspace(orgId);
+  }
+
+  @Patch('subscription/update-card')
+  @ApiBearerAuth()
+  @RequirePermission(PermissionResource.SUBSCRIPTION, PermissionAction.MANAGE) 
+  @ApiOperation({ 
+    summary: 'Update Payment Method', 
+    description: 'Replaces the organization\'s current payment method with a new one. This is used to update an expired or replaced card.' 
+  })
+  @ApiParam({ 
+    name: 'orgId', 
+    description: 'The unique ID of the organization' 
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Payment method updated successfully',
+    schema: {
+      example: {
+        message: 'Payment method updated successfully.',
+        card: {
+          authorization_code: 'AUTH_CODE',
+          last4: '4444',
+          exp_month: 12,
+          exp_year: 2025,
+          card_type: 'visa'
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Invalid card details or payment method update failed.' 
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'No active subscription found.' 
+  })
+  async updateCard(
+    @Param('orgId') orgId: string,
+    @Req() req: any,
+  ) {
+    return this.billingService.replaceCard(orgId, req.user);
   }
 }

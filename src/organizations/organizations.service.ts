@@ -94,9 +94,10 @@ export class OrganizationsService {
           },
         });
 
-        const ownerRole = await tx.role.findFirst({ where: { slug: 'org-owner' } });
-        if (!ownerRole)
-          throw new NotFoundException("Role 'org-owner' missing");
+        const ownerRole = await tx.role.findFirst({
+          where: { slug: 'org-owner' },
+        });
+        if (!ownerRole) throw new NotFoundException("Role 'org-owner' missing");
 
         const orgMember = await tx.organizationMember.create({
           data: {
@@ -212,106 +213,134 @@ export class OrganizationsService {
     });
   }
 
-async deleteOrganization(orgId: string) {
-  // 1. Perform the DB operations first
-  const result = await this.prisma.$transaction(async (tx) => {
-    await tx.organization.update({
-      where: { id: orgId },
-      data: { isActive: false, status: 'SUSPENDED' },
+  async deleteOrganization(orgId: string) {
+    // 1. Perform the DB operations first
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.organization.update({
+        where: { id: orgId },
+        data: { isActive: false, status: 'SUSPENDED' },
+      });
+
+      await tx.organizationMember.updateMany({
+        where: { organizationId: orgId },
+        data: { isActive: false },
+      });
+
+      return { success: true, message: 'Organization deactivated' };
     });
 
-    await tx.organizationMember.updateMany({
-      where: { organizationId: orgId },
-      data: { isActive: false },
+    // 2. Trigger cancellation AFTER transaction, without 'await'
+    // We use .catch to ensure background errors don't crash the process
+    this.billingService.cancelSubscription(orgId).catch((err) => {
+      this.logger.error(
+        `Background subscription cancellation failed for ${orgId}:`,
+        err,
+      );
     });
 
-    return { success: true, message: 'Organization deactivated' };
-  });
-
-  // 2. Trigger cancellation AFTER transaction, without 'await'
-  // We use .catch to ensure background errors don't crash the process
-  this.billingService.cancelSubscription(orgId).catch((err) => {
-    this.logger.error(`Background subscription cancellation failed for ${orgId}:`, err);
-  });
-
-  return result;
-}
-
-async activateOrganization(orgId: string) {
-  const org = await this.getOrganization(orgId);
-  const sub = await this.prisma.subscription.findUnique({ where: { organizationId: orgId } });
-
-  const now = new Date();
-  let needsPayment = false;
-
-  // ==========================================
-  // 1. EXTERNAL NETWORK CALLS (OUTSIDE DB TRANSACTION)
-  // ==========================================
-  if (sub && sub.currentPeriodEnd > now) {
-    // CASE A: They have active time left. Let's tell Paystack to resume auto-billing.
-    if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
-      try {
-        // You'll need to implement this method to hit Paystack's /subscription/enable endpoint
-        await this.billingService.enablePaystackSubscription(sub.paystackSubscriptionCode, sub.paystackEmailToken);
-      } catch (error) {
-        this.logger.error(`Failed to enable Paystack sub for Org ${orgId}`, error.message);
-        throw new BadRequestException('Could not reactivate subscription with the payment provider. Please contact support.');
-      }
-    }
-  } else {
-    // CASE B: Their time is up.
-    needsPayment = true;
+    return result;
   }
 
-  // ==========================================
-  // 2. FAST DATABASE TRANSACTION
-  // ==========================================
-  const result = await this.prisma.$transaction(async (tx) => {
-    
-    if (!needsPayment && sub) {
-      // Restore Subscription State
-      await tx.subscription.update({
+  async activateOrganization(orgId: string) {
+    const [sub, org] = await Promise.all([
+      this.prisma.subscription.findUnique({
         where: { organizationId: orgId },
-        data: { cancelAtPeriodEnd: false, status: 'ACTIVE' }
-      });
+      }),
+      this.prisma.organization.findUnique({
+        where: { id: orgId },
+      }),
+    ]);
 
-      // 🛡️ CRITICAL: Reactivate their Social Profiles so the publishing queue resumes
-      await tx.socialProfile.updateMany({
-        where: { workspace: { organizationId: orgId } },
-        data: { isActive: true },
-      });
+    if (!org) throw new NotFoundException('Organization not found');
+
+    // 🚨 FLAW 3 FIX: Prevent banned users from reactivating themselves
+    if (org.status === 'BANNED' || org.status === 'SUSPENDED_BY_ADMIN') {
+      throw new ForbiddenException(
+        'This account has been suspended by administration. Please contact support.',
+      );
     }
 
-    // Reactivate the Org 
-    await tx.organization.update({
-      where: { id: orgId },
-      data: { 
-        isActive: true, 
-        // If they need payment, leave readOnly true so they are forced to the billing page
-        readOnly: needsPayment ? true : false, 
-        status: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
-        billingStatus: needsPayment ? 'CANCELED' : 'ACTIVE' 
-      },
+    const now = new Date();
+
+    // 🚨 FLAW 4 FIX: Safely handle if sub is null
+    let needsPayment = sub ? true : false;
+
+    // ==========================================
+    // 1. EXTERNAL NETWORK CALLS
+    // ==========================================
+    if (sub && sub.currentPeriodEnd > now) {
+      needsPayment = false; // They still have time left!
+
+      // If it's a paid plan that was canceled at Paystack
+      if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+        try {
+          await this.billingService.enablePaystackSubscription(
+            sub.paystackSubscriptionCode,
+            sub.paystackEmailToken,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to enable Paystack sub for Org ${orgId}`,
+            error.message,
+          );
+          throw new BadRequestException(
+            'Could not reactivate subscription with payment provider.',
+          );
+        }
+      }
+    }
+
+    // ==========================================
+    // 2. FAST DATABASE TRANSACTION
+    // ==========================================
+    const result = await this.prisma.$transaction(async (tx) => {
+      // If they are allowed back in (Free tier OR Paid tier with time left)
+      if (!needsPayment) {
+        // 1. Only restore the subscription IF they actually have one
+        if (sub) {
+          await tx.subscription.update({
+            where: { organizationId: orgId },
+            data: {
+              cancelAtPeriodEnd: false,
+              status: sub.isTrial ? 'TRIALING' : 'ACTIVE',
+            },
+          });
+        }
+
+        // 🚨 2. THE FIX: Reactivate Social Profiles for EVERYONE (Free or Paid)
+        await tx.socialProfile.updateMany({
+          where: { workspace: { organizationId: orgId } },
+          data: { isActive: true },
+        });
+      }
+
+      // Reactivate the Org
+      await tx.organization.update({
+        where: { id: orgId },
+        data: {
+          isActive: true,
+          readOnly: needsPayment ? true : false,
+          status: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
+          billingStatus: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
+        },
+      });
+
+      // Reactivate Team Members
+      await tx.organizationMember.updateMany({
+        where: { organizationId: orgId },
+        data: { isActive: true },
+      });
+
+      return {
+        success: true,
+        message: needsPayment
+          ? 'Organization reactivated. Please update your payment method to restore full access.'
+          : 'Organization fully restored.',
+        needsPayment,
+      };
     });
-
-    // Reactivate Team Members
-    await tx.organizationMember.updateMany({
-      where: { organizationId: orgId },
-      data: { isActive: true },
-    });
-
-    return { 
-      success: true, 
-      message: needsPayment 
-        ? 'Organization reactivated. Please update your payment method to restore full access.' 
-        : 'Organization fully restored and subscription resumed.',
-      needsPayment
-    };
-  });
-
-  return result;
-}
-
+    return result;
+  }
   /**
    * Returns a high-level snapshot of the organization's usage, limits, and billing.
    * Perfect for the "Settings > Overview" page.
@@ -341,10 +370,11 @@ async activateOrganization(orgId: string) {
     // Calculate effective limits (Custom Enterprise overrides vs Standard Plan)
     let maxWorkspaces = customLimits?.maxWorkspaces ?? plan?.maxWorkspaces ?? 1;
     let maxUsers = customLimits?.maxUsers ?? plan?.maxUsers ?? 1;
-    let aiCreditsLimit = customLimits?.aiCreditsMonthly ?? plan?.aiCreditsMonthly ?? 0;
+    let aiCreditsLimit =
+      customLimits?.aiCreditsMonthly ?? plan?.aiCreditsMonthly ?? 0;
     let planName = plan?.name ?? 'Free / None';
 
-    // 2. 🚨 TRIAL OVERRIDE 
+    // 2. 🚨 TRIAL OVERRIDE
     if (isTrial) {
       planName = 'Free Trial';
       maxWorkspaces = 1;
@@ -352,7 +382,7 @@ async activateOrganization(orgId: string) {
       aiCreditsLimit = 20;
     } else {
       // If NOT on trial, factor in purchased add-ons for Rocket users
-      maxWorkspaces += (org.subscription?.extraWorkspacesPurchased ?? 0);
+      maxWorkspaces += org.subscription?.extraWorkspacesPurchased ?? 0;
     }
 
     return {
@@ -366,7 +396,7 @@ async activateOrganization(orgId: string) {
         planName, // 👈 Now displays "Free Trial"
         interval: org.subscription?.billingInterval ?? 'NONE',
         isActive: org.subscription?.isActive ?? false,
-        isTrial,  // 👈 Good flag for the frontend to show the countdown banner!
+        isTrial, // 👈 Good flag for the frontend to show the countdown banner!
         trialEndsAt: org.subscription?.trialEndsAt ?? null,
       },
       usage: {
@@ -422,13 +452,13 @@ async activateOrganization(orgId: string) {
     }
   }
 
-    private async generateUniqueOrgSlug(name: string): Promise<string> {
-      const baseSlug = slugify(name, { lower: true, strict: true });
-      let slug = baseSlug;
-      let count = 1;
-      while (await this.prisma.organization.findUnique({ where: { slug } })) {
-        slug = `${baseSlug}-${count++}`;
-      }
-      return slug;
+  private async generateUniqueOrgSlug(name: string): Promise<string> {
+    const baseSlug = slugify(name, { lower: true, strict: true });
+    let slug = baseSlug;
+    let count = 1;
+    while (await this.prisma.organization.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${count++}`;
     }
+    return slug;
+  }
 }

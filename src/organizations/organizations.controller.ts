@@ -30,6 +30,8 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { UpdateOrgMemberRoleDto } from './dtos/update-member-role.dto';
 import { OrganizationMemberService } from './organization-member/organization-member.service';
 import { PermissionAction, PermissionResource } from '@/common/constants/rbac';
+import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
+import { AllowSuspended } from '@/common/decorators/allow-suspended.decorator';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
@@ -101,6 +103,8 @@ export class OrganizationsController {
   }
 
   @Patch(':organizationId/activate')
+  @BypassSubscription() // Only for this endpoint, as it's meant to help users get back in after a billing issue
+  @AllowSuspended() // Allow suspended orgs to access this endpoint
   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.UPDATE)
   @ApiOperation({ summary: 'Reactivate a previously deactivated organization' })
   @ApiResponse({ status: 200, description: 'Organization reactivated successfully' })
