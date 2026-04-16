@@ -304,6 +304,8 @@ export class BillingService {
           watermarkEnabled: false,
           lastPaymentFailedAt: null,
           failedPaymentAttempts: 0,
+          pendingPlanId: null,
+          pendingBillingInterval: null,
         },
       });
 
