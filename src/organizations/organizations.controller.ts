@@ -66,14 +66,20 @@ export class OrganizationsController {
       },
     },
   })
-  async createOrganization(@CurrentUser('userId') userId: string, @Body() dto: CreateOrganizationDto) {
+  async createOrganization(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: CreateOrganizationDto,
+  ) {
     return this.organizationsService.createOrganization(userId, dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all organizations with optional filters' })
   @ApiOkResponse({ description: 'List of organizations' })
-  async getAll(@Query() query: GetAllOrganizationsDto, @CurrentUser('userId') userId: string) {
+  async getAll(
+    @Query() query: GetAllOrganizationsDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.organizationsService.getAllOrganizations(userId, query);
   }
 
@@ -102,12 +108,30 @@ export class OrganizationsController {
     return this.organizationsService.getOrganization(orgId);
   }
 
+  @Patch(':organizationId/members/:memberId/role')
+  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.UPDATE)
+  @ApiOperation({ summary: 'Update member role (Promotion/Demotion)' })
+  async updateRole(
+    @Param('organizationId') organizationId: string,
+    @Param('memberId') memberId: string,
+    @Body() dto: UpdateOrgMemberRoleDto,
+  ) {
+    return this.organizationMembersService.updateRole({
+      organizationId,
+      memberId,
+      roleId: dto.roleId,
+    });
+  }
+
   @Patch(':organizationId/activate')
   @BypassSubscription() // Only for this endpoint, as it's meant to help users get back in after a billing issue
   @AllowSuspended() // Allow suspended orgs to access this endpoint
   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.UPDATE)
   @ApiOperation({ summary: 'Reactivate a previously deactivated organization' })
-  @ApiResponse({ status: 200, description: 'Organization reactivated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Organization reactivated successfully',
+  })
   async activateOrganization(@Param('organizationId') orgId: string) {
     return this.organizationsService.activateOrganization(orgId);
   }
@@ -140,21 +164,6 @@ export class OrganizationsController {
     return this.organizationsService.updateOrganization(orgId, dto);
   }
 
-  @Patch(':organizationId/members/:memberId/role')
-  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.UPDATE)
-  @ApiOperation({ summary: 'Update member role (Promotion/Demotion)' })
-  async updateRole(
-    @Param('organizationId') organizationId: string,
-    @Param('memberId') memberId: string,
-    @Body() dto: UpdateOrgMemberRoleDto,
-  ) {
-    return this.organizationMembersService.updateRole({
-      organizationId,
-      memberId,
-      roleId: dto.roleId,
-    });
-  }
-
   @Delete(':organizationId/members/:memberId')
   @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.DELETE)
   @ApiOperation({ summary: 'Remove a member from the entire organization' })
@@ -163,9 +172,8 @@ export class OrganizationsController {
     @Param('memberId') memberId: string,
     @CurrentUser('userId') actorUserId: string,
   ) {
-
     return this.organizationMembersService.remove({
-      actorId: actorUserId, 
+      actorId: actorUserId,
       organizationId,
       memberId,
     });
@@ -183,26 +191,25 @@ export class OrganizationsController {
   @Get(':organizationId/summary')
   @RequirePermission(PermissionResource.ORG_BILLING, PermissionAction.READ)
   @ApiOperation({ summary: 'Get organization usage summary' })
-  async getSummary(
-    @Param('organizationId') organizationId: string,
-  ) {
+  async getSummary(@Param('organizationId') organizationId: string) {
     return this.organizationsService.getOrganizationSummary(organizationId);
   }
 
-@Get(':organizationId/members')
-@RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
-  @ApiOperation({ 
-    summary: 'List organization members', 
-    description: 'Returns a paginated list of members belonging to a specific organization with search capabilities.' 
+  @Get(':organizationId/members')
+  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
+  @ApiOperation({
+    summary: 'List organization members',
+    description:
+      'Returns a paginated list of members belonging to a specific organization with search capabilities.',
   })
-  @ApiParam({ 
-    name: 'organizationId', 
+  @ApiParam({
+    name: 'organizationId',
     description: 'The unique ID of the organization',
-    example: 'cmnrgzxs30000shia1wff9zr3' 
+    example: 'cmnrgzxs30000shia1wff9zr3',
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'List of members retrieved successfully.' 
+  @ApiResponse({
+    status: 200,
+    description: 'List of members retrieved successfully.',
   })
   @ApiResponse({ status: 404, description: 'Organization not found.' })
   async listMembers(
@@ -217,9 +224,15 @@ export class OrganizationsController {
   @Get(':organizationId/members/:memberId')
   @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
   @ApiOperation({ summary: 'Get organization member' })
-  @ApiResponse({ status: 200, description: 'Member retrieved successfully.' }) 
-  async getOrganizationMember( @Param('memberId') memberId: string, @Param('organizationId') organizationId: string) {
-    return this.organizationMembersService.getOneOrganizationMember(memberId, organizationId);
+  @ApiResponse({ status: 200, description: 'Member retrieved successfully.' })
+  async getOrganizationMember(
+    @Param('memberId') memberId: string,
+    @Param('organizationId') organizationId: string,
+  ) {
+    return this.organizationMembersService.getOneOrganizationMember(
+      memberId,
+      organizationId,
+    );
   }
 
   @Delete(':organizationId')
@@ -236,7 +249,7 @@ export class OrganizationsController {
       example: { success: true, message: 'Organization deleted successfully' },
     },
   })
-  async deleteOrganization( @Param('organizationId') orgId: string) {
+  async deleteOrganization(@Param('organizationId') orgId: string) {
     return this.organizationsService.deleteOrganization(orgId);
   }
 }

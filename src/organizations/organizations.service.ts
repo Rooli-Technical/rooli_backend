@@ -321,7 +321,9 @@ export class OrganizationsService {
           isActive: true,
           readOnly: needsPayment ? true : false,
           status: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
-          billingStatus: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
+          billingStatus: needsPayment 
+          ? 'PAYMENT_METHOD_REQUIRED' 
+          : (sub.isTrial ? 'TRIAL_ACTIVE' : 'ACTIVE')
         },
       });
 

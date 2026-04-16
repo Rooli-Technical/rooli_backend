@@ -12,16 +12,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
 
-    //  Check if this is an Admin Route
-    const isAdminRoute = this.reflector.getAllAndOverride<boolean>(
-      IS_ADMIN_ROUTE_KEY,
-      [context.getHandler(), context.getClass()],
-    );
-
-    // This wasn't working even though the metadata was set, isAdminRoute still returns undefined
-    // if (isAdminRoute) {
-    //   return true; // Bypass the normal User JWT Strategy completely
-    // }
 
     if (request.path.startsWith('/api/v1/admin')) {
       console.log('Admin route detected by path — bypassing JwtAuthGuard');

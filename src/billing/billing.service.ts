@@ -466,8 +466,8 @@ export class BillingService {
     ]);
   }
 
-  // ---------------------------------------------------------
-  // CHANGE PLAN (Instant for Trials, Scheduled for Paid)
+// ---------------------------------------------------------
+  // CHANGE PLAN (Instant Upgrades, Scheduled Downgrades)
   // ---------------------------------------------------------
   async changePlan(
     organizationId: string,
@@ -483,23 +483,38 @@ export class BillingService {
       },
     });
 
-    if (!org || !org.subscription)
-      throw new BadRequestException('No subscription found');
+    if (!org || !org.subscription) throw new BadRequestException('No subscription found');
 
     const sub = org.subscription;
-    const newPlan = await this.prisma.plan.findUnique({
-      where: { id: newPlanId },
-    });
+    const currentPlan = sub.plan;
+    const newPlan = await this.prisma.plan.findUnique({ where: { id: newPlanId } });
     if (!newPlan) throw new NotFoundException('Target plan not found');
 
     // 1. FREE TRIAL OVERRIDE -> INSTANT CHECKOUT
-    // If they are on a trial, they skip scheduling and go straight to checkout
     if (sub.isTrial) {
       return this.initializePayment(org.id, newPlan.id, interval, user);
     }
 
-    // 2. PAID TO PAID -> PRE-FLIGHT LIMIT CHECKS
-    // Before we let them schedule a downgrade, we must verify they fit the new plan
+    // 🚨 2. DETERMINE IF THIS IS AN UPGRADE OR DOWNGRADE
+    // We compare the monthly USD prices to see which tier is higher
+    const isUpgrade = newPlan.monthlyPriceUsd > currentPlan.monthlyPriceUsd;
+
+    // ==========================================
+    // SCENARIO A: UPGRADES (Instant Money!)
+    // ==========================================
+    if (isUpgrade) {
+      // Don't do limit checks (they are getting MORE limits!)
+      // Send them straight to checkout to authorize the new plan/prorated amount
+      // (Or call a specific handleUpgrade logic if you have card on file)
+      return this.initializePayment(org.id, newPlan.id, interval, user); 
+      // Note: In a true Enterprise app, if they have a Paystack auth code, 
+      // you would hit Paystack's API to upgrade the subscription instantly here.
+    }
+
+    // ==========================================
+    // SCENARIO B: DOWNGRADES (Scheduled)
+    // ==========================================
+    // PRE-FLIGHT LIMIT CHECKS
     const [userCount, profileCount, workspaceCount] = await Promise.all([
       this.prisma.organizationMember.count({ where: { organizationId } }),
       this.prisma.socialProfile.count({
@@ -508,39 +523,44 @@ export class BillingService {
       this.prisma.workspace.count({ where: { organizationId } }),
     ]);
 
-    // Check Users limits (ignoring Unlimited/9999)
+    // Check Limits...
     if (newPlan.maxUsers < 9999 && userCount > newPlan.maxUsers) {
-      throw new BadRequestException(
-        `Please remove ${userCount - newPlan.maxUsers} team members before switching to the ${newPlan.name} plan.`,
-      );
+      throw new BadRequestException(`Please remove ${userCount - newPlan.maxUsers} team members before switching to the ${newPlan.name} plan.`);
+    }
+    if (newPlan.maxSocialProfiles < 9999 && profileCount > newPlan.maxSocialProfiles) {
+      throw new BadRequestException(`Please disconnect ${profileCount - newPlan.maxSocialProfiles} profiles before switching to the ${newPlan.name} plan.`);
+    }
+    if (newPlan.maxWorkspaces < 9999 && workspaceCount > newPlan.maxWorkspaces) {
+      throw new BadRequestException(`Please delete ${workspaceCount - newPlan.maxWorkspaces} workspaces before switching to the ${newPlan.name} plan.`);
     }
 
-    // Check Social Profiles limits
-    if (
-      newPlan.maxSocialProfiles < 9999 &&
-      profileCount > newPlan.maxSocialProfiles
-    ) {
-      throw new BadRequestException(
-        `Please disconnect ${profileCount - newPlan.maxSocialProfiles} social profiles before switching to the ${newPlan.name} plan.`,
-      );
+    // 🚨 TELL PAYSTACK ABOUT THE DOWNGRADE
+    if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+      try {
+        // Paystack allows you to swap the plan on an active subscription!
+        // We get the correct Paystack Plan Code based on their currency/interval
+        const isNigeria = org.currency === 'NGN';
+        const targetPaystackPlanCode = isNigeria 
+          ? (interval === 'ANNUAL' ? newPlan.paystackPlanCodeAnnualNgn : newPlan.paystackPlanCodeMonthlyNgn)
+          : (interval === 'ANNUAL' ? newPlan.paystackPlanCodeAnnualUsd : newPlan.paystackPlanCodeMonthlyUsd);
+
+        // Tell Paystack: "When this month ends, charge them using this new lower plan code"
+        await this.updatePaystackSubscription(
+          sub.paystackSubscriptionCode,
+          sub.paystackEmailToken,
+          targetPaystackPlanCode
+        );
+      } catch (error) {
+        this.logger.error('Failed to update Paystack subscription for downgrade', error);
+        throw new BadRequestException('Could not schedule downgrade with the payment provider.');
+      }
     }
 
-    // Check Workspaces limits
-    if (
-      newPlan.maxWorkspaces < 9999 &&
-      workspaceCount > newPlan.maxWorkspaces
-    ) {
-      throw new BadRequestException(
-        `Please delete ${workspaceCount - newPlan.maxWorkspaces} workspaces before switching to the ${newPlan.name} plan.`,
-      );
-    }
-
-    // 3. SCHEDULE THE CHANGE
+    // SCHEDULE THE CHANGE IN THE DATABASE
     await this.prisma.subscription.update({
       where: { organizationId },
       data: {
         pendingPlanId: newPlan.id,
-        // Add pendingBillingInterval to your Prisma schema!
         pendingBillingInterval: interval as BillingInterval,
       },
     });
@@ -1487,6 +1507,26 @@ async replaceCard(organizationId: string, user: any) {
       );
       throw new Error('Final overage charge failed');
     }
+  }
+
+  async updatePaystackSubscription(subscriptionCode: string, emailToken: string, newPlanCode: string) {
+    // This tells Paystack to swap the plan code. 
+    // Paystack will automatically apply this new plan code on the NEXT billing cycle!
+    const { data } = await firstValueFrom(
+      this.httpService.put(
+        `https://api.paystack.co/subscription/${subscriptionCode}`,
+        {
+          token: emailToken,
+          plan: newPlanCode,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+          },
+        },
+      ),
+    );
+    return data;
   }
 
   private inferCountry(ipCountry?: string, timeZone?: string) {

@@ -288,7 +288,10 @@ export class WorkspaceMemberService {
       where: {
         id: roleId,
         scope: 'WORKSPACE', // Must be workspace scoped
-        organizationId: { in: [null, organizationId] }, // Must be System (null) OR belong to this Org
+        OR: [
+          { organizationId: null }, // Must be System (null)
+          { organizationId: organizationId }, // OR belong to this Org
+        ],
       },
       select: { id: true },
     });
@@ -299,7 +302,6 @@ export class WorkspaceMemberService {
       );
     }
   }
-
   /**
    * Prevents removing a member if they are the LAST person with "Owner" privileges.
    * Checks both Explicit Roles (Workspace Override) and Implicit Roles (Org Owner).
