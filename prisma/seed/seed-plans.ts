@@ -9,10 +9,10 @@ export async function seedPlans() {
       tier: PlanTier.BUSINESS,
       badge: 'Most Popular',
 
-      monthlyPriceUsd: 1200,
-      annualPriceUsd: 9600,
-      monthlyPriceNgn: 1764000,
-      annualPriceNgn: 14112000,
+      monthlyPriceUsd: 1200, // $12.00
+      annualPriceUsd: 11520, // $115.20 (Exactly 20% off $144)
+      monthlyPriceNgn: 1764000, // NGN 17,640
+      annualPriceNgn: 16934400, // NGN 169,344 (Exactly 20% off 211,680)
 
       paystackPlanCodeMonthlyNgn: 'PLN_y8l5ovjzqx6bo5j',
       paystackPlanCodeAnnualNgn: 'PLN_j2dz1p5g4zima6a',
@@ -53,10 +53,10 @@ export async function seedPlans() {
       tier: PlanTier.ROCKET,
       badge: 'Best for Agencies',
 
-      monthlyPriceUsd: 4900,
-      annualPriceUsd: 47000,
-      monthlyPriceNgn: 7203000,
-      annualPriceNgn: 69090000,
+      monthlyPriceUsd: 4900, // $49.00
+      annualPriceUsd: 47040, // $470.40 (Exactly 20% off $588)
+      monthlyPriceNgn: 7203000, // NGN 72,030
+      annualPriceNgn: 69148800, // NGN 691,488 (Exactly 20% off 864,360)
 
       paystackPlanCodeMonthlyNgn: 'PLN_of4tu83cw2og4s5',
       paystackPlanCodeAnnualNgn: 'PLN_oiwln4pt1wxbw61',
@@ -100,10 +100,10 @@ export async function seedPlans() {
       description: 'Custom solutions for large organizations',
       tier: PlanTier.ENTERPRISE,
 
-      monthlyPriceUsd: 20000,
-      annualPriceUsd: 240000,
-      monthlyPriceNgn: 29400000,
-      annualPriceNgn: 352800000,
+      monthlyPriceUsd: 20000, // $200.00
+      annualPriceUsd: 192000, // $1,920.00 (Exactly 20% off $2,400)
+      monthlyPriceNgn: 29400000, // NGN 294,000
+      annualPriceNgn: 282240000, // NGN 2,822,400 (Exactly 20% off 3,528,000)
 
       paystackPlanCodeMonthlyNgn: 'MANUAL',
       paystackPlanCodeAnnualNgn: 'MANUAL',

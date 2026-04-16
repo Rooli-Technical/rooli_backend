@@ -57,12 +57,12 @@ export class InboxSyncProcessor extends WorkerHost {
         case Platform.LINKEDIN:
           await this.syncLinkedIn(profile, accessToken);
           break;
-        case Platform.FACEBOOK:
-          await this.syncMeta(profile, accessToken);
-          break;
-        case Platform.INSTAGRAM:
-          await this.syncInstagram(profile, accessToken);
-          break;
+        // case Platform.FACEBOOK:
+        //   await this.syncMeta(profile, accessToken);
+        //   break;
+        // case Platform.INSTAGRAM:
+        //   await this.syncInstagram(profile, accessToken);
+        //   break;
         default:
           this.logger.warn(`Polling not supported for platform: ${platform}`);
       }
@@ -76,20 +76,52 @@ export class InboxSyncProcessor extends WorkerHost {
     }
   }
 
-  // ==========================================
+// ==========================================
   // LINKEDIN SYNC LOGIC
   // ==========================================
   private async syncLinkedIn(profile: any, accessToken: string) {
-    // 1. Fetch raw API data using your provider
-    // (You will need to write getRecentComments inside LinkedInInboxProvider)
+    const lastPolledAt = Date.now() - (3 * 60 * 1000);
+
+    let entityUrn = profile.platformId;
+    if (!entityUrn.startsWith('urn:li:')) {
+      const isNumeric = /^\d+$/.test(entityUrn);
+      entityUrn = isNumeric 
+        ? `urn:li:organization:${entityUrn}` 
+        : `urn:li:person:${entityUrn}`;
+    }
+
+    // 🚨 1. Fetch only posts published via YOUR APP from your database!
+    // We grab their 10 most recent successful posts.
+    const recentAppPosts = await this.prisma.postDestination.findMany({
+      where: {
+        socialProfileId: profile.id,
+        status: 'SUCCESS',
+        platformPostId: { not: null },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 10,
+    });
+
+    if (recentAppPosts.length === 0) {
+      this.logger.debug(`No app-published posts found for ${profile.id}. Skipping.`);
+      return;
+    }
+
+    // Extract just the LinkedIn URNs
+    const postUrns = recentAppPosts.map(post => post.platformPostId!);
+
+    this.logger.debug(`Fetching comments for ${postUrns.length} app-published posts...`);
+
+    // 🚨 2. Pass the array of post URNs to your provider
     const rawComments = await this.linkedInProvider.getRecentComments(
-      profile.platformId,
+      entityUrn,
+      postUrns, // Pass the array here!
       accessToken,
+      lastPolledAt,
     );
 
-    // 2. Normalize & Save each comment
+    // 3. Normalize & Save each comment
     for (const raw of rawComments) {
-      // Reuse the exact same Adapter we built for Webhooks!
       const normalized = this.linkedInAdapter.normalizeComment(raw);
       if (normalized) {
         const payload = this.mapToCommentPayload(
@@ -97,16 +129,10 @@ export class InboxSyncProcessor extends WorkerHost {
           profile.workspaceId,
           profile.id,
         );
-        // Reuse the exact same IngestService we built for Webhooks!
         await this.ingest.ingestInboundComment(payload);
       }
     }
-
-    // You would repeat the above step for DMs:
-    // const rawDms = await this.linkedInProvider.getRecentDMs(...);
-    // for (const dm of rawDms) { ... normalizeDirectMessage ... }
   }
-
   // ==========================================
   // META SYNC LOGIC (Fallback)
   // ==========================================

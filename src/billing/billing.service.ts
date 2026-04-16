@@ -66,26 +66,23 @@ export class BillingService {
     };
 
 
-    const plans = _plans.map((plan) => {
-      // Because your DB stores Kobo/Cents, we divide by 100 for the UI to display cleanly.
+   const plans = _plans.map((plan) => {
+      // Divide by 100 to convert cents/kobo back to dollars/naira
       const monthlyPrice = isNigeria
         ? plan.monthlyPriceNgn / 100
         : plan.monthlyPriceUsd / 100;
+      
       const annualPrice = isNigeria
         ? plan.annualPriceNgn / 100
         : plan.annualPriceUsd / 100;
 
-
-            // 2. Calculate the UI metrics dynamically
+      // Calculate the UI metrics dynamically
       const originalAnnualPrice = monthlyPrice * 12;
-
-     // Calculate exactly how much cash they keep in their pocket
       const amountSaved = Math.max(0, originalAnnualPrice - annualPrice);
       
-      let discountPercentage = 0;
-      if (originalAnnualPrice > 0 && amountSaved > 0) {
-        discountPercentage = Math.round((amountSaved / originalAnnualPrice) * 100);
-      }
+      // Since you are strictly enforcing a 20% discount on all plans,
+      // we can safely set this to 20 if there is any discount at all.
+      const discountPercentage = amountSaved > 0 ? 20 : 0;
 
       return {
         id: plan.id,
@@ -106,9 +103,9 @@ export class BillingService {
           currency: isNigeria ? 'NGN' : 'USD',
           monthly: monthlyPrice,
           annual: annualPrice,
-          originalAnnual: originalAnnualPrice, // e.g. 144 (For the UI strikethrough)
+          originalAnnual: originalAnnualPrice, // Passes to UI for strikethrough
           amountSaved,
-          discountPercentage,
+          discountPercentage, 
         },
       };
     });

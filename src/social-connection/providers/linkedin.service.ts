@@ -22,12 +22,12 @@ export class LinkedInService {
       'w_member_social', // Post to Personal Profile
       'r_member_postAnalytics',
       'r_member_profileAnalytics',
-      // 'w_member_social_feed',    // OPTIONAL: comment on others' posts
+      'w_member_social_feed',    // OPTIONAL: comment on others' posts
       'rw_organization_admin', // Admin access (to list pages)
       'w_organization_social', // Post to Company Page
       'r_organization_social',
-      // 'r_organization_social_feed', // OPTIONAL: Reading comments on org posts
-      // 'w_organization_social_feed', // OPTIONAL: Replying to comments on org posts
+      'r_organization_social_feed', // OPTIONAL: Reading comments on org posts
+      'w_organization_social_feed', // OPTIONAL: Replying to comments on org posts
       'r_organization_followers',
     ].join(' ');
 
