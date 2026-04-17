@@ -142,22 +142,20 @@ export class LinkedInInboxProvider {
    const isPerson = actorUrn.includes(':person:');
     
     // Extract the raw ID ("urn:li:organization:70387998" -> "70387998")
-    const id = actorUrn.split(':').pop(); 
-
-    // 🚨 THE FIX: Different path structures for People vs. Organizations
-    const resourcePath = isPerson ? `people/(id:${id})` : `organizations/${id}`;
-
-    const fields = isPerson
-      ? 'firstName,lastName,profilePicture'
-      : 'localizedName,vanityName,logoV2';
+    const id = actorUrn.split(':').pop() || ''; 
 
     try {
-     const url = `${this.baseUrl}/${resourcePath}?fields=${fields}`;
+      if (isPerson) {
+        // Person lookup via standard profile endpoint
+        const fields = 'firstName,lastName,profilePicture';
+        const url = `${this.baseUrl}/people/(id:${id})?fields=${fields}`;
 
-      const { data } = await firstValueFrom(
-        this.httpService.get(url, { headers, httpsAgent: this.httpsAgent }),
-      );
-     if (isPerson) {
+        const { data } = await firstValueFrom(
+          this.httpService.get(url, { headers, httpsAgent: this.httpsAgent }),
+        );
+
+        console.log('data', JSON.stringify(data));
+
         const firstName = data.firstName?.localized?.['en_US'] || data.firstName || '';
         const lastName = data.lastName?.localized?.['en_US'] || data.lastName || '';
         
@@ -170,12 +168,28 @@ export class LinkedInInboxProvider {
           avatar: avatar,
         };
       } else {
-        const elements = data.logoV2?.['displayImage~']?.elements || [];
+        // Organization lookup using the public organizationsLookup endpoint to bypass ADMIN_ONLY restrictions
+        const url = `${this.baseUrl}/organizationsLookup?ids=List(${id})`;
+
+        const { data } = await firstValueFrom(
+          this.httpService.get(url, { headers, httpsAgent: this.httpsAgent }),
+        );
+
+        console.log('data', JSON.stringify(data));
+
+        // LinkedIn batch APIs return a results object keyed by the ID
+        const orgData = data.results && data.results[id] ? data.results[id] : null;
+
+        if (!orgData) {
+          throw new Error('Organization data not found in response');
+        }
+
+        const elements = orgData.logoV2?.['displayImage~']?.elements || orgData.logoV2?.elements || [];
         const lastElement = elements[elements.length - 1];
         const avatar = lastElement?.identifiers?.[0]?.identifier || null;
 
         return {
-          name: data.localizedName || data.vanityName || data.name || 'LinkedIn Organization',
+          name: orgData.localizedName || orgData.vanityName || orgData.name || 'LinkedIn Organization',
           avatar: avatar,
         };
       }
