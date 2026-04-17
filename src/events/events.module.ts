@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,6 +15,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TicketEventsSubscriber } from './subscribers/tickets-events.subscriber';
 import { MailModule } from '@/mail/mail.module';
 
+@Global()
 @Module({
   imports: [
     EventEmitterModule.forRoot(),

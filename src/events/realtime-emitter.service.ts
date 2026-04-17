@@ -69,4 +69,22 @@ export class RealtimeEmitterService implements OnModuleInit {
     if (!this.emitter) return;
     this.emitter.of('/events').to(`member:${memberId}`).emit(event, payload);
   }
+
+  /**
+   * Broadcasts events exclusively to Super Admins and Staff
+   */
+  emitToAdmins(event: string, payload: any) {
+    if (!this.emitter) {
+      this.logger.error(
+        `❌ Emitter not initialized. Failed to broadcast ${event} to admins.`,
+      );
+      return;
+    }
+
+    const room = 'admin_global_room';
+    
+    this.logger.debug(`📡 [Worker -> Redis] Emitting ${event} to global admin room`);
+
+    this.emitter.of('/events').to(room).emit(event, payload);
+  }
 }

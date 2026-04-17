@@ -43,6 +43,7 @@ import Redis from 'ioredis';
 import { AdminModule } from './admin/admin.module';
 import { MediaProxyModule } from './media-proxy/media-proxy.module';
 import { PlanAccessModule } from './plan-access/plan-access.module';
+import { EnterpriseLeadsModule } from './enterprise-leads/enterprise-leads.module';
 
 @Module({
   imports: [
@@ -140,6 +141,7 @@ import { PlanAccessModule } from './plan-access/plan-access.module';
     AdminModule,
     MediaProxyModule,
     PlanAccessModule,
+    EnterpriseLeadsModule,
   ],
   controllers: [AppController],
   providers: [

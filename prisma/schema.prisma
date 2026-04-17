@@ -21,6 +21,8 @@ model User {
 
   lastVerificationEmailSentAt DateTime?
 
+  globalRole    GlobalRole @default(USER)
+
   // Tracks which Workspace (Client) the user was looking at last
   lastActiveWorkspaceId String?
   lastActiveWorkspace   Workspace? @relation("UserLastActiveWorkspace", fields: [lastActiveWorkspaceId], references: [id], onDelete: SetNull)
@@ -58,6 +60,11 @@ model User {
   favoriteTemplates  UserFavoriteTemplate[]
 
   comments Comment[]
+
+  enterpriseLeads EnterpriseLead[]
+
+
+  adminNotifications AdminNotification[]
 
   assignedTickets Ticket[]        @relation("TicketAssignee")
   ticketComments  TicketComment[]
@@ -115,6 +122,8 @@ model Organization {
   settings Json?
 
   publishingMetrics PublishingMetric[]
+
+  enterpriseLeads EnterpriseLead[]
 }
 
 model Workspace {
@@ -986,6 +995,25 @@ model Notification {
   @@index([memberId, readAt])
 }
 
+model AdminNotification {
+  id        String   @id @default(cuid())
+  
+  // Link it to the specific Super Admin
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  
+  type      AdminAlertType @default(SYSTEM_ALERT)
+  title     String
+  body      String   @db.Text
+  link      String?  // e.g., /admin/enterprise-leads/xyz
+  
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([adminId, isRead])
+}
+
+
 model Comment {
   id          String @id @default(cuid())
   workspaceId String
@@ -1569,6 +1597,34 @@ model TicketComment {
   @@index([ticketId])
 }
 
+model EnterpriseLead {
+ id              String   @id @default(cuid())
+  companyName     String
+  email           String
+  companySize     String
+  socialProfiles  Int
+  workspaces      Int
+  primaryGoals    String   @db.Text
+  status          EnterpriseLeadStatus @default(PENDING) 
+  
+  // 🚨 NEW: Link to the existing User and Organization
+  userId          String?
+  user            User?          @relation(fields: [userId], references: [id])
+  
+  organizationId  String?
+  organization    Organization?  @relation(fields: [organizationId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum EnterpriseLeadStatus {
+  PENDING
+  CONTACTED
+  CONVERTED
+  REJECTED
+}
+
 enum BillingStatus {
   TRIAL_ACTIVE              // Trial ongoing
   ACTIVE                    // Paid + valid
@@ -2016,6 +2072,22 @@ enum TicketPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+// Add these to your Enums
+enum AdminAlertType {
+  NEW_ENTERPRISE_LEAD
+  SYSTEM_ALERT
+  PAYMENT_FAILED
+  TICKET_ESCALATED
+}
+
+// Add this Enum
+enum GlobalRole {
+  USER           // Standard paying customers
+  SUPER_ADMIN    // Founders / Devs
+  SALES_AGENT    // Can view Enterprise Leads
+  SUPPORT_AGENT  // Can reply to Support Tickets
 }
 
 model AdminSession {

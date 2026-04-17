@@ -290,4 +290,43 @@ export class MailService {
       html,
     );
   }
+
+  async sendEnterpriseLeadInternalAlert(lead: any) {
+    const context = {
+      leadId: lead.id,
+      companyName: lead.companyName,
+      email: lead.email,
+      companySize: lead.companySize,
+      workspaces: lead.workspaces,
+      socialProfiles: lead.socialProfiles,
+      primaryGoals: lead.primaryGoals,
+      userId: lead.userId || 'N/A',
+      organizationId: lead.organizationId || 'N/A',
+      year: new Date().getFullYear(),
+    };
+
+    const html = await this.compileTemplate('enterprise-internal-alert', context);
+
+    // Send this to YOUR internal sales team
+    await this.sendZeptoMail(
+      this.configService.get<string>('SALES_EMAIL_ADDRESS') || 'sales@rooli.com',
+      `🔥 New Enterprise Lead: ${lead.companyName}`,
+      html,
+    );
+  }
+
+  async sendEnterpriseLeadConfirmation(email: string, companyName: string) {
+    const context = {
+      companyName,
+      year: new Date().getFullYear(),
+    };
+
+    const html = await this.compileTemplate('enterprise-user-confirmation', context);
+
+    await this.sendZeptoMail(
+      email,
+      `Your Enterprise Request for ${companyName} - We're on it!`,
+      html,
+    );
+  }
 }
