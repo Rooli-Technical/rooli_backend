@@ -241,7 +241,7 @@ export class OrganizationsService {
     return result;
   }
 
-  async activateOrganization(orgId: string) {
+async activateOrganization(orgId: string) {
     const [sub, org] = await Promise.all([
       this.prisma.subscription.findUnique({
         where: { organizationId: orgId },
@@ -253,7 +253,6 @@ export class OrganizationsService {
 
     if (!org) throw new NotFoundException('Organization not found');
 
-    // 🚨 FLAW 3 FIX: Prevent banned users from reactivating themselves
     if (org.status === 'BANNED' || org.status === 'SUSPENDED_BY_ADMIN') {
       throw new ForbiddenException(
         'This account has been suspended by administration. Please contact support.',
@@ -261,9 +260,8 @@ export class OrganizationsService {
     }
 
     const now = new Date();
-
-    // 🚨 FLAW 4 FIX: Safely handle if sub is null
     let needsPayment = sub ? true : false;
+    let paystackReactivated = false; // 🚨 Track if Paystack actually restarted
 
     // ==========================================
     // 1. EXTERNAL NETWORK CALLS
@@ -271,21 +269,20 @@ export class OrganizationsService {
     if (sub && sub.currentPeriodEnd > now) {
       needsPayment = false; // They still have time left!
 
-      // If it's a paid plan that was canceled at Paystack
       if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
         try {
           await this.billingService.enablePaystackSubscription(
             sub.paystackSubscriptionCode,
             sub.paystackEmailToken,
           );
+          paystackReactivated = true; // ✅ It worked! It will auto-renew.
         } catch (error) {
-          this.logger.error(
-            `Failed to enable Paystack sub for Org ${orgId}`,
-            error.message,
+          // 🚨 THE FIX: Do NOT throw an error here! 
+          // Paystack says it's permanently dead. We just log it and move on.
+          this.logger.warn(
+            `Paystack subscription dead for Org ${orgId}. Allowing access until period end, but it will not auto-renew.`,
           );
-          throw new BadRequestException(
-            'Could not reactivate subscription with payment provider.',
-          );
+          paystackReactivated = false; 
         }
       }
     }
@@ -296,18 +293,18 @@ export class OrganizationsService {
     const result = await this.prisma.$transaction(async (tx) => {
       // If they are allowed back in (Free tier OR Paid tier with time left)
       if (!needsPayment) {
-        // 1. Only restore the subscription IF they actually have one
         if (sub) {
           await tx.subscription.update({
             where: { organizationId: orgId },
             data: {
-              cancelAtPeriodEnd: false,
+              // 🚨 THE FIX: If Paystack failed, we keep cancelAtPeriodEnd TRUE
+              // so your app knows they will lose access at the end of the month!
+              cancelAtPeriodEnd: paystackReactivated ? false : true,
               status: sub.isTrial ? 'TRIALING' : 'ACTIVE',
             },
           });
         }
 
-        // 🚨 2. THE FIX: Reactivate Social Profiles for EVERYONE (Free or Paid)
         await tx.socialProfile.updateMany({
           where: { workspace: { organizationId: orgId } },
           data: { isActive: true },
@@ -322,8 +319,8 @@ export class OrganizationsService {
           readOnly: needsPayment ? true : false,
           status: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
           billingStatus: needsPayment 
-          ? 'PAYMENT_METHOD_REQUIRED' 
-          : (sub.isTrial ? 'TRIAL_ACTIVE' : 'ACTIVE')
+            ? 'PAYMENT_METHOD_REQUIRED' 
+            : (sub.isTrial ? 'TRIAL_ACTIVE' : 'ACTIVE')
         },
       });
 
@@ -333,14 +330,21 @@ export class OrganizationsService {
         data: { isActive: true },
       });
 
+      // 🚨 Give the frontend a smart message!
+      let message = 'Organization fully restored.';
+      if (needsPayment) {
+        message = 'Organization reactivated. Please update your payment method to restore full access.';
+      } else if (!paystackReactivated && sub) {
+        message = 'Organization restored for the remainder of your billing cycle. Please set up a new subscription to prevent future interruption.';
+      }
+
       return {
         success: true,
-        message: needsPayment
-          ? 'Organization reactivated. Please update your payment method to restore full access.'
-          : 'Organization fully restored.',
+        message,
         needsPayment,
       };
     });
+    
     return result;
   }
   /**
