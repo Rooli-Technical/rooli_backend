@@ -80,7 +80,7 @@ export class InboxSyncProcessor extends WorkerHost {
   // LINKEDIN SYNC LOGIC
   // ==========================================
   private async syncLinkedIn(profile: any, accessToken: string) {
-    const lastPolledAt = Date.now() - (3 * 60 * 1000);
+    const lastPolledAt = Date.now() - (24 * 60 * 60 * 1000);
 
     let entityUrn = profile.platformId;
     if (!entityUrn.startsWith('urn:li:')) {
@@ -122,6 +122,12 @@ export class InboxSyncProcessor extends WorkerHost {
 
     // 3. Normalize & Save each comment
     for (const raw of rawComments) {
+      // 🚨 HYDRATE: Get the name and avatar!
+      const profileInfo = await this.linkedInProvider.resolveActorProfile(
+        raw.payload.actor, 
+        accessToken
+      );
+
       const normalized = this.linkedInAdapter.normalizeComment(raw);
       if (normalized) {
         const payload = this.mapToCommentPayload(
@@ -129,6 +135,11 @@ export class InboxSyncProcessor extends WorkerHost {
           profile.workspaceId,
           profile.id,
         );
+
+        // 🚨 OVERWRITE with the real names!
+        payload.senderName = profileInfo.name;
+        payload.senderAvatarUrl = profileInfo.avatar;
+
         await this.ingest.ingestInboundComment(payload);
       }
     }

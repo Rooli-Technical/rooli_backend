@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import * as https from 'https';
 
 @Injectable()
 export class LinkedInInboxProvider {
@@ -9,14 +10,20 @@ export class LinkedInInboxProvider {
 
   constructor(private readonly httpService: HttpService) {}
 
+  private httpsAgent = new https.Agent({
+    family: 4, // Force IPv4 (Disable IPv6)
+    keepAlive: true,
+    timeout: 30000,
+  });
+
   /**
    * Fetches recent LinkedIn comments and maps them to the LinkedIn Webhook format.
    */
-/**
+  /**
    * Fetches recent LinkedIn comments and maps them to the LinkedIn Webhook format.
    * @param lastPolledAt - Pass a timestamp to prevent re-processing old comments!
    */
-async getRecentComments(
+  async getRecentComments(
     organizationUrn: string,
     postUrns: string[], // 🚨 Accept the array of app-published posts
     accessToken: string,
@@ -37,7 +44,10 @@ async getRecentComments(
 
         try {
           const commentsRes = await firstValueFrom(
-            this.httpService.get(commentsUrl, { headers }),
+            this.httpService.get(commentsUrl, {
+              headers,
+              httpsAgent: this.httpsAgent,
+            }),
           );
 
           const comments = commentsRes.data?.elements || [];
@@ -60,7 +70,9 @@ async getRecentComments(
             }
           }
         } catch (commentErr: any) {
-          const errMsg = commentErr.response?.data ? JSON.stringify(commentErr.response.data) : commentErr.message;
+          const errMsg = commentErr.response?.data
+            ? JSON.stringify(commentErr.response.data)
+            : commentErr.message;
           this.logger.debug(`Skipped comments for post ${postUrn}: ${errMsg}`);
           continue;
         }
@@ -68,8 +80,12 @@ async getRecentComments(
 
       return mappedToWebhook;
     } catch (error: any) {
-      const linkedInError = error.response?.data ? JSON.stringify(error.response.data) : error.message;
-      this.logger.error(`Failed to fetch LinkedIn comments. Reason: ${linkedInError}`);
+      const linkedInError = error.response?.data
+        ? JSON.stringify(error.response.data)
+        : error.message;
+      this.logger.error(
+        `Failed to fetch LinkedIn comments. Reason: ${linkedInError}`,
+      );
       return [];
     }
   }
@@ -113,6 +129,71 @@ async getRecentComments(
       const errorMsg = error.response?.data?.message || error.message;
       this.logger.error(`Failed to fetch LinkedIn DMs: ${errorMsg}`);
       return [];
+    }
+  }
+
+  async resolveActorProfile(actorUrn: string, accessToken: string) {
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'LinkedIn-Version': '202601',
+      'X-Restli-Protocol-Version': '2.0.0',
+    };
+
+   const isPerson = actorUrn.includes(':person:');
+    
+    // Extract the raw ID ("urn:li:organization:70387998" -> "70387998")
+    const id = actorUrn.split(':').pop(); 
+
+    // 🚨 THE FIX: Different path structures for People vs. Organizations
+    const resourcePath = isPerson ? `people/(id:${id})` : `organizations/${id}`;
+
+    const fields = isPerson
+      ? 'firstName,lastName,profilePicture'
+      : 'localizedName,vanityName,logoV2';
+
+    try {
+     const url = `${this.baseUrl}/${resourcePath}?fields=${fields}`;
+
+      const { data } = await firstValueFrom(
+        this.httpService.get(url, { headers, httpsAgent: this.httpsAgent }),
+      );
+     if (isPerson) {
+        const firstName = data.firstName?.localized?.['en_US'] || data.firstName || '';
+        const lastName = data.lastName?.localized?.['en_US'] || data.lastName || '';
+        
+        const elements = data.profilePicture?.['displayImage~']?.elements || [];
+        const lastElement = elements[elements.length - 1];
+        const avatar = lastElement?.identifiers?.[0]?.identifier || null;
+
+        return {
+          name: `${firstName} ${lastName}`.trim() || 'LinkedIn Member',
+          avatar: avatar,
+        };
+      } else {
+        const elements = data.logoV2?.['displayImage~']?.elements || [];
+        const lastElement = elements[elements.length - 1];
+        const avatar = lastElement?.identifiers?.[0]?.identifier || null;
+
+        return {
+          name: data.localizedName || data.vanityName || data.name || 'LinkedIn Organization',
+          avatar: avatar,
+        };
+      }
+    } catch (error: any) {
+      // 🚨 Better Error Extraction: Catch Axios Network vs API errors
+      const status = error.response?.status || error.code || 'Unknown';
+      const errorDetail = error.response?.data 
+        ? JSON.stringify(error.response.data) 
+        : error.message;
+
+      this.logger.warn(
+        `LinkedIn API Error [${status}]: Failed to resolve ${actorUrn}. Details: ${errorDetail}`,
+      );
+
+      return {
+        name: isPerson ? 'LinkedIn Member' : 'LinkedIn Organization',
+        avatar: null,
+      };
     }
   }
 }
