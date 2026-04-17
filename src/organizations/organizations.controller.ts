@@ -84,6 +84,8 @@ export class OrganizationsController {
   }
 
   @Get(':organizationId')
+  @BypassSubscription() // Only for this endpoint, as it's meant to help users get back in after a billing issue
+  @AllowSuspended() // Allow suspended orgs to access this endpoint
   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.READ)
   @ApiOperation({
     summary: 'Get organization',
