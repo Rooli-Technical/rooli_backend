@@ -25,7 +25,7 @@ export class LinkedInInboxProvider {
    */
   async getRecentComments(
     organizationUrn: string,
-    postUrns: string[], // 🚨 Accept the array of app-published posts
+    postUrns: string[], // Accept the array of app-published posts
     accessToken: string,
     lastPolledAt: number,
   ): Promise<any[]> {
@@ -38,7 +38,7 @@ export class LinkedInInboxProvider {
 
       const mappedToWebhook: any[] = [];
 
-      // 🚨 Loop directly over the posts from your DB! No need to fetch posts from LinkedIn.
+      // Loop directly over the posts from your DB! No need to fetch posts from LinkedIn.
       for (const postUrn of postUrns) {
         const commentsUrl = `${this.baseUrl}/socialActions/${encodeURIComponent(postUrn)}/comments?count=50`;
 
@@ -131,7 +131,6 @@ export class LinkedInInboxProvider {
       return [];
     }
   }
-
   async resolveActorProfile(actorUrn: string, accessToken: string) {
     const headers = {
       Authorization: `Bearer ${accessToken}`,
@@ -139,14 +138,12 @@ export class LinkedInInboxProvider {
       'X-Restli-Protocol-Version': '2.0.0',
     };
 
-   const isPerson = actorUrn.includes(':person:');
-    
-    // Extract the raw ID ("urn:li:organization:70387998" -> "70387998")
-    const id = actorUrn.split(':').pop() || ''; 
+    const isPerson = actorUrn.includes(':person:');
+    const id = actorUrn.split(':').pop() || '';
 
     try {
       if (isPerson) {
-        // Person lookup via standard profile endpoint
+        // Person logic stays the same - we get the name safely!
         const fields = 'firstName,lastName,profilePicture';
         const url = `${this.baseUrl}/people/(id:${id})?fields=${fields}`;
 
@@ -154,50 +151,45 @@ export class LinkedInInboxProvider {
           this.httpService.get(url, { headers, httpsAgent: this.httpsAgent }),
         );
 
-        console.log('data', JSON.stringify(data));
-
-        const firstName = data.firstName?.localized?.['en_US'] || data.firstName || '';
-        const lastName = data.lastName?.localized?.['en_US'] || data.lastName || '';
-        
-        const elements = data.profilePicture?.['displayImage~']?.elements || [];
-        const lastElement = elements[elements.length - 1];
-        const avatar = lastElement?.identifiers?.[0]?.identifier || null;
+        const firstName =
+          data.firstName?.localized?.['en_US'] || data.firstName || '';
+        const lastName =
+          data.lastName?.localized?.['en_US'] || data.lastName || '';
 
         return {
           name: `${firstName} ${lastName}`.trim() || 'LinkedIn Member',
-          avatar: avatar,
+          avatar: null,
         };
       } else {
-        // Organization lookup using the public organizationsLookup endpoint to bypass ADMIN_ONLY restrictions
         const url = `${this.baseUrl}/organizationsLookup?ids=List(${id})`;
 
         const { data } = await firstValueFrom(
           this.httpService.get(url, { headers, httpsAgent: this.httpsAgent }),
         );
 
-        console.log('data', JSON.stringify(data));
-
         // LinkedIn batch APIs return a results object keyed by the ID
-        const orgData = data.results && data.results[id] ? data.results[id] : null;
+        const orgData =
+          data.results && data.results[id] ? data.results[id] : null;
 
         if (!orgData) {
           throw new Error('Organization data not found in response');
         }
 
-        const elements = orgData.logoV2?.['displayImage~']?.elements || orgData.logoV2?.elements || [];
-        const lastElement = elements[elements.length - 1];
-        const avatar = lastElement?.identifiers?.[0]?.identifier || null;
+        // We successfully extract the public name!
+        const orgName =
+          orgData.localizedName ||
+          orgData.vanityName ||
+          'LinkedIn Organization';        
 
         return {
-          name: orgData.localizedName || orgData.vanityName || orgData.name || 'LinkedIn Organization',
-          avatar: avatar,
+          name: orgName,
+          avatar: null,
         };
       }
     } catch (error: any) {
-      // 🚨 Better Error Extraction: Catch Axios Network vs API errors
       const status = error.response?.status || error.code || 'Unknown';
-      const errorDetail = error.response?.data 
-        ? JSON.stringify(error.response.data) 
+      const errorDetail = error.response?.data
+        ? JSON.stringify(error.response.data)
         : error.message;
 
       this.logger.warn(

@@ -216,6 +216,7 @@ export class InboxIngestService {
         update: {
           content: payload.content,
           updatedAt: payload.timestamp,
+          senderName: payload.senderName, 
           senderAvatarUrl: payload.senderAvatarUrl,
         },
         create: {
@@ -226,10 +227,10 @@ export class InboxIngestService {
           externalCommentId: payload.externalCommentId,
           platform: payload.platform,
           senderExternalId: payload.senderExternalId,
-          senderName: payload.senderName,
           content: payload.content,
           createdAt: payload.timestamp,
           externalPostId: payload.externalPostId,
+          senderName: payload.senderName,
           senderAvatarUrl: payload.senderAvatarUrl,
         },
       });

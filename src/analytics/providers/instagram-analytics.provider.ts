@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
@@ -99,9 +99,9 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
         },
       };
     } catch (error) {
-      console.log(error);
-      this.logger.error(`IG Account fetch failed for ${igUserId}`, error);
-      throw error;
+     throw new InternalServerErrorException(
+        `Instagram account fetch failed for User ID: ${igUserId}. Reason: ${error.message}`
+      );
     }
   }
 
@@ -178,9 +178,11 @@ export class InstagramAnalyticsProvider implements IAnalyticsProvider {
             };
           });
         } catch (error: any) {
-          console.log(error);
           // Tip: If one chunk fails (e.g., due to a deleted post), log it but don't crash the whole job
-          this.logger.error(`Instagram Chunk Failed: ${error.message}`);
+         this.logger.warn(
+            `Instagram Chunk Failed. Skipping chunk and continuing job. Reason: ${error.message}`,
+            error.stack
+          );
           return [];
         }
       }),

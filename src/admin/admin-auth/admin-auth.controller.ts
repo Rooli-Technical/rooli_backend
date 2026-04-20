@@ -43,7 +43,6 @@ export class AdminAuthController {
       req.ip ||
       req.headers['x-forwarded-for']?.toString().split(',')[0].trim() ||
       'unknown';
-    console.log('IP Address', ip);
     return this.adminAuthService.login(body.email, body.password, ip);
   }
 

@@ -156,7 +156,6 @@ export class TicketsService {
         name: authorName,
       },
     };
-    console.log('🔥 BEFORE EMIT');
 
     this.domainEvents.emit('ticket.comment.added', eventPayload);
 
@@ -164,7 +163,6 @@ export class TicketsService {
       ...eventPayload,
       email: ticketOwner?.email,
     });
-    console.log('🔥 AFTER EMIT');
 
     return { commentId: comment.id };
   }

@@ -80,7 +80,7 @@ export class InboxSyncProcessor extends WorkerHost {
   // LINKEDIN SYNC LOGIC
   // ==========================================
   private async syncLinkedIn(profile: any, accessToken: string) {
-    const lastPolledAt = Date.now() - (24 * 60 * 60 * 1000);
+    const lastPolledAt = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
     let entityUrn = profile.platformId;
     if (!entityUrn.startsWith('urn:li:')) {
