@@ -27,10 +27,10 @@ export class GenerateCaptionDto {
 
   @ApiPropertyOptional({
     example: 'LINKEDIN',
-    enum: ['LINKEDIN', 'INSTAGRAM', 'FACEBOOK', 'X'],
+    enum: ['LINKEDIN', 'INSTAGRAM', 'FACEBOOK', 'TWITTER', 'TIKTOK'],
   })
   @IsOptional()
-  @IsEnum(['LINKEDIN', 'INSTAGRAM', 'FACEBOOK', 'X'] as any)
+  @IsEnum(['LINKEDIN', 'INSTAGRAM', 'FACEBOOK', 'TWITTER', 'TIKTOK'] as any)
   platform?: Platform;
 
   @ApiPropertyOptional({ example: 180 })

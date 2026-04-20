@@ -55,7 +55,7 @@ export class HuggingFaceProvider implements IAiProvider {
             content: options.user,
           },
         ],
-        max_tokens: options.maxTokens ?? 500,
+       max_tokens: options.maxTokens ?? 5000, 
         temperature: options.temperature ?? 0.7,
       });
 
