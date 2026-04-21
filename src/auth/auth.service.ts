@@ -386,6 +386,7 @@ export class AuthService {
   }
 
   async handleSocialLogin(googleUser: any, ip: string) {
+    try{
     const lowerEmail = googleUser.email.toLowerCase();
 
     const geo = geoip.lookup(ip);
@@ -462,6 +463,10 @@ export class AuthService {
       lastActiveWorkspaceId: null,
       isOnboardingComplete: false,
     };
+  }catch(err){
+    console.error(err);
+    throw new UnauthorizedException(err.message);
+  }
   }
 
   // ===========================================================================
