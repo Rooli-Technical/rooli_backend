@@ -28,13 +28,13 @@ import { Login } from './dtos/Login.dto';
 import { Register } from './dtos/Register.dto';
 import { ResetPassword } from './dtos/ResetPassword.dto';
 import { Public } from '../common/decorators/public.decorator';
-import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { OnboardingDto } from './dtos/user-onboarding.dto';
 import { ConfigService } from '@nestjs/config';
 import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
 import { AuditContext } from '@/audit/decorators/audit.decorator';
 import { AuditAction, AuditResourceType } from '@generated/enums';
 import { SkipAudit } from '@/audit/decorators/skip-audit.decorator';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -190,7 +190,7 @@ export class AuthController {
 
   @Get('google')
   @Public()
-  @UseGuards(GoogleOAuthGuard)
+  @UseGuards(AuthGuard('google'))
   @ApiOperation({
     summary: 'Initiate Google OAuth Login',
     description:
@@ -206,7 +206,7 @@ export class AuthController {
 
   @Get('google/callback')
   @Public()
-  @UseGuards(GoogleOAuthGuard)
+   @UseGuards(AuthGuard('google'))
   @ApiOperation({
     summary: 'Google OAuth Callback',
     description:
