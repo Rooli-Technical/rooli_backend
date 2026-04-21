@@ -10,10 +10,22 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     private configService: ConfigService,
     private authService: AuthService,
   ) {
+
+     const clientID = configService.get('GOOGLE_CLIENT_ID');
+    const clientSecret = configService.get('GOOGLE_CLIENT_SECRET');
+    const callbackURL = configService.get('GOOGLE_CALLBACK_URL');
+
+    
+    console.log('[GoogleStrategy] clientID:', clientID);
+    console.log('[GoogleStrategy] secret length:', clientSecret?.length);
+    console.log('[GoogleStrategy] secret starts with:', clientSecret?.slice(0, 6));
+    console.log('[GoogleStrategy] callbackURL:', callbackURL);
+
+
     super({
-      clientID: configService.get('GOOGLE_CLIENT_ID'),
-      clientSecret: configService.get('GOOGLE_CLIENT_SECRET'),
-      callbackURL: configService.get('GOOGLE_CALLBACK_URL'),
+      clientID: clientID,
+      clientSecret: clientSecret,
+      callbackURL: callbackURL,
       scope: ['email', 'profile'],
     });
   }
