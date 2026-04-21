@@ -9,6 +9,7 @@ import {
   Delete,
   Patch,
   Query,
+  Req,
 } from '@nestjs/common';
 import { PostService } from '../services/post.service';
 import { CreatePostDto } from '../dto/request/create-post.dto';
@@ -32,6 +33,7 @@ import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+import { CreateDraftDto } from '../dto/request/create-draft.dto';
 
 
 @Controller('workspaces/:workspaceId/posts')
