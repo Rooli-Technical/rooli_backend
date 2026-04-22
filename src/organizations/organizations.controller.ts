@@ -223,6 +223,19 @@ export class OrganizationsController {
       query,
     });
   }
+
+
+@Patch(':organizationId/members/:memberId/reactivate')
+@RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.UPDATE)
+@ApiOperation({ summary: 'Reactivate a suspended team member' })
+@ApiResponse({ status: 200, description: 'Member reactivated successfully.' })
+async reactivateTeamMember(
+  @Param('organizationId') organizationId: string,
+  @Param('memberId') memberId: string,
+) {
+  return this.organizationMembersService.reactivateTeamMember(organizationId, memberId);
+}
+
   @Get(':organizationId/members/:memberId')
   @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
   @ApiOperation({ summary: 'Get organization member' })

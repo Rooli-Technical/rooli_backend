@@ -203,12 +203,22 @@ export class BillingService {
     );
   }
 
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
   // 4. ACTIVATE SUBSCRIPTION (Webhook Handler & The Cycle Wipe)
   // ---------------------------------------------------------
   async activateSubscription(payload: any) {
     const data = payload.data;
-    const { reference, amount, currency, metadata, plan, authorization, id } = data;
+    const { reference, amount, currency, metadata, plan, authorization, id } =
+      data;
+
+    // 👇 IDEMPOTENCY GUARD — first thing in the method
+    const existing = await this.prisma.transaction.findUnique({
+      where: { txRef: reference },
+    });
+    if (existing?.status === 'successful') {
+      this.logger.log(`Webhook replay ignored for ${reference}`);
+      return { org: null, isNewSignup: false };
+    }
 
     // 1. Identify Organization
     const organizationId = metadata?.organizationId;
@@ -297,7 +307,7 @@ export class BillingService {
           failedPaymentAttempts: 0,
           pendingPlanId: null,
           pendingBillingInterval: null,
-          aiCreditsUsed: 0,               // Wipes AI usage for the new cycle
+          aiCreditsUsed: 0, // Wipes AI usage for the new cycle
           lastCreditResetAt: new Date(),
           extraWorkspacesPurchased: 0, // THE WIPE: Reset to 0 on every billing cycle boundary!
         },
@@ -316,7 +326,7 @@ export class BillingService {
           txRef: reference,
           providerTxId: id.toString(),
           provider: 'PAYSTACK',
-          amount: Number(amount) / 100, 
+          amount: Number(amount) / 100,
           currency: currency || 'NGN',
           status: 'successful',
           paymentDate: new Date(),
@@ -330,7 +340,7 @@ export class BillingService {
           status: 'ACTIVE',
           billingStatus: 'ACTIVE',
           isActive: true,
-          readOnly: false, 
+          readOnly: false,
         },
         include: {
           members: {
@@ -358,18 +368,21 @@ export class BillingService {
     // 5. THE RECONCILIATION TRIGGER (Upgrades & Renewals)
     // ---------------------------------------------------------
     if (!result.isNewSignup) {
-      // The transaction above just wiped `extraWorkspacesPurchased` to 0. 
+      // The transaction above just wiped `extraWorkspacesPurchased` to 0.
       // Now, we strictly enforce the base plan limits and lock any excess usage.
       try {
         await this.enforcePlanLimits(
-          organizationId, 
-          localPlan.maxWorkspaces, 
-          localPlan.maxUsers
+          organizationId,
+          localPlan.maxWorkspaces,
+          localPlan.maxUsers,
         );
       } catch (error) {
-         this.logger.error(`Failed to execute downgrade/renewal limits for Org ${organizationId}`, error);
-         // Note: We catch this so an error in the locking logic doesn't cause Paystack 
-         // to retry the webhook and double-record the transaction.
+        this.logger.error(
+          `Failed to execute downgrade/renewal limits for Org ${organizationId}`,
+          error,
+        );
+        // Note: We catch this so an error in the locking logic doesn't cause Paystack
+        // to retry the webhook and double-record the transaction.
       }
     }
 
@@ -384,7 +397,9 @@ export class BillingService {
           .catch((e) => this.logger.error(`Failed to send welcome email`, e));
       }
     } else {
-      this.logger.log(`Renewal/Upgrade payment processed for Org: ${organizationId}. Cycle reset complete.`);
+      this.logger.log(
+        `Renewal/Upgrade payment processed for Org: ${organizationId}. Cycle reset complete.`,
+      );
     }
 
     return result;
@@ -912,12 +927,10 @@ export class BillingService {
     }
   }
 
-
   async simulateExpiration(organizationId: string) {
-    
     // 1. Verify the subscription exists
     const sub = await this.prisma.subscription.findUnique({
-      where: { organizationId }
+      where: { organizationId },
     });
 
     if (!sub) {
@@ -933,15 +946,15 @@ export class BillingService {
       data: {
         cancelAtPeriodEnd: true, // Tells the system they requested a downgrade/cancel
         currentPeriodEnd: yesterday, // Forces the expiration date to the past
-      }
+      },
     });
 
     // 3. MANUALLY TRIGGER THE CRON JOB
-    // You do not need to wait for the @Cron decorator to fire. 
+    // You do not need to wait for the @Cron decorator to fire.
     // Just call the function directly!
     await this.processPendingCancellations();
 
-    return { 
+    return {
       message: `Time travel successful. Organization ${organizationId} has been successfully Juked.`,
     };
   }
@@ -1085,14 +1098,15 @@ export class BillingService {
   async processRecurringAddonsAndOverages() {
     this.logger.log('🧹 Sweeping for Add-ons and AI Overages...');
 
+    const now = new Date();
     const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setDate(now.getDate() + 1);
 
     // 1. Find subs renewing tomorrow that have overages OR extra workspaces
     const subsToCharge = await this.prisma.subscription.findMany({
       where: {
         status: 'ACTIVE',
-        currentPeriodEnd: { lte: tomorrow },
+        currentPeriodEnd: { gte: now, lte: tomorrow }, 
         OR: [{ aiOverageCostCents: { gt: 0 } }],
       },
       include: {
@@ -1101,9 +1115,6 @@ export class BillingService {
         },
       },
     });
-
-    const FX_RATE = 1470; // ₦1,470/USD
-    const WORKSPACE_ADDON_USD = 15;
 
     for (const sub of subsToCharge) {
       if (!sub.paystackAuthCode) {
@@ -1740,11 +1751,17 @@ export class BillingService {
     return { message: 'Workspace successfully unlocked.' };
   }
 
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
   // 10. RECONCILIATION HELPER (Runs on Renewals & Downgrades)
   // ---------------------------------------------------------
-  async enforcePlanLimits(organizationId: string, allowedWorkspaces: number, allowedUsers: number) {
-    this.logger.log(`Reconciling limits for Org ${organizationId}. Allowed Workspaces: ${allowedWorkspaces}, Allowed Users: ${allowedUsers}`);
+  async enforcePlanLimits(
+    organizationId: string,
+    allowedWorkspaces: number,
+    allowedUsers: number,
+  ) {
+    this.logger.log(
+      `Reconciling limits for Org ${organizationId}. Allowed Workspaces: ${allowedWorkspaces}, Allowed Users: ${allowedUsers}`,
+    );
 
     // ==========================================
     // A. WORKSPACE & PROFILE LOCKDOWN
@@ -1752,12 +1769,14 @@ export class BillingService {
     const workspaces = await this.prisma.workspace.findMany({
       where: { organizationId, isLocked: false },
       orderBy: { createdAt: 'asc' }, // Index 0 (oldest) is the safest to keep alive
-      select: { id: true }
+      select: { id: true },
     });
 
     if (workspaces.length > allowedWorkspaces) {
-      const workspacesToLock = workspaces.slice(allowedWorkspaces).map(w => w.id);
-      
+      const workspacesToLock = workspaces
+        .slice(allowedWorkspaces)
+        .map((w) => w.id);
+
       await this.prisma.$transaction([
         this.prisma.workspace.updateMany({
           where: { id: { in: workspacesToLock } },
@@ -1766,7 +1785,7 @@ export class BillingService {
         this.prisma.socialProfile.updateMany({
           where: { workspaceId: { in: workspacesToLock } },
           data: { isActive: false },
-        })
+        }),
       ]);
       this.logger.log(`Locked ${workspacesToLock.length} excess workspaces.`);
     }
@@ -1776,7 +1795,7 @@ export class BillingService {
     // ==========================================
     // ✅ FIX: Query for isActive: true
     const activeMembers = await this.prisma.organizationMember.findMany({
-      where: { organizationId, isActive: true }, 
+      where: { organizationId, isActive: true },
       include: { role: true },
     });
 
@@ -1795,15 +1814,17 @@ export class BillingService {
       const sortedMembers = activeMembers.sort((a, b) => {
         const weightA = roleWeights[a.role.slug] || 0;
         const weightB = roleWeights[b.role.slug] || 0;
-        if (weightA !== weightB) return weightB - weightA; 
+        if (weightA !== weightB) return weightB - weightA;
         return a.createdAt.getTime() - b.createdAt.getTime();
       });
 
-      const membersToSuspend = sortedMembers.slice(allowedUsers).map(m => m.id);
+      const membersToSuspend = sortedMembers
+        .slice(allowedUsers)
+        .map((m) => m.id);
 
       await this.prisma.organizationMember.updateMany({
         where: { id: { in: membersToSuspend } },
-        data: { isActive: false }, 
+        data: { isActive: false },
       });
       this.logger.log(`Suspended ${membersToSuspend.length} excess users.`);
     }

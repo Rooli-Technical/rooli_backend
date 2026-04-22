@@ -2,6 +2,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { RoleScope } from '@generated/enums';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -256,5 +257,51 @@ export class OrganizationMemberService {
         'Cannot remove or demote the last Organization Owner. Transfer ownership first.',
       );
     }
+  }
+
+  // ---------------------------------------------------------
+  // REACTIVATE A SUSPENDED TEAM MEMBER
+  // ---------------------------------------------------------
+  async reactivateTeamMember(organizationId: string, memberId: string) {
+    // 1. Fetch the Organization, Plan Limits, and Active User Count
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+        _count: {
+          select: {
+            members: { where: { isActive: true } }, // Only count currently active people
+          },
+        },
+      },
+    });
+
+    const sub = org?.subscription;
+    if (!sub || !sub.isActive) {
+      throw new BadRequestException('You need an active premium plan to manage team members.');
+    }
+
+    // 2. The Logic Check: Do they have an empty seat?
+    const maxAllowedUsers = sub.plan.maxUsers;
+    const currentlyActiveUsers = org._count.members;
+
+    if (currentlyActiveUsers >= maxAllowedUsers) {
+      throw new ForbiddenException(
+        `You have reached your limit of ${maxAllowedUsers} active users. Please delete an active user or upgrade your plan before reactivating this member.`
+      );
+    }
+
+    // 3. The Execution: Welcome back!
+    await this.prisma.organizationMember.update({
+      where: { 
+        id: memberId, 
+        organizationId: organizationId 
+      },
+      data: { isActive: true },
+    });
+
+    return { message: 'Team member successfully reactivated.' };
   }
 }
