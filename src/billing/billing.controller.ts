@@ -311,4 +311,14 @@ export class BillingController {
   ) {
     return this.billingService.unlockWorkspace(orgId, workspaceId);
   }
+
+  @Post('simulate-expiration')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Simulate subscription expiration',
+    description: 'Simulates subscription expiration for testing purposes.',
+  })
+  async simulateExpiration(@Param('orgId') orgId: string) {
+    return this.billingService.simulateExpiration(orgId);
+  }
 }

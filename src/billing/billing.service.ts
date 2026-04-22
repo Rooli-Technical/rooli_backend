@@ -912,6 +912,40 @@ export class BillingService {
     }
   }
 
+
+  async simulateExpiration(organizationId: string) {
+    
+    // 1. Verify the subscription exists
+    const sub = await this.prisma.subscription.findUnique({
+      where: { organizationId }
+    });
+
+    if (!sub) {
+      throw new NotFoundException('No active subscription found for this Org.');
+    }
+
+    // 2. TIME TRAVEL: Force the database state into the past
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    await this.prisma.subscription.update({
+      where: { organizationId },
+      data: {
+        cancelAtPeriodEnd: true, // Tells the system they requested a downgrade/cancel
+        currentPeriodEnd: yesterday, // Forces the expiration date to the past
+      }
+    });
+
+    // 3. MANUALLY TRIGGER THE CRON JOB
+    // You do not need to wait for the @Cron decorator to fire. 
+    // Just call the function directly!
+    await this.processPendingCancellations();
+
+    return { 
+      message: `Time travel successful. Organization ${organizationId} has been successfully Juked.`,
+    };
+  }
+
   // ---------------------------------------------------------
   // 2. START FREE TRIAL (Called by Onboarding)
   // ---------------------------------------------------------
