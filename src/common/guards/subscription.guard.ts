@@ -72,7 +72,7 @@ export class SubscriptionGuard implements CanActivate {
     ) {
       throw new ForbiddenException({
         code: 'PAYMENT_REQUIRED',
-        message: 'Your account has been suspended or canceled.',
+        message: 'Your account has been suspended.',
         action: 'REDIRECT_TO_BILLING',
       });
     }
@@ -104,7 +104,7 @@ export class SubscriptionGuard implements CanActivate {
     // -------------------------------------------------------------
     // ENFORCEMENT LAYER 3: ALLOWED STATES
     // -------------------------------------------------------------
-    const allowedStates = ['ACTIVE', 'TRIALING', 'PAST_DUE'];
+    const allowedStates = ['ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELED'];
     
     if (allowedStates.includes(subStatus)) {
       return true;

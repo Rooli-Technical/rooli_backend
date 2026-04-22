@@ -45,6 +45,9 @@ export class PostService {
   async createPost(user: any, workspaceId: string, dto: CreatePostDto) {
     await this.validateFeatures(user, dto, workspaceId);
 
+      // 👇 NEW: Validate attached media
+  await this.validateMediaAttachments(workspaceId, dto.mediaIds);
+
     // 🚨 Apply Watermark (Passing the single DTO in an array)
     await this.applyTrialWatermark(workspaceId, [dto]);
 
@@ -114,6 +117,8 @@ export class PostService {
   }
 
   async saveDraft(user: any, workspaceId: string, dto: UpdatePostDto) {
+    
+    await this.validateMediaAttachments(workspaceId, dto.mediaIds);
     // 1. Force the status to DRAFT and clear any accidental schedules
     const status = 'DRAFT';
     const draftDto = {
@@ -1139,4 +1144,44 @@ private async detectTargetPlatform(
       }
     }
   }
+
+  /**
+ * Validates that all attached media files exist in this workspace and aren't
+ * in a FAILED state. PENDING_UPLOAD is allowed — the publish worker will
+ * defer until the upload completes.
+ */
+private async validateMediaAttachments(
+  workspaceId: string,
+  mediaIds?: string[],
+): Promise<void> {
+  if (!mediaIds?.length) return;
+
+  const media = await this.prisma.mediaFile.findMany({
+    where: {
+      id: { in: mediaIds },
+      workspaceId, // 👈 prevents cross-workspace media attachment
+    },
+    select: { id: true, status: true },
+  });
+
+  // Catch missing IDs — either they don't exist or belong to another workspace
+  if (media.length !== mediaIds.length) {
+    const foundIds = new Set(media.map((m) => m.id));
+    const missing = mediaIds.filter((id) => !foundIds.has(id));
+    throw new BadRequestException(
+      `Media file(s) not found in this workspace: ${missing.join(', ')}`,
+    );
+  }
+
+  // Reject FAILED uploads — the post can never publish
+  const failed = media.filter((m) => m.status === 'FAILED');
+  if (failed.length > 0) {
+    throw new BadRequestException(
+      `Cannot attach failed media uploads: ${failed.map((m) => m.id).join(', ')}`,
+    );
+  }
+
+  // 👇 PENDING_UPLOAD is intentionally allowed here.
+  // The publish worker will defer the job until status === READY.
+}
 }
