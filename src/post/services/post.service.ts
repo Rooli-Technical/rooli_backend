@@ -1,10 +1,11 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { PlanTier, PostStatus, Prisma, User } from '@generated/client';
+import { PlanTier, Platform, PostStatus, Prisma, User } from '@generated/client';
 import {
   BadRequestException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreatePostDto } from '../dto/request/create-post.dto';
@@ -25,9 +26,11 @@ import { DomainEventsService } from '@/events/domain-events.service';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
 import { RequiresUpgradeException } from '@/common/exceptions/requires-upgrade.exception';
 
-
 @Injectable()
 export class PostService {
+      private readonly logger = new Logger(PostService.name)
+  private static readonly TRIAL_WATERMARK = '\n\nScheduled with Rooli-rooli.co';
+
   constructor(
     private prisma: PrismaService,
     @InjectQueue('media-ingest') private mediaIngestQueue: Queue,
@@ -35,8 +38,6 @@ export class PostService {
     private postFactory: PostFactory,
     private destinationBuilder: DestinationBuilder,
     private queueService: QueueSlotService,
-    private socialFactory: SocialFactory,
-    private encryptionService: EncryptionService,
     private readonly domainEvents: DomainEventsService,
     private readonly planAccessService: PlanAccessService,
   ) {}
@@ -47,10 +48,10 @@ export class PostService {
     // 🚨 Apply Watermark (Passing the single DTO in an array)
     await this.applyTrialWatermark(workspaceId, [dto]);
 
-    const { finalScheduledAt, status } = await this.resolveScheduleAndStatus(
-      workspaceId,
-      dto,
-    );
+  const { finalScheduledAt, status } = await this.resolvePostSchedule(
+  workspaceId,
+  dto, // dto already has socialProfileIds, so platform detection works
+);
 
     const payloads = await this.destinationBuilder.preparePayloads(
       workspaceId,
@@ -69,7 +70,7 @@ export class PostService {
       await this.destinationBuilder.saveDestinations(tx, post.id, payloads);
 
       if (dto.needsApproval) {
-        await this.createApproval(tx, post.id, user.id);
+        await this.createApproval(tx, post.id, user.userId);
       }
       if (dto.aiGenerationId) {
         await tx.aiGeneration.update({
@@ -102,7 +103,9 @@ export class PostService {
       this.domainEvents.emit('publishing.post.requires_approval', {
         workspaceId,
         postId: created.id,
-        authorName: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : 'A team member',
+        authorName: user.firstName
+          ? `${user.firstName} ${user.lastName}`.trim()
+          : 'A team member',
         snippet: dto.content ? dto.content.substring(0, 60) : 'a new post',
       });
     }
@@ -117,7 +120,7 @@ export class PostService {
       ...dto,
       scheduledAt: null,
       isAutoSchedule: false,
-      needsApproval: false, 
+      needsApproval: false,
     };
 
     // 2. Prepare payloads if they checked any social profiles
@@ -161,7 +164,7 @@ export class PostService {
   /**
    * Helper to check Pricing Limits
    */
-private async validateFeatures(
+  private async validateFeatures(
     user: any,
     dto: CreatePostDto | BulkCreatePostDto | UpdatePostDto,
     workspaceId: string,
@@ -175,8 +178,8 @@ private async validateFeatures(
             subscription: { include: { plan: true } },
             // Grab the specific member record for the user making this request
             members: {
-              where: { userId: user.id },
-              include: { role: true }, 
+              where: { userId: user.userId },
+              include: { role: true },
             },
           },
         },
@@ -188,9 +191,10 @@ private async validateFeatures(
     const plan = ws.organization?.subscription?.plan;
     const features = (plan?.features as any) || {};
     const tier = plan?.tier as PlanTier;
-    
+
     // Fallback to 'contributor' if role isn't found
-    const userRoleSlug = ws.organization?.members[0]?.role?.slug?.toLowerCase() || 'contributor';
+    const userRoleSlug =
+      ws.organization?.members[0]?.role?.slug?.toLowerCase() || 'contributor';
 
     // ==========================================
     // RULE 2: APPROVAL ENFORCEMENT
@@ -199,7 +203,9 @@ private async validateFeatures(
     const isPremium = premiumTiers.includes(tier);
 
     // Identify lower-level employees (Adjust these slugs based on your DB!)
-    const isLowerLevelEmployee = ['contributor', 'editor'].includes(userRoleSlug);
+    const isLowerLevelEmployee = ['contributor', 'editor'].includes(
+      userRoleSlug,
+    );
     const mustHaveApproval = isPremium && isLowerLevelEmployee;
 
     // Helper function to process a single post object
@@ -215,7 +221,8 @@ private async validateFeatures(
       if (postDto.needsApproval && !features.approvalWorkflow) {
         throw new RequiresUpgradeException(
           'Approval Workflows',
-          'Upgrade to Business Plan to use Approval Workflows');
+          'Upgrade to Business Plan to use Approval Workflows',
+        );
       }
     };
 
@@ -232,6 +239,7 @@ private async validateFeatures(
 
     const where = {
       workspaceId,
+      parentPostId: null,
       ...(status && { status }),
       ...(contentType && { contentType }),
       ...(search && {
@@ -330,15 +338,18 @@ private async validateFeatures(
     workspaceId: string,
     dto: BulkCreatePostDto,
   ) {
-    await this.planAccessService.ensureFeatureAccess(workspaceId, 'bulkScheduling');
+    await this.planAccessService.ensureFeatureAccess(
+      workspaceId,
+      'bulkScheduling',
+    );
     await this.validateFeatures(user, dto, workspaceId);
     // 🚨 Apply Watermark (Passing the single DTO in an array)
-    await this.applyTrialWatermark(workspaceId, [dto]);
+   await this.applyTrialWatermark(workspaceId, dto.posts);
     // 1) Precompute schedules + payloads (fail fast)
     const preparedPosts: Array<{
       dto: any;
       payloads: any[];
-      status: 'PENDING_APPROVAL' | 'SCHEDULED' | 'DRAFT';
+      status: PostStatus;
       finalScheduledAt: Date | null;
     }> = [];
 
@@ -364,10 +375,10 @@ private async validateFeatures(
 
     for (const postDto of dto.posts) {
       const { finalScheduledAt, status } = await this.resolvePostSchedule(
-        workspaceId,
-        postDto,
-        postDto.isAutoSchedule ? availableSlots[slotIndex++] : undefined,
-      );
+  workspaceId,
+  postDto,
+  postDto.isAutoSchedule ? availableSlots[slotIndex++] : undefined,
+);
 
       const payloads = await this.destinationBuilder.preparePayloads(
         workspaceId,
@@ -408,7 +419,7 @@ private async validateFeatures(
         // C) Create approval record if needed
         if (currentDto.needsApproval) {
           await tx.postApproval.create({
-            data: { postId: post.id, requesterId: user.id, status: 'PENDING' },
+            data: { postId: post.id, requesterId: user.userId, status: 'PENDING' },
           });
         }
 
@@ -479,20 +490,20 @@ private async validateFeatures(
     return masterPosts;
   }
 
-async updatePost(
-    user: any, 
-    workspaceId: string, 
-    postId: string, 
-    dto: UpdatePostDto
+  async updatePost(
+    user: any,
+    workspaceId: string,
+    postId: string,
+    dto: UpdatePostDto,
   ) {
     const existing = await this.prisma.post.findFirst({
       where: { id: postId, workspaceId },
-      select: { 
-        id: true, 
-        status: true, 
-        scheduledAt: true, 
+      select: {
+        id: true,
+        status: true,
+        scheduledAt: true,
         parentPostId: true,
-        content: true // Grab existing content in case they didn't send it in the DTO
+        content: true, // Grab existing content in case they didn't send it in the DTO
       },
     });
 
@@ -513,12 +524,13 @@ async updatePost(
     await this.applyTrialWatermark(workspaceId, [dtoWithContent]);
 
     const { finalScheduledAt, status } = await this.resolvePostSchedule(
-      workspaceId,
-      {
-        ...dtoWithContent,
-        needsApproval: existing.status === 'PENDING_APPROVAL' || dtoWithContent.needsApproval,
-      },
-    );
+  workspaceId,
+  {
+    ...dtoWithContent,
+    needsApproval:
+      existing.status === 'PENDING_APPROVAL' || dtoWithContent.needsApproval,
+  },
+);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const post = await tx.post.update({
@@ -553,7 +565,7 @@ async updatePost(
       return post;
     });
 
-    // 1. ALWAYS kill the old job first. 
+    // 1. ALWAYS kill the old job first.
     // This clears the queue in case they changed the time from 2pm to 5pm!
     await this.removePostJob(updated.id);
 
@@ -564,8 +576,7 @@ async updatePost(
 
     return updated;
   }
-
-
+  
   async deletePost(workspaceId: string, postId: string) {
     const post = await this.prisma.post.findFirst({
       where: { id: postId, workspaceId },
@@ -573,137 +584,21 @@ async updatePost(
     });
     if (!post) throw new NotFoundException('Post not found');
 
-    const rootId = post.parentPostId ? post.parentPostId : post.id;
-
-    await this.removePostJob(rootId);
-
+    const rootId = post.parentPostId ?? post.id;
     const deleteIds = await this.collectDescendantPostIds(workspaceId, rootId);
 
-    return this.prisma.post.deleteMany({
+    // 👇 DB delete FIRST. If this fails, queue job stays — safer than orphaning a SCHEDULED post.
+     await this.prisma.post.deleteMany({
       where: { workspaceId, id: { in: deleteIds } } as any,
     });
-  }
 
-  async editPublishedPost(
-    workspaceId: string,
-    postId: string,
-    newContent: string,
-  ) {
-    const post = await this.prisma.post.findFirst({
-      where: { id: postId, workspaceId },
-      include: {
-        destinations: {
-          include: { profile: { include: { connection: true } } },
-        },
-      },
-    });
+    // 👇 Queue cleanup AFTER DB succeeds. If this fails, worst case
+    // is a stale job that fires and finds no post — worker should no-op on missing post.
+    await this.removePostJob(rootId).catch((err) =>
+      this.logger.warn(`Failed to remove job for deleted post ${rootId}`, err),
+    );
 
-    if (!post) throw new NotFoundException('Post not found');
-    if (!['PUBLISHED'].includes(post.status)) {
-      throw new BadRequestException(
-        'You can only edit posts that have already been published.',
-      );
-    }
-
-    const results = { success: [] as string[], errors: [] as any[] };
-    let dbUpdated = false;
-
-    for (const dest of post.destinations) {
-      if (!dest.platformPostId || dest.status !== 'SUCCESS') continue;
-
-      // strictly block non-facebook platforms
-      if (dest.profile.platform !== 'FACEBOOK') {
-        results.errors.push({
-          platform: dest.profile.platform,
-          message: `Editing published posts is blocked by the ${dest.profile.platform} API.`,
-        });
-        continue;
-      }
-
-      try {
-        const provider = this.socialFactory.getProvider('FACEBOOK') as any; // Cast to your FB provider
-        const credentials = await this.resolveOAuth2Creds(dest);
-
-        await provider.editContent(
-          credentials.accessToken,
-          dest.platformPostId,
-          newContent,
-        );
-
-        // Update the destination's specific override content
-        await this.prisma.postDestination.update({
-          where: { id: dest.id },
-          data: { contentOverride: newContent },
-        });
-
-        results.success.push(dest.profile.name);
-        dbUpdated = true;
-      } catch (error: any) {
-        results.errors.push({ platform: 'FACEBOOK', message: error.message });
-      }
-    }
-
-    // Update the master post content if at least one edit succeeded
-    if (dbUpdated) {
-      await this.prisma.post.update({
-        where: { id: postId },
-        data: { content: newContent },
-      });
-    }
-
-    return { message: 'Edit operation complete', results };
-  }
-
-  async deletePublishedPost(workspaceId: string, postId: string) {
-    const post = await this.prisma.post.findFirst({
-      where: { id: postId, workspaceId },
-      include: {
-        destinations: {
-          include: { profile: { include: { connection: true } } },
-        },
-      },
-    });
-
-    if (!post) throw new NotFoundException('Post not found');
-    if (!['PUBLISHED'].includes(post.status)) {
-      throw new BadRequestException('Can only delete published posts.');
-    }
-
-    const results = { success: [] as string[], errors: [] as any[] };
-
-    for (const dest of post.destinations) {
-      if (!dest.platformPostId || dest.status !== 'SUCCESS') continue;
-
-      if (dest.profile.platform !== 'FACEBOOK') {
-        results.errors.push({
-          platform: dest.profile.platform,
-          message: `Deleting published posts is blocked by the ${dest.profile.platform} API.`,
-        });
-        continue;
-      }
-
-      try {
-        const provider = this.socialFactory.getProvider('FACEBOOK') as any;
-        const credentials = await this.resolveOAuth2Creds(dest);
-
-        await provider.deleteContent(
-          credentials.accessToken,
-          dest.platformPostId,
-        );
-
-        // Mark destination as deleted in DB
-        await this.prisma.postDestination.update({
-          where: { id: dest.id },
-          data: { status: 'FAILED', errorMessage: 'Deleted by user' }, // Or create a 'DELETED' status
-        });
-
-        results.success.push(dest.profile.name);
-      } catch (error: any) {
-        results.errors.push({ platform: 'FACEBOOK', message: error.message });
-      }
-    }
-
-    return { message: 'Delete operation complete', results };
+    return {message: 'Post deleted successfully'};
   }
 
   async getOne(workspaceId: string, postId: string) {
@@ -859,7 +754,6 @@ async updatePost(
       const isMissing = !finalScheduledAt; // Case where post was created as auto-schedule but date wasn't set yet
 
       if (isPast || isMissing) {
-        // Call the internal queue engine to find the next valid spot
         const slots = await this.queueService.getNextAvailableSlots(
           workspaceId,
           1,
@@ -867,14 +761,13 @@ async updatePost(
 
         if (slots.length > 0) {
           finalScheduledAt = slots[0];
-        } else if (isMissing) {
-          // If it's missing a date and no slots exist, we have a problem
-          throw new BadRequestException(
-            'No available queue slots to schedule this post.',
-          );
         } else {
-          // If it was just stale but no slots found, fallback to 'Now'
-          finalScheduledAt = new Date();
+          // 👇 Never silently publish. Force the approver to reschedule manually.
+          throw new BadRequestException(
+            isMissing
+              ? 'No available queue slots to schedule this post. Please reschedule manually.'
+              : "This post's scheduled time has passed and no queue slots are available. Please reschedule before approving.",
+          );
         }
       }
     }
@@ -937,73 +830,114 @@ async updatePost(
       await tx.postApproval.delete({ where: { id: approvalId } });
 
       // 2. Set Post back to DRAFT
-      await tx.post.update({
+      return await tx.post.update({
         where: { id: approval.postId },
         data: { status: 'DRAFT' },
       });
     });
   }
 
-private async resolveScheduleAndStatus(
-    workspaceId: string,
-    dto: CreatePostDto,
-  ) {
-    let finalScheduledAt: Date | null = null;
+/**
+ * Resolves the final scheduled time and status for a post.
+ * Handles three schedule modes:
+ *   1. Auto-schedule with pre-fetched slot (bulk operations)
+ *   2. Auto-schedule that needs a slot fetched (single create/update)
+ *   3. Manual scheduled time (with timezone conversion)
+ */
+private async resolvePostSchedule(
+  workspaceId: string,
+  dto: {
+    isAutoSchedule?: boolean;
+    scheduledAt?: string | Date | null;
+    timezone?: string | null;
+    needsApproval?: boolean;
+    socialProfileIds?: string[]; // 👈 used to detect target platform for slot optimization
+  },
+  providedAutoSlot?: Date, // 👈 optional pre-fetched slot (used by bulk to avoid N queries)
+): Promise<{ finalScheduledAt: Date | null; status: PostStatus }> {
+  let finalScheduledAt: Date | null = null;
 
-    // 1. Determine the Target Platform based on the provided Profile IDs
-    let targetPlatform = null;
-    
-    if (dto.isAutoSchedule && dto.socialProfileIds?.length > 0) {
-      // Fetch the unique platforms for the selected profiles
-      const profiles = await this.prisma.socialProfile.findMany({
-        where: { 
-          id: { in: dto.socialProfileIds }, 
-          workspaceId 
-        },
-        select: { platform: true },
-        distinct: ['platform'], // Only returns unique platforms
-      });
+  // ===========================================
+  // 1. DETERMINE THE DATE
+  // ===========================================
+  if (dto.isAutoSchedule) {
+    if (providedAutoSlot) {
+      // Caller already fetched the slot (bulk path)
+      finalScheduledAt = providedAutoSlot;
+    } else {
+      // Fetch a slot ourselves — detect target platform first for smarter slot selection
+      const targetPlatform = await this.detectTargetPlatform(
+        workspaceId,
+        dto.socialProfileIds,
+      );
 
-      // If every profile they selected belongs to the EXACT SAME platform, use it!
-      // Otherwise, keep it null so it uses a "Universal" slot.
-      if (profiles.length === 1) {
-        targetPlatform = profiles[0].platform;
-      }
-    }
-
-    // 2. Schedule Logic
-    if (dto.isAutoSchedule) {
       const slots = await this.queueService.getNextAvailableSlots(
         workspaceId,
         1,
-        targetPlatform
+        targetPlatform as Platform, // null means "any platform slot"
       );
 
-      if (!slots || slots.length === 0) {
+      if (!slots?.length) {
         throw new BadRequestException('No available queue slots found.');
       }
       finalScheduledAt = slots[0];
-    } else if (dto.scheduledAt) {
+    }
+  } else if (dto.scheduledAt) {
+    // Manual schedule: handle string (with optional timezone) or Date
+    if (typeof dto.scheduledAt === 'string') {
       finalScheduledAt =
         dto.timezone && !dto.scheduledAt.endsWith('Z')
           ? fromZonedTime(dto.scheduledAt, dto.timezone)
           : new Date(dto.scheduledAt);
-
-      // Past date check
-      if (isBefore(finalScheduledAt, subMinutes(new Date(), 5))) {
-        throw new BadRequestException('Scheduled time is in the past.');
-      }
+    } else {
+      finalScheduledAt = dto.scheduledAt;
     }
 
-    // 3. Status Logic
-    const status: PostStatus = dto.needsApproval
-      ? 'PENDING_APPROVAL'
-      : finalScheduledAt
-        ? 'SCHEDULED'
-        : 'DRAFT';
+    if (isNaN(finalScheduledAt.getTime())) {
+      throw new BadRequestException('Invalid scheduledAt datetime.');
+    }
 
-    return { finalScheduledAt, status };
+    // Past date check with 5-minute tolerance for clock skew
+    if (isBefore(finalScheduledAt, subMinutes(new Date(), 5))) {
+      throw new BadRequestException('Scheduled time is in the past.');
+    }
   }
+
+  // ===========================================
+  // 2. DETERMINE THE STATUS
+  // ===========================================
+  const status: PostStatus = dto.needsApproval
+    ? 'PENDING_APPROVAL'
+    : finalScheduledAt
+      ? 'SCHEDULED'
+      : 'DRAFT';
+
+  return { finalScheduledAt, status };
+}
+
+/**
+ * Detects the target platform from a list of social profile IDs.
+ * Returns the platform if all profiles belong to the same one, otherwise null.
+ * Null means the slot picker will use a "universal" slot.
+ */
+private async detectTargetPlatform(
+  workspaceId: string,
+  socialProfileIds?: string[],
+): Promise<string | null> {
+  if (!socialProfileIds?.length) return null;
+
+  const profiles = await this.prisma.socialProfile.findMany({
+    where: {
+      id: { in: socialProfileIds },
+      workspaceId,
+    },
+    select: { platform: true },
+    distinct: ['platform'],
+  });
+
+  // Only return a platform if ALL profiles share the same one
+  return profiles.length === 1 ? profiles[0].platform : null;
+}
 
   private async createApproval(
     tx: Prisma.TransactionClient,
@@ -1036,84 +970,24 @@ private async resolveScheduleAndStatus(
     if (job) await job.remove();
   }
 
-  private async collectDescendantPostIds(
-    workspaceId: string,
-    rootId: string,
-  ): Promise<string[]> {
-    const ids: string[] = [];
-    let frontier: string[] = [rootId];
+  private async collectDescendantPostIds(workspaceId: string, rootId: string): Promise<string[]> {
+  // 👇 Single query. Postgres recursive CTE walks the entire tree at once.
+  const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+    WITH RECURSIVE descendants AS (
+      SELECT id, "parentPostId", "workspaceId"
+      FROM "Post"
+      WHERE id = ${rootId} AND "workspaceId" = ${workspaceId}
+      UNION ALL
+      SELECT p.id, p."parentPostId", p."workspaceId"
+      FROM "Post" p
+      INNER JOIN descendants d ON p."parentPostId" = d.id
+      WHERE p."workspaceId" = ${workspaceId}
+    )
+    SELECT id FROM descendants
+  `;
 
-    while (frontier.length) {
-      // grab children of everything in the current frontier
-      const children = await this.prisma.post.findMany({
-        where: {
-          workspaceId,
-          parentPostId: { in: frontier },
-        } as any,
-        select: { id: true },
-      });
-
-      const childIds = children.map((c) => c.id);
-      ids.push(...childIds);
-
-      frontier = childIds;
-    }
-
-    return [rootId, ...ids];
-  }
-
-  private async resolvePostSchedule(
-    workspaceId: string,
-    dto: {
-      isAutoSchedule?: boolean;
-      scheduledAt?: string | Date | null;
-      timezone?: string | null;
-      needsApproval?: boolean;
-    },
-    providedAutoSlot?: Date, // Used by bulk to pass in pre-fetched slots
-  ) {
-    let finalScheduledAt: Date | null = null;
-
-    // 1. Determine the Date
-    if (dto.isAutoSchedule) {
-      if (providedAutoSlot) {
-        finalScheduledAt = providedAutoSlot;
-      } else {
-        const slots = await this.queueService.getNextAvailableSlots(
-          workspaceId,
-          1,
-        );
-        if (!slots?.length)
-          throw new BadRequestException('No available queue slots.');
-        finalScheduledAt = slots[0];
-      }
-    } else if (dto.scheduledAt) {
-      finalScheduledAt =
-        typeof dto.scheduledAt === 'string'
-          ? dto.timezone && !dto.scheduledAt.endsWith('Z')
-            ? fromZonedTime(dto.scheduledAt, dto.timezone)
-            : new Date(dto.scheduledAt)
-          : dto.scheduledAt;
-
-      if (isNaN(finalScheduledAt.getTime())) {
-        throw new BadRequestException('Invalid scheduledAt datetime.');
-      }
-
-      // Centralized Past Date Check
-      if (isBefore(finalScheduledAt, subMinutes(new Date(), 5))) {
-        throw new BadRequestException('Scheduled time is in the past.');
-      }
-    }
-
-    // 2. Determine the Status
-    const status: PostStatus = dto.needsApproval
-      ? 'PENDING_APPROVAL'
-      : finalScheduledAt
-        ? 'SCHEDULED'
-        : 'DRAFT';
-
-    return { finalScheduledAt, status };
-  }
+  return rows.map((r) => r.id);
+}
 
   async listPostsWithMetrics(params: {
     workspaceId: string;
@@ -1122,39 +996,59 @@ private async resolveScheduleAndStatus(
   }) {
     const { workspaceId, take, cursor } = params;
 
+    // 1. Fetch posts + destinations (no snapshots yet)
     const posts = await this.prisma.post.findMany({
-      where: { workspaceId },
+      where: { workspaceId, parentPostId: null },
       take,
       skip: cursor ? 1 : 0,
       cursor: cursor ? { id: cursor } : undefined,
       orderBy: { createdAt: 'desc' },
       include: {
-        destinations: {
-          include: {
-            profile: true,
-            postAnalyticsSnapshots: {
-              orderBy: { day: 'desc' },
-              take: 1,
-              // 1. INCLUDE THE SPECIFIC TABLES
-              include: {
-                twitterStats: true,
-                linkedInStats: true,
-                facebookStats: true,
-                instagramStats: true,
-                tiktokStats: true,
-              },
-            },
-          },
-        },
+        destinations: { include: { profile: true } },
       },
     });
 
+    // 2. Collect all destination IDs
+    const destIds = posts.flatMap((p) => p.destinations.map((d) => d.id));
+
+    // 3. Fetch ALL latest snapshots in ONE query using DISTINCT ON (Postgres)
+    // If not Postgres, use a window function or subquery pattern
+    const latestSnapshots =
+      destIds.length === 0
+        ? []
+        : await this.prisma.$queryRaw<any[]>`
+  SELECT DISTINCT ON (s."postDestinationId") 
+    s.*, 
+    t.retweets, t.quotes,
+    l.reposts as linkedin_reposts,
+    f.shares as fb_shares,
+    i.shares as ig_shares,
+    tk.shares as tk_shares
+  FROM "PostAnalyticsSnapshot" s
+  LEFT JOIN "TwitterStats" t ON t."snapshotId" = s.id
+  LEFT JOIN "LinkedInStats" l ON l."snapshotId" = s.id
+  LEFT JOIN "FacebookStats" f ON f."snapshotId" = s.id
+  LEFT JOIN "InstagramStats" i ON i."snapshotId" = s.id
+  LEFT JOIN "TikTokStats" tk ON tk."snapshotId" = s.id
+  WHERE s."postDestinationId" = ANY(${destIds}::text[])
+  ORDER BY s."postDestinationId", s.day DESC
+`;
+
+    // 4. Index snapshots by destination ID for O(1) lookup
+    const snapByDestId = new Map(
+      latestSnapshots.map((s) => [s.postDestinationId, s]),
+    );
+
+    // 5. Aggregate in memory (same logic as before)
     const items = posts.map((post) => {
-      let totalLikes = 0, totalComments = 0, totalImpressions = 0, totalReach = 0, totalShares = 0;
-      
-      // Aggregate across ALL destinations (Facebook + LinkedIn + Twitter, etc.)
+      let totalLikes = 0,
+        totalComments = 0,
+        totalImpressions = 0,
+        totalReach = 0,
+        totalShares = 0;
+
       post.destinations.forEach((dest) => {
-        const stats = dest.postAnalyticsSnapshots[0];
+        const stats = snapByDestId.get(dest.id);
         if (!stats) return;
 
         totalLikes += stats.likes ?? 0;
@@ -1162,99 +1056,86 @@ private async resolveScheduleAndStatus(
         totalImpressions += stats.impressions ?? 0;
         totalReach += stats.reach ?? 0;
 
-        const platform = dest.profile?.platform;
-        if (platform === 'TWITTER') totalShares += (stats.twitterStats?.retweets ?? 0) + (stats.twitterStats?.quotes ?? 0);
-        if (platform === 'LINKEDIN') totalShares += stats.linkedInStats?.reposts ?? 0;
-        if (platform === 'FACEBOOK') totalShares += stats.facebookStats?.shares ?? 0;
-        if (platform === 'INSTAGRAM') totalShares += stats.instagramStats?.shares ?? 0;
-        if (platform === 'TIKTOK') totalShares += stats.tiktokStats?.shares ?? 0;
+        switch (dest.profile?.platform) {
+          case 'TWITTER':
+            totalShares += (stats.retweets ?? 0) + (stats.quotes ?? 0);
+            break;
+          case 'LINKEDIN':
+            totalShares += stats.linkedin_reposts ?? 0;
+            break;
+          case 'FACEBOOK':
+            totalShares += stats.fb_shares ?? 0;
+            break;
+          case 'INSTAGRAM':
+            totalShares += stats.ig_shares ?? 0;
+            break;
+          case 'TIKTOK':
+            totalShares += stats.tk_shares ?? 0;
+            break;
+        }
       });
 
       return {
         id: post.id,
-        postContent: post.content, 
+        postContent: post.content,
         createdAt: post.createdAt,
         status: post.status,
-        destinationsCount: post.destinations.length, // Helpful for the UI
+        destinationsCount: post.destinations.length,
         likes: totalLikes,
-        totalComments: totalComments,
+        totalComments,
         impressions: totalImpressions,
         reach: totalReach,
         shares: totalShares,
       };
     });
-    const nextCursor = posts.length === take ? posts[posts.length - 1].id : null;
+
+    const nextCursor =
+      posts.length === take ? posts[posts.length - 1].id : null;
     return { items, nextCursor };
-  }
-
-  private async resolveOAuth2Creds(
-    dest: any,
-  ): Promise<{ accessToken: string }> {
-    // 1. Find the encrypted token.
-    // Depending on your database schema, the token might be saved directly on the
-    // SocialProfile, or it might be inherited from the parent SocialConnection.
-    const encryptedToken =
-      dest.profile?.accessToken ?? dest.profile?.connection?.accessToken;
-
-    // 2. Fail fast if the user's account is disconnected or missing a token
-    if (!encryptedToken) {
-      throw new BadRequestException(
-        `Your ${dest.profile?.platform} account (${dest.profile?.name}) is missing an access token. Please reconnect it.`,
-      );
-    }
-
-    try {
-      const rawAccessToken =
-        await this.encryptionService.decrypt(encryptedToken);
-
-      if (!rawAccessToken) {
-        throw new Error('Decryption returned null or empty string');
-      }
-
-      return { accessToken: rawAccessToken };
-    } catch (error: any) {
-      throw new InternalServerErrorException(
-        `Security Error: Could not decrypt credentials for ${dest.profile?.platform}. Please reconnect the account.`,
-      );
-    }
   }
 
   // --------------------------------------------------------
   // HELPER: TRIAL WATERMARK
   // --------------------------------------------------------
+
   private async applyTrialWatermark(workspaceId: string, postDtos: any[]) {
-    // 1. Fetch Subscription Status
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      include: { organization: { include: { subscription: true } } }
+      select: {
+        organization: {
+          select: { subscription: { select: { isTrial: true } } },
+        },
+      },
     });
 
     const isTrial = workspace?.organization?.subscription?.isTrial === true;
-    
-    // Exit immediately if they are on a paid plan
-    if (!isTrial) return; 
+    if (!isTrial) return;
 
-    const watermark = `\n\nScheduled with Rooli-rooli.co`;
+    const wm = PostService.TRIAL_WATERMARK;
+    const append = (
+      text: string | null | undefined,
+    ): string | null | undefined => {
+      if (!text) return text;
+      // 👇 Idempotency guard: don't re-append if already present
+      if (text.endsWith(wm)) return text;
+      return `${text}${wm}`;
+    };
 
-    // 2. Mutate the DTOs in place
+    // 👇 Mutate in place BUT guard against double-append.
+    // Kept in-place because downstream code already reads from these DTOs.
     for (const dto of postDtos) {
-      // A. Main Content
-      if (dto.content) {
-        dto.content = `${dto.content}${watermark}`;
-      }
+      if (dto.content) dto.content = append(dto.content);
 
-      // B. Overrides
-      if (dto.overrides && dto.overrides.length > 0) {
-        dto.overrides = dto.overrides.map((override: any) => ({
-          ...override,
-          content: `${override.content}${watermark}`
+      if (dto.overrides?.length > 0) {
+        dto.overrides = dto.overrides.map((o: any) => ({
+          ...o,
+          content: append(o.content),
         }));
       }
 
-      // C. Threads
-      if (dto.threads && dto.threads.length > 0) {
-        const lastIndex = dto.threads.length - 1;
-        dto.threads[lastIndex].content = `${dto.threads[lastIndex].content}${watermark}`;
+      if (dto.threads?.length > 0) {
+        const last = dto.threads.length - 1;
+        dto.threads[last].content = append(dto.threads[last].content);
       }
     }
   }
