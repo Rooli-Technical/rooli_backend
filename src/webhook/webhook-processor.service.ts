@@ -170,11 +170,13 @@ export class WebhooksProcessor extends WorkerHost {
           // The user (or Paystack) has officially canceled the subscription.
           const subCode = data.subscription_code || data.code;
           if (subCode) {
-            // Let's update this to properly mark it as canceled, not past_due
+            // ✅ FIX: Set PENDING_CANCELLATION, not CANCELED.
+            // The actual CANCELED state is applied by the processPendingCancellations
+            // cron when currentPeriodEnd passes. Setting CANCELED here would strip
+            // access before the billing period ends.
             await this.prisma.subscription.updateMany({
               where: { paystackSubscriptionCode: subCode },
               data: {
-                status: 'CANCELED',
                 cancelAtPeriodEnd: true,
               },
             });
@@ -182,9 +184,9 @@ export class WebhooksProcessor extends WorkerHost {
               where: {
                 subscription: { paystackSubscriptionCode: subCode },
               },
-              data: { billingStatus: 'CANCELED' },
+              data: { billingStatus: 'PENDING_CANCELLATION' },
             });
-            this.logger.warn(`Subscription canceled: ${subCode}`);
+            this.logger.warn(`Subscription marked for cancellation at period end: ${subCode}`);
           }
           break;
 
