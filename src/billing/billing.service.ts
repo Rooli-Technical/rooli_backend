@@ -2,6 +2,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -48,14 +49,11 @@ export class BillingService {
       badge: 'Start for Free',
       tier: 'FREE', // Ensure this matches your PlanTier enum
       description: 'Perfect for individuals and hobbyists',
-      features: [
-        'Post Scheduling',
-        'Basic Analytics',
-      ],
+      features: ['Post Scheduling', 'Basic Analytics'],
       limits: {
         workspaces: 1,
         socialProfiles: 3, // As requested
-        users: 1,          // As requested
+        users: 1, // As requested
         aiCredits: 20,
       },
       pricing: {
@@ -65,13 +63,12 @@ export class BillingService {
       },
     };
 
-
-   const plans = _plans.map((plan) => {
+    const plans = _plans.map((plan) => {
       // Divide by 100 to convert cents/kobo back to dollars/naira
       const monthlyPrice = isNigeria
         ? plan.monthlyPriceNgn / 100
         : plan.monthlyPriceUsd / 100;
-      
+
       const annualPrice = isNigeria
         ? plan.annualPriceNgn / 100
         : plan.annualPriceUsd / 100;
@@ -79,7 +76,7 @@ export class BillingService {
       // Calculate the UI metrics dynamically
       const originalAnnualPrice = monthlyPrice * 12;
       const amountSaved = Math.max(0, originalAnnualPrice - annualPrice);
-      
+
       // Since you are strictly enforcing a 20% discount on all plans,
       // we can safely set this to 20 if there is any discount at all.
       const discountPercentage = amountSaved > 0 ? 20 : 0;
@@ -105,7 +102,7 @@ export class BillingService {
           annual: annualPrice,
           originalAnnual: originalAnnualPrice, // Passes to UI for strikethrough
           amountSaved,
-          discountPercentage, 
+          discountPercentage,
         },
       };
     });
@@ -206,13 +203,12 @@ export class BillingService {
     );
   }
 
-  // ---------------------------------------------------------
-  // 4. ACTIVATE SUBSCRIPTION (Webhook Handler)
+// ---------------------------------------------------------
+  // 4. ACTIVATE SUBSCRIPTION (Webhook Handler & The Cycle Wipe)
   // ---------------------------------------------------------
   async activateSubscription(payload: any) {
     const data = payload.data;
-    const { reference, amount, currency, metadata, plan, authorization, id } =
-      data;
+    const { reference, amount, currency, metadata, plan, authorization, id } = data;
 
     // 1. Identify Organization
     const organizationId = metadata?.organizationId;
@@ -228,8 +224,6 @@ export class BillingService {
       return;
     }
 
-    //  MULTI-CURRENCY & MULTI-INTERVAL LOOKUP
-    // We search the DB to see if this code matches ANY of the 4 columns
     const localPlan = await this.prisma.plan.findFirst({
       where: {
         OR: [
@@ -247,7 +241,6 @@ export class BillingService {
     }
 
     // 3. Determine Interval & Calculate Dates
-    // If the code matches either of the Annual columns, it's an Annual sub!
     const isAnnual =
       localPlan.paystackPlanCodeAnnualNgn === paystackPlanCode ||
       localPlan.paystackPlanCodeAnnualUsd === paystackPlanCode;
@@ -262,14 +255,14 @@ export class BillingService {
       endDate.setMonth(endDate.getMonth() + 1);
     }
 
-    // 4. DB Transaction
+    // 4. DB Transaction (The Hard Reset)
     const result = await this.prisma.$transaction(async (tx) => {
       const previousSuccessCount = await tx.transaction.count({
         where: { organizationId, status: 'successful' },
       });
       const isNewSignup = previousSuccessCount === 0;
 
-      //  UPDATE SUBSCRIPTION & CLEAR DUNNING ANCHORS
+      // 🚨 UPSERT SUBSCRIPTION & WIPE ADD-ONS
       await tx.subscription.upsert({
         where: { organizationId },
         create: {
@@ -287,6 +280,7 @@ export class BillingService {
           failedPaymentAttempts: 0,
           aiCreditsUsed: 0,
           lastCreditResetAt: new Date(),
+          extraWorkspacesPurchased: 0, // Initialize at 0
         },
         update: {
           planId: localPlan.id,
@@ -303,6 +297,7 @@ export class BillingService {
           failedPaymentAttempts: 0,
           pendingPlanId: null,
           pendingBillingInterval: null,
+          extraWorkspacesPurchased: 0, // THE WIPE: Reset to 0 on every billing cycle boundary!
         },
       });
 
@@ -319,21 +314,21 @@ export class BillingService {
           txRef: reference,
           providerTxId: id.toString(),
           provider: 'PAYSTACK',
-          amount: Number(amount) / 100, // Convert Paystack's Kobo/Cents back to whole Naira/Dollars
+          amount: Number(amount) / 100, 
           currency: currency || 'NGN',
           status: 'successful',
           paymentDate: new Date(),
         },
       });
 
-      //  UNLOCK THE ORGANIZATION
+      // UNLOCK THE ORGANIZATION
       const org = await tx.organization.update({
         where: { id: organizationId },
         data: {
           status: 'ACTIVE',
           billingStatus: 'ACTIVE',
           isActive: true,
-          readOnly: false, // Clear Day 8 Dunning read-only state!
+          readOnly: false, 
         },
         include: {
           members: {
@@ -348,18 +343,35 @@ export class BillingService {
         },
       });
 
-      // Unlock social profiles (In case they hit Day 14 Suspension)
+      // Unlock social profiles (Clears Day 14 Suspension locks)
       await tx.socialProfile.updateMany({
-        where: {
-          workspace: { organizationId: organizationId },
-        },
+        where: { workspace: { organizationId: organizationId } },
         data: { isActive: true },
       });
 
       return { org, isNewSignup };
     });
 
-    // 5. Send Welcome Email Logic
+    // ---------------------------------------------------------
+    // 5. THE RECONCILIATION TRIGGER (Upgrades & Renewals)
+    // ---------------------------------------------------------
+    if (!result.isNewSignup) {
+      // The transaction above just wiped `extraWorkspacesPurchased` to 0. 
+      // Now, we strictly enforce the base plan limits and lock any excess usage.
+      try {
+        await this.enforcePlanLimits(
+          organizationId, 
+          localPlan.maxWorkspaces, 
+          localPlan.maxUsers
+        );
+      } catch (error) {
+         this.logger.error(`Failed to execute downgrade/renewal limits for Org ${organizationId}`, error);
+         // Note: We catch this so an error in the locking logic doesn't cause Paystack 
+         // to retry the webhook and double-record the transaction.
+      }
+    }
+
+    // 6. Send Welcome Email Logic
     if (result.isNewSignup) {
       const owner = result.org.members[0]?.user;
       const defaultWorkspace = result.org.workspaces[0];
@@ -370,9 +382,7 @@ export class BillingService {
           .catch((e) => this.logger.error(`Failed to send welcome email`, e));
       }
     } else {
-      this.logger.log(
-        `Renewal payment processed for Org: ${organizationId}. Account Unlocked.`,
-      );
+      this.logger.log(`Renewal/Upgrade payment processed for Org: ${organizationId}. Cycle reset complete.`);
     }
 
     return result;
@@ -399,8 +409,7 @@ export class BillingService {
     });
   }
 
-
-// ---------------------------------------------------------
+  // ---------------------------------------------------------
   // 6. CANCEL SUBSCRIPTION
   // ---------------------------------------------------------
   async cancelSubscription(organizationId: string) {
@@ -413,16 +422,21 @@ export class BillingService {
         where: { id: organizationId },
         data: { billingStatus: 'CANCELED' }, // Instant kill, no period end to wait for
       });
-      return { message: 'Organization canceled (No active subscription found)' };
+      return {
+        message: 'Organization canceled (No active subscription found)',
+      };
     }
 
     // 🚨 1. THE OVERAGE SWEEP (Your brilliant audit rule!)
     if (sub.aiOverageCostCents > 0 && sub.paystackAuthCode) {
       try {
-        await this.chargeFinalOverages(sub); 
+        await this.chargeFinalOverages(sub);
       } catch (e) {
         // If it fails, log it, but DO NOT stop the cancellation process.
-        this.logger.error(`Failed to sweep final overages for Org ${organizationId}`, e);
+        this.logger.error(
+          `Failed to sweep final overages for Org ${organizationId}`,
+          e,
+        );
       }
     }
 
@@ -445,7 +459,9 @@ export class BillingService {
         );
       } catch (e) {
         this.logger.error(e.response?.data);
-        throw new BadRequestException('Failed to disable subscription in Paystack');
+        throw new BadRequestException(
+          'Failed to disable subscription in Paystack',
+        );
       }
     }
 
@@ -454,19 +470,19 @@ export class BillingService {
       this.prisma.subscription.update({
         where: { organizationId },
         data: {
-          cancelAtPeriodEnd: true, 
+          cancelAtPeriodEnd: true,
         },
       }),
       this.prisma.organization.update({
         where: { id: organizationId },
         // They keep full access until the cron job kills it on the final day!
-        data: { billingStatus: 'PENDING_CANCELLATION' }, 
+        data: { billingStatus: 'PENDING_CANCELLATION' },
       }),
     ]);
   }
 
-// ---------------------------------------------------------
-  // CHANGE PLAN (Instant Upgrades, Scheduled Downgrades)
+  // ---------------------------------------------------------
+  // CHANGE PLAN (Instant Upgrades, Strict Downgrade Locks)
   // ---------------------------------------------------------
   async changePlan(
     organizationId: string,
@@ -482,38 +498,93 @@ export class BillingService {
       },
     });
 
-    if (!org || !org.subscription) throw new BadRequestException('No subscription found');
+    if (!org || !org.subscription) {
+      throw new BadRequestException('No subscription found');
+    }
 
     const sub = org.subscription;
     const currentPlan = sub.plan;
-    const newPlan = await this.prisma.plan.findUnique({ where: { id: newPlanId } });
+    const newPlan = await this.prisma.plan.findUnique({
+      where: { id: newPlanId },
+    });
     if (!newPlan) throw new NotFoundException('Target plan not found');
+
+    // 🚨 RULE 1: PREVENT SAME-STATE SELECTION
+    // If they are on Business Monthly and click Business Monthly, reject it.
+    if (
+      currentPlan.id === newPlanId &&
+      sub.billingInterval === interval &&
+      sub.isActive
+    ) {
+      throw new ConflictException(
+        `You are already actively subscribed to the ${currentPlan.name} ${interval} plan.`,
+      );
+    }
 
     // 1. FREE TRIAL OVERRIDE -> INSTANT CHECKOUT
     if (sub.isTrial) {
       return this.initializePayment(org.id, newPlan.id, interval, user);
     }
 
-    // 🚨 2. DETERMINE IF THIS IS AN UPGRADE OR DOWNGRADE
-    // We compare the monthly USD prices to see which tier is higher
+    // Determine Upgrade vs Downgrade (Comparing base USD values)
     const isUpgrade = newPlan.monthlyPriceUsd > currentPlan.monthlyPriceUsd;
 
+    // Also consider changing from Monthly to Annual on the SAME plan as an upgrade
+    const isIntervalUpgrade =
+      currentPlan.id === newPlanId &&
+      interval === 'ANNUAL' &&
+      sub.billingInterval === 'MONTHLY';
+
     // ==========================================
-    // SCENARIO A: UPGRADES (Instant Money!)
+    // SCENARIO A: UPGRADES & INTERVAL CHANGES (Instant Reset)
     // ==========================================
-    if (isUpgrade) {
-      // Don't do limit checks (they are getting MORE limits!)
-      // Send them straight to checkout to authorize the new plan/prorated amount
-      // (Or call a specific handleUpgrade logic if you have card on file)
-      return this.initializePayment(org.id, newPlan.id, interval, user); 
-      // Note: In a true Enterprise app, if they have a Paystack auth code, 
-      // you would hit Paystack's API to upgrade the subscription instantly here.
+    if (isUpgrade || isIntervalUpgrade) {
+      // 🚨 RULE 4: INSTANT UPGRADE & RESET
+      // We send them to checkout. When the Paystack webhook fires, your `activateSubscription`
+      // method will overwrite `currentPeriodStart`, wipe `pendingPlanId`, and reset limits.
+      // NOTE: In Paystack, to prevent double billing on their old plan, you must disable the
+      // old subscription code before sending them to checkout for the new one.
+
+      if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+        try {
+          // Disable the old recurring charge so Paystack doesn't bill them twice
+          await firstValueFrom(
+            this.httpService.post(
+              `${this.PAYSTACK_BASE_URL}/subscription/disable`,
+              {
+                code: sub.paystackSubscriptionCode,
+                token: sub.paystackEmailToken,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+                },
+              },
+            ),
+          );
+        } catch (e) {
+          this.logger.error(
+            `Failed to disable old subscription during upgrade for Org ${org.id}`,
+          );
+        }
+      }
+
+      return this.initializePayment(org.id, newPlan.id, interval, user);
     }
 
     // ==========================================
-    // SCENARIO B: DOWNGRADES (Scheduled)
+    // SCENARIO B: DOWNGRADES (Strictly Gated)
     // ==========================================
-    // PRE-FLIGHT LIMIT CHECKS
+
+    // 🚨 RULE 2 & 3: THE ROCKET LOCK
+    // "once on rocket plan is running there is nothing like downgrade plan but once plan expires... then the user can downgrade"
+    if (currentPlan.tier === 'ROCKET' && sub.isActive) {
+      throw new ForbiddenException(
+        'Downgrading from the Rocket plan is not permitted while your billing cycle is active. You may downgrade after your current plan expires.',
+      );
+    }
+
+    // If they bypass the lock (e.g., they are PAST_DUE or expired), enforce the limits before allowing the new checkout
     const [userCount, profileCount, workspaceCount] = await Promise.all([
       this.prisma.organizationMember.count({ where: { organizationId } }),
       this.prisma.socialProfile.count({
@@ -522,52 +593,32 @@ export class BillingService {
       this.prisma.workspace.count({ where: { organizationId } }),
     ]);
 
-    // Check Limits...
+    // Pre-flight limit checks
     if (newPlan.maxUsers < 9999 && userCount > newPlan.maxUsers) {
-      throw new BadRequestException(`Please remove ${userCount - newPlan.maxUsers} team members before switching to the ${newPlan.name} plan.`);
+      throw new BadRequestException(
+        `Please remove ${userCount - newPlan.maxUsers} team members before switching to the ${newPlan.name} plan.`,
+      );
     }
-    if (newPlan.maxSocialProfiles < 9999 && profileCount > newPlan.maxSocialProfiles) {
-      throw new BadRequestException(`Please disconnect ${profileCount - newPlan.maxSocialProfiles} profiles before switching to the ${newPlan.name} plan.`);
+    if (
+      newPlan.maxSocialProfiles < 9999 &&
+      profileCount > newPlan.maxSocialProfiles
+    ) {
+      throw new BadRequestException(
+        `Please disconnect ${profileCount - newPlan.maxSocialProfiles} profiles before switching to the ${newPlan.name} plan.`,
+      );
     }
-    if (newPlan.maxWorkspaces < 9999 && workspaceCount > newPlan.maxWorkspaces) {
-      throw new BadRequestException(`Please delete ${workspaceCount - newPlan.maxWorkspaces} workspaces before switching to the ${newPlan.name} plan.`);
-    }
-
-    // 🚨 TELL PAYSTACK ABOUT THE DOWNGRADE
-    if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
-      try {
-        // Paystack allows you to swap the plan on an active subscription!
-        // We get the correct Paystack Plan Code based on their currency/interval
-        const isNigeria = org.currency === 'NGN';
-        const targetPaystackPlanCode = isNigeria 
-          ? (interval === 'ANNUAL' ? newPlan.paystackPlanCodeAnnualNgn : newPlan.paystackPlanCodeMonthlyNgn)
-          : (interval === 'ANNUAL' ? newPlan.paystackPlanCodeAnnualUsd : newPlan.paystackPlanCodeMonthlyUsd);
-
-        // Tell Paystack: "When this month ends, charge them using this new lower plan code"
-        await this.updatePaystackSubscription(
-          sub.paystackSubscriptionCode,
-          sub.paystackEmailToken,
-          targetPaystackPlanCode
-        );
-      } catch (error) {
-        this.logger.error('Failed to update Paystack subscription for downgrade', error);
-        throw new BadRequestException('Could not schedule downgrade with the payment provider.');
-      }
+    if (
+      newPlan.maxWorkspaces < 9999 &&
+      workspaceCount > newPlan.maxWorkspaces
+    ) {
+      throw new BadRequestException(
+        `Please delete ${workspaceCount - newPlan.maxWorkspaces} workspaces before switching to the ${newPlan.name} plan.`,
+      );
     }
 
-    // SCHEDULE THE CHANGE IN THE DATABASE
-    await this.prisma.subscription.update({
-      where: { organizationId },
-      data: {
-        pendingPlanId: newPlan.id,
-        pendingBillingInterval: interval as BillingInterval,
-      },
-    });
-
-    return {
-      status: 'scheduled',
-      message: `Your plan will automatically change to ${newPlan.name} (${interval}) at the end of your current billing cycle.`,
-    };
+    // Since they are only allowed to downgrade AFTER expiry (meaning sub.isActive is false),
+    // we don't schedule it. We send them straight to checkout to start their new, cheaper cycle.
+    return this.initializePayment(org.id, newPlan.id, interval, user);
   }
 
   // ---------------------------------------------------------
@@ -579,30 +630,37 @@ export class BillingService {
     const organizationId = metadata?.organizationId;
     if (!organizationId) return;
 
-    await this.prisma.transaction.create({
-      data: {
-        organizationId,
-        txRef: reference,
-        providerTxId: id.toString(),
-        provider: 'PAYSTACK',
-        amount: Number(amount) / 100,
-        currency: currency || 'NGN',
-        status: 'failed',
-        paymentDate: new Date(),
-      },
-    });
+    // ✅ FIX: Use upsert + $transaction for idempotency on webhook retries
+    await this.prisma.$transaction([
+      this.prisma.transaction.upsert({
+        where: { txRef: reference },
+        create: {
+          organizationId,
+          txRef: reference,
+          providerTxId: id.toString(),
+          provider: 'PAYSTACK',
+          amount: Number(amount) / 100,
+          currency: currency || 'NGN',
+          status: 'failed',
+          paymentDate: new Date(),
+        },
+        update: {
+          status: 'failed',
+          providerTxId: id.toString(),
+        },
+      }),
+      // 🚨 SET DUNNING ANCHOR
+      this.prisma.subscription.updateMany({
+        where: { organizationId },
+        data: {
+          status: 'PAST_DUE',
+          lastPaymentFailedAt: new Date(),
+          failedPaymentAttempts: { increment: 1 },
+        },
+      }),
+    ]);
 
-    // 🚨 SET DUNNING ANCHOR
-    await this.prisma.subscription.updateMany({
-      where: { organizationId },
-      data: {
-        status: 'PAST_DUE',
-        lastPaymentFailedAt: new Date(),
-        failedPaymentAttempts: { increment: 1 },
-      },
-    });
-
-    // NEW: Send Day 0 Email
+    // Send Day 0 Email
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       include: { members: { include: { user: true, role: true } } },
@@ -657,7 +715,10 @@ export class BillingService {
   // ---------------------------------------------------------
   // REACTIVATE PAYSTACK SUBSCRIPTION
   // ---------------------------------------------------------
-  async enablePaystackSubscription(subscriptionCode: string, emailToken: string) {
+  async enablePaystackSubscription(
+    subscriptionCode: string,
+    emailToken: string,
+  ) {
     try {
       const payload = {
         code: subscriptionCode,
@@ -676,16 +737,17 @@ export class BillingService {
         ),
       );
 
-      this.logger.log(`✅ Successfully re-enabled Paystack subscription: ${subscriptionCode}`);
+      this.logger.log(
+        `✅ Successfully re-enabled Paystack subscription: ${subscriptionCode}`,
+      );
       return data;
-      
     } catch (error: any) {
       this.logger.error(
         `❌ Failed to enable Paystack subscription ${subscriptionCode}`,
         error.response?.data || error.message,
       );
-      
-      // We throw an exception here so the calling method (activateOrganization) 
+
+      // We throw an exception here so the calling method (activateOrganization)
       // knows to abort the database transaction.
       throw new BadRequestException(
         'Failed to reactivate the subscription with the payment gateway. Please contact support.',
@@ -751,7 +813,8 @@ export class BillingService {
         data: { readOnlyNotifiedAt: new Date() },
       });
 
-      Promise.allSettled(
+      // ✅ FIX: Await to prevent silent failures if the process exits early
+      await Promise.allSettled(
         eightDayOrgs.map((org) =>
           this.emailService.sendReadOnlyWarningEmail(org.billingEmail),
         ),
@@ -799,7 +862,8 @@ export class BillingService {
         }),
       ]);
 
-      Promise.allSettled(
+      // ✅ FIX: Await to prevent silent failures if the process exits early
+      await Promise.allSettled(
         doomedSubs.map((s) =>
           this.emailService.sendAccountSuspendedEmail(
             s.organization.billingEmail,
@@ -810,33 +874,40 @@ export class BillingService {
   }
 
   async verifyPayment(reference: string) {
-    // 1. FAST CHECK
-    const existingTx = await this.prisma.transaction.findUnique({
-      where: { txRef: reference },
-    });
-    if (existingTx && existingTx.status === 'successful') {
-      return { status: 'success', message: 'Payment already verified' };
-    }
+    try {
+      // 1. FAST CHECK
+      const existingTx = await this.prisma.transaction.findUnique({
+        where: { txRef: reference },
+      });
+      if (existingTx && existingTx.status === 'successful') {
+        return { status: 'success', message: 'Payment already verified' };
+      }
 
-    // 2. API CHECK
-    const { data } = await firstValueFrom(
-      this.httpService.get(
-        `https://api.paystack.co/transaction/verify/${reference}`,
-        {
-          headers: {
-            Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+      // 2. API CHECK
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `https://api.paystack.co/transaction/verify/${reference}`,
+          {
+            headers: {
+              Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+            },
           },
-        },
-      ),
-    );
+        ),
+      );
 
-    const status = data.data.status;
-    if (status === 'success') return { status: 'pending_webhook' };
-    if (status === 'failed' || status === 'abandoned') {
-      await this.handleFailedPayment(data.data);
-      throw new BadRequestException('Payment failed or was declined');
+      const status = data.data.status;
+      if (status === 'success') return { status: 'pending_webhook' };
+      if (status === 'failed' || status === 'abandoned') {
+        await this.handleFailedPayment(data.data);
+        throw new BadRequestException('Payment failed or was declined');
+      }
+      return data.data;
+    } catch (error) {
+      // Re-throw NestJS exceptions (e.g. the BadRequestException above)
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error('Payment verification failed', error?.message || error);
+      throw new BadRequestException('Payment verification failed');
     }
-    return data.data;
   }
 
   // ---------------------------------------------------------
@@ -948,16 +1019,6 @@ export class BillingService {
     }
   }
 
-  async markAsExpired(paystackCode: string) {
-    await this.prisma.subscription.updateMany({
-      where: { paystackSubscriptionCode: paystackCode },
-      data: {
-        status: 'PAST_DUE', // Blocks access immediately
-        isActive: false,
-      },
-    });
-  }
-
   //@Cron(CronExpression.EVERY_WEEKEND) // Runs once a week
   async cleanupStuckTransactions() {
     this.logger.log('🧹 Sweeping abandoned and stuck transactions...');
@@ -996,10 +1057,7 @@ export class BillingService {
       where: {
         status: 'ACTIVE',
         currentPeriodEnd: { lte: tomorrow },
-        OR: [
-          { aiOverageCostCents: { gt: 0 } },
-          { extraWorkspacesPurchased: { gt: 0 } },
-        ],
+        OR: [{ aiOverageCostCents: { gt: 0 } }],
       },
       include: {
         organization: {
@@ -1027,19 +1085,12 @@ export class BillingService {
       } // Safety check
 
       const targetCurrency = sub.organization.currency || 'NGN';
-
-      // Calculate Workspace Add-on Cost (Dual Currency)
-      const workspaceAddonBaseUnit =
-        targetCurrency === 'USD'
-          ? sub.extraWorkspacesPurchased * WORKSPACE_ADDON_USD * 100
-          : sub.extraWorkspacesPurchased * WORKSPACE_ADDON_USD * FX_RATE * 100;
-
       // Calculate Total Amount to charge (Add-on + AI Overages)
-      const totalChargeBaseUnit =
-        workspaceAddonBaseUnit + sub.aiOverageCostCents;
+      const totalChargeBaseUnit = sub.aiOverageCostCents;
 
       try {
-        const reference = `rooli_addon_${sub.organizationId}_${Date.now()}`;
+        // ✅ FIX: Deterministic reference prevents double-charging on job retries
+        const reference = `rooli_addon_${sub.organizationId}_${sub.currentPeriodEnd.getTime()}`;
 
         // 2. Hit Paystack API
         const { data: paystackResponse } = await firstValueFrom(
@@ -1075,12 +1126,11 @@ export class BillingService {
               subscriptionId: sub.id,
               metadata: {
                 type: 'recurring_addons_and_overages',
-                workspacesPurchased: sub.extraWorkspacesPurchased,
                 aiOverageCost: sub.aiOverageCostCents / 100,
               },
             },
           }),
-          // Reset the overage counter (but KEEP the extraWorkspacesPurchased intact!)
+          // Reset the overage counter
           this.prisma.subscription.update({
             where: { id: sub.id },
             data: { aiOverageCostCents: 0 },
@@ -1088,11 +1138,15 @@ export class BillingService {
         ]);
       } catch (error: any) {
         const httpStatus = error.response?.status || 500;
-        this.logger.error(`Failed to charge add-ons for Org ${sub.organizationId}: ${error.message}`);
+        this.logger.error(
+          `Failed to charge add-ons for Org ${sub.organizationId}: ${error.message}`,
+        );
 
         // 🛡️ ENTERPRISE GUARDRAIL: Is Paystack down?
         if (httpStatus >= 500) {
-          this.logger.warn(`Paystack API unavailable (5xx Error). Skipping Org ${sub.organizationId} until tomorrow.`);
+          this.logger.warn(
+            `Paystack API unavailable (5xx Error). Skipping Org ${sub.organizationId} until tomorrow.`,
+          );
           continue; // Skip to the next subscription. Do NOT suspend the user.
         }
 
@@ -1100,21 +1154,24 @@ export class BillingService {
         await this.prisma.$transaction([
           this.prisma.subscription.update({
             where: { id: sub.id },
-            data: { 
+            data: {
               status: 'PAST_DUE',
               lastPaymentFailedAt: new Date(),
-              failedPaymentAttempts: { increment: 1 }
-            }
+              failedPaymentAttempts: { increment: 1 },
+            },
           }),
-          // Optional: You can let your Day 8 Dunning cron handle readOnly, 
-          // or enforce a soft lock here. Standard practice is to leave it active 
+          // Optional: You can let your Day 8 Dunning cron handle readOnly,
+          // or enforce a soft lock here. Standard practice is to leave it active
           // but PAST_DUE so they have 7 days to fix it.
         ]);
 
         // Alert the owner immediately
         const ownerEmail = sub.organization.billingEmail;
         if (ownerEmail) {
-           await this.emailService.sendPaymentFailedEmail(ownerEmail, "Your recurring add-ons and overages");
+          await this.emailService.sendPaymentFailedEmail(
+            ownerEmail,
+            'Your recurring add-ons and overages',
+          );
         }
       }
     }
@@ -1123,14 +1180,11 @@ export class BillingService {
   // ---------------------------------------------------------
   // 9. PROCESS CANCELLATIONS AT PERIOD END
   // ---------------------------------------------------------
-  //@Cron(CronExpression.EVERY_HOUR)
+  // @Cron(CronExpression.EVERY_HOUR)
   async processPendingCancellations() {
-    this.logger.log(
-      '🧹 Sweeping for subscriptions that have reached the end of their canceled period...',
-    );
+    this.logger.log('🧹 Sweeping for end-of-period cancellations...');
     const now = new Date();
 
-    // 1. Find subscriptions marked to cancel where the period has officially ended
     const expiredCancellations = await this.prisma.subscription.findMany({
       where: {
         cancelAtPeriodEnd: true,
@@ -1142,38 +1196,60 @@ export class BillingService {
 
     if (expiredCancellations.length === 0) return;
 
-    const orgIds = expiredCancellations.map((sub) => sub.organizationId);
+    for (const sub of expiredCancellations) {
+      const orgId = sub.organizationId;
 
-    // 2. Execute the state transition via Transaction
-    await this.prisma.$transaction([
-      // A. Mark subscription as officially canceled
-      this.prisma.subscription.updateMany({
-        where: { id: { in: expiredCancellations.map((s) => s.id) } },
-        data: {
-          status: 'CANCELED',
-          isActive: false,
-        },
-      }),
+      // 1. Fetch all workspaces for this org, ordered by oldest first
+      const workspaces = await this.prisma.workspace.findMany({
+        where: { organizationId: orgId },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
 
-      // B. Update Organization billing status
-      this.prisma.organization.updateMany({
-        where: { id: { in: orgIds } },
-        data: {
-          status: 'SUSPENDED', // Or whatever your base state is for dead accounts
-          billingStatus: 'CANCELED',
-        },
-      }),
+      // 2. Identify the ones to lock (everything after index 0)
+      const workspacesToLock = workspaces.slice(1).map((w) => w.id);
 
-      // C. Deactivate Social Profiles to immediately halt the publishing queue
-      this.prisma.socialProfile.updateMany({
-        where: { workspace: { organizationId: { in: orgIds } } },
-        data: { isActive: false },
-      }),
-    ]);
+      // 3. Execute the "Juk" Transaction
+      await this.prisma.$transaction(async (tx) => {
+        // A. Mark subscription as canceled, but RESET add-ons
+        await tx.subscription.update({
+          where: { id: sub.id },
+          data: {
+            status: 'CANCELED',
+            isActive: false,
+            extraWorkspacesPurchased: 0, // 👈 Wipe the add-on ledger!
+          },
+        });
 
-    this.logger.log(
-      `✅ Processed ${expiredCancellations.length} end-of-period cancellations. Publishing halted and accounts locked.`,
-    );
+        // B. Update Org status to FREE/CANCELED (DO NOT SUSPEND)
+        await tx.organization.update({
+          where: { id: orgId },
+          data: {
+            // Keep them ACTIVE so they can log in, but update billing status
+            status: 'ACTIVE',
+            billingStatus: 'CANCELED',
+          },
+        });
+
+        // C. Lock the excess workspaces
+        if (workspacesToLock.length > 0) {
+          await tx.workspace.updateMany({
+            where: { id: { in: workspacesToLock } },
+            data: { isLocked: true }, // Add an `isLocked: Boolean @default(false)` to your Prisma schema
+          });
+
+          // D. Deactivate social profiles ONLY in the locked workspaces
+          await tx.socialProfile.updateMany({
+            where: { workspaceId: { in: workspacesToLock } },
+            data: { isActive: false },
+          });
+        }
+      });
+
+      this.logger.log(
+        `✅ Organization ${orgId} downgraded. Premium features stripped and excess workspaces locked.`,
+      );
+    }
   }
 
   // ---------------------------------------------------------
@@ -1311,13 +1387,14 @@ export class BillingService {
     }
   }
 
-async replaceCard(organizationId: string, user: any) {
+  async replaceCard(organizationId: string, user: any) {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       include: { subscription: true },
     });
 
-    if (!org || !org.subscription) throw new BadRequestException('No active subscription');
+    if (!org || !org.subscription)
+      throw new BadRequestException('No active subscription');
 
     const targetCurrency = org.currency || 'NGN';
     // Charge a tiny authorization amount just to validate the card
@@ -1331,7 +1408,7 @@ async replaceCard(organizationId: string, user: any) {
         txRef: reference,
         providerTxId: 'pending',
         provider: 'PAYSTACK',
-        amount: authAmountBaseUnit / 100, 
+        amount: authAmountBaseUnit / 100,
         currency: targetCurrency,
         status: 'pending',
         paymentDate: new Date(),
@@ -1357,12 +1434,81 @@ async replaceCard(organizationId: string, user: any) {
         `${this.PAYSTACK_BASE_URL}/transaction/initialize`,
         payload,
         {
-          headers: { Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}` },
+          headers: {
+            Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+          },
         },
       ),
     );
 
     return { paymentUrl: data.data.authorization_url, reference };
+  }
+
+  async enforceDowngradeLimits(
+    organizationId: string,
+    newPlanLimitWorkspaces: number,
+    newPlanLimitUsers: number,
+  ) {
+    // 1. WORKSPACE & PROFILE LOCKDOWN
+    const workspaces = await this.prisma.workspace.findMany({
+      where: { organizationId, isLocked: false },
+      orderBy: { createdAt: 'asc' }, // Keep oldest alive
+      select: { id: true },
+    });
+
+    if (workspaces.length > newPlanLimitWorkspaces) {
+      const workspacesToLock = workspaces
+        .slice(newPlanLimitWorkspaces)
+        .map((w) => w.id);
+
+      await this.prisma.$transaction([
+        this.prisma.workspace.updateMany({
+          where: { id: { in: workspacesToLock } },
+          data: { isLocked: true },
+        }),
+        this.prisma.socialProfile.updateMany({
+          where: { workspaceId: { in: workspacesToLock } },
+          data: { isActive: false },
+        }),
+      ]);
+    }
+
+    // 2. USER LOCKDOWN (RBAC Hierarchy)
+    // ✅ FIX: Query for isActive: true (same bug as enforcePlanLimits)
+    const activeMembers = await this.prisma.organizationMember.findMany({
+      where: { organizationId, isActive: true },
+      include: { role: true },
+    });
+
+    if (activeMembers.length > newPlanLimitUsers) {
+      const roleWeights: Record<string, number> = {
+        'org-owner': 100,
+        'org-admin': 90,
+        'ws-owner': 80,
+        'ws-editor': 70,
+        'ws-contributor': 60,
+        'ws-client': 50,
+        'ws-viewer': 40,
+        'org-member': 10,
+      };
+
+      const sortedMembers = activeMembers.sort((a, b) => {
+        const weightA = roleWeights[a.role.slug] || 0;
+        const weightB = roleWeights[b.role.slug] || 0;
+        if (weightA !== weightB) return weightB - weightA;
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
+
+      const membersToSuspend = sortedMembers
+        .slice(newPlanLimitUsers)
+        .map((m) => m.id);
+
+      await this.prisma.organizationMember.updateMany({
+        where: { id: { in: membersToSuspend } },
+        data: { isActive: false },
+      });
+    }
+    this.logger.log(`✅ Limits enforced for Org ${organizationId}`);
   }
 
   // ---------------------------------------------------------
@@ -1424,27 +1570,34 @@ async replaceCard(organizationId: string, user: any) {
   async chargeFinalOverages(sub: any) {
     // 1. Double-check that there is actually money owed and a card on file
     if (sub.aiOverageCostCents <= 0 || !sub.paystackAuthCode) {
-      return; 
+      return;
     }
 
     // 2. Fetch the Organization to get the Billing Email & Currency
     // (In case the parent method didn't include it in the `sub` object)
-    const org = sub.organization || await this.prisma.organization.findUnique({
-      where: { id: sub.organizationId },
-      select: { billingEmail: true, currency: true }
-    });
+    const org =
+      sub.organization ||
+      (await this.prisma.organization.findUnique({
+        where: { id: sub.organizationId },
+        select: { billingEmail: true, currency: true },
+      }));
 
     if (!org?.billingEmail) {
-      this.logger.error(`Cannot charge overages: missing billing email for Org ${sub.organizationId}`);
+      this.logger.error(
+        `Cannot charge overages: missing billing email for Org ${sub.organizationId}`,
+      );
       throw new Error('Missing billing email');
     }
 
     const targetCurrency = org.currency || 'NGN';
     const amountToChargeBaseUnit = sub.aiOverageCostCents; // This is already in Kobo/Cents
-    const reference = `rooli_final_sweep_${sub.organizationId}_${Date.now()}`;
+    // ✅ FIX: Deterministic reference prevents double-charging if cancellation retries
+    const reference = `rooli_final_sweep_${sub.organizationId}_${sub.id}`;
 
     try {
-      this.logger.log(`Attempting final overage sweep of ${amountToChargeBaseUnit} for Org ${sub.organizationId}...`);
+      this.logger.log(
+        `Attempting final overage sweep of ${amountToChargeBaseUnit} for Org ${sub.organizationId}...`,
+      );
 
       // 3. Hit Paystack API to charge the saved card
       const { data: paystackResponse } = await firstValueFrom(
@@ -1487,7 +1640,7 @@ async replaceCard(organizationId: string, user: any) {
             },
           },
         }),
-        
+
         // B. Reset the overage ledger to 0
         this.prisma.subscription.update({
           where: { id: sub.id },
@@ -1495,8 +1648,9 @@ async replaceCard(organizationId: string, user: any) {
         }),
       ]);
 
-      this.logger.log(`✅ Successfully swept final overages for Org ${sub.organizationId}`);
-      
+      this.logger.log(
+        `✅ Successfully swept final overages for Org ${sub.organizationId}`,
+      );
     } catch (error: any) {
       // We throw an error so `cancelSubscription`'s catch block can log it.
       // At this stage, if it fails, the revenue is lost—but we don't want to block the cancellation.
@@ -1508,24 +1662,115 @@ async replaceCard(organizationId: string, user: any) {
     }
   }
 
-  async updatePaystackSubscription(subscriptionCode: string, emailToken: string, newPlanCode: string) {
-    // This tells Paystack to swap the plan code. 
-    // Paystack will automatically apply this new plan code on the NEXT billing cycle!
-    const { data } = await firstValueFrom(
-      this.httpService.put(
-        `https://api.paystack.co/subscription/${subscriptionCode}`,
-        {
-          token: emailToken,
-          plan: newPlanCode,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+  // ---------------------------------------------------------
+  // UNLOCK A WORKSPACE (After manual purchase)
+  // ---------------------------------------------------------
+  async unlockWorkspace(organizationId: string, workspaceId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        subscription: {
+          include: {
+            plan: true,
           },
         },
-      ),
-    );
-    return data;
+        workspaces: { where: { isLocked: false } }, // Count currently active ones
+      },
+    });
+
+    const sub = org?.subscription;
+    if (!sub || !sub.isActive) {
+      throw new BadRequestException(
+        'You need an active premium plan to unlock workspaces.',
+      );
+    }
+
+    // Base allowance + Purchased allowance
+    const totalAllowed = sub.plan.maxWorkspaces + sub.extraWorkspacesPurchased;
+    const currentlyActive = org.workspaces.length;
+
+    if (currentlyActive >= totalAllowed) {
+      throw new ForbiddenException(
+        'You have reached your active workspace limit. Please purchase another add-on.',
+      );
+    }
+
+    // Unlock it
+    await this.prisma.workspace.update({
+      where: { id: workspaceId, organizationId },
+      data: { isLocked: false },
+    });
+
+    return { message: 'Workspace successfully unlocked.' };
+  }
+
+// ---------------------------------------------------------
+  // 10. RECONCILIATION HELPER (Runs on Renewals & Downgrades)
+  // ---------------------------------------------------------
+  async enforcePlanLimits(organizationId: string, allowedWorkspaces: number, allowedUsers: number) {
+    this.logger.log(`Reconciling limits for Org ${organizationId}. Allowed Workspaces: ${allowedWorkspaces}, Allowed Users: ${allowedUsers}`);
+
+    // ==========================================
+    // A. WORKSPACE & PROFILE LOCKDOWN
+    // ==========================================
+    const workspaces = await this.prisma.workspace.findMany({
+      where: { organizationId, isLocked: false },
+      orderBy: { createdAt: 'asc' }, // Index 0 (oldest) is the safest to keep alive
+      select: { id: true }
+    });
+
+    if (workspaces.length > allowedWorkspaces) {
+      const workspacesToLock = workspaces.slice(allowedWorkspaces).map(w => w.id);
+      
+      await this.prisma.$transaction([
+        this.prisma.workspace.updateMany({
+          where: { id: { in: workspacesToLock } },
+          data: { isLocked: true },
+        }),
+        this.prisma.socialProfile.updateMany({
+          where: { workspaceId: { in: workspacesToLock } },
+          data: { isActive: false },
+        })
+      ]);
+      this.logger.log(`Locked ${workspacesToLock.length} excess workspaces.`);
+    }
+
+    // ==========================================
+    // B. USER LOCKDOWN (RBAC Hierarchy)
+    // ==========================================
+    // ✅ FIX: Query for isActive: true
+    const activeMembers = await this.prisma.organizationMember.findMany({
+      where: { organizationId, isActive: true }, 
+      include: { role: true },
+    });
+
+    if (activeMembers.length > allowedUsers) {
+      const roleWeights: Record<string, number> = {
+        'org-owner': 100,
+        'org-admin': 90,
+        'ws-owner': 80,
+        'ws-editor': 70,
+        'ws-contributor': 60,
+        'ws-client': 50,
+        'ws-viewer': 40,
+        'org-member': 10,
+      };
+
+      const sortedMembers = activeMembers.sort((a, b) => {
+        const weightA = roleWeights[a.role.slug] || 0;
+        const weightB = roleWeights[b.role.slug] || 0;
+        if (weightA !== weightB) return weightB - weightA; 
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
+
+      const membersToSuspend = sortedMembers.slice(allowedUsers).map(m => m.id);
+
+      await this.prisma.organizationMember.updateMany({
+        where: { id: { in: membersToSuspend } },
+        data: { isActive: false }, 
+      });
+      this.logger.log(`Suspended ${membersToSuspend.length} excess users.`);
+    }
   }
 
   private inferCountry(ipCountry?: string, timeZone?: string) {

@@ -68,8 +68,7 @@ export class SubscriptionGuard implements CanActivate {
     // -------------------------------------------------------------
     if (
       org.status === 'SUSPENDED' ||
-      subStatus === 'SUSPENDED' ||
-      subStatus === 'CANCELED'
+      subStatus === 'SUSPENDED'
     ) {
       throw new ForbiddenException({
         code: 'PAYMENT_REQUIRED',

@@ -278,4 +278,37 @@ export class BillingController {
   ) {
     return this.billingService.replaceCard(orgId, req.user);
   }
+
+  @Post('workspaces/:workspaceId/unlock')
+  @ApiBearerAuth()
+  @RequirePermission(PermissionResource.SUBSCRIPTION, PermissionAction.MANAGE)
+  @ApiOperation({
+    summary: 'Unlock a locked workspace',
+    description:
+      'Unlocks a workspace that was locked due to a plan downgrade or cycle reset. ' +
+      'Only succeeds if the organization has available workspace slots (base plan + purchased add-ons).',
+  })
+  @ApiParam({ name: 'orgId', description: 'The unique ID of the organization' })
+  @ApiParam({ name: 'workspaceId', description: 'The unique ID of the workspace to unlock' })
+  @ApiResponse({
+    status: 201,
+    description: 'Workspace successfully unlocked.',
+    schema: {
+      example: { message: 'Workspace successfully unlocked.' },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'No active subscription found.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Active workspace limit reached. Purchase an extra workspace add-on first.',
+  })
+  async unlockWorkspace(
+    @Param('orgId') orgId: string,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.billingService.unlockWorkspace(orgId, workspaceId);
+  }
 }

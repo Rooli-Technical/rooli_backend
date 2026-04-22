@@ -132,6 +132,8 @@ model Workspace {
   slug     String // unique-per-org logic needed in app code, or globally unique
   timezone String @default("UTC") // For scheduling posts
 
+  isLocked  Boolean @default(false)
+
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 

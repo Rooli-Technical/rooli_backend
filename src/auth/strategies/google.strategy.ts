@@ -16,12 +16,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const callbackURL = configService.get('GOOGLE_CALLBACK_URL');
 
     
-    console.log('[GoogleStrategy] clientID:', clientID);
-    console.log('[GoogleStrategy] secret length:', clientSecret?.length);
-    console.log('[GoogleStrategy] secret starts with:', clientSecret?.slice(0, 6));
-    console.log('[GoogleStrategy] callbackURL:', callbackURL);
-
-
     super({
       clientID: clientID,
       clientSecret: clientSecret,
