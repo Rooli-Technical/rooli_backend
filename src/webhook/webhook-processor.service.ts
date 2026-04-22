@@ -32,6 +32,8 @@ export class WebhooksProcessor extends WorkerHost {
         await this.processTikTokPublish(logId, payload);
       } else if (job.name === 'tiktok-deauth') {
         await this.processTikTokDeauth(logId, payload);
+      } else if (job.name === 'cloudinary-upload-complete') {
+        await this.processCloudinaryUpload(logId, payload);
       }
     } catch (error) {
       this.logger.error(
@@ -186,7 +188,9 @@ export class WebhooksProcessor extends WorkerHost {
               },
               data: { billingStatus: 'PENDING_CANCELLATION' },
             });
-            this.logger.warn(`Subscription marked for cancellation at period end: ${subCode}`);
+            this.logger.warn(
+              `Subscription marked for cancellation at period end: ${subCode}`,
+            );
           }
           break;
 
@@ -397,6 +401,81 @@ export class WebhooksProcessor extends WorkerHost {
     await this.prisma.webhookLog.update({
       where: { id: logId },
       data: { status: 'PROCESSED', processedAt: new Date() },
+    });
+  }
+
+  private async processCloudinaryUpload(logId: string, payload: any) {
+    const mediaFileId = payload?.context?.custom?.mediaFileId;
+
+    if (!mediaFileId) {
+      this.logger.warn(
+        `Cloudinary webhook missing mediaFileId in context`,
+        payload.context,
+      );
+      await this.markLogFailed(logId, 'Missing mediaFileId');
+      return;
+    }
+
+    // Look up the pending record
+    const existing = await this.prisma.mediaFile.findUnique({
+      where: { id: mediaFileId },
+      select: { id: true, status: true, mimeType: true, workspaceId: true },
+    });
+
+    if (!existing) {
+      this.logger.warn(
+        `Cloudinary webhook for unknown mediaFile: ${mediaFileId}`,
+      );
+      await this.markLogFailed(logId, 'MediaFile not found');
+      return;
+    }
+
+    // Idempotency: webhook may fire multiple times
+    if (existing.status === 'READY') {
+      this.logger.log(`Webhook replay ignored for ${mediaFileId}`);
+      await this.markLogProcessed(logId);
+      return;
+    }
+
+    // Update the record with real Cloudinary data
+    await this.prisma.mediaFile.update({
+      where: { id: mediaFileId },
+      data: {
+        status: 'READY',
+        url: payload.secure_url,
+        publicId: payload.public_id,
+        width: payload.width ?? null,
+        height: payload.height ?? null,
+        duration: payload.duration ? Math.round(payload.duration) : null,
+        thumbnailUrl: this.buildThumbnailUrl(payload),
+      },
+    });
+
+    await this.markLogProcessed(logId);
+    this.logger.log(`✅ MediaFile ${mediaFileId} marked READY`);
+  }
+
+  private buildThumbnailUrl(payload: any): string | null {
+    if (payload.resource_type === 'video') {
+      // Extract first frame as JPG thumbnail
+      return payload.secure_url
+        .replace('/upload/', '/upload/so_0/')
+        .replace(/\.[^/.]+$/, '.jpg');
+    }
+    return payload.secure_url;
+  }
+
+  private async markLogProcessed(logId: string) {
+    await this.prisma.webhookLog.update({
+      where: { id: logId },
+      data: { status: 'PROCESSED', processedAt: new Date() },
+    });
+  }
+
+  private async markLogFailed(logId: string, reason: string) {
+    await this.prisma.webhookLog.update({
+      where: { id: logId },
+      data: { status: 'FAILED', errorMessage: reason },
     });
   }
 }

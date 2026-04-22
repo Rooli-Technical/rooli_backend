@@ -35,7 +35,8 @@ import { MediaFileDto } from './dto/response/media-file.dto';
 import { MediaFolderDto } from './dto/response/media-folder.dto';
 import { MediaLibraryResponseDto } from './dto/response/media-library.dto';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import {memoryStorage } from 'multer';
+import { memoryStorage } from 'multer';
+import { SignedUploadDto } from './request/signed-upload.dto';
 
 const sharedMemoryStorage = memoryStorage();
 
@@ -63,7 +64,7 @@ export class PostMediaController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: sharedMemoryStorage,
-      limits: { fileSize: 50 * 1024 * 1024 }, 
+      limits: { fileSize: 50 * 1024 * 1024 },
     }),
   )
   @ApiStandardResponse(MediaFileDto)
@@ -177,7 +178,7 @@ export class PostMediaController {
     description:
       'Uploads a new image, links it to the user profile, and deletes the previous avatar file.',
   })
- @ApiConsumes('multipart/form-data')
+  @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
@@ -194,7 +195,10 @@ export class PostMediaController {
       fileFilter: (req, file, cb) => {
         // Basic fail-fast. Service still checks magic bytes via file-type package.
         if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
-          return cb(new BadRequestException('Only image files are allowed'), false);
+          return cb(
+            new BadRequestException('Only image files are allowed'),
+            false,
+          );
         }
         cb(null, true);
       },
@@ -238,5 +242,22 @@ export class PostMediaController {
     @Body() body: { name: string; parentId?: string },
   ) {
     return this.mediaService.createFolder(wsId, body.name, body.parentId);
+  }
+
+  @Post('signed-upload')
+  @ApiOperation({
+    summary: 'Get signed upload parameters for a file',
+  })
+  @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
+  async getSignedUpload(
+    @CurrentUser() user: any,
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: SignedUploadDto,
+  ) {
+    return this.mediaService.getSignedUploadParams(
+      workspaceId,
+      user.userId,
+      dto,
+    );
   }
 }

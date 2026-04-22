@@ -27,6 +27,7 @@ import { LinkedInWebhookGuard } from './guards/linkedin.guard';
 import { TikTokWebhookGuard } from './guards/tiktok.guard';
 import { TwitterWebhookGuard } from './guards/twitter.guard';
 import { SkipAudit } from '@/audit/decorators/skip-audit.decorator';
+import { CloudinaryWebhookGuard } from './guards/cloudinary-webhook.guard';
 
 @Controller('webhooks')
 @Public()
@@ -423,6 +424,58 @@ export class WebhookController {
     // 3. Return 200 OK instantly
     return { status: 'success' };
   }
+
+  // ==========================================
+// 6. CLOUDINARY (Media Uploads)
+// ==========================================
+
+/**
+ * Cloudinary webhook receiver.
+ * Fired when a direct upload completes. Flips PENDING_UPLOAD → READY.
+ * Secured by CloudinaryWebhookGuard checking x-cld-signature header.
+ */
+@Post('cloudinary')
+@UseGuards(CloudinaryWebhookGuard)
+async handleCloudinary(@Body() payload: any) {
+  const notificationType = payload?.notification_type;
+  const publicId = payload?.public_id;
+  const mediaFileId = payload?.context?.custom?.mediaFileId;
+
+  this.logger.log(
+    `[Cloudinary] Webhook received: ${notificationType} for ${publicId}`,
+  );
+
+  // 1. Log to DB
+  const log = await this.prisma.webhookLog.create({
+    data: {
+      provider: 'CLOUDINARY',
+      eventType: notificationType || 'unknown',
+      resourceId: mediaFileId || publicId || 'system-event',
+      payload: payload,
+      status: 'PENDING',
+    },
+  });
+
+  // 2. Only route events we care about
+  // Cloudinary fires many types: upload, eager, delete, moderation, etc.
+  // We only need upload completion for now.
+  if (notificationType === 'upload' && mediaFileId) {
+    await this.webhooksQueue.add(
+      'cloudinary-upload-complete',
+      { logId: log.id, payload },
+      {
+        jobId: `cloudinary-upload-${mediaFileId}`, // idempotent
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 1500 },
+        removeOnComplete: true,
+        removeOnFail: { age: 7 * 24 * 3600 },
+      },
+    );
+  }
+
+  // 3. Respond fast — Cloudinary expects 2xx or it retries
+  return { status: 'success' };
+}
 }
 
 function cryptoRandomId() {

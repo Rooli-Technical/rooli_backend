@@ -1,18 +1,10 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
-import {
-  v2 as cloudinary,
-  UploadApiOptions,
-} from 'cloudinary';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { v2 as cloudinary, UploadApiOptions } from 'cloudinary';
 import * as fs from 'fs/promises';
 import pLimit from 'p-limit';
 import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
-
-
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PostMediaService {
@@ -20,11 +12,19 @@ export class PostMediaService {
 
   // Class property, not a loose const
   private readonly ALLOWED_MIME_TYPES = new Set([
-    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-    'video/mp4', 'video/quicktime', 'video/webm',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'video/mp4',
+    'video/quicktime',
+    'video/webm',
   ]);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+  ) {}
 
   // ==========================================
   // 1. UPLOAD FILE (Smartly handles Buffer or Path)
@@ -40,7 +40,8 @@ export class PostMediaService {
       const folder = await this.prisma.mediaFolder.findFirst({
         where: { id: folderId, workspaceId },
       });
-      if (!folder) throw new BadRequestException('Folder not found in this workspace');
+      if (!folder)
+        throw new BadRequestException('Folder not found in this workspace');
     }
 
     // B. Safe Magic Byte Validation
@@ -49,18 +50,23 @@ export class PostMediaService {
       detected = await fileTypeFromBuffer(file.buffer);
     } else if (file.path) {
       // Reads only the first chunk from disk, preserving RAM
-      detected = await fileTypeFromFile(file.path); 
+      detected = await fileTypeFromFile(file.path);
     }
 
     if (!detected || !this.ALLOWED_MIME_TYPES.has(detected.mime)) {
       // Cleanup temp file if it was a rejected disk upload
       if (file.path) await fs.unlink(file.path).catch(() => {});
-      throw new BadRequestException(`File type not allowed: ${detected?.mime ?? 'unknown'}`);
+      throw new BadRequestException(
+        `File type not allowed: ${detected?.mime ?? 'unknown'}`,
+      );
     }
 
     try {
       // C. Upload to Cloudinary (Routes to buffer or path logic)
-      const uploadResult = await this.processCloudinaryUpload(file, workspaceId);
+      const uploadResult = await this.processCloudinaryUpload(
+        file,
+        workspaceId,
+      );
 
       // D. Save to DB
       const mediaFile = await this.prisma.mediaFile.create({
@@ -77,7 +83,9 @@ export class PostMediaService {
           thumbnailUrl: this.getThumbnailUrl(uploadResult),
           width: uploadResult.width,
           height: uploadResult.height,
-          duration: uploadResult.duration ? Math.round(uploadResult.duration) : null,
+          duration: uploadResult.duration
+            ? Math.round(uploadResult.duration)
+            : null,
           isAiGenerated: false,
         },
       });
@@ -91,17 +99,29 @@ export class PostMediaService {
     }
   }
 
-  async uploadMany(userId: string, workspaceId: string, files: Express.Multer.File[], folderId?: string) {
+  async uploadMany(
+    userId: string,
+    workspaceId: string,
+    files: Express.Multer.File[],
+    folderId?: string,
+  ) {
     const limit = pLimit(3); // max 3 concurrent uploads
     return Promise.all(
-      files.map((file) => limit(() => this.uploadFile(userId, workspaceId, file, folderId))),
+      files.map((file) =>
+        limit(() => this.uploadFile(userId, workspaceId, file, folderId)),
+      ),
     );
   }
 
   // ==========================================
   // 2. AI & AVATAR HELPERS
   // ==========================================
-  async uploadAiGeneratedBuffer(userId: string, workspaceId: string, buffer: Buffer, prompt: string) {
+  async uploadAiGeneratedBuffer(
+    userId: string,
+    workspaceId: string,
+    buffer: Buffer,
+    prompt: string,
+  ) {
     const uploadResult = await this.uploadBufferToCloudinary(buffer, {
       folder: `rooli/${workspaceId}`,
       resource_type: 'image',
@@ -115,7 +135,7 @@ export class PostMediaService {
         originalName: prompt.substring(0, 50),
         mimeType: 'image/png',
         size: BigInt(buffer.length),
-        url: uploadResult.secure_url,       // Fixed variable reference
+        url: uploadResult.secure_url, // Fixed variable reference
         publicId: uploadResult.public_id,
         thumbnailUrl: uploadResult.secure_url,
         width: uploadResult.width,
@@ -132,9 +152,12 @@ export class PostMediaService {
   // ==========================================
   // 3. PRIVATE UPLOAD HELPERS
   // ==========================================
-  
+
   // Smart router for Multer's MemoryStorage vs DiskStorage
-  private async processCloudinaryUpload(file: Express.Multer.File, workspaceId: string): Promise<any> {
+  private async processCloudinaryUpload(
+    file: Express.Multer.File,
+    workspaceId: string,
+  ): Promise<any> {
     const opts: UploadApiOptions = {
       folder: `rooli/${workspaceId}`,
       resource_type: 'auto',
@@ -146,7 +169,9 @@ export class PostMediaService {
     } else if (file.path) {
       // DISK STORAGE (Videos)
       const isLarge = file.size > 100 * 1024 * 1024; // 100MB
-      const uploadFn = isLarge ? cloudinary.uploader.upload_large : cloudinary.uploader.upload;
+      const uploadFn = isLarge
+        ? cloudinary.uploader.upload_large
+        : cloudinary.uploader.upload;
       if (isLarge) opts.chunk_size = 6_000_000;
 
       const uploadResult = await new Promise((resolve, reject) => {
@@ -157,14 +182,21 @@ export class PostMediaService {
       });
 
       // Crucial: Clean up the temp file after disk upload
-      await fs.unlink(file.path).catch(err => this.logger.error('Failed to delete temp file', err));
+      await fs
+        .unlink(file.path)
+        .catch((err) => this.logger.error('Failed to delete temp file', err));
       return uploadResult;
     }
 
-    throw new BadRequestException('Invalid file format: No buffer or path found.');
+    throw new BadRequestException(
+      'Invalid file format: No buffer or path found.',
+    );
   }
 
-  private uploadBufferToCloudinary(buffer: Buffer, opts: UploadApiOptions): Promise<any> {
+  private uploadBufferToCloudinary(
+    buffer: Buffer,
+    opts: UploadApiOptions,
+  ): Promise<any> {
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(opts, (err, result) =>
         err ? reject(err) : resolve(result),
@@ -217,24 +249,23 @@ export class PostMediaService {
   // ==========================================
   // 3. DELETE (Cleanup)
   // ==========================================
-async deleteFile(workspaceId: string, fileId: string) {
-  const file = await this.prisma.mediaFile.findFirst({
-    where: { id: fileId, workspaceId },
-  });
-  if (!file) throw new BadRequestException('File not found');
+  async deleteFile(workspaceId: string, fileId: string) {
+    const file = await this.prisma.mediaFile.findFirst({
+      where: { id: fileId, workspaceId },
+    });
+    if (!file) throw new BadRequestException('File not found');
 
-  // Cloudinary first — if this fails, DB record still exists,
-  // so you can retry the deletion later
-  await cloudinary.uploader.destroy(file.publicId, {
-    resource_type: file.mimeType.startsWith('video') ? 'video' : 'image',
-  });
+    // Cloudinary first — if this fails, DB record still exists,
+    // so you can retry the deletion later
+    await cloudinary.uploader.destroy(file.publicId, {
+      resource_type: file.mimeType.startsWith('video') ? 'video' : 'image',
+    });
 
-  // DB last — only runs if cloud deletion succeeded
-  await this.prisma.mediaFile.delete({ where: { id: fileId } });
+    // DB last — only runs if cloud deletion succeeded
+    await this.prisma.mediaFile.delete({ where: { id: fileId } });
 
-  return { success: true };
-}
-
+    return { success: true };
+  }
 
   async updateUserAvatar(
     userId: string,
@@ -277,4 +308,80 @@ async deleteFile(workspaceId: string, fileId: string) {
     };
   }
 
+  async getSignedUploadParams(
+    workspaceId: string,
+    userId: string,
+    fileMeta: { filename: string; size: number; mimeType: string },
+  ) {
+    // ========================================
+    // 1. VALIDATE MIME TYPE
+    // ========================================
+    if (!this.ALLOWED_MIME_TYPES.has(fileMeta.mimeType)) {
+      throw new BadRequestException(
+        `File type not allowed: ${fileMeta.mimeType}`,
+      );
+    }
+
+    // ========================================
+    // 2. VALIDATE SIZE (basic — plan limits can be added later)
+    // ========================================
+    const MAX_SIZE = 500 * 1024 * 1024;
+    if (fileMeta.size <= 0 || fileMeta.size > MAX_SIZE) {
+      throw new BadRequestException('Invalid file size');
+    }
+
+    // ========================================
+    // 3. CREATE PENDING_UPLOAD ROW
+    // Frontend uses this ID immediately in createPost,
+    // even while the upload is still in flight.
+    // ========================================
+    const pending = await this.prisma.mediaFile.create({
+      data: {
+        workspaceId,
+        userId,
+        filename: fileMeta.filename,
+        originalName: fileMeta.filename,
+        mimeType: fileMeta.mimeType,
+        size: BigInt(fileMeta.size),
+        status: 'PENDING_UPLOAD',
+        // url and publicId default to '' — webhook fills them in
+      },
+    });
+
+    // ========================================
+    // 4. BUILD SIGNED CLOUDINARY PARAMS
+    // ========================================
+    const timestamp = Math.round(Date.now() / 1000);
+    const folder = `rooli/${workspaceId}`;
+    const publicId = pending.id;
+    const notificationUrl = `${this.config.get('API_URL')}/webhooks/cloudinary`;
+
+    // Cloudinary's api_sign_request signs params in alphabetical order.
+    // Whatever we sign here, the frontend MUST send exactly the same values.
+    const paramsToSign: Record<string, string | number> = {
+      context: `mediaFileId=${pending.id}`,
+      folder,
+      notification_url: notificationUrl,
+      public_id: publicId,
+      timestamp,
+    };
+
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      this.config.get('CLOUDINARY_API_SECRET'),
+    );
+
+    // ========================================
+    // 5. RETURN EVERYTHING THE FRONTEND NEEDS
+    // ========================================
+    return {
+      mediaFileId: pending.id,
+      uploadUrl: `https://api.cloudinary.com/v1_1/${this.config.get('CLOUDINARY_CLOUD_NAME')}/auto/upload`,
+      params: {
+        ...paramsToSign,
+        signature,
+        api_key: this.config.get('CLOUDINARY_API_KEY'),
+      },
+    };
+  }
 }

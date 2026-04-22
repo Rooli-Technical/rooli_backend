@@ -21,7 +21,7 @@ model User {
 
   lastVerificationEmailSentAt DateTime?
 
-  globalRole    GlobalRole @default(USER)
+  globalRole GlobalRole @default(USER)
 
   // Tracks which Workspace (Client) the user was looking at last
   lastActiveWorkspaceId String?
@@ -62,7 +62,6 @@ model User {
   comments Comment[]
 
   enterpriseLeads EnterpriseLead[]
-
 
   adminNotifications AdminNotification[]
 
@@ -132,7 +131,7 @@ model Workspace {
   slug     String // unique-per-org logic needed in app code, or globally unique
   timezone String @default("UTC") // For scheduling posts
 
-  isLocked  Boolean @default(false)
+  isLocked Boolean @default(false)
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -289,7 +288,7 @@ model SocialConnection {
   tokenExpiresAt DateTime?
 
   refreshExpiresAt       DateTime? // 👈 Tracks when they must physically log in again
-  reconnectWarningSentAt DateTime?  // 👈 Prevents duplicate warning emails
+  reconnectWarningSentAt DateTime? // 👈 Prevents duplicate warning emails
 
   // Relations
   organization Organization    @relation(fields: [organizationId], references: [id])
@@ -517,8 +516,9 @@ model MediaFile {
   originalName String
   mimeType     String // image/jpeg, video/mp4
   size         BigInt
-  url          String // Cloudinary/S3 URL
-  publicId     String // For Cloudinary deletion
+  status       MediaStatus @default(READY) // READY keeps all existing rows working
+  url          String      @default("") // — now has default so we can create rows before upload
+  publicId     String      @default("")
   thumbnailUrl String?
 
   width    Int? // Important for aspect ratio checks
@@ -549,6 +549,7 @@ model MediaFile {
   ticketComment   TicketComment? @relation(fields: [ticketCommentId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, mimeType])
+  @@index([status])
 }
 
 // ==========================================
@@ -998,23 +999,22 @@ model Notification {
 }
 
 model AdminNotification {
-  id        String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Link it to the specific Super Admin
-  adminId   String
-  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  
-  type      AdminAlertType @default(SYSTEM_ALERT)
-  title     String
-  body      String   @db.Text
-  link      String?  // e.g., /admin/enterprise-leads/xyz
-  
+  adminId String
+  admin   User   @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  type  AdminAlertType @default(SYSTEM_ALERT)
+  title String
+  body  String         @db.Text
+  link  String? // e.g., /admin/enterprise-leads/xyz
+
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@index([adminId, isRead])
 }
-
 
 model Comment {
   id          String @id @default(cuid())
@@ -1600,24 +1600,43 @@ model TicketComment {
 }
 
 model EnterpriseLead {
- id              String   @id @default(cuid())
-  companyName     String
-  email           String
-  companySize     String
-  socialProfiles  Int
-  workspaces      Int
-  primaryGoals    String   @db.Text
-  status          EnterpriseLeadStatus @default(PENDING) 
-  
+  id             String               @id @default(cuid())
+  companyName    String
+  email          String
+  companySize    String
+  socialProfiles Int
+  workspaces     Int
+  primaryGoals   String               @db.Text
+  status         EnterpriseLeadStatus @default(PENDING)
+
   // 🚨 NEW: Link to the existing User and Organization
-  userId          String?
-  user            User?          @relation(fields: [userId], references: [id])
-  
-  organizationId  String?
-  organization    Organization?  @relation(fields: [organizationId], references: [id])
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  adminId   String
+  ip        String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminSessions", fields: [adminId], references: [id])
+}
+
+model IpWhitelist {
+  id        String   @id @default(cuid())
+  adminId   String
+  ipRange   String
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminIpWhitelist", fields: [adminId], references: [id])
 }
 
 enum EnterpriseLeadStatus {
@@ -1628,23 +1647,23 @@ enum EnterpriseLeadStatus {
 }
 
 enum BillingStatus {
-  TRIAL_ACTIVE              // Trial ongoing
-  ACTIVE                    // Paid + valid
-  GRACE_PERIOD              // Payment failed but still usable (Dunning Day 0–7)
-  READ_ONLY                 // Locked, can only view data (Dunning Day 8–13)
-  SUSPENDED                 // Fully blocked (Dunning Day 14+)
-  PENDING_CANCELLATION      // User canceled, but still has days left in billing cycle
-  CANCELED                  // Billing cycle ended, account is dead
-  PAYMENT_METHOD_REQUIRED   // Trial ended OR card was completely removed. Hard lock.
+  TRIAL_ACTIVE // Trial ongoing
+  ACTIVE // Paid + valid
+  GRACE_PERIOD // Payment failed but still usable (Dunning Day 0–7)
+  READ_ONLY // Locked, can only view data (Dunning Day 8–13)
+  SUSPENDED // Fully blocked (Dunning Day 14+)
+  PENDING_CANCELLATION // User canceled, but still has days left in billing cycle
+  CANCELED // Billing cycle ended, account is dead
+  PAYMENT_METHOD_REQUIRED // Trial ended OR card was completely removed. Hard lock.
 }
 
 enum SubscriptionStatus {
-  TRIALING     // Matches TRIAL_ACTIVE
-  ACTIVE       // Matches ACTIVE & PENDING_CANCELLATION
-  PAST_DUE     // Matches GRACE_PERIOD & READ_ONLY
-  SUSPENDED    // Matches SUSPENDED
-  CANCELED     // Matches CANCELED
-  EXPIRED      // Matches PAYMENT_METHOD_REQUIRED (Trial ran out)
+  TRIALING // Matches TRIAL_ACTIVE
+  ACTIVE // Matches ACTIVE & PENDING_CANCELLATION
+  PAST_DUE // Matches GRACE_PERIOD & READ_ONLY
+  SUSPENDED // Matches SUSPENDED
+  CANCELED // Matches CANCELED
+  EXPIRED // Matches PAYMENT_METHOD_REQUIRED (Trial ran out)
 }
 
 enum ConnectionStatus {
@@ -2086,27 +2105,14 @@ enum AdminAlertType {
 
 // Add this Enum
 enum GlobalRole {
-  USER           // Standard paying customers
-  SUPER_ADMIN    // Founders / Devs
-  SALES_AGENT    // Can view Enterprise Leads
-  SUPPORT_AGENT  // Can reply to Support Tickets
+  USER // Standard paying customers
+  SUPER_ADMIN // Founders / Devs
+  SALES_AGENT // Can view Enterprise Leads
+  SUPPORT_AGENT // Can reply to Support Tickets
 }
 
-model AdminSession {
-  id        String   @id @default(cuid())
-  adminId   String
-  ip        String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-
-  admin User @relation("AdminSessions", fields: [adminId], references: [id])
-}
-
-model IpWhitelist {
-  id        String   @id @default(cuid())
-  adminId   String
-  ipRange   String
-  createdAt DateTime @default(now())
-
-  admin User @relation("AdminIpWhitelist", fields: [adminId], references: [id])
+enum MediaStatus {
+  PENDING_UPLOAD // signed URL issued, Cloudinary hasn't confirmed yet
+  READY // upload confirmed via webhook, safe to use
+  FAILED // upload timed out or rejected
 }
