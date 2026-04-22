@@ -104,7 +104,7 @@ export class SubscriptionGuard implements CanActivate {
     // -------------------------------------------------------------
     // ENFORCEMENT LAYER 3: ALLOWED STATES
     // -------------------------------------------------------------
-    const allowedStates = ['ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELED'];
+    const allowedStates = ['ACTIVE', 'TRIALING', 'PAST_DUE'];
     
     if (allowedStates.includes(subStatus)) {
       return true;

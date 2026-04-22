@@ -384,4 +384,57 @@ export class PostMediaService {
       },
     };
   }
+
+  //@Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async cleanupOrphanedMedia() {
+    this.logger.log('🧹 Sweeping orphaned media uploads...');
+
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - 24);
+
+    // ========================================
+    // STEP 1: Delete UNATTACHED orphans outright
+    // (No post references this media — safe to delete)
+    // ========================================
+    const orphanDeleted = await this.prisma.mediaFile.deleteMany({
+      where: {
+        status: 'PENDING_UPLOAD',
+        createdAt: { lt: cutoff },
+        postUsage: { none: {} }, // 👈 not attached to any post
+      },
+    });
+
+    // ========================================
+    // STEP 2: Mark ATTACHED orphans as FAILED
+    // (Attached to posts — can't delete, but let the worker handle failure)
+    // ========================================
+    const attachedFailed = await this.prisma.mediaFile.updateMany({
+      where: {
+        status: 'PENDING_UPLOAD',
+        createdAt: { lt: cutoff },
+        postUsage: { some: {} }, // 👈 attached to at least one post
+      },
+      data: { status: 'FAILED' },
+    });
+
+    // ========================================
+    // STEP 3: Clean up old unused FAILED rows
+    // ========================================
+    const failedCutoff = new Date();
+    failedCutoff.setDate(failedCutoff.getDate() - 7);
+
+    const failedDeleted = await this.prisma.mediaFile.deleteMany({
+      where: {
+        status: 'FAILED',
+        createdAt: { lt: failedCutoff },
+        postUsage: { none: {} },
+      },
+    });
+
+    this.logger.log(
+      `✅ Cleanup: deleted ${orphanDeleted.count} orphans, ` +
+        `failed ${attachedFailed.count} attached pendings, ` +
+        `deleted ${failedDeleted.count} old failed`,
+    );
+  }
 }

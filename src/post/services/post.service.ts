@@ -348,6 +348,14 @@ export class PostService {
       'bulkScheduling',
     );
     await this.validateFeatures(user, dto, workspaceId);
+
+      // 👇 NEW: Collect and validate all media across all posts at once
+  const allMediaIds = dto.posts.flatMap((p) => p.mediaIds ?? []);
+  if (allMediaIds.length > 0) {
+    const uniqueMediaIds = [...new Set(allMediaIds)];
+    await this.validateMediaAttachments(workspaceId, uniqueMediaIds);
+  }
+
     // 🚨 Apply Watermark (Passing the single DTO in an array)
    await this.applyTrialWatermark(workspaceId, dto.posts);
     // 1) Precompute schedules + payloads (fail fast)
@@ -480,8 +488,8 @@ export class PostService {
           delay: Math.max(0, new Date(p.scheduledAt).getTime() - Date.now()),
           jobId: p.id,
           removeOnComplete: true,
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 5000 },
+          attempts: 10,
+          backoff: { type: 'exponential', delay: 20_000 },
         },
       }));
 
@@ -519,6 +527,12 @@ export class PostService {
 
     // 🚨 PATCH THE LOOPHOLE: Run the exact same checks as createPost!
     await this.validateFeatures(user, dto, workspaceId);
+
+    // 👇 NEW: Validate media if it's being updated
+  // Note: undefined = "don't touch media"; empty array = "remove all media"
+  if (dto.mediaIds !== undefined) {
+    await this.validateMediaAttachments(workspaceId, dto.mediaIds);
+  }
 
     // If they are scheduling it, we must ensure the watermark is applied.
     // We merge the existing content if the DTO didn't include it.
@@ -964,8 +978,8 @@ private async detectTargetPlatform(
         delay,
         jobId: postId, // one job per post
         removeOnComplete: true,
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
+        attempts: 10,
+        backoff: { type: 'exponential', delay: 20_000 },
       },
     );
   }

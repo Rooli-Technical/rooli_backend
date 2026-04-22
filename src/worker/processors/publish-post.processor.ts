@@ -44,6 +44,46 @@ export class PublishPostProcessor extends WorkerHost {
       return;
     }
 
+    // ============================================================
+    // 👇 NEW: ATOMIC LOCK — claim the post for publishing
+    // ============================================================
+    const claimed = await this.prisma.post.updateMany({
+      where: {
+        id: postId,
+        status: 'SCHEDULED', // only transition from SCHEDULED
+      },
+      data: { status: 'PUBLISHING' },
+    });
+
+    if (claimed.count === 0) {
+      // Another worker got it, or status changed (user edited, canceled, etc.)
+      this.logger.warn(`Post ${postId} could not be claimed for publishing`);
+      return;
+    }
+
+    // ============================================================
+    // 👇 NEW: MEDIA READINESS CHECK
+    // Defer or fail based on attached media status.
+    // ============================================================
+    const mediaCheck = await this.checkMediaReadiness(post, job);
+    if (mediaCheck.action === 'defer') {
+      await this.prisma.post.updateMany({
+        where: { id: postId, status: 'PUBLISHING' },
+        data: { status: 'SCHEDULED' },
+      });
+      this.logger.log(
+        `Post ${postId} deferred: ${mediaCheck.pendingCount} media file(s) still uploading. Retry #${job.attemptsMade + 1}`,
+      );
+      throw new Error('MEDIA_NOT_READY'); // BullMQ will retry with backoff
+    }
+    if (mediaCheck.action === 'fail') {
+      this.logger.error(
+        `Post ${postId} failed permanently: ${mediaCheck.reason}`,
+      );
+      await this.markPostAsFailed(postId, mediaCheck.reason);
+      return; // Don't throw — don't retry, just end.
+    }
+
     // Publish per destination (isolated execution)
     // This avoids needing a replyId map.
     for (const dest of post.destinations) {
@@ -426,6 +466,14 @@ export class PublishPostProcessor extends WorkerHost {
       else nextStatus = 'FAILED';
     }
 
+    if (remaining > 0) {
+      // Publishing loop ended but destinations are still in-flight — bug
+      this.logger.error(
+        `Post ${postId} loop ended with ${remaining} destinations still ${scheduled} scheduled, ${publishing} publishing`,
+      );
+      nextStatus = 'FAILED';
+    }
+
     // Only update+emit on actual change
     if (post.status !== nextStatus) {
       await this.prisma.post.update({
@@ -438,5 +486,69 @@ export class PublishPostProcessor extends WorkerHost {
         },
       });
     }
+  }
+
+  /**
+   * Checks whether all attached media is ready to publish.
+   * Returns an action: 'proceed', 'defer', or 'fail'.
+   */
+  private async checkMediaReadiness(
+    post: any,
+    job: Job,
+  ): Promise<
+    | { action: 'proceed' }
+    | { action: 'defer'; pendingCount: number }
+    | { action: 'fail'; reason: string }
+  > {
+    // Post has no media → nothing to check
+    if (!post.media?.length) {
+      return { action: 'proceed' };
+    }
+
+    const failed = post.media.filter(
+      (m: any) => m.mediaFile.status === 'FAILED',
+    );
+    const pending = post.media.filter(
+      (m: any) => m.mediaFile.status === 'PENDING_UPLOAD',
+    );
+
+    // Any failed media → post can never publish, stop retrying
+    if (failed.length > 0) {
+      const failedIds = failed.map((m: any) => m.mediaFile.id).join(', ');
+      return {
+        action: 'fail',
+        reason: `Media upload failed: ${failedIds}`,
+      };
+    }
+
+    // All ready → go
+    if (pending.length === 0) {
+      return { action: 'proceed' };
+    }
+
+    // Some still uploading → defer with a cap
+    const MAX_DEFER_ATTEMPTS = 10; // 20 × 30s = 10 min max wait
+    if (job.attemptsMade >= MAX_DEFER_ATTEMPTS) {
+      return {
+        action: 'fail',
+        reason: `Media upload timed out after ${MAX_DEFER_ATTEMPTS} retries`,
+      };
+    }
+
+    return { action: 'defer', pendingCount: pending.length };
+  }
+
+  /**
+   * Marks the post as FAILED and writes the reason.
+   * Called when media is in an unrecoverable state.
+   */
+  private async markPostAsFailed(postId: string, reason: string) {
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: {
+        status: 'FAILED',
+        errorMessage: reason,
+      },
+    });
   }
 }
