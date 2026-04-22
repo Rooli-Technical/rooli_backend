@@ -33,7 +33,6 @@ import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
-import { CreateDraftDto } from '../dto/request/create-draft.dto';
 
 
 @Controller('workspaces/:workspaceId/posts')
@@ -103,8 +102,9 @@ export class PostController {
     @Param('workspaceId') workspaceId: string,
     @Param('postId') postId: string,
     @Body() dto: UpdatePostDto,
+    @CurrentUser() user,
   ) {
-    const post = await this.postService.updatePost(workspaceId, postId, dto);
+    const post = await this.postService.updatePost(user, workspaceId, postId, dto);
     return { data: post };
   }
 
@@ -177,5 +177,21 @@ export class PostController {
     @Param('workspaceId') workspaceId: string,
   ) {
     return this.postService.deletePublishedPost(workspaceId, postId);
+  }
+
+
+  @Post('draft')
+  @RequirePermission(PermissionResource.POSTS, PermissionAction.CREATE)
+  @ApiOperation({ 
+    summary: 'Save a post as draft', 
+    description: 'Saves a post as a draft in the database.' 
+  })
+  @ApiParam({ name: 'workspaceId', description: 'The internal Database ID of the workspace' })
+  async saveDraft(
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: UpdatePostDto,
+    @CurrentUser() user,
+  ) {
+    return this.postService.saveDraft(user, workspaceId, dto);
   }
 }

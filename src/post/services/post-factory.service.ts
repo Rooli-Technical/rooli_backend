@@ -3,6 +3,7 @@ import { PostStatus } from '@generated/enums';
 import { Injectable } from '@nestjs/common';
 import { CreatePostDto } from '../dto/request/create-post.dto';
 import { ThreadItemDto } from '../dto/request/thread-item.dto';
+import { UpdatePostDto } from '../dto/request/update-post.dto';
 
 @Injectable()
 export class PostFactory {
@@ -10,7 +11,7 @@ export class PostFactory {
     tx: Prisma.TransactionClient,
     userId: string,
     workspaceId: string,
-    dto: CreatePostDto,
+    dto: CreatePostDto | UpdatePostDto,
     status: PostStatus,
   ) {
     const post = await tx.post.create({

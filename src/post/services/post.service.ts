@@ -25,6 +25,7 @@ import { DomainEventsService } from '@/events/domain-events.service';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
 import { RequiresUpgradeException } from '@/common/exceptions/requires-upgrade.exception';
 
+
 @Injectable()
 export class PostService {
   constructor(
@@ -109,12 +110,60 @@ export class PostService {
     return created;
   }
 
+  async saveDraft(user: any, workspaceId: string, dto: UpdatePostDto) {
+    // 1. Force the status to DRAFT and clear any accidental schedules
+    const status = 'DRAFT';
+    const draftDto = {
+      ...dto,
+      scheduledAt: null,
+      isAutoSchedule: false,
+      needsApproval: false, 
+    };
+
+    // 2. Prepare payloads if they checked any social profiles
+    // (This ensures the draft remembers which accounts they had selected)
+    let payloads = [];
+    if (dto.socialProfileIds && dto.socialProfileIds.length > 0) {
+      payloads = await this.destinationBuilder.preparePayloads(
+        workspaceId,
+        draftDto,
+      );
+    }
+
+    // 3. Save to database in a clean transaction
+    const draft = await this.prisma.$transaction(async (tx) => {
+      const post = await this.postFactory.createMasterPost(
+        tx,
+        user.userId,
+        workspaceId,
+        draftDto,
+        status,
+      );
+
+      if (payloads.length > 0) {
+        await this.destinationBuilder.saveDestinations(tx, post.id, payloads);
+      }
+
+      // Link to AI history if this draft came from the AI generator
+      if (dto.aiGenerationId) {
+        await tx.aiGeneration.update({
+          where: { id: dto.aiGenerationId },
+          data: { postId: post.id },
+        });
+      }
+
+      return post;
+    });
+
+    return draft;
+  }
+
   /**
    * Helper to check Pricing Limits
    */
 private async validateFeatures(
     user: any,
-    dto: CreatePostDto | BulkCreatePostDto,
+    dto: CreatePostDto | BulkCreatePostDto | UpdatePostDto,
     workspaceId: string,
   ) {
     // 1. Fetch Workspace, Plan Features, and User Role in ONE query
@@ -430,10 +479,21 @@ private async validateFeatures(
     return masterPosts;
   }
 
-  async updatePost(workspaceId: string, postId: string, dto: UpdatePostDto) {
+async updatePost(
+    user: any, 
+    workspaceId: string, 
+    postId: string, 
+    dto: UpdatePostDto
+  ) {
     const existing = await this.prisma.post.findFirst({
       where: { id: postId, workspaceId },
-      select: { id: true, status: true, scheduledAt: true, parentPostId: true },
+      select: { 
+        id: true, 
+        status: true, 
+        scheduledAt: true, 
+        parentPostId: true,
+        content: true // Grab existing content in case they didn't send it in the DTO
+      },
     });
 
     if (!existing) throw new NotFoundException('Post not found');
@@ -441,11 +501,22 @@ private async validateFeatures(
       throw new BadRequestException('Cannot edit a post in progress.');
     }
 
+    // 🚨 PATCH THE LOOPHOLE: Run the exact same checks as createPost!
+    await this.validateFeatures(user, dto, workspaceId);
+
+    // If they are scheduling it, we must ensure the watermark is applied.
+    // We merge the existing content if the DTO didn't include it.
+    const dtoWithContent = {
+      ...dto,
+      content: dto.content ?? existing.content,
+    };
+    await this.applyTrialWatermark(workspaceId, [dtoWithContent]);
+
     const { finalScheduledAt, status } = await this.resolvePostSchedule(
       workspaceId,
       {
-        ...dto,
-        needsApproval: existing.status === 'PENDING_APPROVAL',
+        ...dtoWithContent,
+        needsApproval: existing.status === 'PENDING_APPROVAL' || dtoWithContent.needsApproval,
       },
     );
 
@@ -453,7 +524,7 @@ private async validateFeatures(
       const post = await tx.post.update({
         where: { id: postId },
         data: {
-          content: dto.content ?? undefined,
+          content: dtoWithContent.content, // Save the watermarked content
           scheduledAt: finalScheduledAt,
           status,
         } as any,
@@ -471,7 +542,7 @@ private async validateFeatures(
         });
       }
 
-      // Sync children schedule
+      // Sync children schedule for Twitter threads
       if (finalScheduledAt && existing.parentPostId === null) {
         await tx.post.updateMany({
           where: { parentPostId: postId } as any,
@@ -482,15 +553,18 @@ private async validateFeatures(
       return post;
     });
 
-    // Queue sync only if not pending approval
+    // 1. ALWAYS kill the old job first. 
+    // This clears the queue in case they changed the time from 2pm to 5pm!
+    await this.removePostJob(updated.id);
+
+    // 2. If it is still meant to be scheduled, add it back to the queue with the fresh time.
     if (updated.status === 'SCHEDULED' && updated.scheduledAt) {
       await this.schedulePostJob(updated.id, updated.scheduledAt);
-    } else {
-      await this.removePostJob(updated.id);
     }
 
     return updated;
   }
+
 
   async deletePost(workspaceId: string, postId: string) {
     const post = await this.prisma.post.findFirst({

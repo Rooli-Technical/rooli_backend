@@ -5,6 +5,7 @@ import * as twitter from 'twitter-text';
 import { PlatformRulesService } from './platform-rules.service';
 import { CreatePostDto } from '../dto/request/create-post.dto';
 import { MediaItem, ThreadNode } from '../interfaces/post.interface';
+import { UpdatePostDto } from '../dto/request/update-post.dto';
 
 @Injectable()
 export class DestinationBuilder {
@@ -44,7 +45,7 @@ export class DestinationBuilder {
    */
   async preparePayloads(
     workspaceId: string,
-    dto: CreatePostDto,
+    dto: CreatePostDto | UpdatePostDto,
   ): Promise<any[]> {
     // 1) Fetch profiles
     const profiles = await this.prisma.socialProfile.findMany({
