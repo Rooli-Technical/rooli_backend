@@ -297,6 +297,8 @@ export class BillingService {
           failedPaymentAttempts: 0,
           pendingPlanId: null,
           pendingBillingInterval: null,
+          aiCreditsUsed: 0,               // Wipes AI usage for the new cycle
+          lastCreditResetAt: new Date(),
           extraWorkspacesPurchased: 0, // THE WIPE: Reset to 0 on every billing cycle boundary!
         },
       });
