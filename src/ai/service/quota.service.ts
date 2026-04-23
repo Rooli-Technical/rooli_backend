@@ -25,7 +25,14 @@ export class AiQuotaService {
 
     // 2. ATOMIC TRANSACTION
     return await this.prisma.$transaction(async (tx) => {
-      // Use standard findUnique. In highly concurrent apps, you might use raw SQL with FOR UPDATE here.
+      //  LOCK THE ROW — any concurrent transaction waits until this one commits
+      await tx.$queryRaw`
+    SELECT id FROM "Subscription" 
+    WHERE "organizationId" = ${ws.organizationId}
+    FOR UPDATE
+  `;
+
+      // Now findUnique is safe — we hold the row lock
       const org = await tx.organization.findUnique({
         where: { id: ws.organizationId },
         include: { subscription: { include: { plan: true } } },
@@ -46,10 +53,10 @@ export class AiQuotaService {
 
       const sub = org.subscription;
 
-   if (sub.status === 'EXPIRED') {
+      if (sub.status === 'EXPIRED') {
         throw new RequiresUpgradeException(
-          'Active Subscription', 
-          'Your free trial has expired. Please upgrade to a paid plan to continue using Rooli.'
+          'Active Subscription',
+          'Your free trial has expired. Please upgrade to a paid plan to continue using Rooli.',
         );
       }
 
@@ -65,7 +72,7 @@ export class AiQuotaService {
       const overageRate = sub.plan?.aiOverageRateCents ?? 0;
       const overageCap = sub.plan?.aiOverageCapCents ?? 0; // The max they are allowed to spend on overages
 
-      const used = sub.aiCreditsUsed;
+      const used = Math.max(0, sub.aiCreditsUsed); // 👈 clamp defensively
       const newTotalUsed = used + cost;
 
       let overageCostToAdd = 0;
@@ -122,18 +129,20 @@ export class AiQuotaService {
 
       // Calculate UX metrics
       const remainingCredits = Math.max(0, limit - newTotalUsed);
-      const isNearLimit = newTotalUsed >= limit * 0.8 && newTotalUsed <= limit; // 80% warning
-
+      const warningThreshold = limit * 0.8;
+      const isNearLimit =
+        newTotalUsed >= warningThreshold && newTotalUsed <= limit;
+      const isInOverage = newTotalUsed > limit;
       const newTotalOverageCents = sub.aiOverageCostCents + overageCostToAdd;
 
       return {
-        allowed: true,
         remainingCredits,
         isNearLimit,
         overageIncurred,
         overageCostAdded: overageCostToAdd,
         currentOverageAccruedCents: newTotalOverageCents,
         cost,
+        isInOverage,
       };
     });
   }
@@ -152,16 +161,14 @@ export class AiQuotaService {
     });
     if (!ws) return;
 
-    // Simple decrement. (In a perfect world, you'd calculate overage refunds too, but this is fine for error recovery)
-    await this.prisma.subscription.updateMany({
-      where: { organizationId: ws.organizationId },
-      data: {
-        aiCreditsUsed: { decrement: cost },
-        ...(overageRefundCents > 0
-          ? { aiOverageCostCents: { decrement: overageRefundCents } }
-          : {}),
-      },
-    });
+    // Use raw SQL to clamp at 0 — Prisma's decrement has no GREATEST() equivalent
+    await this.prisma.$executeRaw`
+    UPDATE "Subscription"
+    SET 
+      "aiCreditsUsed" = GREATEST(0, "aiCreditsUsed" - ${cost}),
+      "aiOverageCostCents" = GREATEST(0, "aiOverageCostCents" - ${overageRefundCents})
+    WHERE "organizationId" = ${ws.organizationId}
+  `;
   }
 
   /**

@@ -102,6 +102,8 @@ export class PromptBuilder {
         return 3000;
       case 'INSTAGRAM':
         return 2200;
+      case 'TIKTOK':
+        return 300;
       default:
         return 2000;
     }

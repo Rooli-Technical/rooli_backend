@@ -1,10 +1,11 @@
 import { AiProvider } from '@generated/enums';
+import { ImageGenMetadata } from '../types/ai.types';
 
 export interface IAiProvider {
   generateText(options: TextGenOptions): Promise<TextGenResult>;
 
   // 🎨 Optional method: Not every provider has an "artist" inside
-  generateImage?(prompt: string, model?: string): Promise<Buffer>;
+  generateImage?(prompt: string, model?: string): Promise<{ buffer: Buffer; metadata: ImageGenMetadata }>;
 }
 
 export interface TextGenUsage {

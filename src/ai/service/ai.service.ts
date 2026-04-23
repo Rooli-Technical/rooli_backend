@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   ServiceUnavailableException,
   HttpException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AiFeature, AiProvider, AiType } from '@generated/enums';
@@ -25,6 +26,7 @@ import { PlanAccessService } from '@/plan-access/plan-access.service';
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly quota: AiQuotaService,
@@ -341,7 +343,8 @@ export class AiService {
       ) as HuggingFaceProvider;
 
       const enhancedPrompt = `${dto.prompt}, ${dto.style || 'digital art, high resolution, social media style, trending on artstation'}`;
-      const imageBuffer = await hfProvider.generateImage(enhancedPrompt);
+      const { buffer: imageBuffer, metadata } =
+        await hfProvider.generateImage(enhancedPrompt);
 
       const mediaFile = await this.postMedia.uploadAiGeneratedBuffer(
         userId,
@@ -357,11 +360,20 @@ export class AiService {
         feature: AiFeature.IMAGE,
         provider: AiProvider.HUGGINGFACE,
         creditCost: cost,
-        model: 'black-forest-labs/FLUX.1-schnell',
+        model: metadata.model, //  real model from HF
         prompt: enhancedPrompt,
         input: { originalPrompt: dto.prompt, style: dto.style },
-        output: { mediaId: mediaFile.id, url: mediaFile.url },
-        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 100 },
+        output: {
+          mediaId: mediaFile.id,
+          url: mediaFile.url,
+          // REAL METADATA, NOT FAKE TOKENS
+          imageCount: metadata.imageCount,
+          sizeBytes: metadata.sizeBytes,
+          durationMs: metadata.durationMs,
+          revisedPrompt: metadata.revisedPrompt,
+        },
+        // DON'T FAKE TOKEN USAGE — image models don't emit tokens
+        usage: undefined,
         brandKitId: null,
         postId: null,
       });
@@ -389,6 +401,25 @@ export class AiService {
       });
       const parsed = this.safeJson(result.text);
 
+      await this.logGeneration({
+        workspaceId,
+        organizationId: (await this.getWorkspaceContext(workspaceId))
+          .organizationId,
+        type: AiType.TEXT,
+        feature: AiFeature.CAPTION,
+        provider,
+        creditCost: cost,
+        model: result.model || AI_MODELS.FAST,
+        prompt: system,
+        input: { type: 'hashtags' },
+        output: { hashtags: parsed?.hashtags ?? [] },
+        usage: result.usage,
+        brandKitId: null,
+        postId: null,
+      });
+
+      return parsed?.hashtags || [];
+
       // Note: Omitted logGeneration here for brevity as it's a micro-action, but you can add it if you want strict logging!
       return parsed?.hashtags || [];
     });
@@ -414,6 +445,23 @@ export class AiService {
         model: AI_MODELS.FAST,
         temperature: 0.7,
         maxTokens: 800,
+      });
+
+      await this.logGeneration({
+        workspaceId,
+        organizationId: (await this.getWorkspaceContext(workspaceId))
+          .organizationId,
+        type: AiType.TEXT,
+        feature: AiFeature.CAPTION,
+        provider,
+        creditCost: cost,
+        model: result.model || AI_MODELS.FAST,
+        prompt: system,
+        input: { type: 'optimized_content', content },
+        output: { rewritten: result.text },
+        usage: result.usage,
+        brandKitId: null,
+        postId: null,
       });
 
       return { rewritten: result.text };
@@ -529,11 +577,14 @@ export class AiService {
         },
       };
     } catch (error) {
-      // 4. Atomic Refund if the AI provider crashes
       await this.quota.refundQuota(workspaceId, cost, quota.overageCostAdded);
 
       if (error instanceof HttpException) throw error;
-      console.error('AI Execution Error:', error);
+
+      this.logger.error(
+        `AI execution failed for workspace ${workspaceId}`,
+        error instanceof Error ? error.stack : error,
+      );
       throw new ServiceUnavailableException(
         'AI service is temporarily unavailable. Please try again.',
       );
@@ -682,13 +733,10 @@ export class AiService {
     feature: AiFeature | string,
     count: number = 1,
   ): number {
-    const baseCost = AI_COSTS[feature] ?? 1;
+    const baseCost = AI_COSTS[feature] ?? 2;
 
-    // For features like 'BULK', you might want to multiply cost by count
-    // For single actions, count defaults to 1.
     if (feature === 'BULK' || feature === 'VARIANTS') {
-      // Example logic: Base cost + small fee per additional item
-      return baseCost + (count > 1 ? (count - 1) * 0.5 : 0);
+      return baseCost + (count > 1 ? (count - 1) * 1 : 0);
     }
 
     return baseCost * count;

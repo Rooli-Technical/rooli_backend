@@ -11,7 +11,7 @@ import * as cheerio from 'cheerio';
 @Injectable()
 export class ScraperService {
   async scrapeUrl(url: string): Promise<string> {
-    // 0) Validate URL early (true 400)
+    // 1. Parse + validate URL
     let parsed: URL;
     try {
       parsed = new URL(url);
@@ -24,6 +24,25 @@ export class ScraperService {
       );
     }
 
+    // 2. SSRF PROTECTION — block private IP ranges
+    const hostname = parsed.hostname.toLowerCase();
+    const blockedPatterns = [
+      /^localhost$/,
+      /^127\./,
+      /^10\./,
+      /^192\.168\./,
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+      /^169\.254\./, // link-local / AWS metadata
+      /^::1$/, // IPv6 localhost
+      /^fc00:/, // IPv6 private
+      /^fe80:/, // IPv6 link-local
+    ];
+
+    if (blockedPatterns.some((p) => p.test(hostname))) {
+      throw new BadRequestException('This URL cannot be scraped.');
+    }
+
+    // 3. Fetch the page
     try {
       const res = await axios.get<string>(parsed.toString(), {
         headers: {
@@ -32,12 +51,22 @@ export class ScraperService {
         },
         timeout: 8000,
         maxRedirects: 5,
-        // avoid downloading huge pages
         maxContentLength: 2_000_000,
-        validateStatus: () => true, // we will handle status codes ourselves
+        validateStatus: () => true,
       });
 
-      // 1) Handle HTTP status codes cleanly
+      // 4. Content-type check — must be HTML
+      const contentType = String(res.headers['content-type'] ?? '');
+      if (
+        !contentType.includes('text/html') &&
+        !contentType.includes('application/xhtml')
+      ) {
+        throw new BadRequestException(
+          'URL must point to an HTML page (got ' + contentType + ').',
+        );
+      }
+
+      // 5. Status code handling
       if (res.status === 429) {
         throw new ServiceUnavailableException(
           'This website is rate-limiting requests. Try again later.',
@@ -59,8 +88,8 @@ export class ScraperService {
         );
       }
 
+      // 6. Extract content
       const $ = cheerio.load(res.data);
-
       $('script, style, nav, footer, header, noscript, iframe').remove();
 
       let content = '';
@@ -88,7 +117,6 @@ export class ScraperService {
           .trim();
       }
 
-      // Normalize whitespace + cap length
       const clean = content.replace(/\s+/g, ' ').trim().slice(0, 6000);
 
       if (clean.length < 100) {
@@ -99,7 +127,6 @@ export class ScraperService {
 
       return clean;
     } catch (error) {
-      // Preserve explicit Nest exceptions thrown above
       if (
         error instanceof BadRequestException ||
         error instanceof ForbiddenException ||
@@ -108,7 +135,6 @@ export class ScraperService {
         throw error;
       }
 
-      // Axios errors (timeouts, DNS, etc.) => 503 usually
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
           throw new ServiceUnavailableException(

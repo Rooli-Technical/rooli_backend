@@ -15,6 +15,7 @@ import {
   TextGenResult,
 } from '../interfaces/ai-provider.interface';
 import { AiProvider } from '@generated/enums';
+import { ImageGenMetadata } from '../types/ai.types';
 
 @Injectable()
 export class HuggingFaceProvider implements IAiProvider {
@@ -111,46 +112,73 @@ export class HuggingFaceProvider implements IAiProvider {
   }
 
   // generateImage stays the same
-  async generateImage(
-    prompt: string,
-    model: string = 'stabilityai/stable-diffusion-xl-base-1.0',
-  ): Promise<Buffer> {
-    try {
-      const response = await fetch(
-        'https://router.huggingface.co/nscale/v1/images/generations',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model,
-            prompt,
-            response_format: 'b64_json',
-          }),
+async generateImage(
+  prompt: string,
+  model: string = 'stabilityai/stable-diffusion-xl-base-1.0',
+): Promise<{ buffer: Buffer; metadata: ImageGenMetadata }> {
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch(
+      'https://router.huggingface.co/nscale/v1/images/generations',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          model,
+          prompt,
+          response_format: 'b64_json',
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new ServiceUnavailableException(
+        `HF image generation failed: ${text}`,
       );
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new ServiceUnavailableException(
-          `HF image generation failed: ${text}`,
-        );
-      }
-
-      const result = await response.json();
-      const imageBase64 = result.data?.[0]?.b64_json;
-
-      if (!imageBase64) throw new Error('No image data returned from API');
-
-      return Buffer.from(imageBase64, 'base64');
-    } catch (error: any) {
-      this.logger.error(`❌ Image generation failed: ${error.message}`);
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Image generation failed.');
     }
+
+    const result = await response.json();
+    const imageBase64 = result.data?.[0]?.b64_json;
+
+    if (!imageBase64) throw new Error('No image data returned from API');
+
+    const buffer = Buffer.from(imageBase64, 'base64');
+    const durationMs = Date.now() - startTime;
+
+    // 👇 CAPTURE EVERYTHING USEFUL FROM HF's RESPONSE
+    const metadata: ImageGenMetadata = {
+      model,
+      provider: 'huggingface',
+      durationMs,
+      imageCount: result.data?.length ?? 1,
+      sizeBytes: buffer.length,
+      // HF sometimes returns these — may be null
+      hfCreated: result.created ?? null,
+      revisedPrompt: result.data?.[0]?.revised_prompt ?? null,
+      // Full raw response for debugging (truncated to avoid storing base64 bloat)
+      rawResponse: {
+        created: result.created,
+        model: result.model,
+        // intentionally NOT storing result.data[0].b64_json — that's the image bytes
+      },
+    };
+
+    this.logger.log(
+      `Image generated in ${durationMs}ms: ${buffer.length} bytes, model=${model}`,
+    );
+
+    return { buffer, metadata };
+  } catch (error: any) {
+    this.logger.error(`❌ Image generation failed: ${error.message}`);
+    if (error instanceof HttpException) throw error;
+    throw new InternalServerErrorException('Image generation failed.');
   }
+}
 
   private handleError(error: any): never {
     this.logger.error('Hugging Face Router API call failed:', error);

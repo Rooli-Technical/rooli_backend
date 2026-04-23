@@ -57,14 +57,14 @@ export const AI_TIER_LIMITS = {
 // FEATURE COSTS (in AI credits)
 // ============================================================
 export const AI_COSTS: Record<string, number> = {
-  CAPTION: 1, // Standard text generation
-  VARIANTS: 2, // Multiple platform versions (slightly higher)
-  REPURPOSE: 3, // Scraping + heavy transformation
-  BULK: 15, // Generating 10-30 posts at once
-  IMAGE: 10, // GPU-intensive image generation
-  HASHTAGS: 1, // Lightweight list generation
-  OPTIMIZE: 1, // Quick rewrite/edit
-  HOLIDAY_POST: 1, // Specific holiday generation
+  CAPTION: 2,       
+  VARIANTS: 4,      
+  REPURPOSE: 6,     
+  BULK: 30,         
+  IMAGE: 20,        
+  HASHTAGS: 2,
+  OPTIMIZE: 2,
+  HOLIDAY_POST: 2,
 };
 
 // ============================================================
