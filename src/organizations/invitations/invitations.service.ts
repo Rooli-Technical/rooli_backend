@@ -31,7 +31,7 @@ export class InvitationsService {
     private readonly planAccessService: PlanAccessService,
   ) {}
 
-  // ===========================================================================
+// ===========================================================================
   // 1. SEND INVITATION
   // ===========================================================================
   async inviteUser(params: {
@@ -50,24 +50,40 @@ export class InvitationsService {
       select: { firstName: true, lastName: true },
     });
 
-    // 1. Validation: Is user already a member of the Org?
-    const existingMember = await this.prisma.organizationMember.findFirst({
+    // 1. Validation: Context-Aware Membership Check
+    const existingOrgMember = await this.prisma.organizationMember.findFirst({
       where: {
         organizationId,
         user: { email: lowerEmail },
       },
     });
-    if (existingMember) {
-      throw new ConflictException(
-        'User is already a member of this organization.',
-      );
+
+    if (workspaceId) {
+      // If inviting to a WORKSPACE, only block if they are already in THIS workspace
+      const existingWsMember = await this.prisma.workspaceMember.findFirst({
+        where: {
+          workspaceId,
+          member: { user: { email: lowerEmail } },
+        },
+      });
+
+      if (existingWsMember) {
+        throw new ConflictException('User is already a member of this workspace.');
+      }
+    } else {
+      // If it's an ORG-WIDE invite, block if they are already in the Org
+      if (existingOrgMember) {
+        throw new ConflictException('User is already a member of this organization.');
+      }
     }
 
-    // 2. Billing: Check seat capacity before proceeding
-    await this.planAccessService.ensureSeatAvailable(
-      organizationId,
-      lowerEmail,
-    );
+    // 2. Billing: Check seat capacity ONLY if they are a brand new user to the Org
+    if (!existingOrgMember) {
+      await this.planAccessService.ensureSeatAvailable(
+        organizationId,
+        lowerEmail,
+      );
+    }
 
     // 3. Resolve Role
     // Logic:
@@ -92,7 +108,7 @@ export class InvitationsService {
       // Default fallback to 'member' if no roleId provided
       const defaultRole = await this.prisma.role.findFirstOrThrow({
         where: {
-          slug: 'member',
+          slug: 'member', // Ensure you have default roles seeded for both scopes
           scope: workspaceId ? 'WORKSPACE' : 'ORGANIZATION',
           organizationId: null,
         },
@@ -101,7 +117,6 @@ export class InvitationsService {
     }
 
     // 4. Clean up / Transaction
-    // (email + org + workspace) and create the new one atomically.
     const token = randomBytes(32).toString('hex');
 
     const invitation = await this.prisma.$transaction(async (tx) => {
@@ -149,6 +164,7 @@ export class InvitationsService {
     } catch (error) {
       console.log('Failed to send invitation email. Please try again.');
     }
+    
     return {
       message: workspaceId
         ? 'Workspace invitation sent'
@@ -156,7 +172,6 @@ export class InvitationsService {
       invitationId: invitation.id,
     };
   }
-
   /**
    * 1. GET INVITE DETAILS (Public)
    */

@@ -313,7 +313,7 @@ export class BillingController {
   }
 
   @Post('simulate-expiration')
-  @ApiBearerAuth()
+  @Public()
   @ApiOperation({
     summary: 'Simulate subscription expiration',
     description: 'Simulates subscription expiration for testing purposes.',
