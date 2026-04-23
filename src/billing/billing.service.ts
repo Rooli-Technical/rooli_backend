@@ -440,10 +440,19 @@ export class BillingService {
         where: { id: organizationId },
         data: { billingStatus: 'CANCELED' }, // Instant kill, no period end to wait for
       });
+
       return {
         message: 'Organization canceled (No active subscription found)',
       };
     }
+
+      // 👇 GUARD: Don't let already-canceled subs get re-canceled
+  if (sub.status === 'CANCELED' || sub.cancelAtPeriodEnd) {
+    throw new BadRequestException(
+      'Subscription is already canceled or pending cancellation.',
+    );
+  }
+
 
     // 🚨 1. THE OVERAGE SWEEP (Your brilliant audit rule!)
     if (sub.aiOverageCostCents > 0 && sub.paystackAuthCode) {
@@ -532,7 +541,6 @@ export class BillingService {
       where: { id: organizationId },
       include: {
         subscription: { include: { plan: true } },
-        members: true,
       },
     });
 
@@ -744,8 +752,7 @@ export class BillingService {
         error.response?.data || error.message,
       );
 
-      // We throw an exception here so the calling method (activateOrganization)
-      // knows to abort the database transaction.
+     // Throw so callers know to abort any pending DB transaction
       throw new BadRequestException(
         'Failed to reactivate the subscription with the payment gateway. Please contact support.',
       );
@@ -1331,8 +1338,8 @@ export class BillingService {
     }
 
     // 2. CURRENCY & PRICING SETUP
-    const targetCurrency = org.currency || 'NGN'; // Defaulting to your system's base
-    const FX_RATE = 1470; // ₦1,470/USD as per spec
+    const targetCurrency = org.currency || 'NGN';
+    const FX_RATE = Number(this.config.get('FX_RATE_NGN_USD')) || 1470;
     const EXTRA_WORKSPACE_USD = 15;
 
     // Convert to base units (Cents for USD, Kobo for NGN)
@@ -1371,8 +1378,35 @@ export class BillingService {
 
     try {
       const reference = `rooli_ws_${org.id}_${Date.now()}`;
-      // Hit Paystack API to charge their saved card instantly
-      // 1. Hit Paystack API and capture the response
+
+      const recentPurchase = await this.prisma.transaction.findFirst({
+        where: {
+          organizationId: org.id,
+          txRef: { startsWith: `rooli_ws_${org.id}_` },
+          createdAt: { gte: new Date(Date.now() - 5000) }, // last 5 seconds
+        },
+      });
+      if (recentPurchase) {
+        throw new BadRequestException(
+          'Please wait before purchasing another workspace.',
+        );
+      }
+
+      // Create pending transaction BEFORE charging Paystack
+      await this.prisma.transaction.create({
+        data: {
+          organizationId: org.id,
+          txRef: reference,
+          providerTxId: 'pending',
+          provider: 'PAYSTACK',
+          amount: proratedAmountBaseUnit / 100,
+          currency: targetCurrency,
+          status: 'pending',
+          paymentDate: new Date(),
+        },
+      });
+
+      // Hit Paystack API
       const { data: paystackResponse } = await firstValueFrom(
         this.httpService.post(
           'https://api.paystack.co/transaction/charge_authorization',
@@ -1393,32 +1427,17 @@ export class BillingService {
 
       const paystackData = paystackResponse.data;
 
-      // 2. Perform DB Updates in a single transaction
+      // Update DB after successful charge
       await this.prisma.$transaction([
-        // A. Increment the workspace allowance
         this.prisma.subscription.update({
           where: { id: sub.id },
-          data: {
-            extraWorkspacesPurchased: { increment: 1 },
-          },
+          data: { extraWorkspacesPurchased: { increment: 1 } },
         }),
-
-        // B. Create the Transaction Record
-        this.prisma.transaction.create({
+        this.prisma.transaction.update({
+          where: { txRef: reference },
           data: {
-            organizationId: org.id,
-            txRef: reference,
             providerTxId: paystackData.id.toString(),
-            provider: 'PAYSTACK',
-            amount: proratedAmountBaseUnit / 100, // Convert back to standard ₦ or $
-            currency: targetCurrency,
             status: 'successful',
-            paymentDate: new Date(),
-            subscriptionId: sub.id, // Link it for easy auditing
-            metadata: {
-              type: 'add_on_workspace',
-              proratedDays: daysRemaining,
-            },
           },
         }),
       ]);
@@ -1562,12 +1581,10 @@ export class BillingService {
 
     // 2. Fetch the Organization to get the Billing Email & Currency
     // (In case the parent method didn't include it in the `sub` object)
-    const org =
-      sub.organization ||
-      (await this.prisma.organization.findUnique({
-        where: { id: sub.organizationId },
-        select: { billingEmail: true, currency: true },
-      }));
+    const org = await this.prisma.organization.findUnique({
+  where: { id: sub.organizationId },
+  select: { billingEmail: true, currency: true },
+});
 
     if (!org?.billingEmail) {
       this.logger.error(
