@@ -5,6 +5,7 @@ import {
   Logger,
   UnauthorizedException,
   NotFoundException,
+  HttpException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
@@ -21,13 +22,21 @@ export class HuggingFaceProvider implements IAiProvider {
   private readonly client: OpenAI;
   private readonly apiKey: string;
 
-  private readonly textModel = 'zai-org/GLM-4.6:novita';
+  // Default fallback — a fast non-reasoning model currently deployed on HF Router
+  private readonly defaultModel = 'meta-llama/Llama-3.3-70B-Instruct:novita';
+  
+  // Known reasoning models — these need larger token budgets
+  private readonly reasoningModels = new Set([
+    'zai-org/GLM-4.6:novita',
+    'deepseek-ai/DeepSeek-R1',
+    'deepseek-ai/DeepSeek-V3',
+  ]);
 
   constructor(private readonly config: ConfigService) {
     this.apiKey = this.config.get<string>('HF_API_KEY');
 
     if (!this.apiKey) {
-      throw new Error('HF_ACCESS_TOKEN not found in environment variables.');
+      throw new Error('HF_API_KEY not found in environment variables.');
     }
 
     this.client = new OpenAI({
@@ -36,34 +45,57 @@ export class HuggingFaceProvider implements IAiProvider {
     });
   }
 
-  /**
-   * ✍️ GENERATE TEXT (Via OpenAI SDK)
-   */
   async generateText(options: TextGenOptions): Promise<TextGenResult> {
     try {
-      const model = this.textModel;
+      // 👇 RESPECT THE MODEL PARAMETER FROM THE CALLER
+      const model = options.model || this.defaultModel;
+      const isReasoning = this.reasoningModels.has(model);
+
+      // 👇 REASONING MODELS NEED MUCH MORE HEADROOM
+      // Non-reasoning: 500 tokens is plenty for a tweet
+      // Reasoning: 500 tokens is eaten entirely by thinking
+      const defaultMaxTokens = isReasoning ? 4000 : 1000;
+      const maxTokens = options.maxTokens ?? defaultMaxTokens;
 
       const completion = await this.client.chat.completions.create({
-        model: model,
+        model,
         messages: [
           {
             role: 'system',
             content: options.system || 'You are a helpful AI assistant.',
           },
-          {
-            role: 'user',
-            content: options.user,
-          },
+          { role: 'user', content: options.user },
         ],
-       max_tokens: options.maxTokens ?? 5000, 
+        max_tokens: maxTokens,
         temperature: options.temperature ?? 0.7,
       });
 
-      this.logger.log(`Generated text using model: ${model}`);
+      const content = completion.choices[0]?.message?.content || '';
+      const finishReason = completion.choices[0]?.finish_reason;
 
-      // Map the OpenAI response to your App's standard result format
+      // 👇 DETECT REASONING EXHAUSTION
+      if (!content && finishReason === 'length') {
+        const completionTokens = completion.usage?.completion_tokens ?? 0;
+        this.logger.error(
+          `Model ${model} hit token cap (${completionTokens}/${maxTokens}) with empty output. Likely reasoning exhaustion — increase maxTokens.`,
+        );
+        throw new ServiceUnavailableException(
+          'AI model ran out of tokens before producing a response. Please retry.',
+        );
+      }
+
+      if (!content) {
+        this.logger.warn(
+          `Model ${model} returned empty content. Finish reason: ${finishReason}`,
+        );
+      }
+
+      this.logger.log(
+        `Generated text using ${model} (${completion.usage?.completion_tokens ?? 0} tokens)`,
+      );
+
       return {
-        text: completion.choices[0]?.message?.content || '',
+        text: content,
         model: completion.model,
         provider: AiProvider.HUGGINGFACE,
         usage: {
@@ -73,20 +105,17 @@ export class HuggingFaceProvider implements IAiProvider {
         },
       };
     } catch (error: any) {
+      if (error instanceof HttpException) throw error;
       this.handleError(error);
     }
   }
 
-  /**
-   * 🎨 GENERATE IMAGE (Via Custom Fetch)
-   * Adapted to return a Buffer so PostMediaService can upload it.
-   */
+  // generateImage stays the same
   async generateImage(
     prompt: string,
     model: string = 'stabilityai/stable-diffusion-xl-base-1.0',
   ): Promise<Buffer> {
     try {
-      // ✅ Using your specific Router Endpoint
       const response = await fetch(
         'https://router.huggingface.co/nscale/v1/images/generations',
         {
@@ -98,7 +127,7 @@ export class HuggingFaceProvider implements IAiProvider {
           body: JSON.stringify({
             model,
             prompt,
-            response_format: 'b64_json', // We request Base64 to convert to Buffer
+            response_format: 'b64_json',
           }),
         },
       );
@@ -115,16 +144,14 @@ export class HuggingFaceProvider implements IAiProvider {
 
       if (!imageBase64) throw new Error('No image data returned from API');
 
-      // ✅ CONVERSION: Base64 String -> Buffer
-      // This allows CloudinaryService to upload it effortlessly
       return Buffer.from(imageBase64, 'base64');
     } catch (error: any) {
       this.logger.error(`❌ Image generation failed: ${error.message}`);
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Image generation failed.');
     }
   }
 
-  // Centralized Error Handling
   private handleError(error: any): never {
     this.logger.error('Hugging Face Router API call failed:', error);
 

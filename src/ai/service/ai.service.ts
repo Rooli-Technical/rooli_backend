@@ -14,7 +14,7 @@ import { GenerateVariantsDto } from '../dto/generate-variant.dto';
 import { PromptBuilder } from './prompt.service';
 import { AiProviderFactory } from './ai.factory';
 import { AiQuotaService } from './quota.service';
-import { AI_COSTS, AI_TIER_LIMITS } from '../constants/ai.constant';
+import { AI_COSTS, AI_MODELS, AI_TIER_LIMITS } from '../constants/ai.constant';
 import { ScraperService } from './scraper.service';
 import { BulkGenerateDto } from '../dto/bulk-generate.dto';
 import { RepurposeContentDto } from '../dto/repurpose-content.dto';
@@ -383,8 +383,9 @@ export class AiService {
       const result = await textProvider.generateText({
         system,
         user,
-        model: 'mistralai/Mistral-7B-Instruct-v0.3',
+        model: AI_MODELS.FAST,
         responseFormat: 'json',
+        maxTokens: 300,
       });
       const parsed = this.safeJson(result.text);
 
@@ -410,8 +411,9 @@ export class AiService {
       const result = await textProvider.generateText({
         system,
         user,
-        model: 'mistralai/Mistral-7B-Instruct-v0.3',
+        model: AI_MODELS.FAST,
         temperature: 0.7,
+        maxTokens: 800,
       });
 
       return { rewritten: result.text };
