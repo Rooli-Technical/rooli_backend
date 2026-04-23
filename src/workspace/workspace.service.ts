@@ -197,6 +197,10 @@ export class WorkspaceService {
       include: {
         organization: { select: { id: true, name: true, slug: true } },
         members: {
+          where: {
+            isActive: true,
+            deletedAt: null,
+          },
           include: {
             role: true,
             member: {

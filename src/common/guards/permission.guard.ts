@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSION_KEY } from '../decorators/require-permission.decorator';
+
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -22,20 +23,21 @@ export class PermissionsGuard implements CanActivate {
       action: string;
     }>(PERMISSION_KEY, [context.getHandler(), context.getClass()]);
 
-    if (!requiredRule) return true; // no permission needed
+    if (!requiredRule) return true;
 
     const request = context.switchToHttp().getRequest();
-    const userRoles = request.user?.roles;
-    const userPermissions = request.user?.permissions; // lowercase strings
+    
+    // FIX: Read directly from the context populated by ContextGuard
+    const userPermissions = request.permissions; 
+    const currentRole = request.currentRole;
 
-    if (!userRoles || !userPermissions) {
-      throw new ForbiddenException('No permission context found');
+    if (!userPermissions) {
+      throw new ForbiddenException('No permission context found. Is ContextGuard running before PermissionsGuard?');
     }
 
-    // Owners bypass all
-    const isOwner = userRoles.some((role) =>
-      role.toLowerCase().includes('owner'),
-    );
+    // FIX: Check if the dynamically attached role is an Owner
+    const isOwner = currentRole?.name?.toLowerCase().includes('owner') || currentRole?.slug?.toLowerCase().includes('owner');
+    
     if (isOwner) return true;
 
     const resource = requiredRule.resource.toLowerCase();
@@ -43,11 +45,11 @@ export class PermissionsGuard implements CanActivate {
 
     // Wildcard checks
     if (
-      userPermissions.includes('all.manage') || // global admin
-      userPermissions.includes(`all.${action}`) || // e.g., allowed to 'read' everything
-      userPermissions.includes(`${resource}.all`) || // e.g., allowed to do everything to 'posts'
-      userPermissions.includes(`${resource}.manage`) || // e.g., allowed to manage 'organization'
-      userPermissions.includes(`${resource}.${action}`) //  EXACT MATCH (e.g., posts.create)
+      userPermissions.includes('all.manage') || 
+      userPermissions.includes(`all.${action}`) || 
+      userPermissions.includes(`${resource}.all`) || 
+      userPermissions.includes(`${resource}.manage`) || 
+      userPermissions.includes(`${resource}.${action}`) 
     ) {
       return true;
     }
