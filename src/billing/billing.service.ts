@@ -526,8 +526,15 @@ export class BillingService {
     });
     if (!newPlan) throw new NotFoundException('Target plan not found');
 
+    // 1. FREE TRIAL OVERRIDE -> INSTANT CHECKOUT (Move this to the top!)
+    // If they are on a trial, they should always be able to proceed to checkout,
+    // even if they are purchasing the exact plan they are currently trialing.
+    if (sub.isTrial) {
+      return this.initializePayment(org.id, newPlan.id, interval, user);
+    }
+
     // 🚨 RULE 1: PREVENT SAME-STATE SELECTION
-    // If they are on Business Monthly and click Business Monthly, reject it.
+    // Now this only blocks paid users from checking out for the exact plan they already pay for.
     if (
       currentPlan.id === newPlanId &&
       sub.billingInterval === interval &&
@@ -536,11 +543,6 @@ export class BillingService {
       throw new ConflictException(
         `You are already actively subscribed to the ${currentPlan.name} ${interval} plan.`,
       );
-    }
-
-    // 1. FREE TRIAL OVERRIDE -> INSTANT CHECKOUT
-    if (sub.isTrial) {
-      return this.initializePayment(org.id, newPlan.id, interval, user);
     }
 
     // Determine Upgrade vs Downgrade (Comparing base USD values)
