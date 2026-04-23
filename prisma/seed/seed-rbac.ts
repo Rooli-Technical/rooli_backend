@@ -456,6 +456,7 @@ export async function seedRBAC() {
       scope: PermissionScope.WORKSPACE,
       resources: [
         PermissionResource.POSTS,
+        PermissionResource.WORKSPACE_MEMBERS,
         PermissionResource.CONTENT,
         PermissionResource.SCHEDULING,
         PermissionResource.TEMPLATE,
@@ -492,6 +493,8 @@ export async function seedRBAC() {
     await permIds({
       scope: PermissionScope.WORKSPACE,
       resources: [
+        PermissionResource.WORKSPACE,
+        PermissionResource.WORKSPACE_MEMBERS,
         PermissionResource.POSTS,
         PermissionResource.CONTENT,
         PermissionResource.ANALYTICS,
@@ -507,6 +510,7 @@ export async function seedRBAC() {
     await permIds({
       scope: PermissionScope.WORKSPACE,
       resources: [
+        PermissionResource.WORKSPACE_MEMBERS,
         PermissionResource.POSTS,
         PermissionResource.CONTENT,
         PermissionResource.SCHEDULING,
