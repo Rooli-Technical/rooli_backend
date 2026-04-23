@@ -26,6 +26,7 @@ import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
+import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
 
 @ApiTags('Workspace')
 @ApiBearerAuth()
@@ -66,6 +67,7 @@ export class WorkspaceController {
   }
 
   @Get(':workspaceId')
+  @BypassSubscription()
   @RequirePermission(PermissionResource.WORKSPACE, PermissionAction.READ)
   @ApiOperation({ summary: 'Get workspace by ID' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })

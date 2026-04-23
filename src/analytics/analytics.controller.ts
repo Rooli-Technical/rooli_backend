@@ -25,6 +25,7 @@ import {
 import { Public } from '@/common/decorators/public.decorator';
 import { subDays } from 'date-fns/subDays';
 import { startOfDay, endOfDay } from 'date-fns';
+import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
 
 @Controller('analytics')
 @ApiBearerAuth()
@@ -192,6 +193,7 @@ This endpoint manually triggers analytics fetching logic for testing purposes.`,
   }
 
   @Get('/workspaces/:id/dashboard')
+  @BypassSubscription()
   @ApiOperation({
     summary: 'Get workspace analytics dashboard (plan-gated)',
     description:

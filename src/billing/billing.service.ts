@@ -790,18 +790,31 @@ export class BillingService {
     fourteenDaysAgo.setDate(now.getDate() - 14);
 
     // -----------------------------------------------------------------
-    // PHASE 1: Expire Free Trials
+    // PHASE 1: Expire Free Trials (The Hard Lockout)
     // -----------------------------------------------------------------
-    const expiredTrials = await this.prisma.subscription.updateMany({
+    const expiredTrials = await this.prisma.subscription.findMany({
       where: { isTrial: true, status: 'TRIALING', trialEndsAt: { lt: now } },
-      data: { status: 'PAST_DUE', isActive: false },
+      select: { organizationId: true }
     });
 
-    if (expiredTrials.count > 0) {
-      await this.prisma.organization.updateMany({
-        where: { subscription: { isTrial: true, status: 'PAST_DUE' } },
-        data: { readOnly: true },
-      });
+    if (expiredTrials.length > 0) {
+      const orgIds = expiredTrials.map(t => t.organizationId);
+
+      await this.prisma.$transaction([
+        // 1. Set the subscription to CANCELED (Triggers the 403 Guard)
+        this.prisma.subscription.updateMany({
+          where: { organizationId: { in: orgIds } },
+          data: { status: 'CANCELED', isActive: false }, 
+        }),
+        
+        // 2. Stop their publishing queues immediately
+        this.prisma.socialProfile.updateMany({
+          where: { workspace: { organizationId: { in: orgIds } } },
+          data: { isActive: false },
+        }),
+      ]);
+
+      this.logger.log(`Locked ${orgIds.length} organizations due to expired free trials.`);
     }
 
     // -----------------------------------------------------------------
