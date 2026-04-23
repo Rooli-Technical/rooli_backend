@@ -8,8 +8,6 @@ import {
 import { Reflector } from '@nestjs/core';
 import { BYPASS_SUB_KEY } from '../decorators/bypass-subscription.decorator';
 
-
-
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
   constructor(
@@ -47,7 +45,13 @@ export class SubscriptionGuard implements CanActivate {
       where: { id: user.organizationId },
       include: {
         subscription: {
-          select: { status: true, isTrial: true, trialEndsAt: true }, 
+          select: {
+            status: true,
+            isTrial: true,
+            trialEndsAt: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+          },
         },
       },
     });
@@ -61,15 +65,12 @@ export class SubscriptionGuard implements CanActivate {
     }
 
     const sub = org.subscription;
-    const subStatus = sub.status; 
+    const subStatus = sub.status;
 
     // -------------------------------------------------------------
     // ENFORCEMENT LAYER 1: HARD LOCKOUTS
     // -------------------------------------------------------------
-    if (
-      org.status === 'SUSPENDED' ||
-      subStatus === 'SUSPENDED'
-    ) {
+    if (org.status === 'SUSPENDED' || subStatus === 'SUSPENDED') {
       throw new ForbiddenException({
         code: 'PAYMENT_REQUIRED',
         message: 'Your account has been suspended.',
@@ -83,7 +84,8 @@ export class SubscriptionGuard implements CanActivate {
     if (org.readOnly && request.method !== 'GET') {
       throw new ForbiddenException({
         code: 'READ_ONLY_MODE',
-        message: 'Your account is in Read-Only mode due to a billing issue. Please update your payment method to restore full access.',
+        message:
+          'Your account is in Read-Only mode due to a billing issue. Please update your payment method to restore full access.',
         action: 'REDIRECT_TO_BILLING',
       });
     }
@@ -93,19 +95,35 @@ export class SubscriptionGuard implements CanActivate {
     // -------------------------------------------------------------
     if (sub.isTrial && sub.trialEndsAt && new Date() > sub.trialEndsAt) {
       if (request.method !== 'GET') {
-         throw new ForbiddenException({
-           code: 'TRIAL_EXPIRED',
-           message: 'Your free trial has ended. Please upgrade your plan to continue.',
-           action: 'REDIRECT_TO_BILLING',
-         });
+        throw new ForbiddenException({
+          code: 'TRIAL_EXPIRED',
+          message:
+            'Your free trial has ended. Please upgrade your plan to continue.',
+          action: 'REDIRECT_TO_BILLING',
+        });
       }
+    }
+
+   if (
+      !sub.isTrial &&
+      sub.cancelAtPeriodEnd === true && // 👈 ONLY block them if they actually canceled!
+      sub.currentPeriodEnd &&
+      new Date() > sub.currentPeriodEnd &&
+      subStatus === 'ACTIVE'
+    ) {
+        throw new ForbiddenException({
+          code: 'PERIOD_ENDED',
+          message:
+            'Your billing period has ended. Please renew your subscription.',
+          action: 'REDIRECT_TO_BILLING',
+        });
     }
 
     // -------------------------------------------------------------
     // ENFORCEMENT LAYER 3: ALLOWED STATES
     // -------------------------------------------------------------
     const allowedStates = ['ACTIVE', 'TRIALING', 'PAST_DUE'];
-    
+
     if (allowedStates.includes(subStatus)) {
       return true;
     }

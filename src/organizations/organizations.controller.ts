@@ -129,13 +129,13 @@ export class OrganizationsController {
   @BypassSubscription() // Only for this endpoint, as it's meant to help users get back in after a billing issue
   @AllowSuspended() // Allow suspended orgs to access this endpoint
   @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.UPDATE)
-  @ApiOperation({ summary: 'Reactivate a previously deactivated organization' })
+  @ApiOperation({ summary: 'Reactivate a previously deactivated organization only for superadmins' })
   @ApiResponse({
     status: 200,
     description: 'Organization reactivated successfully',
   })
   async activateOrganization(@Param('organizationId') orgId: string) {
-    return this.organizationsService.activateOrganization(orgId);
+    return this.organizationsService.unsuspendOrganization(orgId);
   }
 
   @Patch(':organizationId')

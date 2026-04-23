@@ -104,7 +104,7 @@ export class BillingController {
     summary: 'Cancel auto-renewal',
     description: 'Downgrades to free tier at the end of the current period.',
   })
-  async cancelSubscription(@Req() req: any) {
+  async cancelSubscription(@Req() req: any, @Param('orgId') orgId: string ) {
     return this.billingService.cancelSubscription(req.user.organizationId);
   }
 
@@ -310,6 +310,31 @@ export class BillingController {
     @Param('workspaceId') workspaceId: string,
   ) {
     return this.billingService.unlockWorkspace(orgId, workspaceId);
+  }
+
+  @Post('resume')
+  @ApiBearerAuth()
+  @RequirePermission(PermissionResource.SUBSCRIPTION, PermissionAction.MANAGE)
+  @ApiOperation({ 
+    summary: 'Resume a canceled subscription',
+    description: 'Allows a user to un-cancel their subscription during the grace period before the billing cycle officially ends.'
+  })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: 'Subscription successfully resumed. Auto-renew re-enabled.' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.BAD_REQUEST, 
+    description: 'Subscription is not pending cancellation, or has already expired.' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.NOT_FOUND, 
+    description: 'No subscription found for this organization.' 
+  })
+  async resumeSubscription(@Req() req: any, @Param('orgId') orgId: string) {
+    // Extracts the organization ID securely from the user's JWT token
+    const organizationId = req.user.organizationId;
+    return await this.billingService.resumeSubscription(organizationId);
   }
 
   @Post('simulate-expiration')

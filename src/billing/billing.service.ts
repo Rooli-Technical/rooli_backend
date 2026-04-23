@@ -375,6 +375,7 @@ export class BillingService {
           organizationId,
           localPlan.maxWorkspaces,
           localPlan.maxUsers,
+          localPlan.maxSocialProfiles,
         );
       } catch (error) {
         this.logger.error(
@@ -457,31 +458,6 @@ export class BillingService {
       }
     }
 
-    // 🚨 2. SAFE PAYSTACK CALL (Only if they actually have an active Paystack sub)
-    if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
-      try {
-        await firstValueFrom(
-          this.httpService.post(
-            `${this.PAYSTACK_BASE_URL}/subscription/disable`,
-            {
-              code: sub.paystackSubscriptionCode,
-              token: sub.paystackEmailToken,
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
-              },
-            },
-          ),
-        );
-      } catch (e) {
-        this.logger.error(e.response?.data);
-        throw new BadRequestException(
-          'Failed to disable subscription in Paystack',
-        );
-      }
-    }
-
     // 🚨 3. THE DB TRANSACTION WITH THE NEW ENUM
     return await this.prisma.$transaction([
       this.prisma.subscription.update({
@@ -496,6 +472,51 @@ export class BillingService {
         data: { billingStatus: 'PENDING_CANCELLATION' },
       }),
     ]);
+  }
+
+  // ---------------------------------------------------------
+  // RESUME SUBSCRIPTION (During the Grace Period)
+  // ---------------------------------------------------------
+  async resumeSubscription(organizationId: string) {
+    const sub = await this.prisma.subscription.findUnique({
+      where: { organizationId },
+    });
+
+    if (!sub) {
+      throw new NotFoundException('No subscription found.');
+    }
+
+    // 1. Validate they are actually in the "Grace Period"
+    if (!sub.cancelAtPeriodEnd) {
+      throw new BadRequestException(
+        'Subscription is not pending cancellation.',
+      );
+    }
+
+    if (sub.status === 'CANCELED' || new Date() > sub.currentPeriodEnd) {
+      throw new BadRequestException(
+        'Your subscription has already expired. Please purchase a new plan.',
+      );
+    }
+
+    // 3. Update the Database (Remove the "bomb")
+    await this.prisma.$transaction([
+      this.prisma.subscription.update({
+        where: { organizationId },
+        data: {
+          cancelAtPeriodEnd: false, // 👈 Turn off the self-destruct sequence!
+        },
+      }),
+      this.prisma.organization.update({
+        where: { id: organizationId },
+        data: { billingStatus: 'ACTIVE' },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message: 'Subscription successfully resumed. Your plan will auto-renew.',
+    };
   }
 
   // ---------------------------------------------------------
@@ -526,15 +547,12 @@ export class BillingService {
     });
     if (!newPlan) throw new NotFoundException('Target plan not found');
 
-    // 1. FREE TRIAL OVERRIDE -> INSTANT CHECKOUT (Move this to the top!)
-    // If they are on a trial, they should always be able to proceed to checkout,
-    // even if they are purchasing the exact plan they are currently trialing.
+    // Trial users always proceed straight to checkout, even for the same plan
     if (sub.isTrial) {
       return this.initializePayment(org.id, newPlan.id, interval, user);
     }
 
-    // 🚨 RULE 1: PREVENT SAME-STATE SELECTION
-    // Now this only blocks paid users from checking out for the exact plan they already pay for.
+    // Prevent paid users from checking out for the exact same plan they're on
     if (
       currentPlan.id === newPlanId &&
       sub.billingInterval === interval &&
@@ -545,28 +563,20 @@ export class BillingService {
       );
     }
 
-    // Determine Upgrade vs Downgrade (Comparing base USD values)
+    // Determine upgrade vs downgrade
     const isUpgrade = newPlan.monthlyPriceUsd > currentPlan.monthlyPriceUsd;
-
-    // Also consider changing from Monthly to Annual on the SAME plan as an upgrade
     const isIntervalUpgrade =
       currentPlan.id === newPlanId &&
       interval === 'ANNUAL' &&
       sub.billingInterval === 'MONTHLY';
 
     // ==========================================
-    // SCENARIO A: UPGRADES & INTERVAL CHANGES (Instant Reset)
+    // SCENARIO A: UPGRADES & INTERVAL CHANGES
     // ==========================================
     if (isUpgrade || isIntervalUpgrade) {
-      // 🚨 RULE 4: INSTANT UPGRADE & RESET
-      // We send them to checkout. When the Paystack webhook fires, your `activateSubscription`
-      // method will overwrite `currentPeriodStart`, wipe `pendingPlanId`, and reset limits.
-      // NOTE: In Paystack, to prevent double billing on their old plan, you must disable the
-      // old subscription code before sending them to checkout for the new one.
-
+      // Disable old Paystack subscription so they don't get double-billed
       if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
         try {
-          // Disable the old recurring charge so Paystack doesn't bill them twice
           await firstValueFrom(
             this.httpService.post(
               `${this.PAYSTACK_BASE_URL}/subscription/disable`,
@@ -592,51 +602,19 @@ export class BillingService {
     }
 
     // ==========================================
-    // SCENARIO B: DOWNGRADES (Strictly Gated)
+    // SCENARIO B: DOWNGRADES (Auto-Lock Strategy)
     // ==========================================
 
-    // 🚨 RULE 2 & 3: THE ROCKET LOCK
-    // "once on rocket plan is running there is nothing like downgrade plan but once plan expires... then the user can downgrade"
+    // Rocket Lock: can't downgrade from Rocket mid-cycle
     if (currentPlan.tier === 'ROCKET' && sub.isActive) {
       throw new ForbiddenException(
         'Downgrading from the Rocket plan is not permitted while your billing cycle is active. You may downgrade after your current plan expires.',
       );
     }
 
-    // If they bypass the lock (e.g., they are PAST_DUE or expired), enforce the limits before allowing the new checkout
-    const [userCount, profileCount, workspaceCount] = await Promise.all([
-      this.prisma.organizationMember.count({ where: { organizationId } }),
-      this.prisma.socialProfile.count({
-        where: { workspace: { organizationId }, status: 'CONNECTED' },
-      }),
-      this.prisma.workspace.count({ where: { organizationId } }),
-    ]);
-
-    // Pre-flight limit checks
-    if (newPlan.maxUsers < 9999 && userCount > newPlan.maxUsers) {
-      throw new BadRequestException(
-        `Please remove ${userCount - newPlan.maxUsers} team members before switching to the ${newPlan.name} plan.`,
-      );
-    }
-    if (
-      newPlan.maxSocialProfiles < 9999 &&
-      profileCount > newPlan.maxSocialProfiles
-    ) {
-      throw new BadRequestException(
-        `Please disconnect ${profileCount - newPlan.maxSocialProfiles} profiles before switching to the ${newPlan.name} plan.`,
-      );
-    }
-    if (
-      newPlan.maxWorkspaces < 9999 &&
-      workspaceCount > newPlan.maxWorkspaces
-    ) {
-      throw new BadRequestException(
-        `Please delete ${workspaceCount - newPlan.maxWorkspaces} workspaces before switching to the ${newPlan.name} plan.`,
-      );
-    }
-
-    // Since they are only allowed to downgrade AFTER expiry (meaning sub.isActive is false),
-    // we don't schedule it. We send them straight to checkout to start their new, cheaper cycle.
+    // Send to checkout. When the webhook fires, activateSubscription will call
+    // enforcePlanLimits which auto-locks excess workspaces and suspends excess members.
+    // User data is preserved — they can pay for add-ons to unlock individual workspaces.
     return this.initializePayment(org.id, newPlan.id, interval, user);
   }
 
@@ -794,19 +772,19 @@ export class BillingService {
     // -----------------------------------------------------------------
     const expiredTrials = await this.prisma.subscription.findMany({
       where: { isTrial: true, status: 'TRIALING', trialEndsAt: { lt: now } },
-      select: { organizationId: true }
+      select: { organizationId: true },
     });
 
     if (expiredTrials.length > 0) {
-      const orgIds = expiredTrials.map(t => t.organizationId);
+      const orgIds = expiredTrials.map((t) => t.organizationId);
 
       await this.prisma.$transaction([
         // 1. Set the subscription to CANCELED (Triggers the 403 Guard)
         this.prisma.subscription.updateMany({
           where: { organizationId: { in: orgIds } },
-          data: { status: 'CANCELED', isActive: false }, 
+          data: { status: 'CANCELED', isActive: false },
         }),
-        
+
         // 2. Stop their publishing queues immediately
         this.prisma.socialProfile.updateMany({
           where: { workspace: { organizationId: { in: orgIds } } },
@@ -814,7 +792,9 @@ export class BillingService {
         }),
       ]);
 
-      this.logger.log(`Locked ${orgIds.length} organizations due to expired free trials.`);
+      this.logger.log(
+        `Locked ${orgIds.length} organizations due to expired free trials.`,
+      );
     }
 
     // -----------------------------------------------------------------
@@ -1121,7 +1101,7 @@ export class BillingService {
     const subsToCharge = await this.prisma.subscription.findMany({
       where: {
         status: 'ACTIVE',
-        currentPeriodEnd: { gte: now, lte: tomorrow }, 
+        currentPeriodEnd: { gte: now, lte: tomorrow },
         OR: [{ aiOverageCostCents: { gt: 0 } }],
       },
       include: {
@@ -1253,7 +1233,13 @@ export class BillingService {
         isActive: true,
         currentPeriodEnd: { lte: now },
       },
-      select: { id: true, organizationId: true },
+      // FIX 1: Fetch the Paystack tokens!
+      select: {
+        id: true,
+        organizationId: true,
+        paystackSubscriptionCode: true,
+        paystackEmailToken: true,
+      },
     });
 
     if (expiredCancellations.length === 0) return;
@@ -1261,55 +1247,61 @@ export class BillingService {
     for (const sub of expiredCancellations) {
       const orgId = sub.organizationId;
 
-      // 1. Fetch all workspaces for this org, ordered by oldest first
-      const workspaces = await this.prisma.workspace.findMany({
-        where: { organizationId: orgId },
-        orderBy: { createdAt: 'asc' },
-        select: { id: true },
-      });
-
-      // 2. Identify the ones to lock (everything after index 0)
-      const workspacesToLock = workspaces.slice(1).map((w) => w.id);
-
-      // 3. Execute the "Juk" Transaction
+      // 1. Execute the Hard Lockout Transaction
       await this.prisma.$transaction(async (tx) => {
-        // A. Mark subscription as canceled, but RESET add-ons
+        // A. Mark subscription as canceled & wipe add-ons
         await tx.subscription.update({
           where: { id: sub.id },
           data: {
             status: 'CANCELED',
             isActive: false,
-            extraWorkspacesPurchased: 0, // 👈 Wipe the add-on ledger!
+            extraWorkspacesPurchased: 0,
           },
         });
 
-        // B. Update Org status to FREE/CANCELED (DO NOT SUSPEND)
+        // B. Update Org status (Leaves isActive: true so they can log in to see the Billing page)
         await tx.organization.update({
           where: { id: orgId },
           data: {
-            // Keep them ACTIVE so they can log in, but update billing status
             status: 'ACTIVE',
             billingStatus: 'CANCELED',
           },
         });
 
-        // C. Lock the excess workspaces
-        if (workspacesToLock.length > 0) {
-          await tx.workspace.updateMany({
-            where: { id: { in: workspacesToLock } },
-            data: { isLocked: true }, // Add an `isLocked: Boolean @default(false)` to your Prisma schema
-          });
-
-          // D. Deactivate social profiles ONLY in the locked workspaces
-          await tx.socialProfile.updateMany({
-            where: { workspaceId: { in: workspacesToLock } },
-            data: { isActive: false },
-          });
-        }
+        // FIX 2: Stop ALL automated publishing across their entire organization
+        await tx.socialProfile.updateMany({
+          where: { workspace: { organizationId: orgId } },
+          data: { isActive: false },
+        });
       });
 
+      // 2. Safely tell Paystack to terminate the contract permanently
+      if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+        try {
+          await firstValueFrom(
+            this.httpService.post(
+              `${this.PAYSTACK_BASE_URL}/subscription/disable`,
+              {
+                code: sub.paystackSubscriptionCode,
+                token: sub.paystackEmailToken,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}`,
+                },
+              },
+            ),
+          );
+        } catch (e) {
+          this.logger.error(
+            `Failed to disable Paystack sub for Org ${orgId}`,
+            e?.response?.data || e.message,
+          );
+        }
+      }
+
       this.logger.log(
-        `✅ Organization ${orgId} downgraded. Premium features stripped and excess workspaces locked.`,
+        ` Organization ${orgId} plan expired. Hard lockout enforced and publishing halted.`,
       );
     }
   }
@@ -1504,73 +1496,6 @@ export class BillingService {
     );
 
     return { paymentUrl: data.data.authorization_url, reference };
-  }
-
-  async enforceDowngradeLimits(
-    organizationId: string,
-    newPlanLimitWorkspaces: number,
-    newPlanLimitUsers: number,
-  ) {
-    // 1. WORKSPACE & PROFILE LOCKDOWN
-    const workspaces = await this.prisma.workspace.findMany({
-      where: { organizationId, isLocked: false },
-      orderBy: { createdAt: 'asc' }, // Keep oldest alive
-      select: { id: true },
-    });
-
-    if (workspaces.length > newPlanLimitWorkspaces) {
-      const workspacesToLock = workspaces
-        .slice(newPlanLimitWorkspaces)
-        .map((w) => w.id);
-
-      await this.prisma.$transaction([
-        this.prisma.workspace.updateMany({
-          where: { id: { in: workspacesToLock } },
-          data: { isLocked: true },
-        }),
-        this.prisma.socialProfile.updateMany({
-          where: { workspaceId: { in: workspacesToLock } },
-          data: { isActive: false },
-        }),
-      ]);
-    }
-
-    // 2. USER LOCKDOWN (RBAC Hierarchy)
-    // ✅ FIX: Query for isActive: true (same bug as enforcePlanLimits)
-    const activeMembers = await this.prisma.organizationMember.findMany({
-      where: { organizationId, isActive: true },
-      include: { role: true },
-    });
-
-    if (activeMembers.length > newPlanLimitUsers) {
-      const roleWeights: Record<string, number> = {
-        'org-owner': 100,
-        'org-admin': 90,
-        'ws-owner': 80,
-        'ws-editor': 70,
-        'ws-contributor': 60,
-        'ws-client': 50,
-        'ws-viewer': 40,
-        'org-member': 10,
-      };
-
-      const sortedMembers = activeMembers.sort((a, b) => {
-        const weightA = roleWeights[a.role.slug] || 0;
-        const weightB = roleWeights[b.role.slug] || 0;
-        if (weightA !== weightB) return weightB - weightA;
-        return a.createdAt.getTime() - b.createdAt.getTime();
-      });
-
-      const membersToSuspend = sortedMembers
-        .slice(newPlanLimitUsers)
-        .map((m) => m.id);
-
-      await this.prisma.organizationMember.updateMany({
-        where: { id: { in: membersToSuspend } },
-        data: { isActive: false },
-      });
-    }
-    this.logger.log(`✅ Limits enforced for Org ${organizationId}`);
   }
 
   // ---------------------------------------------------------
@@ -1773,6 +1698,7 @@ export class BillingService {
     organizationId: string,
     allowedWorkspaces: number,
     allowedUsers: number,
+    allowedProfiles: number,
   ) {
     this.logger.log(
       `Reconciling limits for Org ${organizationId}. Allowed Workspaces: ${allowedWorkspaces}, Allowed Users: ${allowedUsers}`,
@@ -1842,6 +1768,28 @@ export class BillingService {
         data: { isActive: false },
       });
       this.logger.log(`Suspended ${membersToSuspend.length} excess users.`);
+    }
+
+    // C. SOCIAL PROFILE LOCKDOWN
+    const profiles = await this.prisma.socialProfile.findMany({
+      where: {
+        workspace: { organizationId, isLocked: false }, // only in active workspaces
+        isActive: true,
+      },
+      orderBy: { createdAt: 'asc' }, // keep oldest active
+      select: { id: true },
+    });
+
+    if (profiles.length > allowedProfiles) {
+      const profilesToLock = profiles.slice(allowedProfiles).map((p) => p.id);
+
+      await this.prisma.socialProfile.updateMany({
+        where: { id: { in: profilesToLock } },
+        data: { isActive: false },
+      });
+      this.logger.log(
+        `Deactivated ${profilesToLock.length} excess social profiles.`,
+      );
     }
   }
 

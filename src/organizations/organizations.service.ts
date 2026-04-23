@@ -241,7 +241,10 @@ export class OrganizationsService {
     return result;
   }
 
-async activateOrganization(orgId: string) {
+// ---------------------------------------------------------
+  // ADMIN ACCOUNT RECOVERY (The Sledgehammer)
+  // ---------------------------------------------------------
+  async unsuspendOrganization(orgId: string) {
     const [sub, org] = await Promise.all([
       this.prisma.subscription.findUnique({
         where: { organizationId: orgId },
@@ -253,35 +256,27 @@ async activateOrganization(orgId: string) {
 
     if (!org) throw new NotFoundException('Organization not found');
 
-    if (org.status === 'BANNED' || org.status === 'SUSPENDED_BY_ADMIN') {
-      throw new ForbiddenException(
-        'This account has been suspended by administration. Please contact support.',
-      );
-    }
-
     const now = new Date();
-    let needsPayment = sub ? true : false;
-    let paystackReactivated = false; // 🚨 Track if Paystack actually restarted
+    // If they have no sub, or their sub ran out while they were suspended, they need to pay.
+    let needsPayment = !sub || sub.currentPeriodEnd <= now; 
+    let paystackReactivated = false;
 
     // ==========================================
     // 1. EXTERNAL NETWORK CALLS
     // ==========================================
-    if (sub && sub.currentPeriodEnd > now) {
-      needsPayment = false; // They still have time left!
-
+    if (sub && !needsPayment) {
       if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
         try {
+          // Attempt to wake up Paystack just in case it was disabled
           await this.billingService.enablePaystackSubscription(
             sub.paystackSubscriptionCode,
             sub.paystackEmailToken,
           );
-          paystackReactivated = true; // ✅ It worked! It will auto-renew.
+          paystackReactivated = true; 
         } catch (error) {
-          // 🚨 THE FIX: Do NOT throw an error here! 
-          // Paystack says it's permanently dead. We just log it and move on.
-          this.logger.warn(
-            `Paystack subscription dead for Org ${orgId}. Allowing access until period end, but it will not auto-renew.`,
-          );
+          // Paystack contract is dead. We log it, but we STILL let them into the app 
+          // because they paid for the rest of the month!
+          this.logger.warn(`Paystack subscription dead for Org ${orgId}. Waking up local DB only.`);
           paystackReactivated = false; 
         }
       }
@@ -291,58 +286,54 @@ async activateOrganization(orgId: string) {
     // 2. FAST DATABASE TRANSACTION
     // ==========================================
     const result = await this.prisma.$transaction(async (tx) => {
-      // If they are allowed back in (Free tier OR Paid tier with time left)
-      if (!needsPayment) {
-        if (sub) {
-          await tx.subscription.update({
-            where: { organizationId: orgId },
-            data: {
-              // 🚨 THE FIX: If Paystack failed, we keep cancelAtPeriodEnd TRUE
-              // so your app knows they will lose access at the end of the month!
-              cancelAtPeriodEnd: paystackReactivated ? false : true,
-              status: sub.isTrial ? 'TRIALING' : 'ACTIVE',
-            },
-          });
-        }
+      
+      // A. If they have time left on the clock, wake up their premium features
+      if (!needsPayment && sub) {
+        await tx.subscription.update({
+          where: { organizationId: orgId },
+          data: {
+            // If Paystack is dead, ensure they get locked out at the end of the month
+            cancelAtPeriodEnd: paystackReactivated ? false : true,
+            status: sub.isTrial ? 'TRIALING' : 'ACTIVE',
+            isActive: true, 
+          },
+        });
 
+        // Wake up their social profiles
         await tx.socialProfile.updateMany({
           where: { workspace: { organizationId: orgId } },
           data: { isActive: true },
         });
       }
 
-      // Reactivate the Org
+      // B. Wake up the Organization entity
       await tx.organization.update({
         where: { id: orgId },
         data: {
-          isActive: true,
+          isActive: true, // Let them log in!
           readOnly: needsPayment ? true : false,
           status: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
           billingStatus: needsPayment 
             ? 'PAYMENT_METHOD_REQUIRED' 
-            : (sub.isTrial ? 'TRIAL_ACTIVE' : 'ACTIVE')
+            : (sub?.isTrial ? 'TRIAL_ACTIVE' : 'ACTIVE')
         },
       });
 
-      // Reactivate Team Members
+      // C. Wake up all their team members
       await tx.organizationMember.updateMany({
         where: { organizationId: orgId },
         data: { isActive: true },
       });
 
-      // 🚨 Give the frontend a smart message!
-      let message = 'Organization fully restored.';
+      // D. Generate the Admin Report Message
+      let message = 'Organization fully restored and active.';
       if (needsPayment) {
-        message = 'Organization reactivated. Please update your payment method to restore full access.';
+        message = 'Organization unbanned. User must update payment method to restore full access.';
       } else if (!paystackReactivated && sub) {
-        message = 'Organization restored for the remainder of your billing cycle. Please set up a new subscription to prevent future interruption.';
+        message = 'Organization restored for the remainder of their cycle. User will need to resubscribe next month.';
       }
 
-      return {
-        success: true,
-        message,
-        needsPayment,
-      };
+      return { success: true, message, needsPayment };
     });
     
     return result;
