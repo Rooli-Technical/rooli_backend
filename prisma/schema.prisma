@@ -268,7 +268,6 @@ model Invitation {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
-  @@unique([email, organizationId, workspaceId])
   @@index([organizationId, status])
   @@index([email])
 }
