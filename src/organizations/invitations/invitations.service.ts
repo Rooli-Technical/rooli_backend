@@ -265,62 +265,65 @@ export class InvitationsService {
         });
       }
 
-      // 2. Handle Organization Membership
-      let orgMember = await tx.organizationMember.findUnique({
+    // 2. Handle Organization Membership
+      let orgRoleId = invite.roleId;
+      if (invite.workspaceId) {
+        const defaultRole = await tx.role.findFirst({
+          where: {
+            slug: 'org-member',
+            scope: 'ORGANIZATION',
+            organizationId: null,
+          },
+        });
+        if (!defaultRole) throw new Error('Default Org Role not found');
+        orgRoleId = defaultRole.id;
+      }
+
+      //  FIX: Use upsert to handle returning/soft-deleted Org Members
+      const orgMember = await tx.organizationMember.upsert({
         where: {
           organizationId_userId: {
             organizationId: invite.organizationId,
             userId: user.id,
           },
         },
+        update: {
+          isActive: true, // Assuming you have soft-deletes on Org Members too
+          deletedAt: null,
+          // Only update role if it's an org-level invite, otherwise keep their existing org role
+          ...(invite.workspaceId ? {} : { roleId: orgRoleId }), 
+        },
+        create: {
+          userId: user.id,
+          organizationId: invite.organizationId,
+          roleId: orgRoleId,
+        },
       });
 
-      if (!orgMember) {
-        let orgRoleId = invite.roleId;
-        if (invite.workspaceId) {
-          const defaultRole = await tx.role.findFirst({
-            where: {
-              slug: 'org-member',
-              scope: 'ORGANIZATION',
-              organizationId: null,
-            },
-          });
-          if (!defaultRole) throw new Error('Default Org Role not found');
-          orgRoleId = defaultRole.id;
-        }
-
-        orgMember = await tx.organizationMember.create({
-          data: {
-            userId: user.id,
-            organizationId: invite.organizationId,
-            roleId: orgRoleId,
-          },
-        });
-      }
 
       // 3. Handle Workspace Membership (If applicable)
       if (invite.workspaceId) {
-        const existingWsMember = await tx.workspaceMember.findUnique({
+        // 🚨 FIX: Use upsert to reactivate soft-deleted Workspace Members
+        const wsMember = await tx.workspaceMember.upsert({
           where: {
             workspaceId_memberId: {
               workspaceId: invite.workspaceId,
               memberId: orgMember.id,
             },
           },
+          update: {
+            isActive: true,         // Welcome back!
+            deletedAt: null,        // Clear the graveyard stamp
+            roleId: invite.roleId,  // Apply the new role they were invited with
+          },
+          create: {
+            workspaceId: invite.workspaceId,
+            memberId: orgMember.id,
+            roleId: invite.roleId,
+          },
         });
-
-        if (!existingWsMember) {
-          const newWsMember = await tx.workspaceMember.create({
-            data: {
-              workspaceId: invite.workspaceId,
-              memberId: orgMember.id,
-              roleId: invite.roleId,
-            },
-          });
-          finalWorkspaceMemberId = newWsMember.id;
-        } else {
-          finalWorkspaceMemberId = existingWsMember.id;
-        }
+        
+        finalWorkspaceMemberId = wsMember.id;
       }
 
       // 4. Update Invite Status
