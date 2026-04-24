@@ -31,15 +31,15 @@ export class InvitationsService {
     private readonly planAccessService: PlanAccessService,
   ) {}
 
-// ===========================================================================
-  // 1. SEND INVITATION
+ // ===========================================================================
+  // 1. SEND INVITATION (Strictly to a Workspace)
   // ===========================================================================
   async inviteUser(params: {
     inviterId: string;
     organizationId: string;
     email: string;
-    roleId?: string; // The role to grant (Org role OR Workspace role)
-    workspaceId?: string | null;
+    roleId?: string; 
+    workspaceId: string;
   }) {
     const { inviterId, organizationId, roleId, workspaceId } = params;
     const lowerEmail = params.email.toLowerCase();
@@ -59,38 +59,20 @@ export class InvitationsService {
       },
     });
 
-    if (workspaceId) {
-      // If inviting to a WORKSPACE, only block if they are already in THIS workspace
-      const existingWsMember = await this.prisma.workspaceMember.findFirst({
-        where: {
-          workspaceId,
-          member: { user: { email: lowerEmail } },
-          isActive: true,
-        },
-      });
-
-      if (existingWsMember) {
-        throw new ConflictException('User is already a member of this workspace.');
-      }
-    } else {
-      // If it's an ORG-WIDE invite, block if they are already in the Org
-      if (existingOrgMember) {
-        throw new ConflictException('User is already a member of this organization.');
-      }
-    }
-
-    // 2. Billing: Check seat capacity ONLY if they are a brand new user to the Org
-    if (!existingOrgMember) {
-      await this.planAccessService.ensureSeatAvailable(
-        organizationId,
-        lowerEmail,
+    // Reject immediately if they are already in the organization
+    if (existingOrgMember) {
+      throw new ConflictException(
+        'User is already an active member of this organization. Please use the assign member endpoint instead.'
       );
     }
 
-    // 3. Resolve Role
-    // Logic:
-    // If workspaceId is present, the roleId refers to a WORKSPACE role.
-    // If workspaceId is null, the roleId refers to an ORGANIZATION role.
+    // 2. Billing: Check seat capacity 
+    await this.planAccessService.ensureSeatAvailable(
+      organizationId,
+      lowerEmail,
+    );
+
+    // 3. Resolve Role (Always WORKSPACE scoped now)
     let finalRoleId: string;
 
     if (roleId) {
@@ -98,20 +80,19 @@ export class InvitationsService {
         where: { id: roleId },
       });
 
-      // Safety check: ensure role scope matches the target
-      const requiredScope = workspaceId ? 'WORKSPACE' : 'ORGANIZATION';
-      if (targetRole.scope !== requiredScope) {
+      // 🚨 Safety check: strictly ensure the role is a WORKSPACE role
+      if (targetRole.scope !== 'WORKSPACE') {
         throw new BadRequestException(
-          `Role scope mismatch. Expected ${requiredScope} role.`,
+          'Role scope mismatch. Expected a WORKSPACE role.',
         );
       }
       finalRoleId = targetRole.id;
     } else {
-      // Default fallback to 'member' if no roleId provided
+      // Default fallback to 'member' for workspaces
       const defaultRole = await this.prisma.role.findFirstOrThrow({
         where: {
-          slug: 'member', // Ensure you have default roles seeded for both scopes
-          scope: workspaceId ? 'WORKSPACE' : 'ORGANIZATION',
+          slug: 'member',
+          scope: 'WORKSPACE', // 🚨 Strictly WORKSPACE
           organizationId: null,
         },
       });
@@ -122,13 +103,12 @@ export class InvitationsService {
     const token = randomBytes(32).toString('hex');
 
     const invitation = await this.prisma.$transaction(async (tx) => {
-      // Remove existing pending/declined invites for this specific email+org+workspace combo
+      // Safely deletes ALL old invites for this specific workspace
       await tx.invitation.deleteMany({
         where: {
           email: lowerEmail,
           organizationId,
-          workspaceId: workspaceId || null,
-          status: { in: ['PENDING', 'DECLINED'] },
+          workspaceId, // 🚨 No longer falls back to null
         },
       });
 
@@ -138,7 +118,7 @@ export class InvitationsService {
           token,
           inviterId,
           organizationId,
-          workspaceId: workspaceId || null,
+          workspaceId, // 🚨 Direct assignment
           roleId: finalRoleId,
           status: 'PENDING',
         },
@@ -150,17 +130,15 @@ export class InvitationsService {
       });
     });
 
-    const isWorkspace = !!invitation.workspaceId;
+    // 5. Send Email
     try {
       await this.mailService.sendInvitationEmail({
         to: invitation.email,
-        contextName: isWorkspace
-          ? invitation.workspace!.name
-          : invitation.organization.name,
+        contextName: invitation.workspace!.name, // 🚨 We know workspace exists now
         inviterName: `${inviter.firstName} ${inviter.lastName}`,
         roleName: invitation.role.name,
         token: invitation.token,
-        isWorkspaceInvite: isWorkspace,
+        isWorkspaceInvite: true, // 🚨 Always true
         organizationId,
       });
     } catch (error) {
@@ -168,9 +146,7 @@ export class InvitationsService {
     }
     
     return {
-      message: workspaceId
-        ? 'Workspace invitation sent'
-        : 'Organization invitation sent',
+      message: 'Workspace invitation sent',
       invitationId: invitation.id,
     };
   }
@@ -265,65 +241,62 @@ export class InvitationsService {
         });
       }
 
-    // 2. Handle Organization Membership
-      let orgRoleId = invite.roleId;
-      if (invite.workspaceId) {
-        const defaultRole = await tx.role.findFirst({
-          where: {
-            slug: 'org-member',
-            scope: 'ORGANIZATION',
-            organizationId: null,
-          },
-        });
-        if (!defaultRole) throw new Error('Default Org Role not found');
-        orgRoleId = defaultRole.id;
-      }
-
-      //  FIX: Use upsert to handle returning/soft-deleted Org Members
-      const orgMember = await tx.organizationMember.upsert({
+      // 2. Handle Organization Membership
+      let orgMember = await tx.organizationMember.findUnique({
         where: {
           organizationId_userId: {
             organizationId: invite.organizationId,
             userId: user.id,
           },
         },
-        update: {
-          isActive: true, // Assuming you have soft-deletes on Org Members too
-          deletedAt: null,
-          // Only update role if it's an org-level invite, otherwise keep their existing org role
-          ...(invite.workspaceId ? {} : { roleId: orgRoleId }), 
-        },
-        create: {
-          userId: user.id,
-          organizationId: invite.organizationId,
-          roleId: orgRoleId,
-        },
       });
 
+      if (!orgMember) {
+        let orgRoleId = invite.roleId;
+        if (invite.workspaceId) {
+          const defaultRole = await tx.role.findFirst({
+            where: {
+              slug: 'org-member',
+              scope: 'ORGANIZATION',
+              organizationId: null,
+            },
+          });
+          if (!defaultRole) throw new Error('Default Org Role not found');
+          orgRoleId = defaultRole.id;
+        }
+
+        orgMember = await tx.organizationMember.create({
+          data: {
+            userId: user.id,
+            organizationId: invite.organizationId,
+            roleId: orgRoleId,
+          },
+        });
+      }
 
       // 3. Handle Workspace Membership (If applicable)
       if (invite.workspaceId) {
-        // 🚨 FIX: Use upsert to reactivate soft-deleted Workspace Members
-        const wsMember = await tx.workspaceMember.upsert({
+        const existingWsMember = await tx.workspaceMember.findUnique({
           where: {
             workspaceId_memberId: {
               workspaceId: invite.workspaceId,
               memberId: orgMember.id,
             },
           },
-          update: {
-            isActive: true,         // Welcome back!
-            deletedAt: null,        // Clear the graveyard stamp
-            roleId: invite.roleId,  // Apply the new role they were invited with
-          },
-          create: {
-            workspaceId: invite.workspaceId,
-            memberId: orgMember.id,
-            roleId: invite.roleId,
-          },
         });
-        
-        finalWorkspaceMemberId = wsMember.id;
+
+        if (!existingWsMember) {
+          const newWsMember = await tx.workspaceMember.create({
+            data: {
+              workspaceId: invite.workspaceId,
+              memberId: orgMember.id,
+              roleId: invite.roleId,
+            },
+          });
+          finalWorkspaceMemberId = newWsMember.id;
+        } else {
+          finalWorkspaceMemberId = existingWsMember.id;
+        }
       }
 
       // 4. Update Invite Status
