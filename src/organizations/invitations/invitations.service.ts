@@ -55,6 +55,7 @@ export class InvitationsService {
       where: {
         organizationId,
         user: { email: lowerEmail },
+        isActive: true,
       },
     });
 
@@ -64,6 +65,7 @@ export class InvitationsService {
         where: {
           workspaceId,
           member: { user: { email: lowerEmail } },
+          isActive: true,
         },
       });
 
