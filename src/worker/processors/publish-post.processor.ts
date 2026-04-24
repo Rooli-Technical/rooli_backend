@@ -467,11 +467,13 @@ export class PublishPostProcessor extends WorkerHost {
     }
 
     if (remaining > 0) {
-      // Publishing loop ended but destinations are still in-flight — bug
-      this.logger.error(
-        `Post ${postId} loop ended with ${remaining} destinations still ${scheduled} scheduled, ${publishing} publishing`,
+      // Destinations still in flight — another retry may finalize them.
+      // Don't mark FAILED yet — that would overwrite the PUBLISHING state
+      // and confuse subsequent retries.
+      this.logger.warn(
+        `Post ${postId} has ${remaining} destinations still active (${scheduled} scheduled, ${publishing} publishing). Deferring final status.`,
       );
-      nextStatus = 'FAILED';
+      return; // 👈 Don't update master status yet
     }
 
     // Only update+emit on actual change

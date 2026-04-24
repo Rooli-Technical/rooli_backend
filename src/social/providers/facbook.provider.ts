@@ -404,6 +404,7 @@ export class FacebookProvider implements ISocialProvider {
     caption: string,
     videoUrl: string,
   ) {
+    try{
     const url = `${this.GRAPH_URL}/${pageId}/videos`;
 
     // 1. Upload the video to Meta
@@ -437,6 +438,13 @@ export class FacebookProvider implements ISocialProvider {
 
     // 3. Return the Media ID instantly so the user isn't kept waiting
     return this.formatResult(videoId, pageId);
+  } catch (error) {
+    this.logger.error(
+    'Facebook video upload failed',
+    JSON.stringify(error.response?.data, null, 2),
+  );
+    throw error
+  }
   }
 
   private handleError(error: any) {

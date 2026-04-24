@@ -33,6 +33,7 @@ import { ContextGuard } from '@/common/guards/context.guard';
 import { PermissionsGuard } from '@/common/guards/permission.guard';
 import { RequirePermission } from '@/common/decorators/require-permission.decorator';
 import { PermissionResource, PermissionAction } from '@/common/constants/rbac';
+import { RetryPostDto } from '../dto/request/retry-post.dto';
 
 
 @Controller('workspaces/:workspaceId/posts')
@@ -151,5 +152,78 @@ export class PostController {
     @CurrentUser() user,
   ) {
     return this.postService.saveDraft(user, workspaceId, dto);
+  }
+
+
+  @Post('destinations/:destinationId/retry')
+  @ApiOperation({ 
+    summary: 'Retry a single failed destination',
+    description: 'Clones a specific failed destination into a new post and reschedules it.'
+  })
+  @ApiParam({ name: 'workspaceId', description: 'The ID of the workspace' })
+  @ApiParam({ name: 'destinationId', description: 'The ID of the failed PostDestination' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Successfully cloned and rescheduled the destination.',
+    schema: {
+      example: {
+        message: 'Created a new post to retry TWITTER destination.',
+        originalDestinationId: 'cl_123abc',
+        newPostId: 'cl_456xyz',
+        platform: 'TWITTER',
+        scheduledAt: '2026-04-24T14:30:00.000Z'
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Destination is not in a FAILED state.' })
+  @ApiResponse({ status: 404, description: 'Destination not found.' })
+  async retryDestination(
+    @CurrentUser() user: any,
+    @Param('workspaceId') workspaceId: string,
+    @Param('destinationId') destinationId: string,
+    @Body() dto: RetryPostDto,
+  ) {
+    return this.postService.retryDestination(
+      user, 
+      workspaceId, 
+      destinationId, 
+      dto
+    );
+  }
+
+  @Post('posts/:postId/retry-failed')
+  @ApiOperation({ 
+    summary: 'Retry all failed destinations for a post',
+    description: 'Clones all failed destinations from a master post into a single new post and reschedules them.'
+  })
+  @ApiParam({ name: 'workspaceId', description: 'The ID of the workspace' })
+  @ApiParam({ name: 'postId', description: 'The ID of the original Master Post' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Successfully cloned and rescheduled the failed destinations.',
+    schema: {
+      example: {
+        message: 'Created a new post to retry 2 failed destinations.',
+        originalPostId: 'cl_987def',
+        newPostId: 'cl_654uvw',
+        retriedCount: 2,
+        scheduledAt: '2026-04-24T14:30:00.000Z'
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'No failed destinations to retry.' })
+  @ApiResponse({ status: 404, description: 'Post not found.' })
+  async retryAllFailedDestinations(
+    @CurrentUser() user: any,
+    @Param('workspaceId') workspaceId: string,
+    @Param('postId') postId: string,
+    @Body() dto: RetryPostDto,
+  ) {
+    return this.postService.retryAllFailedDestinations(
+      user, 
+      workspaceId, 
+      postId, 
+      dto
+    );
   }
 }
