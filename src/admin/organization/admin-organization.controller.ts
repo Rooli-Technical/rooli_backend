@@ -186,6 +186,20 @@ export class AdminOrganizationController {
   async activateOrganization(@Param('id') id: string) {
     return this.organizationService.activateOrganization(id);
   }
+
+  @Patch(':organizationId/unsuspend')
+  @ApiOperation({
+    summary:
+      'Reactivate a previously deactivated organization only for superadmins',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Organization reactivated successfully',
+  })
+  async unsuspendOrganization(@Param('organizationId') orgId: string) {
+    return this.organizationService.unsuspendOrganization(orgId);
+  }
+
   // ── DELETE /admin/organizations/:id ───────────────────────────────────────
 
   @Delete('organization/:id')

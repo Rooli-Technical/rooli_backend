@@ -32,6 +32,7 @@ import { OrganizationMemberService } from './organization-member/organization-me
 import { PermissionAction, PermissionResource } from '@/common/constants/rbac';
 import { BypassSubscription } from '@/common/decorators/bypass-subscription.decorator';
 import { AllowSuspended } from '@/common/decorators/allow-suspended.decorator';
+import { Public } from '@/common/decorators/public.decorator';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
@@ -126,9 +127,7 @@ export class OrganizationsController {
   }
 
   @Patch(':organizationId/activate')
-  @BypassSubscription() // Only for this endpoint, as it's meant to help users get back in after a billing issue
-  @AllowSuspended() // Allow suspended orgs to access this endpoint
-  @RequirePermission(PermissionResource.ORGANIZATION, PermissionAction.UPDATE)
+  @Public()
   @ApiOperation({ summary: 'Reactivate a previously deactivated organization only for superadmins' })
   @ApiResponse({
     status: 200,

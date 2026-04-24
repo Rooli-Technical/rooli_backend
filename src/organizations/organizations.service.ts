@@ -241,10 +241,7 @@ export class OrganizationsService {
     return result;
   }
 
-// ---------------------------------------------------------
-  // ADMIN ACCOUNT RECOVERY (The Sledgehammer)
-  // ---------------------------------------------------------
-  async unsuspendOrganization(orgId: string) {
+    async unsuspendOrganization(orgId: string) {
     const [sub, org] = await Promise.all([
       this.prisma.subscription.findUnique({
         where: { organizationId: orgId },
@@ -258,32 +255,14 @@ export class OrganizationsService {
 
     const now = new Date();
     // If they have no sub, or their sub ran out while they were suspended, they need to pay.
-    let needsPayment = !sub || sub.currentPeriodEnd <= now; 
-    let paystackReactivated = false;
+    const needsPayment = !sub || sub.currentPeriodEnd <= now; 
+
+    // 🚨 PAYSTACK CALLS REMOVED ENTIRELY
+    // We assume any previous Paystack contract is either dead or untrustworthy.
+    // We handle their recovery entirely through our local database.
 
     // ==========================================
-    // 1. EXTERNAL NETWORK CALLS
-    // ==========================================
-    if (sub && !needsPayment) {
-      if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
-        try {
-          // Attempt to wake up Paystack just in case it was disabled
-          await this.billingService.enablePaystackSubscription(
-            sub.paystackSubscriptionCode,
-            sub.paystackEmailToken,
-          );
-          paystackReactivated = true; 
-        } catch (error) {
-          // Paystack contract is dead. We log it, but we STILL let them into the app 
-          // because they paid for the rest of the month!
-          this.logger.warn(`Paystack subscription dead for Org ${orgId}. Waking up local DB only.`);
-          paystackReactivated = false; 
-        }
-      }
-    }
-
-    // ==========================================
-    // 2. FAST DATABASE TRANSACTION
+    // FAST DATABASE TRANSACTION
     // ==========================================
     const result = await this.prisma.$transaction(async (tx) => {
       
@@ -292,8 +271,8 @@ export class OrganizationsService {
         await tx.subscription.update({
           where: { organizationId: orgId },
           data: {
-            // If Paystack is dead, ensure they get locked out at the end of the month
-            cancelAtPeriodEnd: paystackReactivated ? false : true,
+            // Force the yellow banner! They must resubscribe next month.
+            cancelAtPeriodEnd: true, 
             status: sub.isTrial ? 'TRIALING' : 'ACTIVE',
             isActive: true, 
           },
@@ -315,7 +294,7 @@ export class OrganizationsService {
           status: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
           billingStatus: needsPayment 
             ? 'PAYMENT_METHOD_REQUIRED' 
-            : (sub?.isTrial ? 'TRIAL_ACTIVE' : 'ACTIVE')
+            : (sub?.isTrial ? 'TRIAL_ACTIVE' : 'ACTIVE') // Matches your ENUM perfectly
         },
       });
 
@@ -329,7 +308,7 @@ export class OrganizationsService {
       let message = 'Organization fully restored and active.';
       if (needsPayment) {
         message = 'Organization unbanned. User must update payment method to restore full access.';
-      } else if (!paystackReactivated && sub) {
+      } else if (sub) {
         message = 'Organization restored for the remainder of their cycle. User will need to resubscribe next month.';
       }
 
@@ -338,6 +317,7 @@ export class OrganizationsService {
     
     return result;
   }
+  
   /**
    * Returns a high-level snapshot of the organization's usage, limits, and billing.
    * Perfect for the "Settings > Overview" page.
