@@ -270,6 +270,10 @@ export class PostService {
               id: true,
               postId: true,
               contentOverride: true,
+              status: true,
+              errorMessage: true,
+              platformUrl: true,
+              publishedAt: true,
               profile: {
                 select: {
                   platform: true,
