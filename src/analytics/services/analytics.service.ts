@@ -327,6 +327,7 @@ export class AnalyticsService {
       this.prisma.socialProfile.count({
         where: {
           workspaceId,
+          status: ConnectionStatus.CONNECTED,
         },
       }),
     ]);
