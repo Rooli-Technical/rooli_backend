@@ -298,7 +298,7 @@ model SocialConnection {
   reconnectWarningSentAt DateTime? // 👈 Prevents duplicate warning emails
 
   // Relations
-  organization Organization    @relation(fields: [organizationId], references: [id])
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   profiles     SocialProfile[] // One Login -> Many Pages
 
   createdAt DateTime @default(now())
@@ -692,7 +692,7 @@ model Subscription {
   id String @id @default(cuid())
 
   organizationId String       @unique
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   planId String
   plan   Plan   @relation(fields: [planId], references: [id])
@@ -749,7 +749,7 @@ model Transaction {
   id String @id @default(cuid())
 
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   amount   Decimal @db.Decimal(10, 2)
   currency String

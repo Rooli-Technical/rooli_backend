@@ -128,7 +128,10 @@ export class OrganizationsController {
 
   @Patch(':organizationId/activate')
   @Public()
-  @ApiOperation({ summary: 'Reactivate a previously deactivated organization only for superadmins' })
+  @ApiOperation({
+    summary:
+      'Reactivate a previously deactivated organization only for superadmins',
+  })
   @ApiResponse({
     status: 200,
     description: 'Organization reactivated successfully',
@@ -196,6 +199,19 @@ export class OrganizationsController {
     return this.organizationsService.getOrganizationSummary(organizationId);
   }
 
+  @Delete(':organizationId/hardDelete')
+  @Public()
+  @ApiOperation({
+    summary: 'Permanently delete an organization and all associated data',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Organization and all data permanently deleted',
+  })
+  async hardDeleteOrganization(@Param('organizationId') orgId: string) {
+    return this.organizationsService.hardDeleteOrganization(orgId);
+  }
+
   @Get(':organizationId/members')
   @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)
   @ApiOperation({
@@ -223,17 +239,19 @@ export class OrganizationsController {
     });
   }
 
-
-@Patch(':organizationId/members/:memberId/reactivate')
-@RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.UPDATE)
-@ApiOperation({ summary: 'Reactivate a suspended team member' })
-@ApiResponse({ status: 200, description: 'Member reactivated successfully.' })
-async reactivateTeamMember(
-  @Param('organizationId') organizationId: string,
-  @Param('memberId') memberId: string,
-) {
-  return this.organizationMembersService.reactivateTeamMember(organizationId, memberId);
-}
+  @Patch(':organizationId/members/:memberId/reactivate')
+  @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.UPDATE)
+  @ApiOperation({ summary: 'Reactivate a suspended team member' })
+  @ApiResponse({ status: 200, description: 'Member reactivated successfully.' })
+  async reactivateTeamMember(
+    @Param('organizationId') organizationId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    return this.organizationMembersService.reactivateTeamMember(
+      organizationId,
+      memberId,
+    );
+  }
 
   @Get(':organizationId/members/:memberId')
   @RequirePermission(PermissionResource.ORG_MEMBERS, PermissionAction.READ)

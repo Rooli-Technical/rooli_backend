@@ -485,6 +485,69 @@ export class OrganizationsService {
     }
   }
 
+  async hardDeleteOrganization(orgId: string) {
+    // 1. Fetch external references BEFORE deleting
+    // We need the billing IDs and member emails before the data is gone forever
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: {
+        id: true,
+        name: true,
+        members: {
+          select: {
+            user: { select: { email: true, firstName: true } },
+          },
+        },
+      },
+    });
+
+    if (!org) throw new NotFoundException('Organization not found');
+
+    // 2. CRITICAL: Cancel Subscriptions First
+    // If you delete the DB row first, you lose the Paystack/Stripe customer ID,
+    // and the customer will keep getting billed for an app they can't access!
+    try {
+      await this.billingService.cancelSubscription(orgId);
+    } catch (err) {
+      this.logger.error(`Failed to cancel subscription for org ${orgId} during hard delete. Manual intervention required!`, err);
+      // Depending on your strictness, you might want to `throw` here to stop the deletion 
+      // if billing cancellation fails.
+    }
+
+    // 3. The Hard Delete Transaction
+    await this.prisma.$transaction(async (tx) => {
+      // Note: If your Prisma schema has `onDelete: Cascade` set up correctly, 
+      // deleting the Organization will automatically wipe all associated:
+      // - Workspaces
+      // - WorkspaceMembers
+      // - OrganizationMembers
+      // - Posts & Media 
+      // - Social Connections
+      
+      await tx.organization.delete({
+        where: { id: orgId },
+      });
+    });
+
+    // 4. Notify members (Optional, but good UX)
+    for (const member of org.members) {
+      this.mailService
+        .sendOrgDeletedEmail({
+          to: member.user.email,
+          userName: member.user.firstName,
+          orgName: org.name,
+        })
+        .catch((err) =>
+          this.logger.error(
+            `Failed to send org hard-deletion email to ${member.user.email}`,
+            err,
+          ),
+        );
+    }
+
+    return { success: true, message: 'Organization and all associated data permanently deleted.' };
+  }
+
   private async generateUniqueOrgSlug(name: string): Promise<string> {
     const baseSlug = slugify(name, { lower: true, strict: true });
     let slug = baseSlug;
