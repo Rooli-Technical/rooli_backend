@@ -13,6 +13,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { BillingService } from '@/billing/billing.service';
 import * as crypto from 'crypto';
 import { MailService } from '@/mail/mail.service';
+import { OrganizationsService } from '@/organizations/organizations.service';
 
 @Injectable()
 export class UserService {
@@ -20,6 +21,7 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: MailService,
+    private readonly organizationsService: OrganizationsService,
   ) {}
 
   async findById(id: string): Promise<SafeUser | null> {
@@ -207,17 +209,134 @@ export class UserService {
     });
   }
 
-  async deactivateMyAccount(userId: string): Promise<void> {
-    await this.prisma.user.update({
+async deactivateMyAccount(userId: string): Promise<{
+  message: string;
+  permanentDeletionAt: Date;
+}> {
+  // 1. EVALUATE OWNED ORGANIZATIONS
+  const ownedOrgs = await this.prisma.organizationMember.findMany({
+    where: {
+      userId,
+      role: { slug: 'org-owner' },
+      isActive: true,
+    },
+    include: {
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { members: { where: { isActive: true } } } },
+        },
+      },
+    },
+  });
+
+  const ownerRole = await this.prisma.role.findFirst({
+    where: { slug: 'org-owner', scope: 'ORGANIZATION' },
+  });
+
+  const soleOwnerTeamOrgs: { id: string; name: string }[] = [];
+  const soloOrgsToDelete: string[] = [];
+
+  for (const membership of ownedOrgs) {
+    const totalActiveMembers = membership.organization._count.members;
+
+    if (totalActiveMembers === 1) {
+      // Solo/personal org — safe to auto-delete
+      soloOrgsToDelete.push(membership.organizationId);
+    } else {
+      // Team org — block if they're the only owner
+      const otherOwnerCount = await this.prisma.organizationMember.count({
+        where: {
+          organizationId: membership.organizationId,
+          roleId: ownerRole.id,
+          isActive: true,
+          NOT: { userId },
+        },
+      });
+
+      if (otherOwnerCount === 0) {
+        soleOwnerTeamOrgs.push(membership.organization);
+      }
+    }
+  }
+
+  // 2. BLOCK if sole owner of any team org
+  if (soleOwnerTeamOrgs.length > 0) {
+    const orgNames = soleOwnerTeamOrgs.map((o) => o.name).join(', ');
+    throw new BadRequestException({
+      message: `You are the sole owner of ${orgNames}. You must transfer ownership to another team member before deactivating your account.`,
+      error: 'SOLE_OWNER_BLOCKED',
+      organizations: soleOwnerTeamOrgs,
+    });
+  }
+
+  // 3. Auto-delete solo orgs (this also disconnects their socials)
+  for (const orgId of soloOrgsToDelete) {
+    await this.organizationsService.deleteOrganization(orgId);
+  }
+
+  // 4. Calculate permanent deletion date (3 years for GDPR retention)
+  const RETENTION_YEARS = 3;
+  const permanentDeletionAt = new Date();
+  permanentDeletionAt.setFullYear(
+    permanentDeletionAt.getFullYear() + RETENTION_YEARS,
+  );
+
+  // 5. Fetch user info for email BEFORE we wipe identifiers
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, firstName: true },
+  });
+
+  // 6. Mark user as deactivated and free up their email
+  // 🚨 KEY CHANGE: We append a deactivation marker to email so they can re-register
+  //    The email column is unique — we can't leave their original email in place
+  //    or registration with the same email will fail.
+  await this.prisma.$transaction(async (tx) => {
+    // Remove them from any remaining team org memberships (they blocked-out
+    // of sole-owner roles, but they may be a regular member of teams)
+    await tx.organizationMember.updateMany({
+      where: { userId },
+      data: { isActive: false },
+    });
+
+    // Mark user as deactivated
+    await tx.user.update({
       where: { id: userId },
       data: {
+        // Free up the email for re-registration by mangling it.
+        // Original email preserved in `originalEmail` for compliance/audit.
+        originalEmail: user.email,
+        email: `deactivated-${userId}@deactivated.local`,
         deletedAt: new Date(),
+        scheduledDeletionAt: permanentDeletionAt,
         refreshToken: null,
         refreshTokenVersion: { increment: 1 },
         lastActiveAt: new Date(),
       },
     });
-  }
+  });
+
+  // 7. Send confirmation email (fire-and-forget) to their REAL email
+  this.emailService
+    .sendAccountDeactivatedEmail({
+      to: user.email,
+      userName: user.firstName,
+      permanentDeletionAt,
+    })
+    .catch((err) =>
+      this.logger.error(
+        `Failed to send deactivation email to ${user.email}`,
+        err,
+      ),
+    );
+
+  return {
+    message: 'Account deactivated. Your data will be permanently deleted in 3 years.',
+    permanentDeletionAt,
+  };
+}
 
   private validatePasswordStrength(password: string): void {
     if (password.length < 8)

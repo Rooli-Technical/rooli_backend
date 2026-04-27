@@ -19,6 +19,8 @@ model User {
   timezone             String?    @default("Africa/Lagos")
   isOnboardingComplete Boolean    @default(false)
 
+   originalEmail String? 
+
   lastVerificationEmailSentAt DateTime?
 
   globalRole GlobalRole @default(USER)
@@ -33,6 +35,8 @@ model User {
 
   passwordResetOtp        String? // Stores the hashed OTP
   passwordResetOtpExpires DateTime?
+
+  scheduledDeletionAt  DateTime?
 
   // Security
   loginAttempts       Int       @default(0)
@@ -87,6 +91,8 @@ model Organization {
   // Branding
   agencyLogoUrl    String?
   agencyColor      String?
+
+  suspendedAt DateTime?
   // Billing & Status
   billingEmail     String?
   billingCountry   String             @default("NG")

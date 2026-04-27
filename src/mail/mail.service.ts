@@ -329,4 +329,50 @@ export class MailService {
       html,
     );
   }
+
+  async sendOrgDeletedEmail(payload: {
+  to: string;
+  userName: string;
+  orgName: string;
+}) {
+  const dashboardUrl = `${this.configService.get('FRONTEND_URL')}/dashboard`;
+
+  const context = {
+    userName: payload.userName || 'there',
+    orgName: payload.orgName,
+    dashboardUrl,
+    year: new Date().getFullYear(),
+  };
+
+  const html = await this.compileTemplate('org-deleted', context);
+
+  await this.sendZeptoMail(
+    payload.to,
+    `The ${payload.orgName} organization has been deleted`,
+    html,
+  );
+}
+
+async sendAccountDeactivatedEmail(payload: {
+  to: string;
+  userName: string;
+  permanentDeletionAt: Date;
+}) {
+  const context = {
+    userName: payload.userName || 'there',
+    permanentDeletionDate: payload.permanentDeletionAt.toLocaleDateString(
+      'en-US',
+      { year: 'numeric', month: 'long', day: 'numeric' },
+    ),
+    year: new Date().getFullYear(),
+  };
+
+  const html = await this.compileTemplate('account-deactivated', context);
+
+  await this.sendZeptoMail(
+    payload.to,
+    'Your Rooli account has been deactivated',
+    html,
+  );
+}
 }

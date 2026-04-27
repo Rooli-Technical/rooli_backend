@@ -3,7 +3,6 @@ import { OrganizationsService } from './organizations.service';
 import { OrganizationsController } from './organizations.controller';
 import { InvitationsController } from './invitations/controllers/invitations.controller';
 import { InvitationsService } from './invitations/invitations.service';
-//import { AccessControlModule } from '@/access-control/access-control.module';
 import { BillingModule } from '@/billing/billing.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -34,5 +33,6 @@ import { PublicInvitationsController } from './invitations/controllers/public-in
     JwtService,
     OrganizationMemberService,
   ],
+  exports: [OrganizationsService],
 })
 export class OrganizationsModule {}

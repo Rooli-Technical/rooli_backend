@@ -46,8 +46,8 @@ export class AuthService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: lowerEmail },
     });
-    if (existingUser) throw new ConflictException('User already exists');
-
+  
+  if (existingUser) throw new ConflictException('User already exists');
     // 2. Hash Password & Geo lookup (Concurrent for speed)
     const [hashedPassword, geo] = await Promise.all([
       argon2.hash(password),
@@ -111,8 +111,9 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
 
     // Always fetch Business for the baseline trial safety net
-    const baseTrialPlan = await this.prisma.plan.findUnique({ where: { tier: 'BUSINESS' } });
-
+    const baseTrialPlan = await this.prisma.plan.findUnique({
+      where: { tier: 'BUSINESS' },
+    });
 
     const orgName = dto.name;
     const workspaceName = dto.initialWorkspaceName || 'General';
@@ -219,20 +220,20 @@ export class AuthService {
     //  NEW LOGIC: Did they want to pay upfront?
     let checkoutUrl = null;
     if (dto.upfrontPlanId && dto.billingInterval) {
-       try {
-         // Call your existing Paystack initialize method
-         const paymentData = await this.billingService.initializePayment(
-           txResult.org.id, 
-           dto.upfrontPlanId, 
-           dto.billingInterval, 
-           user
-         );
-         checkoutUrl = paymentData.paymentUrl;
-       } catch (error) {
-         // If Paystack fails to generate a link, we don't want to ruin their signup. 
-         // We just swallow the error, they fall back to the Free Trial.
-         console.error("Failed to generate upfront payment link", error);
-       }
+      try {
+        // Call your existing Paystack initialize method
+        const paymentData = await this.billingService.initializePayment(
+          txResult.org.id,
+          dto.upfrontPlanId,
+          dto.billingInterval,
+          user,
+        );
+        checkoutUrl = paymentData.paymentUrl;
+      } catch (error) {
+        // If Paystack fails to generate a link, we don't want to ruin their signup.
+        // We just swallow the error, they fall back to the Free Trial.
+        console.error('Failed to generate upfront payment link', error);
+      }
     }
 
     return {
@@ -303,6 +304,7 @@ export class AuthService {
       user: this.toSafeUser(user),
       lastActiveWorkspaceId: context.workspaceId,
       isOnboardingComplete: user.isOnboardingComplete,
+      hasNoActiveOrgs: !context.orgId,
     };
   }
 
@@ -386,87 +388,87 @@ export class AuthService {
   }
 
   async handleSocialLogin(googleUser: any, ip: string) {
-    try{
-    const lowerEmail = googleUser.email.toLowerCase();
+    try {
+      const lowerEmail = googleUser.email.toLowerCase();
 
-    const geo = geoip.lookup(ip);
-    const timezone = geo?.timezone ?? 'Africa/Lagos';
+      const geo = geoip.lookup(ip);
+      const timezone = geo?.timezone ?? 'Africa/Lagos';
 
-    // A. Check if user exists
-    let user = await this.prisma.user.findUnique({
-      where: { email: lowerEmail },
-      include: {
-        organizationMemberships: {
-          include: {
-            organization: true,
-            workspaceMemberships: {
-              include: { workspace: true },
-              take: 1,
+      // A. Check if user exists
+      let user = await this.prisma.user.findUnique({
+        where: { email: lowerEmail },
+        include: {
+          organizationMemberships: {
+            include: {
+              organization: true,
+              workspaceMemberships: {
+                include: { workspace: true },
+                take: 1,
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    // B. EXISTING USER
-    if (user) {
-      const context = await this.resolveLoginContext(user);
+      // B. EXISTING USER
+      if (user) {
+        const context = await this.resolveLoginContext(user);
+
+        const tokens = await this.generateTokens(
+          user.id,
+          user.email,
+          context.orgId,
+          context.workspaceId,
+          context.workspaceMemberId,
+          user.refreshTokenVersion,
+        );
+
+        await this.updateRefreshToken(user.id, tokens.refreshToken);
+
+        return {
+          user: this.toSafeUser(user),
+          ...tokens,
+          isOnboardingComplete: user.isOnboardingComplete,
+          lastActiveWorkspaceId: context.workspaceId,
+          organizationId: context.orgId,
+        };
+      }
+
+      // C. NEW USER (Register Logic - No Org yet)
+      const newUser = await this.prisma.user.create({
+        data: {
+          email: lowerEmail,
+          password: await argon2.hash(crypto.randomBytes(32).toString('hex')),
+          firstName: googleUser.firstName,
+          lastName: googleUser.lastName,
+          isEmailVerified: true,
+          timezone,
+          userType: 'INDIVIDUAL',
+          //systemRoleId: (await this.fetchSystemRole('user')).id,
+        },
+      });
 
       const tokens = await this.generateTokens(
-        user.id,
-        user.email,
-        context.orgId,
-        context.workspaceId,
-        context.workspaceMemberId,
-        user.refreshTokenVersion,
+        newUser.id,
+        newUser.email,
+        null,
+        null,
+        null,
+        0,
       );
-
-      await this.updateRefreshToken(user.id, tokens.refreshToken);
+      await this.updateRefreshToken(newUser.id, tokens.refreshToken);
 
       return {
-        user: this.toSafeUser(user),
+        user: this.toSafeUser(newUser),
         ...tokens,
-        isOnboardingComplete: user.isOnboardingComplete,
-        lastActiveWorkspaceId: context.workspaceId,
-        organizationId: context.orgId,
+        organizationId: null, // Force redirect to Onboarding
+        lastActiveWorkspaceId: null,
+        isOnboardingComplete: false,
       };
+    } catch (err) {
+      console.error(err);
+      throw new UnauthorizedException(err.message);
     }
-
-    // C. NEW USER (Register Logic - No Org yet)
-    const newUser = await this.prisma.user.create({
-      data: {
-        email: lowerEmail,
-        password: await argon2.hash(crypto.randomBytes(32).toString('hex')),
-        firstName: googleUser.firstName,
-        lastName: googleUser.lastName,
-        isEmailVerified: true,
-        timezone,
-        userType: 'INDIVIDUAL',
-        //systemRoleId: (await this.fetchSystemRole('user')).id,
-      },
-    });
-
-    const tokens = await this.generateTokens(
-      newUser.id,
-      newUser.email,
-      null,
-      null,
-      null,
-      0,
-    );
-    await this.updateRefreshToken(newUser.id, tokens.refreshToken);
-
-    return {
-      user: this.toSafeUser(newUser),
-      ...tokens,
-      organizationId: null, // Force redirect to Onboarding
-      lastActiveWorkspaceId: null,
-      isOnboardingComplete: false,
-    };
-  }catch(err){
-    console.error(err);
-    throw new UnauthorizedException(err.message);
-  }
   }
 
   // ===========================================================================
@@ -489,7 +491,11 @@ export class AuthService {
       const stickyMember = await this.prisma.workspaceMember.findFirst({
         where: {
           workspaceId: activeWorkspaceId,
-          member: { userId: user.id },
+          member: {
+            userId: user.id,
+            isActive: true, // 🚨
+            organization: { isActive: true },
+          },
         },
         select: { id: true, workspace: { select: { organizationId: true } } },
       });
@@ -505,9 +511,15 @@ export class AuthService {
     // 2. Direct Workspace Membership Fallback
     if (!activeWorkspaceId) {
       const directWs = await this.prisma.workspaceMember.findFirst({
-        where: { member: { userId: user.id } },
-        include: { workspace: { select: { organizationId: true } } },
-      });
+  where: {
+    member: {
+      userId: user.id,
+      isActive: true,
+      organization: { isActive: true },
+    },
+  },
+  include: { workspace: { select: { organizationId: true } } },
+});
 
       if (directWs) {
         activeWorkspaceId = directWs.workspaceId;
@@ -520,7 +532,11 @@ export class AuthService {
     if (!activeWorkspaceId) {
       const firstOrgWithWorkspaces =
         await this.prisma.organizationMember.findFirst({
-          where: { userId: user.id },
+          where: {
+            userId: user.id,
+            isActive: true, // ← add
+            organization: { isActive: true },
+          },
           include: {
             organization: {
               include: {
@@ -539,7 +555,7 @@ export class AuthService {
           const wsMember = await this.prisma.workspaceMember.findFirst({
             where: {
               workspaceId: activeWorkspaceId,
-              member: { userId: user.id },
+              member: { userId: user.id, isActive: true },
             },
             select: { id: true },
           });
@@ -875,4 +891,62 @@ export class AuthService {
       `Cleaned up stale refresh tokens for ${result.count} users`,
     );
   }
+
+ //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+async purgeExpiredAccounts() {
+  const expired = await this.prisma.user.findMany({
+    where: {
+      deletedAt: { not: null },
+      scheduledDeletionAt: { lt: new Date() },
+    },
+    select: { id: true },
+  });
+
+  this.logger.log(`Found ${expired.length} accounts past retention period`);
+
+  for (const { id } of expired) {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // 1. Safety check — don't nuke a user who somehow ended up sole-owner
+        //    of an active org (shouldn't happen given the deactivation block,
+        //    but defense in depth)
+        const ownedOrgs = await tx.organizationMember.findMany({
+          where: { userId: id, role: { slug: 'org-owner' }, isActive: true },
+          select: { organizationId: true },
+        });
+
+        for (const { organizationId } of ownedOrgs) {
+          const otherOwners = await tx.organizationMember.count({
+            where: {
+              organizationId,
+              role: { slug: 'org-owner' },
+              isActive: true,
+              NOT: { userId: id },
+            },
+          });
+          if (otherOwners === 0) {
+            this.logger.warn(
+              `Skipping purge of user ${id} — sole owner of active org ${organizationId}. Manual intervention required.`,
+            );
+            return;
+          }
+        }
+
+        // 2. Remove memberships
+        await tx.organizationMember.deleteMany({ where: { userId: id } });
+
+        // 3. Hard delete the user
+        // 🚨 Make sure all relations have onDelete: Cascade or SetNull
+        //    in your Prisma schema, or this will throw FK violations.
+        await tx.user.delete({ where: { id } });
+      });
+
+      this.logger.log(`Purged user ${id} after retention period`);
+    } catch (err) {
+      this.logger.error(`Failed to purge user ${id}`, err);
+    }
+  }
+
+  this.logger.log(`Purge run complete: ${expired.length} accounts processed`);
+}
 }

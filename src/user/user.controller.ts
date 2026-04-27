@@ -81,7 +81,7 @@ export class UserController {
     description: 'Soft deletes the authenticated user account.',
   })
   @ApiResponse({ status: 200, description: 'Account deactivated' })
-  async deactivateAccount(@Req() req): Promise<void> {
+  async deactivateAccount(@Req() req){
     return this.usersService.deactivateMyAccount(req.user.userId);
   }
 

@@ -14,6 +14,7 @@ import slugify from 'slugify';
 import { BillingService } from '@/billing/billing.service';
 import { Prisma } from '@generated/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { MailService } from '@/mail/mail.service';
 
 @Injectable()
 export class OrganizationsService {
@@ -22,6 +23,7 @@ export class OrganizationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
+    private readonly mailService: MailService,
   ) {}
 
   async createOrganization(userId: string, dto: CreateOrganizationDto) {
@@ -213,35 +215,84 @@ export class OrganizationsService {
     });
   }
 
-  async deleteOrganization(orgId: string) {
-    // 1. Perform the DB operations first
-    const result = await this.prisma.$transaction(async (tx) => {
-      await tx.organization.update({
-        where: { id: orgId },
-        data: { isActive: false, status: 'SUSPENDED' },
-      });
 
-      await tx.organizationMember.updateMany({
-        where: { organizationId: orgId },
-        data: { isActive: false },
-      });
 
-      return { success: true, message: 'Organization deactivated' };
+async deleteOrganization(orgId: string) {
+  const org = await this.prisma.organization.findUnique({
+    where: { id: orgId },
+    select: {
+      id: true,
+      name: true,
+      members: {
+        where: { isActive: true },
+        select: {
+          user: { select: { email: true, firstName: true } },
+        },
+      },
+    },
+  });
+
+  if (!org) throw new NotFoundException('Organization not found');
+
+  const result = await this.prisma.$transaction(async (tx) => {
+    // Soft-delete the org
+    await tx.organization.update({
+      where: { id: orgId },
+      data: {
+        isActive: false,
+        status: 'SUSPENDED',
+        suspendedAt: new Date(), 
+      },
     });
 
-    // 2. Trigger cancellation AFTER transaction, without 'await'
-    // We use .catch to ensure background errors don't crash the process
-    this.billingService.cancelSubscription(orgId).catch((err) => {
-      this.logger.error(
-        `Background subscription cancellation failed for ${orgId}:`,
-        err,
+    // Mark all members inactive
+    await tx.organizationMember.updateMany({
+      where: { organizationId: orgId },
+      data: { isActive: false },
+    });
+
+    // 🚨 NEW: Disconnect all socials
+    await tx.socialConnection.updateMany({
+      where: { organizationId: orgId },
+      data: { status: 'DISCONNECTED' },
+    });
+
+    await tx.socialProfile.updateMany({
+      where: { workspace: { organizationId: orgId } },
+      data: { status: 'DISCONNECTED', isActive: false },
+    });
+
+    return { success: true, message: 'Organization deactivated' };
+  });
+
+  // Background subscription cancellation
+  this.billingService.cancelSubscription(orgId).catch((err) => {
+    this.logger.error(
+      `Background subscription cancellation failed for ${orgId}:`,
+      err,
+    );
+  });
+
+  // Notify members
+  for (const member of org.members) {
+    this.mailService
+      .sendOrgDeletedEmail({
+        to: member.user.email,
+        userName: member.user.firstName,
+        orgName: org.name,
+      })
+      .catch((err) =>
+        this.logger.error(
+          `Failed to send org deletion email to ${member.user.email}`,
+          err,
+        ),
       );
-    });
-
-    return result;
   }
 
-    async unsuspendOrganization(orgId: string) {
+  return result;
+}
+
+  async unsuspendOrganization(orgId: string) {
     const [sub, org] = await Promise.all([
       this.prisma.subscription.findUnique({
         where: { organizationId: orgId },
@@ -255,7 +306,7 @@ export class OrganizationsService {
 
     const now = new Date();
     // If they have no sub, or their sub ran out while they were suspended, they need to pay.
-    const needsPayment = !sub || sub.currentPeriodEnd <= now; 
+    const needsPayment = !sub || sub.currentPeriodEnd <= now;
 
     // 🚨 PAYSTACK CALLS REMOVED ENTIRELY
     // We assume any previous Paystack contract is either dead or untrustworthy.
@@ -265,16 +316,15 @@ export class OrganizationsService {
     // FAST DATABASE TRANSACTION
     // ==========================================
     const result = await this.prisma.$transaction(async (tx) => {
-      
       // A. If they have time left on the clock, wake up their premium features
       if (!needsPayment && sub) {
         await tx.subscription.update({
           where: { organizationId: orgId },
           data: {
             // Force the yellow banner! They must resubscribe next month.
-            cancelAtPeriodEnd: true, 
+            cancelAtPeriodEnd: true,
             status: sub.isTrial ? 'TRIALING' : 'ACTIVE',
-            isActive: true, 
+            isActive: true,
           },
         });
 
@@ -292,9 +342,11 @@ export class OrganizationsService {
           isActive: true, // Let them log in!
           readOnly: needsPayment ? true : false,
           status: needsPayment ? 'PAYMENT_METHOD_REQUIRED' : 'ACTIVE',
-          billingStatus: needsPayment 
-            ? 'PAYMENT_METHOD_REQUIRED' 
-            : (sub?.isTrial ? 'TRIAL_ACTIVE' : 'ACTIVE') // Matches your ENUM perfectly
+          billingStatus: needsPayment
+            ? 'PAYMENT_METHOD_REQUIRED'
+            : sub?.isTrial
+              ? 'TRIAL_ACTIVE'
+              : 'ACTIVE', // Matches your ENUM perfectly
         },
       });
 
@@ -307,17 +359,19 @@ export class OrganizationsService {
       // D. Generate the Admin Report Message
       let message = 'Organization fully restored and active.';
       if (needsPayment) {
-        message = 'Organization unbanned. User must update payment method to restore full access.';
+        message =
+          'Organization unbanned. User must update payment method to restore full access.';
       } else if (sub) {
-        message = 'Organization restored for the remainder of their cycle. User will need to resubscribe next month.';
+        message =
+          'Organization restored for the remainder of their cycle. User will need to resubscribe next month.';
       }
 
       return { success: true, message, needsPayment };
     });
-    
+
     return result;
   }
-  
+
   /**
    * Returns a high-level snapshot of the organization's usage, limits, and billing.
    * Perfect for the "Settings > Overview" page.
@@ -409,7 +463,7 @@ export class OrganizationsService {
     const abandonedOrgs = await this.prisma.organization.findMany({
       where: {
         status: 'SUSPENDED',
-        updatedAt: { lt: thirtyDaysAgo }, // Has been suspended for 30+ days
+        suspendedAt: { lt: thirtyDaysAgo }, // Has been suspended for 30+ days
       },
       select: { id: true },
     });
