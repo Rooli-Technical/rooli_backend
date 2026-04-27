@@ -206,7 +206,7 @@ export class AuthController {
 
   @Get('google/callback')
   @Public()
-   @UseGuards(AuthGuard('google'))
+  @UseGuards(AuthGuard('google'))
   @ApiOperation({
     summary: 'Google OAuth Callback',
     description:
@@ -263,6 +263,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @BypassSubscription()
   @ApiBearerAuth()
   @AuditContext({
     action: AuditAction.LOGOUT,
