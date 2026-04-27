@@ -212,7 +212,6 @@ export class UserService {
 
 async deactivateMyAccount(userId: string): Promise<{
   message: string;
-  permanentDeletionAt: Date;
 }> {
   const user = await this.prisma.user.findUnique({
     where: { id: userId, deletedAt: null },
@@ -333,8 +332,7 @@ async deactivateMyAccount(userId: string): Promise<{
     );
 
   return {
-    message: 'Account deactivated. Your data will be permanently deleted in 3 years.',
-    permanentDeletionAt,
+    message: 'Your account has been deactivated successfully.',
   };
 }
 
