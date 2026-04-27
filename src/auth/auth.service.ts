@@ -42,6 +42,11 @@ export class AuthService {
     const { email, password, firstName, lastName } = registerDto;
     const lowerEmail = email.toLowerCase();
 
+      // 🚨 Block reserved deactivation domain
+  if (lowerEmail.endsWith('@deactivated.local')) {
+    throw new BadRequestException('Invalid email address');
+  }
+
     // 1. Check existence
     const existingUser = await this.prisma.user.findUnique({
       where: { email: lowerEmail },

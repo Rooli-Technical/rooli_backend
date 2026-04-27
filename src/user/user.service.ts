@@ -62,6 +62,7 @@ export class UserService {
           some: {
             member: {
               userId: userId,
+              isActive: true,
             },
           },
         },
@@ -213,6 +214,12 @@ async deactivateMyAccount(userId: string): Promise<{
   message: string;
   permanentDeletionAt: Date;
 }> {
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId, deletedAt: null },
+    select: { email: true, firstName: true },
+  });
+  if (!user) throw new NotFoundException('User not found or already deactivated');
+
   // 1. EVALUATE OWNED ORGANIZATIONS
   const ownedOrgs = await this.prisma.organizationMember.findMany({
     where: {
@@ -282,13 +289,6 @@ async deactivateMyAccount(userId: string): Promise<{
   permanentDeletionAt.setFullYear(
     permanentDeletionAt.getFullYear() + RETENTION_YEARS,
   );
-
-  // 5. Fetch user info for email BEFORE we wipe identifiers
-  const user = await this.prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true, firstName: true },
-  });
-
   // 6. Mark user as deactivated and free up their email
   // 🚨 KEY CHANGE: We append a deactivation marker to email so they can re-register
   //    The email column is unique — we can't leave their original email in place

@@ -40,7 +40,11 @@ export class OrganizationsService {
       where: { id: userId },
       include: {
         organizationMemberships: {
-          where: { role: { slug: 'org-owner' } },
+          where: {
+            role: { slug: 'org-owner' },
+            isActive: true,
+            organization: { isActive: true },
+          },
         },
       },
     });
@@ -177,7 +181,7 @@ export class OrganizationsService {
       isActive: true,
       status: 'ACTIVE',
       members: {
-        some: { userId: userId },
+        some: { userId: userId, isActive: true },
       },
     };
 
@@ -215,82 +219,80 @@ export class OrganizationsService {
     });
   }
 
-
-
-async deleteOrganization(orgId: string) {
-  const org = await this.prisma.organization.findUnique({
-    where: { id: orgId },
-    select: {
-      id: true,
-      name: true,
-      members: {
-        where: { isActive: true },
-        select: {
-          user: { select: { email: true, firstName: true } },
+  async deleteOrganization(orgId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: {
+        id: true,
+        name: true,
+        members: {
+          where: { isActive: true },
+          select: {
+            user: { select: { email: true, firstName: true } },
+          },
         },
       },
-    },
-  });
-
-  if (!org) throw new NotFoundException('Organization not found');
-
-  const result = await this.prisma.$transaction(async (tx) => {
-    // Soft-delete the org
-    await tx.organization.update({
-      where: { id: orgId },
-      data: {
-        isActive: false,
-        status: 'SUSPENDED',
-        suspendedAt: new Date(), 
-      },
     });
 
-    // Mark all members inactive
-    await tx.organizationMember.updateMany({
-      where: { organizationId: orgId },
-      data: { isActive: false },
+    if (!org) throw new NotFoundException('Organization not found');
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Soft-delete the org
+      await tx.organization.update({
+        where: { id: orgId },
+        data: {
+          isActive: false,
+          status: 'SUSPENDED',
+          suspendedAt: new Date(),
+        },
+      });
+
+      // Mark all members inactive
+      await tx.organizationMember.updateMany({
+        where: { organizationId: orgId },
+        data: { isActive: false },
+      });
+
+      // 🚨 NEW: Disconnect all socials
+      await tx.socialConnection.updateMany({
+        where: { organizationId: orgId },
+        data: { status: 'DISCONNECTED' },
+      });
+
+      await tx.socialProfile.updateMany({
+        where: { workspace: { organizationId: orgId } },
+        data: { status: 'DISCONNECTED', isActive: false },
+      });
+
+      return { success: true, message: 'Organization deactivated' };
     });
 
-    // 🚨 NEW: Disconnect all socials
-    await tx.socialConnection.updateMany({
-      where: { organizationId: orgId },
-      data: { status: 'DISCONNECTED' },
-    });
-
-    await tx.socialProfile.updateMany({
-      where: { workspace: { organizationId: orgId } },
-      data: { status: 'DISCONNECTED', isActive: false },
-    });
-
-    return { success: true, message: 'Organization deactivated' };
-  });
-
-  // Background subscription cancellation
-  this.billingService.cancelSubscription(orgId).catch((err) => {
-    this.logger.error(
-      `Background subscription cancellation failed for ${orgId}:`,
-      err,
-    );
-  });
-
-  // Notify members
-  for (const member of org.members) {
-    this.mailService
-      .sendOrgDeletedEmail({
-        to: member.user.email,
-        userName: member.user.firstName,
-        orgName: org.name,
-      })
-      .catch((err) =>
-        this.logger.error(
-          `Failed to send org deletion email to ${member.user.email}`,
-          err,
-        ),
+    // Background subscription cancellation
+    this.billingService.cancelSubscription(orgId).catch((err) => {
+      this.logger.error(
+        `Background subscription cancellation failed for ${orgId}:`,
+        err,
       );
-  }
+    });
 
-  return result;
-}
+    // Notify members
+    for (const member of org.members) {
+      this.mailService
+        .sendOrgDeletedEmail({
+          to: member.user.email,
+          userName: member.user.firstName,
+          orgName: org.name,
+        })
+        .catch((err) =>
+          this.logger.error(
+            `Failed to send org deletion email to ${member.user.email}`,
+            err,
+          ),
+        );
+    }
+
+    return result;
+  }
 
   async unsuspendOrganization(orgId: string) {
     const [sub, org] = await Promise.all([
