@@ -153,6 +153,7 @@ export class CalendarService {
         campaignId: true,
         destinations: {
           select: {
+            id: true,
             profile: {
               select: { platform: true },
             },
@@ -174,6 +175,8 @@ export class CalendarService {
 
       const title = this.compactTitle(p.content, p.platform, p.status);
 
+      const destinationIds = p.destinations.map((dest: any) => dest.id);
+
       return {
         id: `post_${p.id}`,
         type: 'POST',
@@ -185,6 +188,7 @@ export class CalendarService {
           postId: p.id,
           status: p.status,
           platform: p.platform,
+          destinationIds,
           scheduledAt: scheduledIso,
           timezone: p.timezone ?? zone,
           campaignId: p.campaignId ?? null,
