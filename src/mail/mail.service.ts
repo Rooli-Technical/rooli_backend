@@ -31,7 +31,7 @@ export class MailService {
     try {
       const source = fs.readFileSync(templatePath, 'utf8');
       const template = handlebars.compile(source);
-      return template(context);
+      return template({ logoUrl: this.getLogoUrl(), ...context });
     } catch (error) {
       this.logger.error(
         `Could not find or compile template: ${templateName}`,
@@ -39,6 +39,13 @@ export class MailService {
       );
       throw error;
     }
+  }
+
+  private getLogoUrl(): string {
+    return (
+      this.configService.get<string>('LOGO_URL') ??
+      'https://res.cloudinary.com/dbvv8bryb/image/upload/v1777463521/rooli/Asset_5_4x_xttppc.png'
+    );
   }
 
   /**
