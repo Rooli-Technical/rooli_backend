@@ -1,5 +1,6 @@
 import { BillingService } from '@/billing/billing.service';
 import { EncryptionService } from '@/common/utility/encryption.service';
+import { DomainEventsService } from '@/events/domain-events.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Processor } from '@nestjs/bullmq';
 import { WorkerHost } from '@nestjs/bullmq';
@@ -18,6 +19,7 @@ export class WebhooksProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
     private readonly encryptionService: EncryptionService,
+    private readonly events: DomainEventsService,
   ) {
     super();
   }
@@ -257,10 +259,7 @@ export class WebhooksProcessor extends WorkerHost {
     }
 
     // 3. Handle Success Event
-    if (
-      event === 'post.publish.complete' ||
-      event === 'video.publish.completed'
-    ) {
+    if (event === 'post.publish.complete') {
       let finalVideoId = publishId; // Default to publish_id if fetch fails
       let liveUrl = null;
 
@@ -327,19 +326,32 @@ export class WebhooksProcessor extends WorkerHost {
       });
 
       this.logger.log(`TikTok post ${finalVideoId} is now SUCCESS.`);
+
+      const snippet =
+        (destination.contentOverride || destination.post.content || 'Media post')
+          .replace(/\n/g, ' ')
+          .substring(0, 60) + '...';
+
+      this.events.emit('publishing.post.published', {
+        workspaceId: destination.post.workspaceId,
+        postId: destination.postId,
+        postDestinationId: destination.id,
+        platform: 'TIKTOK',
+        profileName: destination.profile.name,
+        snippet,
+      });
     }
 
     // 4. Handle Failure Event
-    else if (
-      event === 'post.publish.failed' ||
-      event === 'video.upload.failed'
-    ) {
+    else if (event === 'post.publish.failed') {
+      const reason =
+        'TikTok rejected the video during final processing (Guidelines/Copyright).';
+
       await this.prisma.postDestination.update({
         where: { id: destination.id },
         data: {
           status: 'FAILED',
-          errorMessage:
-            'TikTok rejected the video during final processing (Guidelines/Copyright).',
+          errorMessage: reason,
         },
       });
 
@@ -347,6 +359,21 @@ export class WebhooksProcessor extends WorkerHost {
       await this.prisma.post.update({
         where: { id: destination.postId },
         data: { status: 'FAILED' },
+      });
+
+      const snippet =
+        (destination.contentOverride || destination.post.content || 'Media post')
+          .replace(/\n/g, ' ')
+          .substring(0, 60) + '...';
+
+      this.events.emit('publishing.post.failed', {
+        workspaceId: destination.post.workspaceId,
+        postId: destination.postId,
+        postDestinationId: destination.id,
+        platform: 'TIKTOK',
+        profileName: destination.profile.name,
+        snippet,
+        reason,
       });
     }
 

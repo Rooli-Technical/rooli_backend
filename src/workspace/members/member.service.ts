@@ -146,17 +146,41 @@ export class WorkspaceMemberService {
 
     const wsMember = await this.prisma.workspaceMember.findUnique({
       where: { id: workspaceMemberId },
-      select: { id: true, workspaceId: true },
+      select: {
+        id: true,
+        workspaceId: true,
+        roleId: true,
+        role: { select: { slug: true } },
+        member: { select: { role: { select: { slug: true } } } },
+      },
     });
     if (!wsMember || wsMember.workspaceId !== workspaceId) {
       throw new NotFoundException('Workspace member not found');
     }
 
+    let newRoleSlug: string | null = null;
     if (dto.roleId) {
       await this.assertRoleIsWorkspaceScoped(
         dto.roleId,
         workspace.organizationId,
       );
+      const newRole = await this.prisma.role.findUnique({
+        where: { id: dto.roleId },
+        select: { slug: true },
+      });
+      newRoleSlug = newRole?.slug ?? null;
+    }
+
+    const isCurrentlyOwner =
+      wsMember.role?.slug === 'ws-owner' ||
+      (!wsMember.roleId && wsMember.member.role.slug === 'org-owner');
+
+    const willRemainOwner =
+      newRoleSlug === 'ws-owner' ||
+      (!dto.roleId && wsMember.member.role.slug === 'org-owner');
+
+    if (isCurrentlyOwner && !willRemainOwner) {
+      await this.assertNotLastOwner(workspaceId, wsMember);
     }
 
     const updatedMember = await this.prisma.workspaceMember.update({

@@ -151,14 +151,18 @@ export class PublishPostProcessor extends WorkerHost {
           .replace(/\n/g, ' ')
           .substring(0, 60) + '...';
 
-      this.events.emit('publishing.post.published', {
-        workspaceId: post.workspaceId,
-        postId: post.id,
-        postDestinationId: dest.id,
-        platform: platform,
-        profileName: dest.profile.name,
-        snippet: textPreview,
-      });
+      // TikTok publishes asynchronously — the success/failure event is emitted
+      // from the tiktok-publish-status webhook handler once TikTok confirms.
+      if (platform !== 'TIKTOK') {
+        this.events.emit('publishing.post.published', {
+          workspaceId: post.workspaceId,
+          postId: post.id,
+          postDestinationId: dest.id,
+          platform: platform,
+          profileName: dest.profile.name,
+          snippet: textPreview,
+        });
+      }
     } catch (e: any) {
       await this.prisma.postDestination.update({
         where: { id: dest.id },
@@ -373,14 +377,16 @@ export class PublishPostProcessor extends WorkerHost {
       postType: post.contentType,
     });
 
+    // TikTok publishes are asynchronous: provider.publish() returns a publish_id
+    // acknowledging the upload. The real success/failure arrives later via the
+    // tiktok-publish-status webhook, which flips the row to SUCCESS or FAILED.
+    // Leave the row in PUBLISHING and store the publish_id so the webhook can
+    // find this destination.
     await this.prisma.postDestination.update({
       where: { id: dest.id },
       data: {
-        status: 'SUCCESS',
         platformPostId: res?.platformPostId ?? dest.platformPostId ?? null,
-        publishedAt: new Date(),
         errorMessage: null,
-        platformUrl: res?.url,
       },
     });
   }

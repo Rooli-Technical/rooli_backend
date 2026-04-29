@@ -6,6 +6,8 @@ import { WebhooksProcessor } from './webhook-processor.service';
 import { BillingModule } from '@/billing/billing.module';
 import { WorkerModule } from '@/worker/worker.module';
 import { EncryptionService } from '@/common/utility/encryption.service';
+import { EventsModule } from '@/events/events.module';
+import { TikTokPublishReconciliationService } from './tiktok-publish-reconciliation.service';
 
 @Module({
   imports: [
@@ -14,8 +16,14 @@ import { EncryptionService } from '@/common/utility/encryption.service';
     }),
     BillingModule,
     WorkerModule,
+    EventsModule,
   ],
   controllers: [WebhookController],
-  providers: [WebhookService, WebhooksProcessor, EncryptionService],
+  providers: [
+    WebhookService,
+    WebhooksProcessor,
+    EncryptionService,
+    TikTokPublishReconciliationService,
+  ],
 })
 export class WebhookModule {}
