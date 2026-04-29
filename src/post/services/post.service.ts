@@ -32,11 +32,11 @@ import { DomainEventsService } from '@/events/domain-events.service';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
 import { RequiresUpgradeException } from '@/common/exceptions/requires-upgrade.exception';
 import { RetryPostDto } from '../dto/request/retry-post.dto';
+import { TRIAL_WATERMARK } from '../post.constants';
 
 @Injectable()
 export class PostService {
   private readonly logger = new Logger(PostService.name);
-  private static readonly TRIAL_WATERMARK = '\n\nScheduled with Rooli-rooli.co';
 
   constructor(
     private prisma: PrismaService,
@@ -1407,7 +1407,7 @@ export class PostService {
     const isTrial = workspace?.organization?.subscription?.isTrial === true;
     if (!isTrial) return;
 
-    const wm = PostService.TRIAL_WATERMARK;
+    const wm = TRIAL_WATERMARK;
     const append = (
       text: string | null | undefined,
     ): string | null | undefined => {

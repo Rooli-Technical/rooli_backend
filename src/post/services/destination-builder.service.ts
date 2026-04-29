@@ -6,6 +6,16 @@ import { PlatformRulesService } from './platform-rules.service';
 import { CreatePostDto } from '../dto/request/create-post.dto';
 import { MediaItem, ThreadNode } from '../interfaces/post.interface';
 import { UpdatePostDto } from '../dto/request/update-post.dto';
+import {
+  PostOverrideDto,
+  TikTokOptionsDto,
+} from '../dto/request/post-override.dto';
+import { TRIAL_WATERMARK } from '../post.constants';
+
+type OverrideEntry = {
+  content?: string;
+  tiktok?: TikTokOptionsDto;
+};
 
 @Injectable()
 export class DestinationBuilder {
@@ -14,12 +24,18 @@ export class DestinationBuilder {
     private prisma: PrismaService,
   ) {}
 
-  private buildOverrideMap(
-    overrides?: { socialProfileId: string; content: string }[],
-  ) {
-    const map = new Map<string, string>();
-    overrides?.forEach((o) => map.set(o.socialProfileId, o.content));
+  private buildOverrideMap(overrides?: PostOverrideDto[]) {
+    const map = new Map<string, OverrideEntry>();
+    overrides?.forEach((o) =>
+      map.set(o.socialProfileId, { content: o.content, tiktok: o.tiktok }),
+    );
     return map;
+  }
+
+  private stripTrialWatermark(text: string): string {
+    return text.endsWith(TRIAL_WATERMARK)
+      ? text.slice(0, -TRIAL_WATERMARK.length)
+      : text;
   }
 
   /**
@@ -122,7 +138,8 @@ export class DestinationBuilder {
     for (const profile of profiles) {
       const contentBase = (dto.content ?? '').trim();
       const override = overrideMap.get(profile.id);
-      const tweet1Content = (override ?? contentBase).trim();
+      const overrideContent = override?.content;
+      const tweet1Content = (overrideContent ?? contentBase).trim();
 
       try {
         // -------------------------
@@ -189,9 +206,14 @@ export class DestinationBuilder {
         }
 
         // -------------------------
-        // DEFAULT (LinkedIn/FB/IG)
+        // DEFAULT (LinkedIn/FB/IG/TikTok)
         // -------------------------
-        const contentToValidate = (override ?? contentBase).trim();
+        let contentToValidate = (overrideContent ?? contentBase).trim();
+
+        // TikTok must never carry the trial watermark, regardless of plan.
+        if (profile.platform === Platform.TIKTOK) {
+          contentToValidate = this.stripTrialWatermark(contentToValidate);
+        }
 
         // Default platforms only use master mediaIds
         const mediaForPlatform = resolveMedia(dto.mediaIds);
@@ -203,16 +225,20 @@ export class DestinationBuilder {
           { igKind: dto.contentType as any, FbKind: dto.contentType as any },
         );
 
+        const metadata: Record<string, unknown> = {};
+        if (result.threadChain?.length) {
+          metadata.thread = result.threadChain.map((c) => ({ content: c }));
+        }
+        if (profile.platform === Platform.TIKTOK && override?.tiktok) {
+          metadata.tiktok = override.tiktok;
+        }
+
         payloads.push({
           socialProfileId: profile.id,
           platform: profile.platform,
           status: 'SCHEDULED',
           contentOverride: result.finalContent,
-          metadata: result.threadChain?.length
-            ? {
-                thread: (result.threadChain ?? []).map((c) => ({ content: c })),
-              }
-            : undefined,
+          metadata: Object.keys(metadata).length ? metadata : undefined,
         });
       } catch (err: any) {
         errors.push(
