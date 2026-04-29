@@ -39,6 +39,18 @@ export class DestinationBuilder {
   }
 
   /**
+   * TikTok rejects branded content (paid partnership) posted with SELF_ONLY
+   * visibility — paid disclosures must be public-discoverable.
+   */
+  private validateTikTokCommercialContent(tiktok: TikTokOptionsDto) {
+    if (tiktok.brandContentToggle && tiktok.privacyLevel === 'SELF_ONLY') {
+      throw new BadRequestException(
+        'TikTok does not allow Branded Content (paid partnership) to be posted privately. Choose a public privacy level or turn off Branded Content.',
+      );
+    }
+  }
+
+  /**
    * PHASE 1: PREPARATION (outside transaction)
    *
    * Rules:
@@ -230,6 +242,7 @@ export class DestinationBuilder {
           metadata.thread = result.threadChain.map((c) => ({ content: c }));
         }
         if (profile.platform === Platform.TIKTOK && override?.tiktok) {
+          this.validateTikTokCommercialContent(override.tiktok);
           metadata.tiktok = override.tiktok;
         }
 

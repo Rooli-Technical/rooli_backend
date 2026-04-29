@@ -70,6 +70,40 @@ export class SocialProfileController {
     return this.profileService.getWorkspaceProfiles(workspaceId);
   }
 
+  @Get(':profileId/tiktok/creator-info')
+  @RequirePermission(PermissionResource.SOCIAL_PROFILE, PermissionAction.READ)
+  @ApiOperation({
+    summary: 'Get live TikTok creator info for a connected profile',
+    description:
+      'Calls TikTok in real time and returns the privacy levels the user is allowed to choose, the maximum video duration, and any globally disabled interaction toggles (comment/duet/stitch). Use this to populate the TikTok publishing form.',
+  })
+  @ApiParam({ name: 'workspaceId', example: 'ws_abc123' })
+  @ApiParam({ name: 'profileId', example: 'profile_tiktok_123' })
+  @ApiOkResponse({
+    schema: {
+      example: {
+        creatorAvatarUrl: 'https://...',
+        creatorUsername: 'rooli',
+        creatorNickname: 'Rooli',
+        privacyLevelOptions: [
+          'PUBLIC_TO_EVERYONE',
+          'MUTUAL_FOLLOW_FRIENDS',
+          'SELF_ONLY',
+        ],
+        maxVideoPostDurationSec: 600,
+        commentDisabled: false,
+        duetDisabled: false,
+        stitchDisabled: false,
+      },
+    },
+  })
+  async getTikTokCreatorInfo(
+    @Param('workspaceId') workspaceId: string,
+    @Param('profileId') profileId: string,
+  ) {
+    return this.profileService.getTikTokCreatorInfo(workspaceId, profileId);
+  }
+
   @Delete(':profileId')
   @RequirePermission(PermissionResource.SOCIAL_PROFILE, PermissionAction.DISCONNECT)
   @ApiOperation({

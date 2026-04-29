@@ -13,6 +13,7 @@ import { BulkAddProfilesDto } from './dto/request/bulk-add-profile.dto';
 import { ConnectionStatus, Platform } from '@generated/enums';
 import { DomainEventsService } from '@/events/domain-events.service';
 import { PlanAccessService } from '@/plan-access/plan-access.service';
+import { TikTokService } from '@/social-connection/providers/tiktok.service';
 
 @Injectable()
 export class SocialProfileService {
@@ -23,7 +24,35 @@ export class SocialProfileService {
     private readonly encryption: EncryptionService,
     private readonly domainEvents: DomainEventsService,
     private readonly planAccessService: PlanAccessService,
+    private readonly tiktok: TikTokService,
   ) {}
+
+  async getTikTokCreatorInfo(workspaceId: string, profileId: string) {
+    const profile = await this.prisma.socialProfile.findFirst({
+      where: {
+        id: profileId,
+        workspaceId,
+        platform: Platform.TIKTOK,
+        status: ConnectionStatus.CONNECTED,
+      },
+      include: { connection: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException(
+        'Connected TikTok profile not found in this workspace',
+      );
+    }
+
+    const encryptedToken =
+      profile.accessToken ?? profile.connection?.accessToken;
+    if (!encryptedToken) {
+      throw new BadRequestException('Missing TikTok access token');
+    }
+
+    const accessToken = await this.encryption.decrypt(encryptedToken);
+    return this.tiktok.getCreatorInfo(accessToken);
+  }
 
   async addProfilesToWorkspace(workspaceId: string, dto: BulkAddProfilesDto) {
     // 1. Get the Workspace to find the Organization ID

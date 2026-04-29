@@ -270,6 +270,7 @@ export class PostService {
           status: true,
           scheduledAt: true,
           publishedAt: true,
+          createdAt: true,
 
           destinations: {
             select: {
@@ -881,6 +882,8 @@ export class PostService {
         status: true,
         scheduledAt: true,
         publishedAt: true,
+        createdAt: true,
+        timezone: true,
         destinations: {
           select: {
             id: true,

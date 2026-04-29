@@ -26,14 +26,6 @@ export interface TikTokPostOptions {
   brandOrganicToggle?: boolean;
 }
 
-interface CreatorInfo {
-  privacyLevelOptions: TikTokPrivacyLevel[];
-  maxVideoPostDurationSec: number;
-  commentDisabled: boolean;
-  duetDisabled: boolean;
-  stitchDisabled: boolean;
-}
-
 @Injectable()
 export class TikTokProvider implements ISocialProvider {
   private readonly logger = new Logger(TikTokProvider.name);
@@ -59,6 +51,18 @@ export class TikTokProvider implements ISocialProvider {
     const options = metadata?.tiktok ?? {};
     this.logger.log(`Preparing TikTok Direct Post...`);
 
+    if (!options.privacyLevel) {
+      throw new BadRequestException(
+        'TikTok privacy level is required. Fetch /social-profiles/:profileId/tiktok/creator-info and let the user pick one of the allowed values.',
+      );
+    }
+
+    if (options.brandContentToggle && options.privacyLevel === 'SELF_ONLY') {
+      throw new BadRequestException(
+        'TikTok does not allow Branded Content (paid partnership) to be posted privately. Choose a public privacy level or turn off Branded Content.',
+      );
+    }
+
     const videoFiles = mediaFiles.filter((m) =>
       m.mimeType.startsWith('video/'),
     );
@@ -67,10 +71,6 @@ export class TikTokProvider implements ISocialProvider {
     );
 
     try {
-      // Pre-flight: fetch creator capabilities so we can validate user choices
-      // and surface clean errors instead of letting TikTok reject late.
-      const creatorInfo = await this.getCreatorInfo(accessToken);
-
       // ==========================================
       // ROUTE A: PHOTO MODE (Carousel)
       // ==========================================
@@ -80,7 +80,6 @@ export class TikTokProvider implements ISocialProvider {
           accessToken,
           content,
           imageUrls,
-          creatorInfo,
           options,
         );
       }
@@ -97,23 +96,12 @@ export class TikTokProvider implements ISocialProvider {
           );
         }
 
-        if (
-          video.durationSeconds &&
-          creatorInfo.maxVideoPostDurationSec > 0 &&
-          video.durationSeconds > creatorInfo.maxVideoPostDurationSec
-        ) {
-          throw new BadRequestException(
-            `Video is ${video.durationSeconds}s but this TikTok creator can only post videos up to ${creatorInfo.maxVideoPostDurationSec}s.`,
-          );
-        }
-
         const videoBuffer = await this.downloadVideo(video.url);
 
         const { uploadId, uploadUrl } = await this.initializeVideoUpload(
           accessToken,
           video.sizeBytes,
           content,
-          creatorInfo,
           options,
         );
 
@@ -131,82 +119,12 @@ export class TikTokProvider implements ISocialProvider {
   }
 
   // ==================================================
-  // 🔍 CREATOR INFO QUERY (pre-flight validation)
-  // ==================================================
-  private async getCreatorInfo(accessToken: string): Promise<CreatorInfo> {
-    const url = `${this.API_URL}/post/publish/creator_info/query/`;
-
-    const response = await axios.post(
-      url,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-      },
-    );
-
-    const data = response.data;
-    if (data.error?.code !== 'ok' && data.error?.code !== 0) {
-      throw new InternalServerErrorException(
-        `Failed to fetch TikTok creator info: ${data.error?.message}`,
-      );
-    }
-
-    const d = data.data ?? {};
-    return {
-      privacyLevelOptions: d.privacy_level_options ?? [],
-      maxVideoPostDurationSec: d.max_video_post_duration_sec ?? 0,
-      commentDisabled: !!d.comment_disabled,
-      duetDisabled: !!d.duet_disabled,
-      stitchDisabled: !!d.stitch_disabled,
-    };
-  }
-
-  private resolvePrivacyLevel(
-    requested: TikTokPrivacyLevel | undefined,
-    info: CreatorInfo,
-    mediaType: 'PHOTO' | 'VIDEO',
-  ): TikTokPrivacyLevel {
-    // TikTok does not support FOLLOWER_OF_CREATOR for photo carousels.
-    const allowed =
-      mediaType === 'PHOTO'
-        ? info.privacyLevelOptions.filter((p) => p !== 'FOLLOWER_OF_CREATOR')
-        : info.privacyLevelOptions;
-
-    if (allowed.length === 0) {
-      throw new BadRequestException(
-        'This TikTok creator has no available privacy options. The account may be restricted.',
-      );
-    }
-
-    if (requested) {
-      if (!allowed.includes(requested)) {
-        throw new BadRequestException(
-          `Privacy level "${requested}" is not allowed for this TikTok creator. Allowed: ${allowed.join(', ')}.`,
-        );
-      }
-      return requested;
-    }
-
-    const preferenceOrder: TikTokPrivacyLevel[] = [
-      'PUBLIC_TO_EVERYONE',
-      'FOLLOWER_OF_CREATOR',
-      'MUTUAL_FOLLOW_FRIENDS',
-      'SELF_ONLY',
-    ];
-    return preferenceOrder.find((p) => allowed.includes(p)) ?? allowed[0];
-  }
-
-  // ==================================================
   // 📸 PHOTO UPLOAD (PULL_FROM_URL)
   // ==================================================
   private async publishPhotos(
     accessToken: string,
     caption: string,
     imageUrls: string[],
-    creatorInfo: CreatorInfo,
     options: TikTokPostOptions,
   ) {
     this.logger.log(
@@ -226,22 +144,12 @@ export class TikTokProvider implements ISocialProvider {
       sourceInfo.photo_cover_index = 0;
     }
 
-    const privacyLevel = this.resolvePrivacyLevel(
-      options.privacyLevel,
-      creatorInfo,
-      'PHOTO',
-    );
-
-    // If the creator has globally disabled comments, the post must mirror that.
-    const disableComment =
-      creatorInfo.commentDisabled || !!options.disableComment;
-
     const initBody = {
       post_info: {
         title: '',
         description: caption || '',
-        privacy_level: privacyLevel,
-        disable_comment: disableComment,
+        privacy_level: options.privacyLevel,
+        disable_comment: !!options.disableComment,
         ...(options.brandContentToggle !== undefined && {
           brand_content_toggle: options.brandContentToggle,
         }),
@@ -284,7 +192,6 @@ export class TikTokProvider implements ISocialProvider {
     accessToken: string,
     fileSizeBytes: number,
     caption: string,
-    creatorInfo: CreatorInfo,
     options: TikTokPostOptions,
   ) {
     this.logger.log(
@@ -296,25 +203,13 @@ export class TikTokProvider implements ISocialProvider {
     const chunkSize = Math.min(fileSizeBytes, 10000000); // 10MB max per chunk
     const totalChunkCount = Math.ceil(fileSizeBytes / chunkSize);
 
-    const privacyLevel = this.resolvePrivacyLevel(
-      options.privacyLevel,
-      creatorInfo,
-      'VIDEO',
-    );
-
-    // Mirror creator-level interaction toggles when they're globally disabled.
-    const disableComment =
-      creatorInfo.commentDisabled || !!options.disableComment;
-    const disableDuet = creatorInfo.duetDisabled || !!options.disableDuet;
-    const disableStitch = creatorInfo.stitchDisabled || !!options.disableStitch;
-
     const body = {
       post_info: {
         title: caption || '',
-        privacy_level: privacyLevel,
-        disable_comment: disableComment,
-        disable_duet: disableDuet,
-        disable_stitch: disableStitch,
+        privacy_level: options.privacyLevel,
+        disable_comment: !!options.disableComment,
+        disable_duet: !!options.disableDuet,
+        disable_stitch: !!options.disableStitch,
         ...(options.videoCoverTimestampMs !== undefined && {
           video_cover_timestamp_ms: options.videoCoverTimestampMs,
         }),

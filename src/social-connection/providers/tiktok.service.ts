@@ -149,7 +149,55 @@ export class TikTokService {
   }
 
   // -------------------------------------------------------
-  // 5. REFRESH TOKEN (Called by the Midnight Cron Job)
+  // 5. CREATOR INFO QUERY
+  // Returns the live publishing capabilities for a TikTok creator:
+  // allowed privacy levels, max video duration, and globally disabled
+  // interaction toggles (comment/duet/stitch).
+  // -------------------------------------------------------
+  async getCreatorInfo(accessToken: string) {
+    try {
+      const { data } = await lastValueFrom(
+        this.httpService.post(
+          `${this.API_URL}/post/publish/creator_info/query/`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json; charset=UTF-8',
+            },
+          },
+        ),
+      );
+
+      if (data.error?.code !== 'ok' && data.error?.code !== 0) {
+        throw new BadRequestException(
+          data.error?.message ?? 'Failed to fetch TikTok creator info',
+        );
+      }
+
+      const d = data.data ?? {};
+      return {
+        creatorAvatarUrl: d.creator_avatar_url ?? null,
+        creatorUsername: d.creator_username ?? null,
+        creatorNickname: d.creator_nickname ?? null,
+        privacyLevelOptions: d.privacy_level_options ?? [],
+        maxVideoPostDurationSec: d.max_video_post_duration_sec ?? 0,
+        commentDisabled: !!d.comment_disabled,
+        duetDisabled: !!d.duet_disabled,
+        stitchDisabled: !!d.stitch_disabled,
+      };
+    } catch (error: any) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error(
+        'TikTok Creator Info Fetch Failed',
+        error.response?.data || error.message,
+      );
+      throw new BadRequestException('Failed to fetch TikTok creator info');
+    }
+  }
+
+  // -------------------------------------------------------
+  // 6. REFRESH TOKEN (Called by the Midnight Cron Job)
   // -------------------------------------------------------
   async refreshToken(currentRefreshToken: string) {
     const clientKey = this.config.get<string>('TIKTOK_CLIENT_KEY');
