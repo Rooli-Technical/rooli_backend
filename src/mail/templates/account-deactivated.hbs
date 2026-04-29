@@ -3,65 +3,81 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Your account has been deactivated</title>
+  <style>
+    @media only screen and (max-width: 620px) {
+      .container { width: 100% !important; border-radius: 0 !important; }
+      .px { padding-left: 24px !important; padding-right: 24px !important; }
+    }
+    a { color: #0B1F3A; }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #333;">
-  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f7; padding: 40px 20px;">
+<body style="margin:0; padding:0; background-color:#F4F5F7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; color:#3C4858;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">Your Rooli account has been deactivated as requested.</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F4F5F7;">
     <tr>
-      <td align="center">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+      <td align="center" style="padding: 40px 16px;">
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; border:1px solid #E6E8EC;">
 
           <tr>
-            <td style="padding: 32px 40px 0 40px;">
-              <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #1a1a1a;">Rooli</h1>
+            <td class="px" style="padding: 32px 40px 0 40px;">
+              <p style="margin:0; font-size:18px; font-weight:700; letter-spacing:-0.2px; color:#0B1F3A;">Rooli</p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 24px 40px 32px 40px;">
-              <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #1a1a1a;">
-                Your account has been deactivated
-              </h2>
-
-              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #444;">
-                Hi {{userName}},
+            <td class="px" style="padding: 24px 40px 8px 40px;">
+              <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; font-weight:600; color:#0B1F3A;">Your account has been deactivated</h1>
+              <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:#3C4858;">
+                Hi {{userName}}, this is a confirmation that your Rooli account has been deactivated as requested. You can no longer log in, and any social accounts connected to your personal organizations have been disconnected.
               </p>
+            </td>
+          </tr>
 
-              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #444;">
-                We're confirming that your Rooli account has been deactivated as requested. You will no longer be able to log in, and any social media connections tied to your personal organizations have been disconnected.
-              </p>
-
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 24px 0; background-color: #f8f9fb; border-left: 3px solid #4f46e5; border-radius: 4px;">
+          <tr>
+            <td class="px" style="padding: 8px 40px 8px 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F8F9FB; border:1px solid #E6E8EC; border-radius:8px;">
                 <tr>
                   <td style="padding: 16px 20px;">
-                    <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #1a1a1a;">
-                      Your data
-                    </p>
-                    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #555;">
-                      In line with our data retention policy, your account data will be permanently deleted on <strong>{{permanentDeletionDate}}</strong>. After this date, none of your information can be recovered.
+                    <p style="margin:0 0 6px 0; font-size:14px; font-weight:600; color:#0B1F3A;">Your data</p>
+                    <p style="margin:0; font-size:14px; line-height:1.6; color:#3C4858;">
+                      Per our retention policy, your account data will be permanently deleted on <strong style="color:#0B1F3A;">{{permanentDeletionDate}}</strong>. After this date, none of your information can be recovered.
                     </p>
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
 
-              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #444;">
-                If you change your mind, you're welcome to sign up for a new account at any time using the same email address.
+          <tr>
+            <td class="px" style="padding: 16px 40px 8px 40px;">
+              <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:#3C4858;">
+                Changed your mind? You can sign up again with the same email at any time.
               </p>
-
-              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #444;">
+              <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:#3C4858;">
                 If you didn't request this, please contact our support team immediately.
-              </p>
-
-              <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.6; color: #777;">
-                Thanks for being part of Rooli.<br>
-                &mdash; The Rooli Team
               </p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 24px 40px; background-color: #fafafa; border-top: 1px solid #eee;">
-              <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #999; text-align: center;">
-                &copy; {{year}} Rooli. All rights reserved.
+            <td class="px" style="padding: 8px 40px 32px 40px;">
+              <p style="margin:0; font-size:13px; line-height:1.6; color:#7A8599;">
+                Questions? Reply to this email or reach us at <a href="mailto:support@rooli.com" style="color:#0B1F3A;">support@rooli.com</a>.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="border-top:1px solid #E6E8EC;"></td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 24px 40px;">
+              <p style="margin:0; font-size:12px; line-height:1.6; color:#7A8599; text-align:center;">
+                &copy; {{year}} Rooli, Inc. All rights reserved.
               </p>
             </td>
           </tr>

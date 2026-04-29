@@ -1,9 +1,90 @@
-<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h1>Welcome to Rooli!</h1>
-  <p>Please click the button below to verify your email address:</p>
-  <a href="{{verificationUrl}}" 
-     style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-    Verify Email
-  </a>
-  <p>This link will expire in 24 hours.</p>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Verify your email</title>
+  <style>
+    @media only screen and (max-width: 620px) {
+      .container { width: 100% !important; border-radius: 0 !important; }
+      .px { padding-left: 24px !important; padding-right: 24px !important; }
+      .py-lg { padding-top: 32px !important; padding-bottom: 32px !important; }
+    }
+    a { color: #0B1F3A; }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#F4F5F7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; color:#3C4858;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">Confirm your email to finish setting up your Rooli account.</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F4F5F7;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; border:1px solid #E6E8EC;">
+
+          <tr>
+            <td class="px py-lg" style="padding: 32px 40px 0 40px;">
+              <p style="margin:0; font-size:18px; font-weight:700; letter-spacing:-0.2px; color:#0B1F3A;">Rooli</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 24px 40px 8px 40px;">
+              <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; font-weight:600; color:#0B1F3A;">Confirm your email address</h1>
+              <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:#3C4858;">
+                Thanks for signing up. Click the button below to verify your email and finish setting up your account.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 16px 40px 8px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="border-radius:8px; background-color:#0B1F3A;">
+                    <a href="{{verificationUrl}}" target="_blank" style="display:inline-block; padding:13px 28px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">
+                      Verify email
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 16px 40px 8px 40px;">
+              <p style="margin:0 0 8px 0; font-size:13px; line-height:1.6; color:#7A8599;">
+                Or copy and paste this URL into your browser:
+              </p>
+              <p style="margin:0 0 16px 0; font-size:13px; line-height:1.6; word-break:break-all;">
+                <a href="{{verificationUrl}}" style="color:#0B1F3A; text-decoration:underline;">{{verificationUrl}}</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 8px 40px 32px 40px;">
+              <p style="margin:0; font-size:13px; line-height:1.6; color:#7A8599;">
+                This link expires in 24 hours. If you didn't create a Rooli account, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="border-top:1px solid #E6E8EC;"></td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 24px 40px;">
+              <p style="margin:0; font-size:12px; line-height:1.6; color:#7A8599; text-align:center;">
+                &copy; {{year}} Rooli, Inc. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

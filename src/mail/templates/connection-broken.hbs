@@ -1,87 +1,101 @@
-<html>
-  <head>
-    <meta charset='utf-8' />
-    <title>Connection Lost</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f9fafb;
-        padding: 20px;
-        color: #111827;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-        background: #ffffff;
-        border-radius: 8px;
-        padding: 24px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-      }
-      h2 {
-        color: #dc2626;
-      } /* Red heading for urgency */
-      p {
-        line-height: 1.6;
-      }
-      .alert-box {
-        padding: 12px;
-        background: #fef2f2;
-        border-left: 4px solid #dc2626;
-        margin: 20px 0;
-      }
-      .platform-list {
-        font-weight: bold;
-        padding-left: 20px;
-      }
-      .button {
-        display: inline-block;
-        margin-top: 20px;
-        padding: 12px 20px;
-        background-color: #2563eb;
-        color: #ffffff;
-        text-decoration: none;
-        border-radius: 6px;
-        font-weight: bold;
-      }
-      .footer {
-        margin-top: 30px;
-        font-size: 12px;
-        color: #6b7280;
-        text-align: center;
-      }
-    </style>
-  </head>
-  <body>
-    <div class='container'>
-      <h2>Connection Lost</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Social connection lost</title>
+  <style>
+    @media only screen and (max-width: 620px) {
+      .container { width: 100% !important; border-radius: 0 !important; }
+      .px { padding-left: 24px !important; padding-right: 24px !important; }
+    }
+    a { color: #0B1F3A; }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#F4F5F7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; color:#3C4858;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">We've lost authorization to publish to one or more of your social accounts.</div>
 
-      <p>Hello {{userName}},</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F4F5F7;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; border:1px solid #E6E8EC;">
 
-      <div class='alert-box'>
-        <p style='margin: 0;'>
-          We have lost authorization to publish to the following platforms on
-          your behalf:
-        </p>
-        <ul class='platform-list'>
-          {{#each brokenPlatforms}}
-            <li>{{this}}</li>
-          {{/each}}
-        </ul>
-      </div>
+          <tr>
+            <td class="px" style="padding: 32px 40px 0 40px;">
+              <p style="margin:0; font-size:18px; font-weight:700; letter-spacing:-0.2px; color:#0B1F3A;">Rooli</p>
+            </td>
+          </tr>
 
-      <p>
-        This usually happens if a password was changed, permissions were
-        revoked, or the platform required a mandatory re-authentication. Any
-        posts scheduled for these platforms will fail until the connection is
-        restored.
-      </p>
+          <tr>
+            <td class="px" style="padding: 24px 40px 8px 40px;">
+              <p style="margin:0 0 12px 0; font-size:12px; font-weight:600; letter-spacing:0.6px; text-transform:uppercase; color:#D7263D;">Connection lost</p>
+              <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; font-weight:600; color:#0B1F3A;">Action needed: reconnect your accounts</h1>
+              <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:#3C4858;">
+                Hi {{userName}}, we've lost authorization to publish on your behalf to the following platforms:
+              </p>
+            </td>
+          </tr>
 
-      <a href='{{integrationsUrl}}' class='button' style='color: #ffffff;'>Go to
-        Integrations</a>
+          <tr>
+            <td class="px" style="padding: 8px 40px 8px 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F8F9FB; border:1px solid #E6E8EC; border-radius:8px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    {{#each brokenPlatforms}}
+                      <p style="margin:0 0 6px 0; font-size:14px; font-weight:600; color:#0B1F3A;">&bull; {{this}}</p>
+                    {{/each}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <div class='footer'>
-        <p>© {{year}} Rooli. All rights reserved.</p>
-      </div>
-    </div>
-  </body>
+          <tr>
+            <td class="px" style="padding: 16px 40px 8px 40px;">
+              <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:#3C4858;">
+                This usually happens after a password change, revoked permission, or a required re-authentication. Posts scheduled for these platforms will fail until you reconnect.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 8px 40px 8px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="border-radius:8px; background-color:#0B1F3A;">
+                    <a href="{{integrationsUrl}}" target="_blank" style="display:inline-block; padding:13px 28px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">
+                      Go to integrations
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 16px 40px 32px 40px;">
+              <p style="margin:0; font-size:13px; line-height:1.6; color:#7A8599;">
+                Need help? Reply to this email or reach us at <a href="mailto:support@rooli.com" style="color:#0B1F3A;">support@rooli.com</a>.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="border-top:1px solid #E6E8EC;"></td>
+          </tr>
+
+          <tr>
+            <td class="px" style="padding: 24px 40px;">
+              <p style="margin:0; font-size:12px; line-height:1.6; color:#7A8599; text-align:center;">
+                &copy; {{year}} Rooli, Inc. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
