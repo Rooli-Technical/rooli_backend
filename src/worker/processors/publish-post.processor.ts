@@ -369,12 +369,16 @@ export class PublishPostProcessor extends WorkerHost {
     const mediaPayload = post.media.map((m: any) => ({
       url: m.mediaFile.url,
       mimeType: m.mediaFile.mimeType,
-      sizeBytes: Number(m.mediaFile.size), // 👈 Convert Prisma BigInt to Number
+      sizeBytes: Number(m.mediaFile.size),
+      durationSeconds: m.mediaFile.duration ?? undefined,
     }));
+
+    const tiktokOptions = (dest.metadata as any)?.tiktok;
 
     const res = await provider.publish(creds as any, text, mediaPayload, {
       pageId: dest.profile.platformId,
       postType: post.contentType,
+      tiktok: tiktokOptions,
     });
 
     // TikTok publishes are asynchronous: provider.publish() returns a publish_id
