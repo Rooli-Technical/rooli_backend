@@ -143,6 +143,7 @@ export class BillingService {
       where: { id: organizationId },
       include: { members: true },
     });
+    if(!org) throw new NotFoundException('Organization not found');
     const email = org.billingEmail || user?.email;
     if (!email) throw new BadRequestException('Billing email is required');
 
@@ -304,6 +305,8 @@ export class BillingService {
           isTrial: false,
           watermarkEnabled: false,
           lastPaymentFailedAt: null,
+          readOnlyNotifiedAt: null,
+          suspendedNotifiedAt: null,
           failedPaymentAttempts: 0,
           pendingPlanId: null,
           pendingBillingInterval: null,
@@ -387,15 +390,25 @@ export class BillingService {
       }
     }
 
-    // 6. Send Welcome Email Logic
+    // 6. Send Subscription Activated Email (first successful payment only)
     if (result.isNewSignup) {
       const owner = result.org.members[0]?.user;
-      const defaultWorkspace = result.org.workspaces[0];
 
-      if (owner && defaultWorkspace) {
+      if (owner) {
         this.emailService
-          .sendWelcomeEmail(owner.email, owner.firstName, defaultWorkspace.name)
-          .catch((e) => this.logger.error(`Failed to send welcome email`, e));
+          .sendSubscriptionActivatedEmail({
+            email: owner.email,
+            userName: owner.firstName,
+            orgName: result.org.name,
+            planName: localPlan.name,
+            billingInterval,
+            amount: Number(amount) / 100,
+            currency: currency || 'NGN',
+            nextBillingDate: endDate,
+          })
+          .catch((e) =>
+            this.logger.error(`Failed to send subscription activated email`, e),
+          );
       }
     } else {
       this.logger.log(
@@ -410,16 +423,28 @@ export class BillingService {
   // ---------------------------------------------------------
   async saveSubscriptionDetails(payload: any) {
     const data = payload.data;
-    const { subscription_code, email_token, customer } = data;
+    const { subscription_code, email_token, customer, metadata } = data;
 
-    const org = await this.prisma.organization.findFirst({
-      where: { billingEmail: customer.email },
-    });
+    let orgId = metadata?.organizationId;
 
-    if (!org) return;
+   // 2. Fallback: If Paystack stripped metadata, find it via the Customer code
+    // Assuming you saved the Paystack customer code when they first paid
+    if (!orgId && customer?.customer_code) {
+       // Look up the transaction or subscription that has this customer email/code
+       const recentTx = await this.prisma.transaction.findFirst({
+         where: { providerTxId: { not: 'pending' }, status: 'successful' }, // Or match via email if you MUST
+         orderBy: { createdAt: 'desc' }
+       });
+       orgId = recentTx?.organizationId;
+    }
+
+   if (!orgId) {
+      this.logger.warn(`Could not link subscription.create to an Org. SubCode: ${subscription_code}`);
+      return;
+    }
 
     await this.prisma.subscription.update({
-      where: { organizationId: org.id },
+      where: { organizationId: orgId },
       data: {
         paystackSubscriptionCode: subscription_code,
         paystackEmailToken: email_token,
@@ -613,18 +638,42 @@ export class BillingService {
     // SCENARIO B: DOWNGRADES (Auto-Lock Strategy)
     // ==========================================
 
-    // Rocket Lock: can't downgrade from Rocket mid-cycle
-    if (currentPlan.tier === 'ROCKET' && sub.isActive) {
-      throw new ForbiddenException(
-        'Downgrading from the Rocket plan is not permitted while your billing cycle is active. You may downgrade after your current plan expires.',
-      );
+   // 1. Disable their current Paystack auto-renewal so they aren't charged for the expensive plan next month
+    if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+      try {
+        await firstValueFrom(
+          this.httpService.post(
+            `${this.PAYSTACK_BASE_URL}/subscription/disable`,
+            {
+              code: sub.paystackSubscriptionCode,
+              token: sub.paystackEmailToken,
+            },
+            {
+              headers: { Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}` },
+            },
+          ),
+        );
+      } catch (e) {
+        this.logger.error(`Failed to disable Paystack sub during downgrade scheduling for Org ${org.id}`);
+      }
     }
 
-    // Send to checkout. When the webhook fires, activateSubscription will call
-    // enforcePlanLimits which auto-locks excess workspaces and suspends excess members.
-    // User data is preserved — they can pay for add-ons to unlock individual workspaces.
-    return this.initializePayment(org.id, newPlan.id, interval, user);
+    // 2. Save the future plan to the database
+    await this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: {
+        pendingPlanId: newPlan.id,
+        pendingBillingInterval: interval as BillingInterval,
+      },
+    });
+
+    // 3. Return a success message instead of a checkout URL
+    return {
+      message: `Your downgrade to the ${newPlan.name} plan has been scheduled. It will take effect at the end of your current billing cycle on ${sub.currentPeriodEnd.toLocaleDateString()}.`,
+      isScheduled: true, // Frontend can use this to show a toast instead of redirecting to Paystack
+    };
   }
+
 
   // ---------------------------------------------------------
   // 7. HANDLE FAILURES (Sets the Dunning Anchor)
@@ -1814,5 +1863,131 @@ export class BillingService {
     if (timeZone === 'Africa/Lagos') return 'NG';
     if (ipCountry) return ipCountry;
     return 'NG';
+  }
+
+  // ---------------------------------------------------------
+  // PROCESS SCHEDULED DOWNGRADES
+  // ---------------------------------------------------------
+  //@Cron(CronExpression.EVERY_HOUR)
+  async processScheduledDowngrades() {
+    this.logger.log('🧹 Sweeping for scheduled end-of-cycle downgrades...');
+    const now = new Date();
+
+    const pendingDowngrades = await this.prisma.subscription.findMany({
+      where: {
+        pendingPlanId: { not: null },
+        isActive: true,
+        currentPeriodEnd: { lte: now }, // Their cycle has finished
+      },
+      include: {
+        organization: { select: { id: true, billingEmail: true, currency: true } },
+        plan: true, // The OLD plan
+      },
+    });
+
+    if (pendingDowngrades.length === 0) return;
+
+    for (const sub of pendingDowngrades) {
+      const orgId = sub.organizationId;
+      const targetCurrency = sub.organization.currency || 'NGN';
+
+      // 1. Fetch the NEW plan details
+      const newPlan = await this.prisma.plan.findUnique({
+        where: { id: sub.pendingPlanId! },
+      });
+
+      if (!newPlan || !sub.paystackAuthCode) {
+        this.logger.error(`Cannot process downgrade for Org ${orgId}. Missing Plan or Auth Code.`);
+        continue;
+      }
+
+      // Calculate amount based on interval and currency
+      const amountBaseUnit =
+        targetCurrency === 'USD'
+          ? sub.pendingBillingInterval === 'ANNUAL' ? newPlan.annualPriceUsd : newPlan.monthlyPriceUsd
+          : sub.pendingBillingInterval === 'ANNUAL' ? newPlan.annualPriceNgn : newPlan.monthlyPriceNgn;
+
+      const reference = `rooli_downgrade_${orgId}_${Date.now()}`;
+
+      try {
+        // 2. Charge Paystack for the NEW cheaper plan
+        const { data: paystackResponse } = await firstValueFrom(
+          this.httpService.post(
+            'https://api.paystack.co/transaction/charge_authorization',
+            {
+              authorization_code: sub.paystackAuthCode,
+              email: sub.organization.billingEmail,
+              amount: amountBaseUnit,
+              currency: targetCurrency,
+              reference: reference,
+            },
+            {
+              headers: { Authorization: `Bearer ${this.config.get('PAYSTACK_SECRET_KEY')}` },
+            },
+          ),
+        );
+
+        // 3. Calculate new dates
+        const startDate = new Date();
+        const endDate = new Date();
+        if (sub.pendingBillingInterval === 'ANNUAL') endDate.setFullYear(endDate.getFullYear() + 1);
+        else endDate.setMonth(endDate.getMonth() + 1);
+
+        // 4. Update the Database
+        await this.prisma.$transaction(async (tx) => {
+          // Log the transaction
+          await tx.transaction.create({
+            data: {
+              organizationId: orgId,
+              txRef: reference,
+              providerTxId: paystackResponse.data.id.toString(),
+              provider: 'PAYSTACK',
+              amount: amountBaseUnit / 100,
+              currency: targetCurrency,
+              status: 'successful',
+              paymentDate: new Date(),
+            },
+          });
+
+          // Apply the downgrade to the subscription
+          await tx.subscription.update({
+            where: { id: sub.id },
+            data: {
+              planId: newPlan.id,
+              billingInterval: sub.pendingBillingInterval!,
+              currentPeriodStart: startDate,
+              currentPeriodEnd: endDate,
+              pendingPlanId: null,           // Clear the pending state
+              pendingBillingInterval: null,
+              aiCreditsUsed: 0,              // Reset usage
+              extraWorkspacesPurchased: 0,   // Wipe add-ons
+            },
+          });
+        });
+
+        // 5. Enforce Limits (Lock workspaces/users if they exceed the new cheaper plan's limits)
+        await this.enforcePlanLimits(
+          orgId,
+          newPlan.maxWorkspaces,
+          newPlan.maxUsers,
+          newPlan.maxSocialProfiles,
+        );
+
+        this.logger.log(`✅ Organization ${orgId} successfully downgraded to ${newPlan.name}.`);
+
+      } catch (error) {
+        this.logger.error(`❌ Downgrade charge failed for Org ${orgId}. Moving to PAST_DUE.`);
+        
+        // If the charge fails, they don't get the new plan. They enter dunning.
+        await this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: {
+            status: 'PAST_DUE',
+            lastPaymentFailedAt: new Date(),
+            failedPaymentAttempts: { increment: 1 },
+          },
+        });
+      }
+    }
   }
 }

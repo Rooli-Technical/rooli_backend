@@ -139,6 +139,46 @@ export class MailService {
     await this.sendZeptoMail(email, `Welcome to Rooli, ${userName}!`, html);
   }
 
+  async sendSubscriptionActivatedEmail(payload: {
+    email: string;
+    userName: string;
+    orgName: string;
+    planName: string;
+    billingInterval: string;
+    amount: number;
+    currency: string;
+    nextBillingDate: Date;
+  }) {
+    const billingUrl = `${this.configService.get('FRONTEND_URL')}/settings/billing`;
+
+    const context = {
+      userName: payload.userName || 'there',
+      orgName: payload.orgName,
+      planName: payload.planName,
+      billingInterval: payload.billingInterval,
+      amount: payload.amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+      currency: payload.currency,
+      nextBillingDate: payload.nextBillingDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+      billingUrl,
+      year: new Date().getFullYear(),
+    };
+
+    const html = await this.compileTemplate('subscription-activated', context);
+
+    await this.sendZeptoMail(
+      payload.email,
+      `Your ${payload.planName} subscription is active`,
+      html,
+    );
+  }
+
   async sendPasswordResetOtp(email: string, userName: string, otp: string) {
     const context = {
       userName: userName || 'there',

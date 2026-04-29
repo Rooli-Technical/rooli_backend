@@ -222,6 +222,11 @@ export class AuthService {
       data: { refreshToken: hashedRefreshToken },
     });
 
+    // 4. Welcome email — onboarding complete, workspace created
+    this.emailService
+      .sendWelcomeEmail(user.email, user.firstName, txResult.workspace.name)
+      .catch((err) => this.logger.error('Failed to send welcome email', err));
+
     //  NEW LOGIC: Did they want to pay upfront?
     let checkoutUrl = null;
     if (dto.upfrontPlanId && dto.billingInterval) {
